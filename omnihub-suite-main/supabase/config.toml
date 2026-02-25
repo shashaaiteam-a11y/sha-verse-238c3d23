@@ -1,0 +1,13 @@
+project_id = "plmhjuqedtkiffzhberf"
+
+[functions.nova-chat]
+verify_jwt = true
+
+[functions.mux-transcode]
+verify_jwt = true
+
+[functions.create-conversation]
+verify_jwt = false
+
+[functions.seed-demo-data]
+verify_jwt = false

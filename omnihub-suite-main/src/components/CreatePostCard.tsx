@@ -1,0 +1,660 @@
+import { useState, useRef } from 'react';
+import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { 
+  Send, Image, Video, FileText, BarChart2, Smile, MapPin, 
+  Globe, Users, Lock, X, Plus, Trash2, Clock
+} from "lucide-react";
+import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { LocationPicker } from '@/components/LocationPicker';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+type PostPrivacy = 'public' | 'friends' | 'private';
+
+interface PollOption {
+  id: string;
+  text: string;
+}
+
+const privacyOptions = [
+  { value: 'public' as PostPrivacy, label: 'Public', icon: <Globe className="w-4 h-4" />, description: 'Anyone can see' },
+  { value: 'friends' as PostPrivacy, label: 'Friends', icon: <Users className="w-4 h-4" />, description: 'Only friends can see' },
+  { value: 'private' as PostPrivacy, label: 'Only Me', icon: <Lock className="w-4 h-4" />, description: 'Only you can see' },
+];
+
+// Feelings/Activities options
+const feelingsOptions = [
+  { emoji: '😊', label: 'happy' },
+  { emoji: '😢', label: 'sad' },
+  { emoji: '😍', label: 'loved' },
+  { emoji: '🎉', label: 'celebrating' },
+  { emoji: '😤', label: 'angry' },
+  { emoji: '😴', label: 'tired' },
+  { emoji: '🤔', label: 'thinking' },
+  { emoji: '😎', label: 'cool' },
+  { emoji: '🥳', label: 'excited' },
+  { emoji: '😌', label: 'relaxed' },
+  { emoji: '🤗', label: 'grateful' },
+  { emoji: '😇', label: 'blessed' },
+];
+
+const activitiesOptions = [
+  { emoji: '🎬', label: 'Watching', placeholder: 'movie/show name' },
+  { emoji: '🎵', label: 'Listening to', placeholder: 'song/artist' },
+  { emoji: '📖', label: 'Reading', placeholder: 'book name' },
+  { emoji: '🎮', label: 'Playing', placeholder: 'game name' },
+  { emoji: '🍽️', label: 'Eating', placeholder: 'food' },
+  { emoji: '☕', label: 'Drinking', placeholder: 'beverage' },
+  { emoji: '✈️', label: 'Traveling to', placeholder: 'place' },
+  { emoji: '💪', label: 'Working out', placeholder: '' },
+  { emoji: '🛒', label: 'Shopping', placeholder: '' },
+  { emoji: '🎂', label: 'Celebrating', placeholder: 'event' },
+];
+
+export const CreatePostCard = () => {
+  const { profile } = useProfile();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  
+  const [content, setContent] = useState('');
+  const [privacy, setPrivacy] = useState<PostPrivacy>('public');
+  const [location, setLocation] = useState<string | null>(null);
+  const [mediaFiles, setMediaFiles] = useState<{ url: string; type: string }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPollDialog, setShowPollDialog] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<PollOption[]>([
+    { id: '1', text: '' },
+    { id: '2', text: '' }
+  ]);
+  const [pollDuration, setPollDuration] = useState<'1d' | '3d' | '1w'>('1d');
+  const [feeling, setFeeling] = useState<{ emoji: string; text: string } | null>(null);
+  const [showFeelingPicker, setShowFeelingPicker] = useState(false);
+  const [activityInput, setActivityInput] = useState('');
+  const [selectedActivity, setSelectedActivity] = useState<typeof activitiesOptions[0] | null>(null);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: 'photo' | 'video') => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      const newMedia: { url: string; type: string }[] = [];
+
+      for (const file of Array.from(files)) {
+        if (file.size > 50 * 1024 * 1024) {
+          toast({
+            title: 'File too large',
+            description: `${file.name} exceeds 50MB limit`,
+            variant: 'destructive'
+          });
+          continue;
+        }
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+
+        const { error: uploadError, data } = await supabase.storage
+          .from('post-images')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('post-images')
+          .getPublicUrl(fileName);
+
+        newMedia.push({
+          url: urlData.publicUrl,
+          type: mediaType === 'video' ? 'video' : 'image'
+        });
+      }
+
+      setMediaFiles(prev => [...prev, ...newMedia]);
+      toast({ title: `${mediaType === 'video' ? 'Video' : 'Photo'} added!` });
+    } catch (error: any) {
+      toast({
+        title: 'Upload failed',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUploading(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      if (videoInputRef.current) videoInputRef.current.value = '';
+    }
+  };
+
+  const removeMedia = (index: number) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addPollOption = () => {
+    if (pollOptions.length >= 4) return;
+    setPollOptions(prev => [...prev, { id: String(Date.now()), text: '' }]);
+  };
+
+  const removePollOption = (id: string) => {
+    if (pollOptions.length <= 2) return;
+    setPollOptions(prev => prev.filter(opt => opt.id !== id));
+  };
+
+  const updatePollOption = (id: string, text: string) => {
+    setPollOptions(prev => prev.map(opt => opt.id === id ? { ...opt, text } : opt));
+  };
+
+  const handleSelectFeeling = (emoji: string, label: string) => {
+    setFeeling({ emoji, text: `feeling ${label}` });
+    setSelectedActivity(null);
+    setActivityInput('');
+    setShowFeelingPicker(false);
+  };
+
+  const handleSelectActivity = (activity: typeof activitiesOptions[0]) => {
+    setSelectedActivity(activity);
+    setFeeling(null);
+  };
+
+  const confirmActivity = () => {
+    if (selectedActivity) {
+      const activityText = activityInput 
+        ? `${selectedActivity.label} ${activityInput}` 
+        : selectedActivity.label;
+      setFeeling({ emoji: selectedActivity.emoji, text: activityText });
+      setSelectedActivity(null);
+      setActivityInput('');
+      setShowFeelingPicker(false);
+    }
+  };
+
+  const clearFeeling = () => {
+    setFeeling(null);
+    setSelectedActivity(null);
+    setActivityInput('');
+  };
+
+  // Calculate poll expiry based on duration
+  const getPollExpiry = () => {
+    const now = new Date();
+    switch (pollDuration) {
+      case '1d': return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      case '3d': return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      case '1w': return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      default: return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!content.trim() && mediaFiles.length === 0 && !pollQuestion.trim()) return;
+    if (!user) return;
+
+    setIsSubmitting(true);
+    try {
+      const metadata: any = {};
+      if (location) metadata.location = location;
+      if (feeling) metadata.feeling = feeling;
+
+      const hasPoll = pollQuestion.trim() && pollOptions.filter(o => o.text.trim()).length >= 2;
+      
+      const postData: any = {
+        content: content.trim(),
+        user_id: user.id,
+        visibility: privacy,
+        image_url: mediaFiles[0]?.url || null,
+        media_urls: mediaFiles.slice(1).map(m => m.url),
+        metadata,
+        type: hasPoll ? 'poll' : 'text'
+      };
+
+      // Add poll data if present (store in poll_data for reference)
+      if (hasPoll) {
+        postData.poll_data = {
+          question: pollQuestion.trim(),
+          expires_at: getPollExpiry().toISOString(),
+          duration: pollDuration
+        };
+      }
+
+      const { data: newPost, error } = await supabase
+        .from('posts')
+        .insert(postData)
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      // Create poll options in separate table
+      if (hasPoll && newPost) {
+        const validOptions = pollOptions.filter(o => o.text.trim());
+        const { error: optionsError } = await supabase
+          .from('poll_options')
+          .insert(
+            validOptions.map((opt, idx) => ({
+              post_id: newPost.id,
+              option_text: opt.text.trim(),
+              position: idx,
+              vote_count: 0,
+            }))
+          );
+        
+        if (optionsError) throw optionsError;
+      }
+
+      toast({ title: 'Post created!' });
+      setContent('');
+      setMediaFiles([]);
+      setPrivacy('public');
+      setLocation(null);
+      setFeeling(null);
+      setPollQuestion('');
+      setPollOptions([{ id: '1', text: '' }, { id: '2', text: '' }]);
+      setPollDuration('1d');
+      queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <Card className="p-4 shadow-md hover:shadow-lg transition-shadow">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-3">
+          <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
+            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+            <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm">
+              {profile?.display_name?.[0] || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            {/* Feeling Badge */}
+            {feeling && (
+              <div className="flex items-center gap-1 mb-2 text-sm">
+                <span className="text-muted-foreground">
+                  {profile?.display_name} is
+                </span>
+                <span className="font-medium">{feeling.emoji} {feeling.text}</span>
+                <button onClick={clearFeeling} className="ml-1 text-muted-foreground hover:text-foreground">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="What's on your mind?"
+              className="flex-1 min-h-[60px] resize-none border-0 bg-secondary/50 focus-visible:ring-0 rounded-xl text-sm sm:text-base"
+            />
+          </div>
+        </div>
+
+        {/* Media Preview */}
+        {mediaFiles.length > 0 && (
+          <div className={`mb-3 grid gap-2 ${
+            mediaFiles.length === 1 ? 'grid-cols-1' :
+            mediaFiles.length === 2 ? 'grid-cols-2' :
+            'grid-cols-3'
+          }`}>
+            {mediaFiles.map((media, idx) => (
+              <div key={idx} className="relative rounded-lg overflow-hidden">
+                {media.type === 'video' ? (
+                  <video src={media.url} className="w-full aspect-video object-cover" />
+                ) : media.type === 'pdf' ? (
+                  <div className="flex items-center gap-2 p-3 bg-secondary">
+                    <FileText className="w-8 h-8 text-destructive" />
+                    <span className="text-sm truncate">PDF Document</span>
+                  </div>
+                ) : (
+                  <img src={media.url} alt="" className="w-full aspect-square object-cover" />
+                )}
+                <button
+                  onClick={() => removeMedia(idx)}
+                  className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-black/80"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Poll Preview */}
+        {pollQuestion && (
+          <div className="mb-3 p-3 bg-secondary rounded-lg border border-primary/20">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">{pollQuestion}</span>
+              </div>
+              <button onClick={() => { setPollQuestion(''); setPollOptions([{ id: '1', text: '' }, { id: '2', text: '' }]); setPollDuration('1d'); }}>
+                <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+            <div className="space-y-1 mb-2">
+              {pollOptions.filter(o => o.text.trim()).map((opt, idx) => (
+                <div key={opt.id} className="text-xs text-muted-foreground flex items-center gap-2">
+                  <span className="w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" />
+                  {opt.text}
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              <span>
+                {pollDuration === '1d' ? '1 Day' : pollDuration === '3d' ? '3 Days' : '1 Week'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Actions Row */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border">
+          <div className="flex items-center gap-1 flex-wrap">
+            {/* Photo Input */}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => handleFileSelect(e, 'photo')}
+            />
+            
+            {/* Video Input */}
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(e) => handleFileSelect(e, 'video')}
+            />
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={isUploading}
+              className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+            >
+              <Image className="w-5 h-5" />
+              <span className="hidden sm:inline">Photo</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => videoInputRef.current?.click()}
+              disabled={isUploading}
+              className="gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            >
+              <Video className="w-5 h-5" />
+              <span className="hidden sm:inline">Video</span>
+            </Button>
+
+            {/* Feelings/Activity Picker */}
+            <Popover open={showFeelingPicker} onOpenChange={setShowFeelingPicker}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                >
+                  <Smile className="w-5 h-5" />
+                  <span className="hidden sm:inline">Feeling</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-3" align="start">
+                {!selectedActivity ? (
+                  <>
+                    <p className="text-sm font-medium mb-2">How are you feeling?</p>
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {feelingsOptions.map((f) => (
+                        <button
+                          key={f.label}
+                          onClick={() => handleSelectFeeling(f.emoji, f.label)}
+                          className="flex flex-col items-center p-2 rounded-lg hover:bg-secondary transition-colors"
+                        >
+                          <span className="text-2xl">{f.emoji}</span>
+                          <span className="text-[10px] text-muted-foreground capitalize">{f.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-sm font-medium mb-2">What are you doing?</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {activitiesOptions.map((a) => (
+                        <button
+                          key={a.label}
+                          onClick={() => handleSelectActivity(a)}
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary transition-colors text-left"
+                        >
+                          <span className="text-lg">{a.emoji}</span>
+                          <span className="text-xs">{a.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{selectedActivity.emoji}</span>
+                      <span className="font-medium">{selectedActivity.label}</span>
+                    </div>
+                    {selectedActivity.placeholder && (
+                      <Input
+                        value={activityInput}
+                        onChange={(e) => setActivityInput(e.target.value)}
+                        placeholder={selectedActivity.placeholder}
+                        className="text-sm"
+                      />
+                    )}
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedActivity(null)}>
+                        Back
+                      </Button>
+                      <Button size="sm" onClick={confirmActivity}>
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPollDialog(true)}
+              className="gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+            >
+              <BarChart2 className="w-5 h-5" />
+              <span className="hidden sm:inline">Poll</span>
+            </Button>
+
+            <LocationPicker value={location || undefined} onChange={setLocation} />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Privacy Selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                  {privacyOptions.find(p => p.value === privacy)?.icon}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Who can see this?</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {privacyOptions.map((option) => (
+                  <DropdownMenuItem 
+                    key={option.value}
+                    onClick={() => setPrivacy(option.value)}
+                    className="gap-3"
+                  >
+                    <span className={privacy === option.value ? 'text-primary' : ''}>
+                      {option.icon}
+                    </span>
+                    <div>
+                      <p className={`font-medium ${privacy === option.value ? 'text-primary' : ''}`}>
+                        {option.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button 
+              size="icon"
+              onClick={handleCreatePost}
+              disabled={isSubmitting || isUploading || (!content.trim() && mediaFiles.length === 0 && !pollQuestion.trim())}
+              className="h-8 w-8 bg-gradient-primary shadow-glow"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Poll Creation Dialog - Facebook Style */}
+      <Dialog open={showPollDialog} onOpenChange={setShowPollDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart2 className="w-5 h-5 text-primary" />
+              Create a Poll
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Question</label>
+              <Input
+                value={pollQuestion}
+                onChange={(e) => setPollQuestion(e.target.value)}
+                placeholder="Ask a question..."
+                className="mt-1"
+                maxLength={200}
+              />
+              <p className="text-xs text-muted-foreground mt-1 text-right">{pollQuestion.length}/200</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Options (2-4)</label>
+              {pollOptions.map((opt, idx) => (
+                <div key={opt.id} className="flex gap-2">
+                  <div className="flex items-center justify-center w-6 h-9 text-sm text-muted-foreground">
+                    {idx + 1}.
+                  </div>
+                  <Input
+                    value={opt.text}
+                    onChange={(e) => updatePollOption(opt.id, e.target.value)}
+                    placeholder={`Option ${idx + 1}`}
+                    maxLength={100}
+                  />
+                  {pollOptions.length > 2 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePollOption(opt.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {pollOptions.length < 4 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addPollOption}
+                  className="w-full gap-2 mt-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Option
+                </Button>
+              )}
+            </div>
+
+            {/* Poll Duration */}
+            <div>
+              <label className="text-sm font-medium">Poll Duration</label>
+              <div className="flex gap-2 mt-2">
+                {[
+                  { value: '1d' as const, label: '1 Day' },
+                  { value: '3d' as const, label: '3 Days' },
+                  { value: '1w' as const, label: '1 Week' },
+                ].map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={pollDuration === opt.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPollDuration(opt.value)}
+                    className="flex-1"
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Poll Rules Info */}
+            <div className="text-xs text-muted-foreground bg-secondary/50 p-3 rounded-lg space-y-1">
+              <p>• Single vote only - users can't change their vote</p>
+              <p>• Results hidden until you vote</p>
+              <p>• Poll can't be edited after publishing</p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setShowPollDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => setShowPollDialog(false)}
+                disabled={!pollQuestion.trim() || pollOptions.filter(o => o.text.trim()).length < 2}
+              >
+                Add Poll
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
