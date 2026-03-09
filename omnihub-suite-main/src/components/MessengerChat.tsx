@@ -32,10 +32,19 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [initializing, setInitializing] = useState(false);
   const [showCallDialog, setShowCallDialog] = useState(false);
   const [isVideoCall, setIsVideoCall] = useState(false);
+  
+  // Search state for messages within chat
+  const [isSearching, setIsSearching] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
 
-  const { messages, isLoading: messagesLoading, sendMessage } = useMessages(
+  const { messages, isLoading: messagesLoading, sendMessage, clearMessages } = useMessages(
     selectedConversation?.id || null
   );
+
+  // Filter messages based on search query
+  const filteredMessages = isSearching && messageSearchQuery.trim()
+    ? messages?.filter(m => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
+    : messages;
 
   // Handle initial user ID - find or create conversation
   useEffect(() => {
@@ -216,6 +225,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         {selectedConversation ? (
           <ChatLayout
             header={
+              <>
               <div className="p-3 bg-card border-b border-border flex items-center gap-3">
                 <Button 
                   variant="ghost" 
@@ -270,19 +280,57 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   </Button>
                   <ChatHeaderMenu 
                     conversationId={selectedConversation.id}
+                    otherUserId={selectedConversation.otherMembers?.[0]?.id}
                     otherUserName={selectedConversation.otherMembers?.[0]?.display_name || 'User'}
+                    onClearChat={() => {
+                        if (window.confirm('Are you sure you want to clear all messages in this chat? This cannot be undone.')) {
+                            // Call clearMessages hook function
+                            clearMessages.mutate();
+                        }
+                    }}
+                    onSearchToggle={() => {
+                        setIsSearching(!isSearching);
+                        if (isSearching) setMessageSearchQuery('');
+                    }}
                   />
                 </div>
               </div>
+              
+              {/* Search bar beneath header if searching is active */}
+              {isSearching && (
+                <div className="p-2 border-b border-border bg-muted/30">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search messages..."
+                      value={messageSearchQuery}
+                      onChange={(e) => setMessageSearchQuery(e.target.value)}
+                      className="pl-9 bg-background focus-visible:ring-1"
+                      autoFocus
+                    />
+                    {messageSearchQuery && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
+                        onClick={() => setMessageSearchQuery('')}
+                      >
+                        <span className="text-xs">x</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
             }
             messages={
-              messages && messages.length > 0 ? (
+              filteredMessages && filteredMessages.length > 0 ? (
                 <div className="space-y-2">
-                  {messages.map((message: any, idx: number) => {
+                  {filteredMessages.map((message: any, idx: number) => {
                     const isOwn = message.sender_id === user?.id;
-                    const showDateLabel = idx === 0 || 
-                      getMessageDateLabel(new Date(messages[idx - 1].created_at)) !== 
-                      getMessageDateLabel(new Date(message.created_at));
+                    const showDateLabel = !isSearching && (idx === 0 || 
+                      getMessageDateLabel(new Date(filteredMessages[idx - 1].created_at)) !== 
+                      getMessageDateLabel(new Date(message.created_at)));
                     const metadata = message.metadata as { mediaUrl?: string; mediaType?: string } | null;
 
                     return (

@@ -64,6 +64,22 @@ export const useMessages = (conversationId: string | null) => {
     }
   });
 
+  // Clear all messages in a conversation
+  const clearMessages = useMutation({
+    mutationFn: async () => {
+      if (!conversationId) throw new Error('No conversation to clear');
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('conversation_id', conversationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    }
+  });
+
   // Realtime subscription for messages + read receipts
   useEffect(() => {
     if (!conversationId) return;
@@ -98,6 +114,20 @@ export const useMessages = (conversationId: string | null) => {
           queryClient.invalidateQueries({ queryKey: ['conversations'] });
         }
       )
+      // Realtime delete (clear chat)
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }
+      )
       .subscribe();
 
     return () => {
@@ -108,6 +138,7 @@ export const useMessages = (conversationId: string | null) => {
   return {
     messages,
     isLoading,
-    sendMessage
+    sendMessage,
+    clearMessages
   };
 };

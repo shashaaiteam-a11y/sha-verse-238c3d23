@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Book } from "@/hooks/useBooks";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
 export const useBookFeed = (options: {
     page?: number;
@@ -188,7 +188,29 @@ export const useSavedBooks = (options: { search?: string; category?: string; pag
 };
 
 export const useBook = (bookId?: string) => {
-    return useQuery({
+    const queryClient = useQueryClient();
+
+    // Realtime: subscribe to this exact book row + its channel row for instant updates
+    useEffect(() => {
+        if (!bookId) return;
+
+        const channel = supabase
+            .channel(`book-detail-rt-${bookId}`)
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'books', filter: `id=eq.${bookId}` },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['books', 'detail', bookId] });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [bookId, queryClient]);
+
+    const query = useQuery({
         queryKey: ["books", "detail", bookId],
         queryFn: async () => {
             if (!bookId) return null;
@@ -197,15 +219,45 @@ export const useBook = (bookId?: string) => {
                 .from("books")
                 .select(`
           *,
-          channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
+          channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id, subscribers_count)
         `)
                 .eq("id", bookId)
                 .single();
 
             if (error) throw error;
-            return data as Book;
+            return data;
         },
         enabled: !!bookId,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 0, // always fresh — realtime handles updates
     });
+
+    // After book loads, also subscribe to channel row so subscriber_count stays live
+    const channelId = (query.data as any)?.channel?.id;
+    const invalidateBook = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: ['books', 'detail', bookId] });
+    }, [bookId, queryClient]);
+
+    useEffect(() => {
+        if (!channelId) return;
+
+        const ch = supabase
+            .channel(`channel-rt-${channelId}`)
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'channels', filter: `id=eq.${channelId}` },
+                invalidateBook
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'subscriptions', filter: `channel_id=eq.${channelId}` },
+                invalidateBook
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(ch);
+        };
+    }, [channelId, invalidateBook]);
+
+    return query;
 };

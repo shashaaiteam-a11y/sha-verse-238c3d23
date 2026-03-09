@@ -268,12 +268,15 @@ export const ShareDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Send className="w-5 h-5 text-primary" />
-            Share
-            <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground font-normal">
+      <DialogContent className="w-full max-w-[90vw] md:max-w-lg p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <DialogHeader className="px-5 pt-5 pb-4 border-b border-border shrink-0">
+          <DialogTitle className="flex items-center gap-2.5 text-base font-bold">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Send className="w-4 h-4 text-primary" />
+            </div>
+            Share Post
+            <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground font-normal bg-secondary px-2.5 py-1 rounded-full">
               {getVisibilityIcon()}
               {postVisibility}
             </span>
@@ -281,268 +284,279 @@ export const ShareDialog = ({
         </DialogHeader>
 
         {!canShare ? (
-          <div className="py-8 text-center text-muted-foreground">
-            <Lock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">{shareRestriction}</p>
+          <div className="py-12 text-center text-muted-foreground px-6">
+            <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
+              <Lock className="w-7 h-7 opacity-40" />
+            </div>
+            <p className="font-semibold text-foreground mb-1">Sharing Restricted</p>
+            <p className="text-sm">{shareRestriction}</p>
           </div>
         ) : (
           <Tabs defaultValue="timeline" className="w-full flex-1 flex flex-col overflow-hidden">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="timeline" className="text-xs sm:text-sm">Timeline</TabsTrigger>
-              <TabsTrigger value="story" className="text-xs sm:text-sm">Story</TabsTrigger>
-              <TabsTrigger value="external" className="text-xs sm:text-sm">External</TabsTrigger>
+            <TabsList className="mx-5 mt-4 shrink-0 grid grid-cols-3 bg-secondary rounded-xl h-9">
+              <TabsTrigger value="timeline" className="rounded-lg text-xs font-medium gap-1.5">
+                <Send className="w-3 h-3" />Timeline
+              </TabsTrigger>
+              <TabsTrigger value="story" className="rounded-lg text-xs font-medium gap-1.5">
+                <BookImage className="w-3 h-3" />Story
+              </TabsTrigger>
+              <TabsTrigger value="external" className="rounded-lg text-xs font-medium gap-1.5">
+                <ExternalLink className="w-3 h-3" />External
+              </TabsTrigger>
             </TabsList>
-            
-            {/* Share to Timeline */}
-            <TabsContent value="timeline" className="flex-1 overflow-hidden flex flex-col mt-4">
-              <ScrollArea className="flex-1 pr-2">
-                {/* Share Target Selection */}
-                <div className="space-y-4 mb-4">
-                  <Label className="text-sm font-medium">Share to Timeline</Label>
-                  <RadioGroup 
-                    value={shareTarget} 
-                    onValueChange={(v) => setShareTarget(v as ShareTargetType)}
-                    className="space-y-3"
+
+            {/* ── Timeline Tab ── */}
+            <TabsContent value="timeline" className="flex-1 overflow-hidden flex flex-col mt-0 px-5 pt-4">
+              <ScrollArea className="h-[calc(90vh-255px)]">
+                <RadioGroup
+                  value={shareTarget}
+                  onValueChange={(v) => setShareTarget(v as ShareTargetType)}
+                  className="space-y-2 mb-4"
+                >
+                  {/* My Timeline */}
+                  <label
+                    htmlFor="timeline"
+                    className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                      shareTarget === 'timeline'
+                        ? 'border-primary bg-primary/8 shadow-sm'
+                        : 'border-border hover:border-primary/40 hover:bg-accent'
+                    }`}
                   >
-                    {/* My Timeline - Prominent Option */}
-                    <div className="flex items-center space-x-3 p-4 rounded-xl border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 cursor-pointer transition-all">
-                      <RadioGroupItem value="timeline" id="timeline" />
-                      <Label htmlFor="timeline" className="flex items-center gap-3 cursor-pointer flex-1">
-                        <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                          <AvatarImage src={user?.user_metadata?.avatar_url} />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            <FileText className="w-5 h-5" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-semibold">My Timeline</div>
-                          <div className="text-xs text-muted-foreground">Share with your followers</div>
-                        </div>
-                      </Label>
+                    <RadioGroupItem value="timeline" id="timeline" className="shrink-0" />
+                    <Avatar className="w-10 h-10 ring-2 ring-primary/20 shrink-0">
+                      <AvatarImage src={user?.user_metadata?.avatar_url} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+                        {user?.user_metadata?.full_name?.[0] || 'M'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm leading-tight">My Timeline</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Share with your followers</p>
                     </div>
+                  </label>
 
-                    {/* Groups */}
-                    {groups.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
-                          <RadioGroupItem value="group" id="group" />
-                          <Label htmlFor="group" className="flex items-center gap-3 cursor-pointer flex-1">
-                            <Users className="w-8 h-8 p-1.5 bg-primary/10 rounded-full text-primary" />
-                            <span>Group</span>
-                          </Label>
+                  {/* Groups */}
+                  {groups.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="group"
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          shareTarget === 'group'
+                            ? 'border-primary bg-primary/8'
+                            : 'border-border hover:border-primary/40 hover:bg-accent'
+                        }`}
+                      >
+                        <RadioGroupItem value="group" id="group" className="shrink-0" />
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Users className="w-4.5 h-4.5 text-primary" />
                         </div>
-                        
-                        {shareTarget === 'group' && (
-                          <div className="ml-8 space-y-1">
-                            {groups.map((group: any) => (
-                              <div 
-                                key={group.id}
-                                onClick={() => setSelectedGroupId(group.id)}
-                                className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                                  selectedGroupId === group.id 
-                                    ? 'bg-primary/10 border-primary border' 
-                                    : 'hover:bg-accent border border-transparent'
-                                }`}
-                              >
-                                <Avatar className="w-6 h-6">
-                                  <AvatarImage src={group.avatar_url} />
-                                  <AvatarFallback>{group.name?.[0]}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm truncate">{group.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Pages */}
-                    {myPages && myPages.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent cursor-pointer">
-                          <RadioGroupItem value="page" id="page" />
-                          <Label htmlFor="page" className="flex items-center gap-3 cursor-pointer flex-1">
-                            <FileText className="w-8 h-8 p-1.5 bg-blue-500/10 rounded-full text-blue-500" />
-                            <span>Page</span>
-                          </Label>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm">Group</p>
+                          <p className="text-xs text-muted-foreground">{groups.length} group{groups.length !== 1 ? 's' : ''}</p>
                         </div>
-                        
-                        {shareTarget === 'page' && (
-                          <div className="ml-8 space-y-1">
-                            {myPages.map((page) => (
-                              <div 
-                                key={page.id}
-                                onClick={() => setSelectedPageId(page.id)}
-                                className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                                  selectedPageId === page.id 
-                                    ? 'bg-primary/10 border-primary border' 
-                                    : 'hover:bg-accent border border-transparent'
-                                }`}
-                              >
-                                <Avatar className="w-6 h-6">
-                                  <AvatarImage src={page.avatar_url || undefined} />
-                                  <AvatarFallback>{page.name?.[0]}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm truncate">{page.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </RadioGroup>
-                </div>
+                      </label>
+                      {shareTarget === 'group' && (
+                        <div className="ml-4 pl-3 border-l-2 border-primary/20 space-y-1">
+                          {groups.map((group: any) => (
+                            <div
+                              key={group.id}
+                              onClick={() => setSelectedGroupId(group.id)}
+                              className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer transition-colors text-sm ${
+                                selectedGroupId === group.id
+                                  ? 'bg-primary/10 text-primary font-medium'
+                                  : 'hover:bg-accent'
+                              }`}
+                            >
+                              <Avatar className="w-6 h-6 shrink-0">
+                                <AvatarImage src={group.avatar_url} />
+                                <AvatarFallback className="text-xs">{group.name?.[0]}</AvatarFallback>
+                              </Avatar>
+                              <span className="truncate">{group.name}</span>
+                              {selectedGroupId === group.id && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                {/* Comment */}
+                  {/* Pages */}
+                  {myPages && myPages.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="page"
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          shareTarget === 'page'
+                            ? 'border-primary bg-primary/8'
+                            : 'border-border hover:border-primary/40 hover:bg-accent'
+                        }`}
+                      >
+                        <RadioGroupItem value="page" id="page" className="shrink-0" />
+                        <div className="w-9 h-9 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                          <FileText className="w-4.5 h-4.5 text-blue-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm">Page</p>
+                          <p className="text-xs text-muted-foreground">{myPages.length} page{myPages.length !== 1 ? 's' : ''}</p>
+                        </div>
+                      </label>
+                      {shareTarget === 'page' && (
+                        <div className="ml-4 pl-3 border-l-2 border-blue-500/20 space-y-1">
+                          {myPages.map((page) => (
+                            <div
+                              key={page.id}
+                              onClick={() => setSelectedPageId(page.id)}
+                              className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer transition-colors text-sm ${
+                                selectedPageId === page.id
+                                  ? 'bg-blue-500/10 text-blue-600 font-medium'
+                                  : 'hover:bg-accent'
+                              }`}
+                            >
+                              <Avatar className="w-6 h-6 shrink-0">
+                                <AvatarImage src={page.avatar_url || undefined} />
+                                <AvatarFallback className="text-xs">{page.name?.[0]}</AvatarFallback>
+                              </Avatar>
+                              <span className="truncate">{page.name}</span>
+                              {selectedPageId === page.id && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </RadioGroup>
+
+                {/* Comment box */}
                 <Textarea
                   value={shareComment}
                   onChange={(e) => setShareComment(e.target.value)}
-                  placeholder="Add a comment (optional)..."
-                  className="min-h-[80px] resize-none"
+                  placeholder="Write something about this post..."
+                  className="min-h-[80px] resize-none text-sm bg-secondary border-0 focus-visible:ring-1 rounded-xl placeholder:text-muted-foreground/60"
                 />
               </ScrollArea>
-              
-              <Button 
-                onClick={handleShareToTimeline} 
-                disabled={isSharing || (shareTarget === 'group' && !selectedGroupId) || (shareTarget === 'page' && !selectedPageId)}
-                className="w-full gap-2 mt-4"
-              >
-                <Send className="w-4 h-4" />
-                {shareTarget === 'timeline' ? 'Share to Timeline' : 
-                 shareTarget === 'group' ? 'Share to Group' : 'Share to Page'}
-              </Button>
+
+              {/* Action button */}
+              <div className="pt-3 pb-2 shrink-0">
+                <Button
+                  onClick={handleShareToTimeline}
+                  disabled={isSharing || (shareTarget === 'group' && !selectedGroupId) || (shareTarget === 'page' && !selectedPageId)}
+                  className="w-full gap-2 h-11 text-sm font-semibold rounded-xl bg-gradient-primary shadow-glow"
+                >
+                  <Send className="w-4 h-4" />
+                  {isSharing ? 'Sharing...' : shareTarget === 'timeline' ? 'Share to Timeline' : shareTarget === 'group' ? 'Share to Group' : 'Share to Page'}
+                </Button>
+              </div>
             </TabsContent>
 
-            {/* Share to Story */}
-            <TabsContent value="story" className="space-y-4 mt-4">
-              <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-4 rounded-xl border border-purple-500/20 mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <BookImage className="w-5 h-5 text-purple-500" />
-                  <h3 className="font-semibold text-purple-700 dark:text-purple-300">Share to Story</h3>
+            {/* ── Story Tab ── */}
+            <TabsContent value="story" className="flex flex-col gap-4 mt-0 px-5 pt-4 pb-2 overflow-y-auto max-h-[calc(90vh-130px)]">
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                <div className="w-9 h-9 rounded-full bg-purple-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                  <BookImage className="w-4.5 h-4.5 text-purple-500" />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Add this book to your story for 24-hour visibility
-                </p>
+                <div>
+                  <p className="font-semibold text-sm text-purple-700 dark:text-purple-300">Share to Story</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Visible to your followers for 24 hours</p>
+                </div>
               </div>
-              
+
               {postVisibility !== 'public' && (
-                <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
-                  <Lock className="w-4 h-4 inline mr-2" />
-                  Only public posts can be shared to stories
+                <div className="flex items-center gap-2 p-3 bg-destructive/8 text-destructive rounded-xl text-sm border border-destructive/20">
+                  <Lock className="w-4 h-4 shrink-0" />
+                  <span>Only public posts can be shared to stories</span>
                 </div>
               )}
-              
+
               <Textarea
                 value={shareComment}
                 onChange={(e) => setShareComment(e.target.value)}
-                placeholder="Add caption..."
-                className="min-h-[60px] resize-none"
+                placeholder="Add a caption to your story..."
+                className="min-h-[80px] resize-none bg-secondary border-0 focus-visible:ring-1 rounded-xl text-sm"
                 disabled={postVisibility !== 'public'}
               />
-              
-              <Button 
-                onClick={handleShareToStory} 
+
+              <Button
+                onClick={handleShareToStory}
                 disabled={isSharing || !postImage || postVisibility !== 'public'}
-                className="w-full gap-2"
+                className="w-full gap-2 h-11 font-semibold rounded-xl"
               >
                 <BookImage className="w-4 h-4" />
-                Share to Story
+                {isSharing ? 'Sharing...' : 'Share to Story'}
               </Button>
-              
+
               {!postImage && postVisibility === 'public' && (
-                <p className="text-xs text-muted-foreground text-center">
+                <p className="text-xs text-muted-foreground text-center -mt-1">
                   Only posts with images can be shared to stories
                 </p>
               )}
             </TabsContent>
 
-            {/* External Share */}
-            <TabsContent value="external" className="space-y-4 mt-4">
-              <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-4 rounded-xl border border-blue-500/20 mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <ExternalLink className="w-5 h-5 text-blue-500" />
-                  <h3 className="font-semibold text-blue-700 dark:text-blue-300">Share Externally</h3>
+            {/* ── External Tab ── */}
+            <TabsContent value="external" className="flex flex-col gap-4 mt-0 px-5 pt-4 pb-2 overflow-y-auto max-h-[calc(90vh-130px)]">
+              {postVisibility === 'private' ? (
+                <div className="flex items-center gap-2 p-3 bg-destructive/8 text-destructive rounded-xl text-sm border border-destructive/20">
+                  <Lock className="w-4 h-4 shrink-0" />
+                  <span>Private content cannot be shared externally</span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Share this book on external platforms and social media
-                </p>
-              </div>
-              
-              {postVisibility === 'private' && (
-                <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm mb-4">
-                  <Lock className="w-4 h-4 inline mr-2" />
-                  Private content cannot be shared externally
-                </div>
-              )}
-              
+              ) : null}
+
               {/* Copy Link */}
-              <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg">
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-secondary rounded-xl border border-border">
+                <Link className="w-4 h-4 text-muted-foreground shrink-0" />
                 <input
                   type="text"
                   value={postUrl}
                   readOnly
-                  className="flex-1 text-sm bg-transparent outline-none truncate"
+                  className="flex-1 text-xs bg-transparent outline-none truncate text-muted-foreground"
                 />
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleCopyLink}
-                  className="shrink-0 gap-2"
+                  className={`shrink-0 h-7 px-2.5 text-xs gap-1 rounded-lg font-medium transition-colors ${copied ? 'text-green-600 bg-green-500/10' : ''}`}
                   disabled={postVisibility === 'private'}
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? 'Copied!' : 'Copy'}
                 </Button>
               </div>
 
-              {/* Share Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleShareToMessenger}
-                  className="gap-2"
-                  disabled={postVisibility === 'private'}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Messenger
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleExternalShare('whatsapp')}
-                  className="gap-2 text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-                  disabled={postVisibility === 'private'}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  WhatsApp
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleExternalShare('facebook')}
-                  className="gap-2 text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-                  disabled={postVisibility === 'private'}
-                >
-                  <Facebook className="w-4 h-4" />
-                  Facebook
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleExternalShare('twitter')}
-                  className="gap-2 text-sky-500 border-sky-500 hover:bg-sky-50 dark:hover:bg-sky-950"
-                  disabled={postVisibility === 'private'}
-                >
-                  <Twitter className="w-4 h-4" />
-                  Twitter
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleExternalShare('email')}
-                  className="gap-2 col-span-2"
-                  disabled={postVisibility === 'private'}
-                >
-                  <Mail className="w-4 h-4" />
-                  Email
-                </Button>
+              {/* Share platform buttons */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: 'Messenger', icon: MessageCircle, color: 'text-blue-500', bg: 'bg-blue-500/10', action: handleShareToMessenger },
+                  { label: 'WhatsApp', icon: ExternalLink, color: 'text-green-500', bg: 'bg-green-500/10', action: () => handleExternalShare('whatsapp') },
+                  { label: 'Facebook', icon: Facebook, color: 'text-blue-600', bg: 'bg-blue-600/10', action: () => handleExternalShare('facebook') },
+                  { label: 'Twitter', icon: Twitter, color: 'text-sky-500', bg: 'bg-sky-500/10', action: () => handleExternalShare('twitter') },
+                ].map(({ label, icon: Icon, color, bg, action }) => (
+                  <button
+                    key={label}
+                    onClick={action}
+                    disabled={postVisibility === 'private'}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-border hover:bg-accent transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    <div className={`w-10 h-10 rounded-full ${bg} flex items-center justify-center`}>
+                      <Icon className={`w-5 h-5 ${color}`} />
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground leading-tight">{label}</span>
+                  </button>
+                ))}
               </div>
+
+              <button
+                onClick={() => handleExternalShare('email')}
+                disabled={postVisibility === 'private'}
+                className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-accent transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <div className="w-9 h-9 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <Mail className="w-4.5 h-4.5 text-orange-500" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-xs text-muted-foreground">Share via email</p>
+                </div>
+                <ExternalLink className="w-4 h-4 text-muted-foreground ml-auto" />
+              </button>
             </TabsContent>
           </Tabs>
         )}

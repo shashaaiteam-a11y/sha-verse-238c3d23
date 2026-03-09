@@ -222,11 +222,25 @@ export const useBookInteractions = (bookId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["book", bookId] });
-      // Don't invalidate entire books list
+      queryClient.invalidateQueries({ queryKey: ["books", "detail", bookId] });
     },
     onError: (error) => {
       console.error("Download increment failed:", error);
       toast.error("Failed to update download count");
+    },
+  });
+
+  // Increment view count — only once per session per book
+  const incrementView = useMutation({
+    mutationFn: async () => {
+      if (!bookId) return;
+      const sessionKey = `book_viewed_${bookId}`;
+      if (sessionStorage.getItem(sessionKey)) return; // already counted this session
+      await (supabase as any).rpc('increment_book_views', { book_id: bookId });
+      sessionStorage.setItem(sessionKey, '1');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["books", "detail", bookId] });
     },
   });
 
@@ -287,6 +301,7 @@ export const useBookInteractions = (bookId?: string) => {
     submitRating,
     updateProgress,
     incrementDownload,
+    incrementView,
     submitDeletionRequest,
   };
 };

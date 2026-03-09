@@ -58,7 +58,16 @@ const BookDetailPage = () => {
     toggleSave,
     updateProgress,
     incrementDownload,
+    incrementView,
   } = useBookInteractions(id);
+
+  // Increment view count once per session when book loads
+  useEffect(() => {
+    if (book && id) {
+      incrementView.mutate();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book?.id]);
 
   // Sync initial reading state from progress
   useEffect(() => {
@@ -66,12 +75,6 @@ const BookDetailPage = () => {
       setCurrentPage(readingProgress.current_page);
     }
   }, [readingProgress, isReading]);
-
-  useEffect(() => {
-    if (book && !isReading) {
-      // Increment view count handled by backend or other mechanism usually
-    }
-  }, [book, isReading]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -245,10 +248,19 @@ const BookDetailPage = () => {
                             {book.channel.name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium">{book.channel.name}</p>
-                          <p className="text-sm text-muted-foreground">Author Channel</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatCount(book.channel.subscribers_count ?? 0)} subscribers
+                          </p>
                         </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/bookshelf/channel/${book.channel!.id}`)}
+                        >
+                          View Channel
+                        </Button>
                       </div>
                     )}
 

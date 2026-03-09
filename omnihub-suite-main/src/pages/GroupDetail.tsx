@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useGroupPosts } from '@/hooks/useGroupPosts';
 import { useGroups } from '@/hooks/useGroups';
+import { useGroupAdmin } from '@/hooks/useGroupAdmin';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,18 +44,49 @@ const GroupPostReactions = ({ postId }: { postId: string }) => {
   );
 };
 // ── Helper: upload any file to Supabase Storage ──────────────────────────
-async function uploadToStorage(bucket: string, file: File, folder = ''): Promise<string> {
+async function uploadToStorage(
+  bucket: string,
+  file: File,
+  userId: string,
+  folder = '',
+  onProgress?: (pct: number) => void,
+): Promise<string> {
   const ext = file.name.split('.').pop();
-  const path = `${folder}${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  // Path must start with userId to satisfy RLS: auth.uid()::text = (storage.foldername(name))[1]
+  const path = `${userId}/${folder}${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  // Use XHR for real upload-progress events
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
   const sb = supabase as any;
-  console.log('Uploading to bucket:', bucket, 'path:', path, 'file:', file.name, 'size:', file.size);
-  const { error, data: uploadData } = await sb.storage.from(bucket).upload(path, file);
-  if (error) {
-    console.error('Upload error:', error.message, error);
-    throw error;
-  }
-  console.log('Upload success:', uploadData);
-  const { data } = sb.storage.from(bucket).getPublicUrl(path);
+  const baseUrl: string = sb.supabaseUrl ?? 'https://plmhjuqedtkiffzhberf.supabase.co';
+  const projectUrl = `${baseUrl}/storage/v1`;
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${projectUrl}/object/${bucket}/${path}`);
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('x-upsert', 'false');
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else {
+        let msg = xhr.statusText;
+        try { msg = JSON.parse(xhr.responseText)?.message ?? msg; } catch {}
+        reject(new Error(msg));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    const fd = new FormData();
+    fd.append('', file, path.split('/').pop());
+    xhr.send(fd);
+  });
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }
 
@@ -75,6 +107,9 @@ const GroupDetail = () => {
   const { shareGroupPost } = useShares();
   const { isPostSaved, toggleSavePost } = useSavedPosts();
   const { toast } = useToast();
+  
+  // Need group admin right to change images here
+  const { isAdmin, uploadImage } = useGroupAdmin(groupId);
 
   // Post composer state
   const [newPost, setNewPost] = useState('');
@@ -84,12 +119,15 @@ const GroupDetail = () => {
   const [postFileName, setPostFileName] = useState<string>();
   const [postFileType, setPostFileType] = useState<string>();
   const [isUploading, setIsUploading]   = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingFileName, setUploadingFileName] = useState('');
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef  = useRef<HTMLInputElement>(null);
 
   const [shareDialogPost, setShareDialogPost] = useState<{ id: string; content: string; image?: string } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const isMember = (myGroups as any[])?.some((m: any) => m.groups?.id === groupId);
   const memberRole = (myGroups as any[])?.find((m: any) => m.groups?.id === groupId)?.role;
@@ -98,40 +136,67 @@ const GroupDetail = () => {
   // ── Upload handlers ────────────────────────────────────────────────────
   const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
-    setIsUploading(true);
+    if (!user) return;
+    setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
     try {
-      const url = await uploadToStorage('post-images', file, 'group-posts/');
+      const url = await uploadToStorage('post-images', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
       setPostImage(url);
       // clear other media
       setPostVideo(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
     } catch (err: any) { console.error('Image upload error:', err); toast({ title: 'Image upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); e.target.value = ''; }
+    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
   };
 
   const handleVideoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
+    if (!user) return;
     if (file.size > 200 * 1024 * 1024) { toast({ title: 'Max video size is 200 MB', variant: 'destructive' }); return; }
-    setIsUploading(true);
+    setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
     try {
-      const url = await uploadToStorage('videos', file, 'group-posts/');
+      const url = await uploadToStorage('videos', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
       setPostVideo(url);
       setPostImage(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
     } catch (err: any) { console.error('Video upload error:', err); toast({ title: 'Video upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); e.target.value = ''; }
+    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
   };
 
   const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
+    if (!user) return;
     if (file.size > 50 * 1024 * 1024) { toast({ title: 'Max file size is 50 MB', variant: 'destructive' }); return; }
-    setIsUploading(true);
+    setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
     try {
-      const url = await uploadToStorage('post-files', file, 'group-posts/');
+      const url = await uploadToStorage('post-files', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
       setPostFile(url);
       setPostFileName(file.name);
       setPostFileType(file.type);
       setPostImage(undefined); setPostVideo(undefined);
     } catch (err: any) { console.error('File upload error:', err); toast({ title: 'File upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); e.target.value = ''; }
+    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && isAdmin) {
+      if (!groupId) return;
+      try {
+        await uploadImage.mutateAsync({ file, type: 'avatar' });
+      } catch (err: any) {
+        // Error handled in hook 
+      }
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && isAdmin) {
+      if (!groupId) return;
+      try {
+        await uploadImage.mutateAsync({ file, type: 'cover' });
+      } catch (err: any) {
+        // Error handled in hook
+      }
+    }
   };
 
   const clearMedia = () => {
@@ -196,22 +261,61 @@ const GroupDetail = () => {
       </header>
 
       {/* Cover & Info */}
-      <div className="relative max-w-3xl mx-auto">
-        <div
-          className="h-32 sm:h-40 bg-gradient-primary"
+      <div className="relative max-w-3xl mx-auto group/cover">
+        <label 
+          htmlFor="cover-upload"
+          className={`block h-32 sm:h-40 bg-gradient-primary relative ${isAdmin ? 'cursor-pointer' : ''}`}
           style={
             (group as any).cover_url
               ? { backgroundImage: `url(${(group as any).cover_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
               : {}
           }
-        />
-        <div className="px-3 sm:px-4 -mt-10 sm:-mt-12 mb-3 sm:mb-4 flex items-end gap-3 sm:gap-4">
-          <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-3 sm:border-4 border-card shadow-lg flex-shrink-0">
-            {(group as any).avatar_url && <AvatarImage src={(group as any).avatar_url} />}
-            <AvatarFallback className="bg-gradient-accent text-accent-foreground text-xl sm:text-2xl font-bold">
-              {(group as any).name?.[0]}
-            </AvatarFallback>
-          </Avatar>
+        >
+          {isAdmin && (
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white flex items-center gap-2 font-medium">
+                <ImagePlus className="w-5 h-5" /> 
+                {uploadImage.isPending ? 'Uploading...' : 'Change Cover'}
+              </span>
+            </div>
+          )}
+        </label>
+        {isAdmin && (
+          <input 
+            type="file" 
+            id="cover-upload" 
+            accept="image/*" 
+            className="hidden" 
+            onChange={handleCoverUpload} 
+            disabled={uploadImage.isPending}
+          />
+        )}
+        
+        <div className="px-3 sm:px-4 -mt-10 sm:-mt-12 mb-3 sm:mb-4 flex items-end gap-3 sm:gap-4 group/avatar relative z-10">
+          <label htmlFor="avatar-upload" className={`relative rounded-full shadow-lg ${isAdmin ? 'cursor-pointer' : ''}`}>
+            <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-3 sm:border-4 border-card flex-shrink-0">
+              {(group as any).avatar_url && <AvatarImage src={(group as any).avatar_url} />}
+              <AvatarFallback className="bg-gradient-accent text-accent-foreground text-xl sm:text-2xl font-bold">
+                {(group as any).name?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            {isAdmin && (
+              <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center border-3 sm:border-4 border-transparent">
+                <ImagePlus className="w-6 h-6 text-white" />
+              </div>
+            )}
+          </label>
+          {isAdmin && (
+            <input 
+              type="file" 
+              id="avatar-upload" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={handleAvatarUpload}
+              disabled={uploadImage.isPending}
+            />
+          )}
+
           <div className="flex-1 min-w-0 pb-1 sm:pb-2">
             <h2 className="text-xl sm:text-2xl font-bold truncate">{(group as any).name}</h2>
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
@@ -266,6 +370,22 @@ const GroupDetail = () => {
                 className="flex-1 bg-secondary resize-none text-sm rounded-lg border-0 focus-visible:ring-1 min-h-[36px] py-2"
               />
             </div>
+
+            {/* ── Upload Progress ── */}
+            {isUploading && (
+              <div className="mb-2 rounded-lg border border-border bg-secondary/40 p-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+                  <span className="truncate max-w-[70%]">Uploading: {uploadingFileName}</span>
+                  <span className="font-semibold text-primary">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-200"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* ── Media Previews ── */}
             {(postImage || postVideo || postFile) && (
@@ -440,8 +560,15 @@ const GroupDetail = () => {
 
                 {/* Image */}
                 {post.image_url && (
-                  <div className="mb-3 -mx-3 sm:-mx-4">
-                    <img src={post.image_url} alt="Post" className="w-full max-h-[300px] sm:max-h-[400px] object-cover" />
+                  <div
+                    className="mb-3 -mx-3 sm:-mx-4 bg-black cursor-zoom-in"
+                    onClick={() => setLightboxImage(post.image_url)}
+                  >
+                    <img
+                      src={post.image_url}
+                      alt="Post"
+                      className="w-full max-h-[500px] object-contain"
+                    />
                   </div>
                 )}
 
@@ -477,18 +604,24 @@ const GroupDetail = () => {
                   </a>
                 )}
 
-                <div className="flex items-center gap-4 sm:gap-6 pt-3 border-t border-border">
-                  <GroupPostReactions postId={post.id} />
-                  <button className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground hover:text-primary transition-colors">
-                    <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-xs sm:text-sm">{post.comments_count}</span>
-                  </button>
-                  <button 
-                    onClick={() => setShareDialogPost({ id: post.id, content: post.content, image: post.image_url })}
-                    className="text-muted-foreground hover:text-primary transition-colors ml-auto"
-                  >
-                    <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <div className="flex-1 flex items-center justify-around">
+                    <GroupPostReactions postId={post.id} />
+                    <button
+                      className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all rounded-lg px-3 py-2 font-medium"
+                      onClick={() => {/* toggle comments */}}
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                      <span className="text-sm">Comment</span>
+                    </button>
+                    <button
+                      onClick={() => setShareDialogPost({ id: post.id, content: post.content, image: post.image_url })}
+                      className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all rounded-lg px-3 py-2 font-medium"
+                    >
+                      <Share2 className="w-5 h-5" />
+                      <span className="text-sm">Share</span>
+                    </button>
+                  </div>
                 </div>
 
                 <PostComments postId={post.id} type="group_post" commentsCount={post.comments_count || 0} />
@@ -511,6 +644,27 @@ const GroupDetail = () => {
           postContent={shareDialogPost.content}
           postImage={shareDialogPost.image}
         />
+      )}
+
+      {/* Lightbox */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/80 transition-colors"
+            onClick={() => setLightboxImage(null)}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain p-4"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
     </div>
   );

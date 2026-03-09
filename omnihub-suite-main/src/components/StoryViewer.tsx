@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, MessageCircle } from "lucide-react";
+import { X, Pause, Play, Trash2, Eye, Heart, Send, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,17 +122,18 @@ const StoryViewer = ({ storyGroup, onClose }: StoryViewerProps) => {
       setViewCount((prev) => prev + 1);
     }
 
-    // Fallback: if media doesn't load within 2 seconds, show error
+    // Fallback: if media doesn't load within 8 seconds, silently advance
     const fallbackTimeoutId = setTimeout(() => {
       setMediaLoaded((prevLoaded) => {
         if (!prevLoaded) {
-          console.warn("Media fallback timeout - showing error");
-          setMediaError(true);
+          console.warn("Media fallback timeout - advancing");
+          mediaDurationRef.current = 1000; // advance quickly
+          setMediaError(false);
           return true;
         }
         return prevLoaded;
       });
-    }, 2000);
+    }, 8000);
 
     return () => clearTimeout(fallbackTimeoutId);
   }, [currentIndex, currentStory?.id]);
@@ -183,10 +184,10 @@ const StoryViewer = ({ storyGroup, onClose }: StoryViewerProps) => {
   // Handle media error
   const handleMediaError = () => {
     console.error("Media load error for:", currentStory?.media_url);
-    setMediaError(true);
+    // Don't show error screen — just silently advance to next story
+    mediaDurationRef.current = 500;
+    setMediaError(false);
     setMediaLoaded(true);
-    // Keep showing error for 10 seconds so user can see the message
-    mediaDurationRef.current = 10000;
   };
 
   // Handle text story loaded
@@ -369,13 +370,7 @@ const StoryViewer = ({ storyGroup, onClose }: StoryViewerProps) => {
 
         {/* Story content */}
         <div className="w-full h-full flex items-center justify-center flex-1">
-          {mediaError ? (
-            <div className="w-full h-full flex flex-col items-center justify-center text-white text-center p-8 bg-gradient-to-b from-gray-800 to-gray-900">
-              <p className="text-lg mb-2">Unable to load media</p>
-              <p className="text-sm text-white/70 mb-4">The story content could not be displayed</p>
-              <p className="text-xs text-white/50">Tap right to go to next story</p>
-            </div>
-          ) : (currentStory.story_type === "text" || currentStory.media_type === "text") ? (
+          {(currentStory.story_type === "text" || currentStory.media_type === "text") ? (
             <div
               className="w-full h-full flex items-center justify-center p-8"
               style={{ background: currentStory.background_color || "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}
@@ -430,13 +425,13 @@ const StoryViewer = ({ storyGroup, onClose }: StoryViewerProps) => {
           <span className="text-sm font-medium">{viewCount} views</span>
         </div>
 
-        {/* Navigation areas */}
+        {/* Navigation areas - Instagram style: left half = prev, right half = next */}
         <div
-          className="absolute left-0 top-0 bottom-20 w-1/3 z-30 cursor-pointer"
+          className="absolute left-0 top-0 bottom-24 w-1/2 z-30 cursor-pointer"
           onClick={goToPrevious}
         />
         <div
-          className="absolute right-0 top-0 bottom-20 w-1/3 z-30 cursor-pointer"
+          className="absolute right-0 top-0 bottom-24 w-1/2 z-30 cursor-pointer"
           onClick={goToNext}
         />
 
@@ -540,27 +535,7 @@ const StoryViewer = ({ storyGroup, onClose }: StoryViewerProps) => {
             </div>
           )}
 
-        {/* Navigation arrows */}
-        {currentIndex > 0 && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-40"
-            onClick={goToPrevious}
-          >
-            <ChevronLeft className="w-8 h-8" />
-          </Button>
-        )}
-        {currentIndex < storyGroup.stories.length - 1 && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-40"
-            onClick={goToNext}
-          >
-            <ChevronRight className="w-8 h-8" />
-          </Button>
-        )}
+
       </div>
     </div>
   );

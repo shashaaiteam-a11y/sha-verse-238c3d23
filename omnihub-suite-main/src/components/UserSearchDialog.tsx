@@ -66,7 +66,7 @@ export const UserSearchDialog = () => {
           <Search className="w-5 h-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md p-6">
         <DialogHeader>
           <DialogTitle>Search Users</DialogTitle>
         </DialogHeader>

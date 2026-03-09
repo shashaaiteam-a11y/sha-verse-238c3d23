@@ -126,9 +126,14 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
       </div>
 
       {/* Footer */}
-      <p className="text-xs text-muted-foreground mt-10 text-center">
-        NovaChat can make mistakes. Consider checking important information.
-      </p>
+      <div className="mt-10 flex flex-col items-center gap-1.5 pb-4">
+        <p className="text-xs text-muted-foreground text-center">
+          NovaChat can make mistakes. Consider checking important information.
+        </p>
+        <p className="text-xs text-center font-semibold text-primary/80">
+          🚀 Coming Soon: Sha-Verse's NovaChat will arrive with even more powerful features!
+        </p>
+      </div>
     </div>
   );
 };

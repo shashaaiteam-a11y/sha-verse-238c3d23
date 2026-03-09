@@ -106,9 +106,9 @@ const ChatMessage = ({
               {role === 'user' ? 'You' : 'NovaChat'}
             </span>
             {isStreaming && role === 'assistant' && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                Generating...
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
+                <Pencil className="w-3.5 h-3.5 text-emerald-500 animate-bounce" style={{ animationDuration: '0.8s' }} />
+                <span>Writing...</span>
               </span>
             )}
           </div>

@@ -78,7 +78,7 @@ export const useBookComments = (bookId?: string) => {
 
       // ✅ Use atomic increment function to update comment count
       if (bookId && !(newComment as any).parent_id) {
-        (supabase.rpc as any)('increment_book_comment_count', { book_id: bookId });
+        (supabase.rpc as any)('increment_book_comment_count', { p_book_id: bookId });
       }
 
       toast.success("Comment added successfully!");
@@ -137,7 +137,7 @@ export const useBookComments = (bookId?: string) => {
 
       // Update book's comment count
       if (bookId) {
-        (supabase.rpc as any)('decrement_book_comment_count', { book_id: bookId });
+        (supabase.rpc as any)('decrement_book_comment_count', { p_book_id: bookId });
       }
 
       toast.success("Comment deleted");

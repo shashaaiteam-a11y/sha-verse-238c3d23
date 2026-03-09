@@ -21,6 +21,11 @@ export const useGroupPosts = (groupId?: string) => {
           id,
           content,
           image_url,
+          video_url,
+          file_url,
+          file_name,
+          file_type,
+          post_type,
           likes_count,
           comments_count,
           created_at,
@@ -116,13 +121,11 @@ export const useGroupPosts = (groupId?: string) => {
         content: content || '',
       };
       if (imageUrl) insertData.image_url = imageUrl;
-      // Note: video_url, file_url, file_name, file_type, post_type require schema cache refresh
-      // Uncomment below after running: Supabase Dashboard → Project Settings → API → Reload schema cache
-      // if (videoUrl) insertData.video_url = videoUrl;
-      // if (fileUrl) insertData.file_url = fileUrl;
-      // if (fileName) insertData.file_name = fileName;
-      // if (fileType) insertData.file_type = fileType;
-      // if (postType) insertData.post_type = postType;
+      if (videoUrl) insertData.video_url = videoUrl;
+      if (fileUrl) insertData.file_url = fileUrl;
+      if (fileName) insertData.file_name = fileName;
+      if (fileType) insertData.file_type = fileType;
+      if (postType) insertData.post_type = postType;
 
       const { error } = await sb
         .from('group_posts')

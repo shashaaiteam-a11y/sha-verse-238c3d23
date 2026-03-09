@@ -66,33 +66,33 @@ CREATE POLICY "Users can unlike own likes"
 ON public.comment_likes FOR DELETE USING (auth.uid() = user_id);
 
 -- Function to increment book comment count
-CREATE OR REPLACE FUNCTION public.increment_book_comment_count(book_id UUID)
+CREATE OR REPLACE FUNCTION public.increment_book_comment_count(p_book_id UUID)
 RETURNS VOID AS $$
 BEGIN
   UPDATE public.books 
   SET comments_count = comments_count + 1 
-  WHERE id = book_id;
+  WHERE id = p_book_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to decrement book comment count
-CREATE OR REPLACE FUNCTION public.decrement_book_comment_count(book_id UUID)
+CREATE OR REPLACE FUNCTION public.decrement_book_comment_count(p_book_id UUID)
 RETURNS VOID AS $$
 BEGIN
   UPDATE public.books 
   SET comments_count = GREATEST(0, comments_count - 1) 
-  WHERE id = book_id;
+  WHERE id = p_book_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get comment likes count
-CREATE OR REPLACE FUNCTION public.comment_likes_count(comment_id UUID)
+CREATE OR REPLACE FUNCTION public.comment_likes_count(p_comment_id UUID)
 RETURNS INTEGER AS $$
 BEGIN
   RETURN (
-    SELECT COUNT(*) 
+    SELECT COUNT(*)::int 
     FROM public.comment_likes 
-    WHERE comment_id = comment_id
+    WHERE comment_id = p_comment_id
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

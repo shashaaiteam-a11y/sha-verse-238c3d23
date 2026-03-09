@@ -29,6 +29,7 @@ export interface Book {
     name: string;
     avatar_url: string | null;
     user_id: string;
+    subscribers_count?: number;
   };
 }
 

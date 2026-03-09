@@ -1,8 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { 
-  MoreVertical, Search, Trash2, Bell, BellOff, 
-  UserX, Flag, Share2
-} from 'lucide-react';
+import { MoreVertical, Search, Trash2, UserX } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,32 +7,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
+import { useProfileSettings } from '@/hooks/useProfileSettings';
 
 interface ChatHeaderMenuProps {
   conversationId: string;
+  otherUserId?: string;
   otherUserName: string;
+  onClearChat?: () => void;
+  onSearchToggle?: () => void;
 }
 
-export const ChatHeaderMenu = ({ conversationId, otherUserName }: ChatHeaderMenuProps) => {
-  const handleMuteNotifications = () => {
-    toast.success('Notifications muted for this chat');
-  };
-
-  const handleSearch = () => {
-    toast.info('Search in chat coming soon');
-  };
-
-  const handleClearChat = () => {
-    toast.info('Clear chat coming soon');
-  };
+export const ChatHeaderMenu = ({
+  conversationId,
+  otherUserId,
+  otherUserName,
+  onClearChat,
+  onSearchToggle,
+}: ChatHeaderMenuProps) => {
+  const { blockUser } = useProfileSettings();
 
   const handleBlock = () => {
-    toast.info(`Block ${otherUserName} coming soon`);
-  };
-
-  const handleReport = () => {
-    toast.info('Report coming soon');
+    if (!otherUserId) return;
+    blockUser.mutate({ userId: otherUserId, reason: 'Blocked from chat' });
   };
 
   return (
@@ -46,16 +39,12 @@ export const ChatHeaderMenu = ({ conversationId, otherUserName }: ChatHeaderMenu
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={handleSearch}>
+        <DropdownMenuItem onClick={onSearchToggle}>
           <Search className="w-4 h-4 mr-3" />
           Search in chat
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleMuteNotifications}>
-          <BellOff className="w-4 h-4 mr-3" />
-          Mute notifications
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleClearChat}>
+        <DropdownMenuItem onClick={onClearChat}>
           <Trash2 className="w-4 h-4 mr-3" />
           Clear chat
         </DropdownMenuItem>
@@ -63,10 +52,6 @@ export const ChatHeaderMenu = ({ conversationId, otherUserName }: ChatHeaderMenu
         <DropdownMenuItem onClick={handleBlock} className="text-destructive">
           <UserX className="w-4 h-4 mr-3" />
           Block {otherUserName}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleReport} className="text-destructive">
-          <Flag className="w-4 h-4 mr-3" />
-          Report
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -189,10 +189,7 @@ const ChatInput = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-[10px] sm:text-[11px] text-muted-foreground text-center">
-          NovaChat can make mistakes. Consider checking important information.
-        </p>
+
       </div>
     </div>
   );

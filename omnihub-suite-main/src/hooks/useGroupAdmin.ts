@@ -304,11 +304,55 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-details', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] }); // refresh GroupDetail display
       toast({ title: 'Group settings updated!' });
     },
     onError: (error: any) => {
       toast({ title: 'Failed to update group', description: error.message, variant: 'destructive' });
     },
+  });
+
+  // Upload group image helper
+  const uploadImage = useMutation({
+    mutationFn: async ({ file, type }: { file: File, type: 'avatar' | 'cover' }) => {
+      if (!groupId) throw new Error('No group ID');
+      
+      if (!user) throw new Error('Not authenticated');
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${groupId}-${type}-${Date.now()}.${fileExt}`;
+      // Path must start with userId to satisfy RLS policy
+      const filePath = `${user.id}/groups/${fileName}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Instantly update the group with the new URL
+      const updateData = type === 'avatar' 
+        ? { avatar_url: publicUrl }
+        : { cover_url: publicUrl };
+        
+      await updateGroup.mutateAsync(updateData);
+      
+      return publicUrl;
+    },
+    onSuccess: (_, { type }) => {
+      toast({ title: `${type === 'avatar' ? 'Profile' : 'Cover'} image updated successfully!` });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Upload failed', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    }
   });
 
   // Approve join request
@@ -561,6 +605,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     pendingPosts,
     insights,
     updateGroup,
+    uploadImage,
     approveJoinRequest,
     rejectJoinRequest,
     removeMember,

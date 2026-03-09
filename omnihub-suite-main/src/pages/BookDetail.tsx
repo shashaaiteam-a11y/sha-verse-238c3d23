@@ -56,7 +56,6 @@ const BookDetail = () => {
       return data;
     },
     enabled: !!bookId,
-    refetchInterval: 30000, // ✅ Optimized: Refetch every 30 seconds (reduced from 3s)
   });
 
   // Fetch channel metrics (total views and downloads from all books in the channel)
@@ -83,8 +82,71 @@ const BookDetail = () => {
       };
     },
     enabled: !!book?.channel?.id,
-    refetchInterval: 30000, // ✅ Optimized: Updates every 30 seconds (reduced from 3s)
   });
+
+  // Setup Realtime Subscriptions for live stats
+  useEffect(() => {
+    if (!book?.channel?.id || !bookId) return;
+
+    // Listen to current book changes (likes, views, etc)
+    const bookChannel = supabase
+      .channel(`book-${bookId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'books',
+          filter: `id=eq.${bookId}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+        }
+      )
+      .subscribe();
+
+    // Listen to ALL books in this channel (to update total channel metrics instantly)
+    const channelBooks = supabase
+      .channel(`channel-books-${book.channel.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'books',
+          filter: `channel_id=eq.${book.channel.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["channelMetrics", book.channel.id] });
+        }
+      )
+      .subscribe();
+
+    // Listen to channel changes itself (e.g. subscriber count changes)
+    const channelStats = supabase
+      .channel(`channel-stats-${book.channel.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'channels',
+          filter: `id=eq.${book.channel.id}`
+        },
+        () => {
+          // Invalidate both because book query includes channel subscriber_count in its join
+          queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+          queryClient.invalidateQueries({ queryKey: ["channelMetrics", book.channel.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookChannel);
+      supabase.removeChannel(channelBooks);
+      supabase.removeChannel(channelStats);
+    };
+  }, [book?.channel?.id, bookId, queryClient]);
 
   // Track view when book is loaded
   useEffect(() => {

@@ -87,7 +87,7 @@ const UploadBookDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
           <DialogTitle>Upload Book</DialogTitle>
         </DialogHeader>
