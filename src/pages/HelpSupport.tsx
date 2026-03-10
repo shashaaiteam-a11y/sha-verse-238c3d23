@@ -96,7 +96,7 @@ const HelpSupport = () => {
     
     setSendingFeedback(true);
     try {
-      const { data, error } = await supabase.from('user_feedback').insert({
+      const { data, error } = await (supabase.from('user_feedback') as any).insert({
         user_id: user.id,
         message: feedbackMessage.trim(),
         type: 'feedback',
