@@ -73,11 +73,11 @@ export const useGroups = () => {
 
   // Search groups
   const searchGroups = async (query: string, filters?: { country?: string; language?: string; category?: string }) => {
-    let q: any = supabase
-      .from('groups')
+    let q: any = (supabase
+      .from('groups') as any)
       .select(GROUP_SELECT)
-      .eq('is_suspended' as any, false)
-      .neq('privacy' as any, 'invite_only')
+      .eq('is_suspended', false)
+      .neq('privacy', 'invite_only')
       .ilike('name', `%${query}%`)
       .order('members_count', { ascending: false })
       .limit(30);
