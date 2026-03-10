@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          is_archived: boolean | null
           title: string | null
           updated_at: string | null
           user_id: string
@@ -25,6 +26,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          is_archived?: boolean | null
           title?: string | null
           updated_at?: string | null
           user_id: string
@@ -32,6 +34,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          is_archived?: boolean | null
           title?: string | null
           updated_at?: string | null
           user_id?: string
@@ -1162,6 +1165,7 @@ export type Database = {
           id: string
           joined_at: string | null
           role: string | null
+          status: string | null
           user_id: string
         }
         Insert: {
@@ -1169,6 +1173,7 @@ export type Database = {
           id?: string
           joined_at?: string | null
           role?: string | null
+          status?: string | null
           user_id: string
         }
         Update: {
@@ -1176,6 +1181,7 @@ export type Database = {
           id?: string
           joined_at?: string | null
           role?: string | null
+          status?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1191,6 +1197,59 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          edited: boolean | null
+          group_id: string
+          id: string
+          is_deleted: boolean | null
+          media_type: string | null
+          media_url: string | null
+          profiles: Json | null
+          reactions: Json | null
+          reply_to: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          edited?: boolean | null
+          group_id: string
+          id?: string
+          is_deleted?: boolean | null
+          media_type?: string | null
+          media_url?: string | null
+          profiles?: Json | null
+          reactions?: Json | null
+          reply_to?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          edited?: boolean | null
+          group_id?: string
+          id?: string
+          is_deleted?: boolean | null
+          media_type?: string | null
+          media_url?: string | null
+          profiles?: Json | null
+          reactions?: Json | null
+          reply_to?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
@@ -1251,6 +1310,56 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          group_id: string
+          id: string
+          reason: string
+          reported_post_id: string | null
+          reported_user_id: string | null
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          group_id: string
+          id?: string
+          reason: string
+          reported_post_id?: string | null
+          reported_user_id?: string | null
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          group_id?: string
+          id?: string
+          reason?: string
+          reported_post_id?: string | null
+          reported_user_id?: string | null
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_reports_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
@@ -1342,6 +1451,41 @@ export type Database = {
           },
           {
             foreignKeyName: "group_rules_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_user_warnings: {
+        Row: {
+          created_at: string | null
+          group_id: string
+          id: string
+          reason: string
+          user_id: string
+          warned_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          group_id: string
+          id?: string
+          reason: string
+          user_id: string
+          warned_by: string
+        }
+        Update: {
+          created_at?: string | null
+          group_id?: string
+          id?: string
+          reason?: string
+          user_id?: string
+          warned_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_user_warnings_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
@@ -1568,6 +1712,7 @@ export type Database = {
           created_at: string | null
           edited: boolean | null
           id: string
+          is_read: boolean | null
           metadata: Json | null
           sender_id: string | null
         }
@@ -1577,6 +1722,7 @@ export type Database = {
           created_at?: string | null
           edited?: boolean | null
           id?: string
+          is_read?: boolean | null
           metadata?: Json | null
           sender_id?: string | null
         }
@@ -1586,6 +1732,7 @@ export type Database = {
           created_at?: string | null
           edited?: boolean | null
           id?: string
+          is_read?: boolean | null
           metadata?: Json | null
           sender_id?: string | null
         }
