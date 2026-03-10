@@ -12,6 +12,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useProfile } from "@/hooks/useProfile";
+import { useSavedPosts } from "@/hooks/useSavedPosts";
+import { useFriends } from "@/hooks/useFriends";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   Menu,
   Home,
@@ -39,6 +42,12 @@ const AppMenu = () => {
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
   const { theme, setTheme } = useTheme();
+  const { savedPosts } = useSavedPosts();
+  const { pendingRequests } = useFriends();
+  const { unreadCount } = useNotifications();
+
+  const savedCount = savedPosts?.length || 0;
+  const pendingCount = pendingRequests?.length || 0;
 
   const mainModules = [
     { icon: Home, label: "Home", path: "/", color: "text-blue-500" },
@@ -50,9 +59,9 @@ const AppMenu = () => {
   ];
 
   const shortcuts = [
-    { icon: Bookmark, label: "Saved Posts", path: "/saved" },
-    { icon: UserPlus, label: "Friends", path: "/friends" },
-    { icon: Bell, label: "Notifications", path: "/notifications" },
+    { icon: Bookmark, label: "Saved Posts", path: "/saved", badge: savedCount },
+    { icon: UserPlus, label: "Friends", path: "/friends", badge: pendingCount },
+    { icon: Bell, label: "Notifications", path: "/notifications", badge: unreadCount },
   ];
 
   const handleNavigate = (path: string) => {
@@ -127,16 +136,24 @@ const AppMenu = () => {
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             Shortcuts
           </h4>
-          {shortcuts.map(({ icon: Icon, label, path }) => (
+          {shortcuts.map(({ icon: Icon, label, path, badge }) => (
             <button
               key={path}
               onClick={() => handleNavigate(path)}
               className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-secondary transition-colors"
             >
-              <div className="p-2 rounded-full bg-secondary">
+              <div className="relative p-2 rounded-full bg-secondary">
                 <Icon className="w-4 h-4" />
+                {badge > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-1">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </div>
-              <span className="text-sm font-medium">{label}</span>
+              <span className="text-sm font-medium flex-1 text-left">{label}</span>
+              {badge > 0 && (
+                <span className="text-xs text-muted-foreground">{badge}</span>
+              )}
             </button>
           ))}
         </div>

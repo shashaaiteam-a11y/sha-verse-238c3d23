@@ -11,71 +11,143 @@ import {
   Mail, Phone, ChevronRight
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const HelpSupport = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [sendingFeedback, setSendingFeedback] = useState(false);
 
   const helpCategories = [
-    { icon: Users, label: "Account & Profile", color: "text-blue-500" },
-    { icon: Shield, label: "Privacy & Security", color: "text-green-500" },
-    { icon: MessageCircle, label: "Messages & Chat", color: "text-purple-500" },
-    { icon: Video, label: "Movion (Videos)", color: "text-red-500" },
-    { icon: BookOpen, label: "Bookshelf", color: "text-orange-500" },
-    { icon: Settings, label: "Settings", color: "text-gray-500" },
+    { icon: Users, label: "Account & Profile", color: "text-blue-500", keywords: ["profile", "account", "friend", "add", "photo", "picture"] },
+    { icon: Shield, label: "Privacy & Security", color: "text-green-500", keywords: ["block", "privacy", "password", "security", "delete account"] },
+    { icon: MessageCircle, label: "Messages & Chat", color: "text-purple-500", keywords: ["message", "chat"] },
+    { icon: Video, label: "Movion (Videos)", color: "text-red-500", keywords: ["video", "upload", "movion"] },
+    { icon: BookOpen, label: "Bookshelf", color: "text-orange-500", keywords: ["book"] },
+    { icon: Settings, label: "Settings", color: "text-gray-500", keywords: ["settings", "report", "group"] },
   ];
 
   const faqs = [
     {
       question: "How do I change my profile picture?",
-      answer: "Go to your Profile page, tap on your current profile picture, and select 'Change Photo' to upload a new image from your device or take a new photo."
+      answer: "Go to your Profile page, tap on your current profile picture, and select 'Change Photo' to upload a new image from your device or take a new photo.",
+      category: "Account & Profile"
     },
     {
       question: "How do I add friends?",
-      answer: "You can add friends by searching for their name in the search bar, visiting their profile, and tapping the 'Add Friend' button. They will receive a friend request notification."
+      answer: "You can add friends by searching for their name in the search bar, visiting their profile, and tapping the 'Add Friend' button. They will receive a friend request notification.",
+      category: "Account & Profile"
     },
     {
       question: "How do I block someone?",
-      answer: "Visit the user's profile, tap the three-dot menu, and select 'Block'. Blocked users cannot see your posts, send you messages, or tag you."
+      answer: "Visit the user's profile, tap the three-dot menu, and select 'Block'. Blocked users cannot see your posts, send you messages, or tag you.",
+      category: "Privacy & Security"
     },
     {
       question: "How do I delete my account?",
-      answer: "Go to Settings & Privacy > Security > Deactivate Account. Note that account deletion is permanent and cannot be undone after 30 days."
+      answer: "Go to Settings & Privacy > Security > Deactivate Account. Note that account deletion is permanent and cannot be undone after 30 days.",
+      category: "Privacy & Security"
     },
     {
       question: "How do I upload videos to Movion?",
-      answer: "Go to the Movion section, tap the upload button (+ icon), select your video file, add a title and description, then tap 'Upload'. Your video will be processed and published."
+      answer: "Go to the Movion section, tap the upload button (+ icon), select your video file, add a title and description, then tap 'Upload'. Your video will be processed and published.",
+      category: "Movion (Videos)"
     },
     {
       question: "How do I create a Group?",
-      answer: "Go to the Groups section, tap 'Create Group', enter your group name and description, set privacy settings, and invite members."
+      answer: "Go to the Groups section, tap 'Create Group', enter your group name and description, set privacy settings, and invite members.",
+      category: "Settings"
     },
     {
       question: "How do I report inappropriate content?",
-      answer: "Tap the three-dot menu on any post or profile and select 'Report'. Choose the reason for reporting and submit. Our team will review it within 24-48 hours."
+      answer: "Tap the three-dot menu on any post or profile and select 'Report'. Choose the reason for reporting and submit. Our team will review it within 24-48 hours.",
+      category: "Settings"
     },
     {
       question: "How do I change my password?",
-      answer: "Go to Settings & Privacy > Privacy & Security, tap on the Security tab, and use the 'Change Password' section to update your password."
+      answer: "Go to Settings & Privacy > Privacy & Security, tap on the Security tab, and use the 'Change Password' section to update your password.",
+      category: "Privacy & Security"
     },
   ];
 
-  const filteredFaqs = faqs.filter(
-    faq => 
+  const filteredFaqs = faqs.filter(faq => {
+    const matchesSearch = !searchQuery || 
       faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || faq.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-  const handleSendFeedback = () => {
-    if (!feedbackMessage.trim()) return;
+  const handleSendFeedback = async () => {
+    if (!feedbackMessage.trim() || !user) return;
     
-    toast({
-      title: "Feedback sent!",
-      description: "Thank you for your feedback. We'll review it soon.",
+    // Duplicate prevention: check if same feedback was just sent
+    const feedbackHash = `feedback_${user.id}_${feedbackMessage.trim().substring(0, 50)}`;
+    const lastSent = sessionStorage.getItem(feedbackHash);
+    if (lastSent && Date.now() - parseInt(lastSent) < 5000) {
+      toast({ title: "Please wait", description: "Your feedback is being processed." });
+      return;
+    }
+    
+    setSendingFeedback(true);
+    try {
+      const { data, error } = await supabase.from('user_feedback').insert({
+        user_id: user.id,
+        message: feedbackMessage.trim(),
+        type: 'feedback',
+      }).select();
+      
+      if (error) throw error;
+      
+      // Mark as sent in session storage
+      sessionStorage.setItem(feedbackHash, Date.now().toString());
+      
+      toast({ 
+        title: "✓ Feedback sent!", 
+        description: "Thank you for your feedback. Our team will review it and respond within 24 hours." 
+      });
+      setFeedbackMessage("");
+    } catch (error) {
+      console.error('Feedback submission error:', error);
+      // Retry once on error
+      try {
+        await supabase.from('user_feedback').insert({
+          user_id: user.id,
+          message: feedbackMessage.trim(),
+          type: 'feedback',
+        });
+        sessionStorage.setItem(feedbackHash, Date.now().toString());
+        toast({ 
+          title: "✓ Feedback sent!", 
+          description: "Thank you for your feedback. Our team will review it and respond within 24 hours." 
+        });
+        setFeedbackMessage("");
+      } catch (retryError) {
+        console.error('Feedback retry failed:', retryError);
+        toast({ 
+          title: "Unable to send feedback", 
+          description: "Please check your connection and try again.",
+          variant: "destructive"
+        });
+      }
+    } finally {
+      setSendingFeedback(false);
+    }
+  };
+
+  const handleEmailSupport = () => {
+    // Show toast feedback
+    toast({ 
+      title: "Opening email client...", 
+      description: "shashaaiteam@gmail.com" 
     });
-    setFeedbackMessage("");
+    // Open email with production support email
+    window.location.href = 'mailto:shashaaiteam@gmail.com?subject=Support%20Request';
   };
 
   return (
@@ -109,7 +181,12 @@ const HelpSupport = () => {
             {helpCategories.map(({ icon: Icon, label, color }) => (
               <Card 
                 key={label}
-                className="p-4 cursor-pointer hover:bg-secondary/50 transition-colors"
+                className={`p-4 cursor-pointer transition-colors ${
+                  selectedCategory === label 
+                    ? 'bg-primary/10 border-primary/30 ring-1 ring-primary/20' 
+                    : 'hover:bg-secondary/50'
+                }`}
+                onClick={() => setSelectedCategory(selectedCategory === label ? null : label)}
               >
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-full bg-secondary ${color}`}>
@@ -120,6 +197,14 @@ const HelpSupport = () => {
               </Card>
             ))}
           </div>
+          {selectedCategory && (
+            <button 
+              onClick={() => setSelectedCategory(null)} 
+              className="text-xs text-primary hover:underline mt-2"
+            >
+              Clear filter
+            </button>
+          )}
         </div>
 
         {/* FAQs */}
@@ -149,26 +234,14 @@ const HelpSupport = () => {
             Contact Us
           </h2>
           <Card className="divide-y divide-border">
-            <button className="flex items-center w-full p-4 hover:bg-secondary/50 transition-colors">
+            <button onClick={handleEmailSupport} className="flex items-center w-full p-4 hover:bg-secondary/50 transition-colors">
               <div className="flex items-center gap-3 flex-1">
                 <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
                   <Mail className="w-5 h-5 text-blue-500" />
                 </div>
                 <div className="text-left">
                   <p className="font-medium text-sm">Email Support</p>
-                  <p className="text-xs text-muted-foreground">support@sha-verse.com</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </button>
-            <button className="flex items-center w-full p-4 hover:bg-secondary/50 transition-colors">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                  <MessageCircle className="w-5 h-5 text-green-500" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-sm">Live Chat</p>
-                  <p className="text-xs text-muted-foreground">Chat with support team</p>
+                  <p className="text-xs text-muted-foreground">shashaaiteam@gmail.com</p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -191,9 +264,9 @@ const HelpSupport = () => {
             <Button 
               className="w-full"
               onClick={handleSendFeedback}
-              disabled={!feedbackMessage.trim()}
+              disabled={!feedbackMessage.trim() || sendingFeedback}
             >
-              Send Feedback
+              {sendingFeedback ? 'Sending...' : 'Send Feedback'}
             </Button>
           </Card>
         </div>

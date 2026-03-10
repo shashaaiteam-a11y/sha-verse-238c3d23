@@ -10,11 +10,13 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
+import { useToast } from "@/components/ui/use-toast";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
 
   const settingsGroups = [
     {
@@ -55,7 +57,9 @@ const Settings = () => {
           icon: Globe,
           label: "Language",
           description: "English (US)",
-          onClick: () => {}
+          onClick: () => {
+            toast({ title: 'Language', description: 'English (US) is currently the only available language.' });
+          }
         },
       ]
     },
@@ -84,7 +88,7 @@ const Settings = () => {
           icon: Mail,
           label: "Contact Us",
           description: "Send us feedback",
-          onClick: () => {}
+          onClick: () => navigate("/help")
         },
       ]
     }
