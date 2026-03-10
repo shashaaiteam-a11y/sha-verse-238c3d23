@@ -114,6 +114,7 @@ export const useCreatorMotions = (channelId?: string) => {
 
 // Get creator stats summary
 export const useCreatorStats = (channelId?: string) => {
+  const queryClient = useQueryClient();
   const { data: stats, isLoading } = useQuery({
     queryKey: ['creator-stats', channelId],
     queryFn: async () => {

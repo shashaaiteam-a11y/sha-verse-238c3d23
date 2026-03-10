@@ -508,8 +508,8 @@ const StoryViewer = ({ storyGroup, onClose }: StoryViewerProps) => {
           {!isOwnStory && (
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
-                <AvatarImage src={user?.avatar_url || ""} />
-                <AvatarFallback>{user?.display_name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={(user as any)?.avatar_url || ""} />
+                <AvatarFallback>{(user as any)?.display_name?.charAt(0) || "U"}</AvatarFallback>
               </Avatar>
               <Input
                 placeholder="Reply to this story..."
