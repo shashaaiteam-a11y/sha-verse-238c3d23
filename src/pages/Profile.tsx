@@ -676,9 +676,8 @@ const Profile = () => {
                 <h3 className="font-semibold text-xl mb-6">About</h3>
                 
                 {/* Overview Section */}
-                {(() => { const privacy = profile?.privacy as any; return (
                 <div className="space-y-4">
-                  {shouldShowInfo(privacy?.about_me, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.about_me && (
+                  {shouldShowInfo((profile?.privacy as any)?.about_me, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.about_me && (
                     <div className="pb-4 border-b border-border">
                       <p className="text-sm text-muted-foreground">{profile.about_me}</p>
                     </div>
