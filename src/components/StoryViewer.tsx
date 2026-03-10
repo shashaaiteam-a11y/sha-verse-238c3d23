@@ -534,7 +534,7 @@ const StoryViewer = ({ storyGroup, onClose }: StoryViewerProps) => {
               )}
             </div>
           )}
-
+        </div>
 
       </div>
     </div>
