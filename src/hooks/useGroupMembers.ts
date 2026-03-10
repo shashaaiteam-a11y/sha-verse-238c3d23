@@ -97,7 +97,7 @@ export const useGroupMembers = (groupId?: string) => {
       const { error } = await supabase.from('group_user_warnings').insert({
         group_id: groupId!,
         user_id: userId,
-        issued_by: user!.id,
+        issued_by: user!.id as any,
         reason,
       });
       if (error) throw error;
