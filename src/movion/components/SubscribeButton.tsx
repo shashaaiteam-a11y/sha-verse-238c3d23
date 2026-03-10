@@ -3,8 +3,11 @@ import { Heart } from 'lucide-react';
 import { useMovionSubscriptions } from '@/movion/hooks/useMovionSubscriptions';
 import { useToast } from '@/hooks/use-toast';
 
-interface SubscribeButtonProps {
+export interface SubscribeButtonProps {
   channelId: string;
+  channelOwnerId?: string;
+  variant?: string;
+  dropdownPosition?: string;
   className?: string;
 }
 

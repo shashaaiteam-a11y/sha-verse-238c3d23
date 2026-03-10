@@ -45,7 +45,7 @@ export const useGroupChat = (groupId?: string) => {
         .order('created_at', { ascending: false })
         .range(from, to);
       if (error) throw error;
-      return (data || []) as GroupMessage[];
+      return (data || []) as unknown as GroupMessage[];
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>

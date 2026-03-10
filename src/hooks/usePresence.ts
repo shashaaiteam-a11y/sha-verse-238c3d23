@@ -37,12 +37,12 @@ export const usePresence = (channelName: string = 'global-presence') => {
         setOnlineUsers(flatState);
       })
       .on('presence', { event: 'join' }, ({ newPresences }) => {
-        newPresences.forEach((p: UserPresence) => {
-          setOnlineUsers(prev => ({ ...prev, [p.user_id]: p }));
+        newPresences.forEach((p: any) => {
+          setOnlineUsers(prev => ({ ...prev, [p.user_id]: p as UserPresence }));
         });
       })
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        leftPresences.forEach((p: UserPresence) => {
+        leftPresences.forEach((p: any) => {
           setOnlineUsers(prev => {
             const next = { ...prev };
             delete next[p.user_id];
