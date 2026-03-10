@@ -1206,11 +1206,15 @@ export type Database = {
           content: string
           created_at: string | null
           edited: boolean | null
+          file_name: string | null
+          file_url: string | null
           group_id: string
           id: string
+          image_url: string | null
           is_deleted: boolean | null
           media_type: string | null
           media_url: string | null
+          message_type: string | null
           profiles: Json | null
           reactions: Json | null
           reply_to: string | null
@@ -1220,11 +1224,15 @@ export type Database = {
           content: string
           created_at?: string | null
           edited?: boolean | null
+          file_name?: string | null
+          file_url?: string | null
           group_id: string
           id?: string
+          image_url?: string | null
           is_deleted?: boolean | null
           media_type?: string | null
           media_url?: string | null
+          message_type?: string | null
           profiles?: Json | null
           reactions?: Json | null
           reply_to?: string | null
@@ -1234,11 +1242,15 @@ export type Database = {
           content?: string
           created_at?: string | null
           edited?: boolean | null
+          file_name?: string | null
+          file_url?: string | null
           group_id?: string
           id?: string
+          image_url?: string | null
           is_deleted?: boolean | null
           media_type?: string | null
           media_url?: string | null
+          message_type?: string | null
           profiles?: Json | null
           reactions?: Json | null
           reply_to?: string | null
@@ -3196,6 +3208,36 @@ export type Database = {
           },
         ]
       }
+      user_feedback: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          message: string
+          status: string | null
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          message: string
+          status?: string | null
+          subject: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          message?: string
+          status?: string | null
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           id: string
@@ -3704,6 +3746,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_member_warnings: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: undefined
       }
       is_conversation_member: {
         Args: { _conversation_id: string; _user_id: string }
