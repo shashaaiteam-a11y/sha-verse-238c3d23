@@ -252,7 +252,7 @@ const ChannelPage = () => {
         open={showShareDialog}
         onOpenChange={setShowShareDialog}
         postId={channelId || ''}
-        postType="channel"
+        postType={"video" as any}
         postContent={channel.name}
         postImage={channel.avatar_url}
       />

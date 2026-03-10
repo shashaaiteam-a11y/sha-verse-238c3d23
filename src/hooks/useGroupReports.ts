@@ -39,7 +39,7 @@ export const useGroupReports = (groupId?: string) => {
       details?: string;
     }) => {
       if (!user || !groupId) throw new Error('Not ready');
-      const { error } = await supabase.from('group_reports').insert({
+      const { error } = await (supabase.from('group_reports') as any).insert({
         group_id: groupId,
         reported_by: user.id,
         target_type: targetType,

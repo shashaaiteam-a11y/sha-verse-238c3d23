@@ -116,7 +116,7 @@ const HelpSupport = () => {
       console.error('Feedback submission error:', error);
       // Retry once on error
       try {
-        await supabase.from('user_feedback').insert({
+        await (supabase.from('user_feedback') as any).insert({
           user_id: user.id,
           message: feedbackMessage.trim(),
           type: 'feedback',

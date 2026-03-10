@@ -102,7 +102,7 @@ export const useGroupMembers = (groupId?: string) => {
       });
       if (error) throw error;
       // Increment warning count
-      const { error: err2 } = await supabase.rpc('increment_member_warnings', {
+      const { error: err2 } = await supabase.rpc('increment_member_warnings' as any, {
         p_group_id: groupId!,
         p_user_id: userId,
       });
