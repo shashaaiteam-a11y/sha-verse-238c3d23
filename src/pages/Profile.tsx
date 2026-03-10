@@ -684,7 +684,7 @@ const Profile = () => {
                   )}
 
                   <div className="space-y-4">
-                    {shouldShowInfo(profile?.privacy?.work, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.work && (
+                    {shouldShowInfo((profile?.privacy as any)?.work, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.work && (
                       <div className="flex items-start gap-4">
                         <Briefcase className="w-6 h-6 text-muted-foreground mt-0.5" />
                         <div>
@@ -693,7 +693,7 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {shouldShowInfo(profile?.privacy?.education, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.education && (
+                    {shouldShowInfo((profile?.privacy as any)?.education, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.education && (
                       <div className="flex items-start gap-4">
                         <GraduationCap className="w-6 h-6 text-muted-foreground mt-0.5" />
                         <div>
@@ -702,7 +702,7 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {shouldShowInfo(profile?.privacy?.location, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.current_city && (
+                    {shouldShowInfo((profile?.privacy as any)?.location, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.current_city && (
                       <div className="flex items-start gap-4">
                         <MapPin className="w-6 h-6 text-muted-foreground mt-0.5" />
                         <div>
@@ -711,7 +711,7 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {shouldShowInfo(profile?.privacy?.location, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.hometown && (
+                    {shouldShowInfo((profile?.privacy as any)?.location, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.hometown && (
                       <div className="flex items-start gap-4">
                         <HomeIcon className="w-6 h-6 text-muted-foreground mt-0.5" />
                         <div>
@@ -720,7 +720,7 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {shouldShowInfo(profile?.privacy?.relationship, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.relationship_status && (
+                    {shouldShowInfo((profile?.privacy as any)?.relationship, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.relationship_status && (
                       <div className="flex items-start gap-4">
                         <Heart className="w-6 h-6 text-muted-foreground mt-0.5" />
                         <div>
@@ -738,7 +738,7 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {shouldShowInfo(profile?.privacy?.birthdate, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.birthdate && (
+                    {shouldShowInfo((profile?.privacy as any)?.birthdate, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.birthdate && (
                       <div className="flex items-start gap-4">
                         <Cake className="w-6 h-6 text-muted-foreground mt-0.5" />
                         <div>
@@ -747,7 +747,7 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {shouldShowInfo(profile?.privacy?.phone, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.phone && (
+                    {shouldShowInfo((profile?.privacy as any)?.phone, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.phone && (
                       <div className="flex items-start gap-4">
                         <Phone className="w-6 h-6 text-muted-foreground mt-0.5" />
                         <div>
@@ -756,7 +756,7 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {shouldShowInfo(profile?.privacy?.website, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.website && (
+                    {shouldShowInfo((profile?.privacy as any)?.website, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.website && (
                       <div className="flex items-start gap-4">
                         <Globe className="w-6 h-6 text-muted-foreground mt-0.5" />
                         <div>
