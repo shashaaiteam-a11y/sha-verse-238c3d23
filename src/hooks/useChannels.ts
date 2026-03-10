@@ -291,8 +291,12 @@ export const useUpdateChannel = () => {
       toast.success('Channel updated!');
     },
   });
+};
 
-  // Realtime: channel subscriber count, new channels live
+// Realtime channel updates hook
+export const useChannelRealtime = (channelType: 'video' | 'books' = 'video') => {
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     const channel = supabase
       .channel(`channels-realtime-${channelType}`)

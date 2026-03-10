@@ -156,7 +156,7 @@ const Comment = ({
                 onClick={() => onLike(comment.id)}
               >
                 <ThumbsUp className={`w-3 h-3 mr-1 ${isLiked ? "fill-current" : ""}`} />
-                Like {comment.likes_count ? `(${comment.likes_count})` : ""}
+                Like {(comment as any).likes_count ? `(${(comment as any).likes_count})` : ""}
               </Button>
             )}
             
