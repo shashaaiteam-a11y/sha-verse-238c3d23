@@ -55,7 +55,7 @@ export const useGroups = () => {
         .eq('user_id', user.id);
       const joinedIds = joinedGroups?.map(g => g.group_id) || [];
 
-      let query = supabase
+      let query: any = supabase
         .from('groups')
         .select(GROUP_SELECT)
         .order('members_count', { ascending: false })
