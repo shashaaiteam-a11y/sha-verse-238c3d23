@@ -94,7 +94,7 @@ export const useGroupMembers = (groupId?: string) => {
 
   const issueWarning = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
-      const { error } = await supabase.from('group_user_warnings').insert({
+      const { error } = await (supabase.from('group_user_warnings') as any).insert({
         group_id: groupId!,
         user_id: userId,
         issued_by: user!.id as any,
