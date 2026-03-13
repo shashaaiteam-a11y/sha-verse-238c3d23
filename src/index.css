@@ -1,0 +1,488 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 220 30% 96%;
+    --foreground: 240 10% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 10%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 221 83% 65%;
+
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 10%;
+
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+
+    --accent: 14 100% 57%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 14 100% 70%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.75rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 83% 65%));
+    --gradient-accent: linear-gradient(135deg, hsl(14 100% 57%), hsl(14 100% 70%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 30% 97%), hsl(230 25% 94%));
+    
+    --shadow-sm: 0 2px 4px hsl(240 10% 10% / 0.05);
+    --shadow-md: 0 4px 12px hsl(240 10% 10% / 0.08);
+    --shadow-lg: 0 8px 24px hsl(240 10% 10% / 0.12);
+    --shadow-glow: 0 0 24px hsl(221 83% 53% / 0.3);
+
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Safe area insets */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+  }
+
+  .dark {
+    --background: 240 10% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 221 83% 65%;
+
+    --secondary: 240 10% 15%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 14 100% 57%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 14 100% 70%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 221 83% 53%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 83% 65%));
+    --gradient-accent: linear-gradient(135deg, hsl(14 100% 57%), hsl(14 100% 70%));
+    --gradient-subtle: linear-gradient(180deg, hsl(240 10% 8%), hsl(240 10% 10%));
+    
+    --shadow-sm: 0 2px 4px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 8px 24px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 32px hsl(221 83% 53% / 0.4);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+    overflow-x: hidden;
+  }
+
+  /* Safe area padding for iOS notch and home indicator */
+  .safe-top {
+    padding-top: var(--safe-area-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: var(--safe-area-bottom);
+  }
+
+  .safe-left {
+    padding-left: var(--safe-area-left);
+  }
+
+  .safe-right {
+    padding-right: var(--safe-area-right);
+  }
+
+  .safe-all {
+    padding-top: var(--safe-area-top);
+    padding-bottom: var(--safe-area-bottom);
+    padding-left: var(--safe-area-left);
+    padding-right: var(--safe-area-right);
+  }
+}
+
+@layer components {
+  /* Touch-friendly button targets (minimum 44px) */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .touch-target-lg {
+    @apply min-h-[48px] min-w-[48px];
+  }
+
+  .touch-target-xl {
+    @apply min-h-[56px] min-w-[56px];
+  }
+
+  /* Mobile card styles */
+  .mobile-card {
+    @apply rounded-lg bg-card p-4 shadow-sm;
+  }
+
+  /* Responsive container */
+  .container-mobile {
+    @apply w-full px-4 mx-auto;
+    max-width: min(100%, 1400px);
+  }
+
+  /* Pull to refresh indicator */
+  .pull-indicator {
+    @apply flex items-center justify-center py-4 text-muted-foreground;
+  }
+
+  /* Native-like transitions */
+  .page-transition {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  /* Smooth scrolling container */
+  .scroll-container {
+    @apply overflow-y-auto overflow-x-hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide,
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar,
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Movion Heart Pop Animation */
+  @keyframes heart-pop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+  }
+  
+  .animate-heart-pop {
+    animation: heart-pop 0.8s ease-out forwards;
+  }
+
+  /* Mobile-optimized grid layouts */
+  .grid-mobile {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  }
+
+  .grid-cards {
+    @apply grid gap-3;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
+  }
+
+  /* Sticky header with safe area */
+  .sticky-header {
+    @apply sticky top-0 z-40 bg-card/95 backdrop-blur-lg border-b border-border;
+    padding-top: var(--safe-area-top);
+  }
+
+  /* Bottom navigation with safe area */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border;
+    padding-bottom: var(--safe-area-bottom);
+  }
+
+  /* Ripple effect for touch feedback */
+  .ripple {
+    @apply relative overflow-hidden;
+  }
+
+  .ripple::after {
+    content: '';
+    @apply absolute inset-0 bg-foreground/10 opacity-0 transition-opacity duration-300;
+    pointer-events: none;
+  }
+
+  .ripple:active::after {
+    @apply opacity-100;
+  }
+
+  /* Swipe action container */
+  .swipe-container {
+    @apply overflow-hidden;
+    touch-action: pan-y;
+  }
+
+  /* Loading skeleton with animation */
+  .skeleton-pulse {
+    @apply animate-pulse bg-muted rounded;
+  }
+
+  /* Floating action button */
+  .fab {
+    @apply fixed z-50 rounded-full shadow-lg bg-gradient-primary text-primary-foreground;
+    @apply flex items-center justify-center touch-target-xl;
+    right: 16px;
+    bottom: calc(80px + var(--safe-area-bottom));
+  }
+
+  /* Modal/Dialog mobile optimizations */
+  .modal-mobile {
+    @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center;
+  }
+
+  .modal-content-mobile {
+    @apply w-full max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card;
+    @apply sm:max-w-lg sm:mx-4;
+  }
+
+  /* Input field mobile optimizations */
+  .input-mobile {
+    @apply h-12 text-base rounded-lg px-4;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  /* Action sheet style */
+  .action-sheet {
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl;
+    padding-bottom: var(--safe-area-bottom);
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(100%);
+    }
+  }
+
+  /* Page content with bottom nav spacing */
+  .page-content {
+    @apply min-h-screen pb-20;
+    padding-bottom: calc(5rem + var(--safe-area-bottom));
+  }
+
+  /* Responsive text sizes */
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+
+  .text-responsive-base {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-lg {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  .text-responsive-2xl {
+    @apply text-xl sm:text-2xl md:text-3xl;
+  }
+
+  /* Aspect ratio containers */
+  .aspect-video-mobile {
+    @apply aspect-video w-full;
+  }
+
+  .aspect-square-mobile {
+    @apply aspect-square w-full;
+  }
+
+  /* Image optimization */
+  .img-cover {
+    @apply w-full h-full object-cover;
+  }
+
+  .img-contain {
+    @apply w-full h-full object-contain;
+  }
+
+  /* Tap highlight */
+  .tap-highlight {
+    @apply active:bg-foreground/5 transition-colors;
+  }
+
+  /* Long press menu style */
+  .long-press-menu {
+    @apply absolute z-50 bg-card rounded-lg shadow-lg border border-border overflow-hidden;
+    min-width: 180px;
+  }
+
+  .long-press-item {
+    @apply px-4 py-3 text-sm hover:bg-muted active:bg-muted/80 flex items-center gap-3;
+  }
+}
+
+@layer utilities {
+  /* Disable text selection on mobile */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Hardware acceleration */
+  .gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Smooth transitions */
+  .transition-fast {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .transition-normal {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .transition-slow {
+    @apply transition-all duration-500 ease-out;
+  }
+
+  /* Spacing utilities for safe areas */
+  .mt-safe {
+    margin-top: var(--safe-area-top);
+  }
+
+  .mb-safe {
+    margin-bottom: var(--safe-area-bottom);
+  }
+
+  .pt-safe {
+    padding-top: var(--safe-area-top);
+  }
+
+  .pb-safe {
+    padding-bottom: var(--safe-area-bottom);
+  }
+
+  /* Responsive hiding */
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+
+  .desktop-only {
+    @apply hidden sm:block;
+  }
+
+  .tablet-up {
+    @apply hidden md:block;
+  }
+
+  /* Flexbox utilities for mobile */
+  .flex-mobile-col {
+    @apply flex flex-col sm:flex-row;
+  }
+
+  .flex-mobile-col-reverse {
+    @apply flex flex-col-reverse sm:flex-row;
+  }
+
+  /* Gap utilities for mobile */
+  .gap-mobile {
+    @apply gap-3 sm:gap-4 md:gap-6;
+  }
+
+  /* Padding utilities for mobile */
+  .p-mobile {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+
+  .px-mobile {
+    @apply px-3 sm:px-4 md:px-6;
+  }
+
+  .py-mobile {
+    @apply py-3 sm:py-4 md:py-6;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 240 10% 30%;
+  }
+}
+
+/* Dark mode system preference */
+@media (prefers-color-scheme: dark) {
+  html:not(.light) {
+    color-scheme: dark;
+  }
+}

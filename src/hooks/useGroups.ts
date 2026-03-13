@@ -1,0 +1,264 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+
+export type GroupPrivacy = 'public' | 'private' | 'invite_only';
+
+export interface CreateGroupPayload {
+  name: string;
+  description?: string;
+  privacy?: GroupPrivacy;
+  country?: string;
+  language?: string;
+  rules?: string;
+  category?: string;
+  avatarUrl?: string;
+  coverUrl?: string;
+}
+
+const GROUP_SELECT = `
+  id, name, description, avatar_url, cover_url,
+  is_private, members_count, posts_count,
+  created_at, creator_id
+`;
+
+export const useGroups = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch user's joined groups
+  const { data: myGroups, isLoading: myGroupsLoading } = useQuery({
+    queryKey: ['my-groups', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('group_members')
+        .select(`id, role, joined_at, groups (${GROUP_SELECT})`)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch suggested / discover groups
+  const { data: suggestedGroups, isLoading: suggestedLoading } = useQuery({
+    queryKey: ['suggested-groups', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data: joinedGroups } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user.id);
+      const joinedIds = joinedGroups?.map(g => g.group_id) || [];
+
+      let query: any = supabase
+        .from('groups')
+        .select(GROUP_SELECT)
+        .order('members_count', { ascending: false })
+        .limit(20);
+
+      if (joinedIds.length > 0) {
+        query = query.not('id', 'in', `(${joinedIds.join(',')})`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Search groups
+  const searchGroups = async (query: string, filters?: { country?: string; language?: string; category?: string }) => {
+    let q: any = (supabase
+      .from('groups') as any)
+      .select(GROUP_SELECT)
+      .eq('is_suspended', false)
+      .neq('privacy', 'invite_only')
+      .ilike('name', `%${query}%`)
+      .order('members_count', { ascending: false })
+      .limit(30);
+    if (filters?.country) q = q.eq('country', filters.country);
+    if (filters?.language) q = q.eq('language', filters.language);
+    if (filters?.category) q = q.eq('category', filters.category);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  };
+
+  // Create group mutation
+  const createGroup = useMutation({
+    mutationFn: async (payload: CreateGroupPayload) => {
+      if (!user) throw new Error('Not authenticated');
+
+      // Free user cap at 5 groups
+      const { count } = await supabase
+        .from('group_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('role', 'admin');
+      if ((count || 0) >= 5) throw new Error('You can create a maximum of 5 groups.');
+
+      const { data: group, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          name: payload.name,
+          description: payload.description,
+          is_private: (payload.privacy || 'public') !== 'public',
+          creator_id: user.id,
+          avatar_url: payload.avatarUrl || null,
+          cover_url: payload.coverUrl || null,
+        })
+        .select()
+        .single();
+      if (groupError) throw groupError;
+
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({ group_id: group.id, user_id: user.id, role: 'admin' });
+      if (memberError) throw memberError;
+
+      return group;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      toast({ title: 'Group created!' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to create group', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Join group mutation — handles public (direct join) vs private (join request)
+  const joinGroup = useMutation({
+    mutationFn: async ({ groupId, message }: { groupId: string; message?: string }) => {
+      if (!user) throw new Error('Not authenticated');
+
+      // Check group privacy
+      const { data: group } = await supabase
+        .from('groups')
+        .select('is_private, members_count')
+        .eq('id', groupId)
+        .single();
+
+      if (!group) throw new Error('Group not found');
+
+      if (!group.is_private) {
+        const { error } = await supabase
+          .from('group_members')
+          .insert({ group_id: groupId, user_id: user.id, role: 'member' });
+        if (error) throw error;
+        return { type: 'joined' };
+      } else {
+        // private → join request
+        const { error } = await supabase
+          .from('group_join_requests')
+          .insert({ group_id: groupId, user_id: user.id, message: message || null });
+        if (error) throw error;
+        return { type: 'requested' };
+      }
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
+      toast({ title: result.type === 'joined' ? 'Joined group!' : 'Join request sent!' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Leave group mutation
+  const leaveGroup = useMutation({
+    mutationFn: async (groupId: string) => {
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
+      toast({ title: 'Left group' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to leave group', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Delete group mutation (creator only)
+  const deleteGroup = useMutation({
+    mutationFn: async (groupId: string) => {
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', groupId)
+        .eq('creator_id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
+      toast({ title: 'Group deleted' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to delete group', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Update group (name/description/is_private)
+  const updateGroup = useMutation({
+    mutationFn: async ({ groupId, name, description, isPrivate }: { groupId: string; name: string; description?: string; isPrivate?: boolean }) => {
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('groups')
+        .update({ name, description: description || null, is_private: isPrivate ?? false })
+        .eq('id', groupId)
+        .eq('creator_id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      toast({ title: 'Group updated!' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to update group', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`groups-realtime-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `user_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'groups' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, queryClient]);
+
+  return {
+    myGroups,
+    myGroupsLoading,
+    suggestedGroups,
+    suggestedLoading,
+    searchGroups,
+    createGroup,
+    joinGroup,
+    leaveGroup,
+    deleteGroup,
+    updateGroup,
+  };
+};
