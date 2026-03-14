@@ -34,7 +34,6 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
 
@@ -44,7 +43,6 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
       }
     };
 
-    // Use setTimeout to avoid immediate close from the opening click
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 0);
@@ -55,7 +53,6 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // Close on escape key
   useEffect(() => {
     if (!isOpen) return;
 
@@ -82,7 +79,7 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
     <div
       ref={menuRef}
       className={cn(
-        "absolute top-full mt-1 w-56 bg-white border border-[#e5e5e5] rounded-xl shadow-2xl z-50 py-2",
+        "absolute top-full mt-1 w-56 bg-popover border border-border rounded-xl shadow-lg z-50 py-2",
         "animate-in fade-in slide-in-from-top-2 duration-200",
         position === 'right' ? 'right-0' : 'left-0'
       )}
@@ -90,23 +87,23 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
     >
       <button
         onClick={handleAction(onWatchLater)}
-        className="w-full px-4 py-2.5 text-left text-sm hover:bg-[#f2f2f2] flex items-center gap-3 transition-colors"
+        className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-3 transition-colors text-popover-foreground"
       >
-        <Clock size={18} className={isSavedInWatchLater ? 'text-blue-600' : ''} />
+        <Clock size={18} className={isSavedInWatchLater ? 'text-primary' : ''} />
         {isSavedInWatchLater ? 'Remove from Watch Later' : 'Save to Watch Later'}
       </button>
       
       <button
         onClick={handleAction(onSave)}
-        className="w-full px-4 py-2.5 text-left text-sm hover:bg-[#f2f2f2] flex items-center gap-3 transition-colors"
+        className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-3 transition-colors text-popover-foreground"
       >
-        <Bookmark size={18} className={isSaved ? 'fill-current text-blue-600' : ''} />
+        <Bookmark size={18} className={isSaved ? 'fill-current text-primary' : ''} />
         {isSaved ? 'Remove from Saved' : 'Save'}
       </button>
       
       <button
         onClick={handleAction(onNotInterested)}
-        className="w-full px-4 py-2.5 text-left text-sm hover:bg-[#f2f2f2] flex items-center gap-3 transition-colors"
+        className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-3 transition-colors text-popover-foreground"
       >
         <X size={18} />
         Not interested
@@ -114,7 +111,7 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
       
       <button
         onClick={handleAction(onShare)}
-        className="w-full px-4 py-2.5 text-left text-sm hover:bg-[#f2f2f2] flex items-center gap-3 transition-colors"
+        className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-3 transition-colors text-popover-foreground"
       >
         <Share2 size={18} />
         Share
@@ -123,7 +120,7 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
       {onDownload && (
         <button
           onClick={handleAction(onDownload)}
-          className="w-full px-4 py-2.5 text-left text-sm hover:bg-[#f2f2f2] flex items-center gap-3 transition-colors"
+          className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-3 transition-colors text-popover-foreground"
         >
           <Download size={18} />
           Download
@@ -132,10 +129,10 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
 
       {isOwner && onDelete && (
         <>
-          <div className="h-px bg-[#e5e5e5] my-1" />
+          <div className="h-px bg-border my-1" />
           <button
             onClick={handleAction(onDelete)}
-            className="w-full px-4 py-2.5 text-left text-sm hover:bg-[#f2f2f2] flex items-center gap-3 text-red-600 transition-colors"
+            className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-3 text-destructive transition-colors"
           >
             <Trash2 size={18} />
             Delete

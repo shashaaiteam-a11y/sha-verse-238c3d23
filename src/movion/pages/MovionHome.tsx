@@ -50,9 +50,9 @@ const MovionHome: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full bg-white" onClick={handlePageClick}>
+    <div className="min-h-full bg-background" onClick={handlePageClick}>
       {/* Category Pills */}
-      <div className="sticky top-0 bg-white z-20 border-b border-[#f2f2f2] px-4 py-3">
+      <div className="sticky top-0 bg-card z-20 border-b border-border px-4 py-3">
         <div className="flex gap-3 overflow-x-auto no-scrollbar">
           {VIDEO_CATEGORIES.map((cat) => (
             <button
@@ -61,8 +61,8 @@ const MovionHome: React.FC = () => {
               className={cn(
                 "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
                 activeCategory === cat
-                  ? "bg-[#0f0f0f] text-white"
-                  : "bg-[#f2f2f2] text-[#0f0f0f] hover:bg-[#e5e5e5]"
+                  ? "bg-foreground text-background"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               )}
             >
               {cat}
@@ -76,7 +76,7 @@ const MovionHome: React.FC = () => {
         {!shortsLoading && prioritizedShorts.length > 0 && activeCategory === 'All' && (
           <section className="mb-8">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <span className="text-pink-600">⚡</span> Pulse
+              <span className="text-accent">⚡</span> Pulse
             </h2>
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
               {prioritizedShorts.slice(0, 10).map((video) => (
@@ -124,7 +124,7 @@ const MovionHome: React.FC = () => {
 
             {prioritizedVideos.length === 0 && (
               <div className="py-20 text-center">
-                <p className="text-[#606060]">
+                <p className="text-muted-foreground">
                   {videos?.length === 0 
                     ? "No videos uploaded yet. Be the first to upload!" 
                     : "No videos found for this category"}
