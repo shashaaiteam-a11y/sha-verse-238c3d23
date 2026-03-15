@@ -1270,44 +1270,59 @@ export type Database = {
         Row: {
           approval_status: string | null
           comments_count: number | null
-          content: string
+          content: string | null
           created_at: string | null
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
           group_id: string
           id: string
           image_url: string | null
           is_announcement: boolean | null
           likes_count: number | null
           pinned: boolean | null
+          post_type: string | null
           shares_count: number | null
           user_id: string
+          video_url: string | null
         }
         Insert: {
           approval_status?: string | null
           comments_count?: number | null
-          content: string
+          content?: string | null
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           group_id: string
           id?: string
           image_url?: string | null
           is_announcement?: boolean | null
           likes_count?: number | null
           pinned?: boolean | null
+          post_type?: string | null
           shares_count?: number | null
           user_id: string
+          video_url?: string | null
         }
         Update: {
           approval_status?: string | null
           comments_count?: number | null
-          content?: string
+          content?: string | null
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           group_id?: string
           id?: string
           image_url?: string | null
           is_announcement?: boolean | null
           likes_count?: number | null
           pinned?: boolean | null
+          post_type?: string | null
           shares_count?: number | null
           user_id?: string
+          video_url?: string | null
         }
         Relationships: [
           {
