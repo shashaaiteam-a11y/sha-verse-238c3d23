@@ -205,6 +205,8 @@ export const useToggleSubscription = () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
       queryClient.invalidateQueries({ queryKey: ['is-subscribed'] });
       queryClient.invalidateQueries({ queryKey: ['channel'] });
+      queryClient.invalidateQueries({ queryKey: ['books', 'subscribed'] });
+      queryClient.invalidateQueries({ queryKey: ['books', 'feed'] });
       toast.success(isSubscribed ? 'Unsubscribed' : 'Subscribed!');
     },
   });

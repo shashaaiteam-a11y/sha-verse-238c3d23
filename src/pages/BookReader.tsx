@@ -25,10 +25,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const getFileType = (url: string | null): "pdf" | "epub" | "unknown" => {
   if (!url) return "unknown";
   const lowerUrl = url.toLowerCase();
-  if (lowerUrl.endsWith(".pdf") || lowerUrl.includes(".pdf?")) return "pdf";
-  if (lowerUrl.endsWith(".epub") || lowerUrl.includes(".epub?")) return "epub";
-  // Check for common patterns in Supabase URLs
-  if (lowerUrl.includes("/files/") && !lowerUrl.includes(".epub")) return "pdf";
+  if (lowerUrl.includes(".epub")) return "epub";
+  if (lowerUrl.includes(".pdf")) return "pdf";
+  // Supabase storage public/signed URLs may not end with extension
+  // Default to PDF for any storage URL since most books are PDFs
+  if (lowerUrl.includes("/storage/v1/object/")) return "pdf";
   return "unknown";
 };
 
@@ -87,29 +88,11 @@ const BookReader = () => {
     }
   }, [currentPage, totalPages, bookId, updateProgress]);
 
-  // Increment view count with cleanup
+  // Increment view count via atomic RPC
   useEffect(() => {
-    let cancelled = false;
-    
     if (bookId) {
-      supabase
-        .from("books")
-        .select("views_count")
-        .eq("id", bookId)
-        .single()
-        .then(({ data }) => {
-          if (!cancelled) {
-            supabase
-              .from("books")
-              .update({ views_count: (data?.views_count || 0) + 1 })
-              .eq("id", bookId);
-          }
-        });
+      void (supabase as any).rpc("increment_book_views", { book_id: bookId });
     }
-    
-    return () => {
-      cancelled = true;
-    };
   }, [bookId]);
 
   const goToPage = useCallback((page: number) => {

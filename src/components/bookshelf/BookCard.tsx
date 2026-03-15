@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { Book as BookType } from "@/hooks/useBooks";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BookCardProps {
   book: BookType;
@@ -11,6 +12,11 @@ interface BookCardProps {
 
 const BookCardComponent = ({ book }: BookCardProps) => {
   const navigate = useNavigate();
+
+  const handleBookOpen = () => {
+    void (supabase as any).rpc("increment_book_views", { book_id: book.id });
+    navigate(`/bookshelf/book/${book.id}`, { state: { countedView: true } });
+  };
 
   const formatCount = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -21,14 +27,14 @@ const BookCardComponent = ({ book }: BookCardProps) => {
   return (
     <Card
       className="overflow-hidden cursor-pointer group hover:shadow-glow transition-all"
-      onClick={() => navigate(`/bookshelf/book/${book.id}`)}
+      onClick={handleBookOpen}
       role="article"
       aria-label={`Book: ${book.title} by ${book.author}`}
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          navigate(`/bookshelf/book/${book.id}`);
+          handleBookOpen();
         }
       }}
     >

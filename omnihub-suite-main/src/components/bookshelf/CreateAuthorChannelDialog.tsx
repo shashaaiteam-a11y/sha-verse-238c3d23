@@ -59,20 +59,20 @@ const CreateAuthorChannelDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create Author Channel</DialogTitle>
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[92vw] sm:max-w-md p-0 overflow-hidden">
+        <DialogHeader className="px-5 pt-5 pb-1 sm:px-6 sm:pt-6">
+          <DialogTitle className="text-xl sm:text-2xl">Create Author Channel</DialogTitle>
           <DialogDescription>
             Create your author profile to start uploading and sharing books with
             readers.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-5 px-5 pb-5 sm:px-6 sm:pb-6">
           {/* Avatar */}
-          <div className="flex justify-center">
-            <div className="relative">
-              <Avatar className="w-24 h-24">
+          <div className="flex justify-center pt-1">
+            <div className="relative rounded-full p-1.5 bg-muted/40 ring-1 ring-border/60">
+              <Avatar className="w-24 h-24 sm:w-28 sm:h-28">
                 <AvatarImage src={avatarPreview || ""} />
                 <AvatarFallback className="text-2xl">
                   {name.charAt(0) || "A"}
@@ -81,7 +81,7 @@ const CreateAuthorChannelDialog = ({
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full"
+                className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-sm"
                 onClick={() => avatarInputRef.current?.click()}
               >
                 <Camera className="w-4 h-4" />
@@ -97,41 +97,41 @@ const CreateAuthorChannelDialog = ({
           </div>
 
           {/* Channel Name */}
-          <div>
-            <Label htmlFor="channelName">Channel Name *</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="channelName" className="text-sm font-medium">Channel Name *</Label>
             <Input
               id="channelName"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your author name or pen name"
-              className="mt-1"
+              className="h-11"
             />
           </div>
 
           {/* Description */}
-          <div>
-            <Label htmlFor="channelDescription">About You</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="channelDescription" className="text-sm font-medium">About You</Label>
             <Textarea
               id="channelDescription"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Tell readers about yourself and your writing..."
-              rows={3}
-              className="mt-1"
+              rows={4}
+              className="min-h-[110px] resize-none"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-1">
             <Button
               variant="outline"
-              className="flex-1"
+              className="flex-1 h-11"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
             <Button
-              className="flex-1"
+              className="flex-1 h-11"
               onClick={handleSubmit}
               disabled={!name || createChannel.isPending}
             >

@@ -259,9 +259,11 @@ const Bookshelf = () => {
               </div>
 
               {viewMode === "grid" ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
                   {trendingBooks.slice(0, 12).map((book) => (
-                    <BookCard key={book.id} book={book} />
+                    <div key={book.id} className="w-[130px] sm:w-[150px] justify-self-center">
+                      <BookCard book={book} />
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -317,14 +319,16 @@ const Bookshelf = () => {
                 <Clock className="w-5 h-5 text-primary" />
                 Recently Added
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
                 {books.map((book) => (
-                  <BookCard key={book.id} book={book} />
+                  <div key={book.id} className="w-[130px] sm:w-[150px] justify-self-center">
+                    <BookCard book={book} />
+                  </div>
                 ))}
               </div>
 
               {isLoading && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
                     <Card key={i} className="overflow-hidden animate-pulse">
                       <div className="aspect-[2/3] bg-muted" />
@@ -384,9 +388,11 @@ const Bookshelf = () => {
 
           <TabsContent value="trending">
             {trendingBooks.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
                 {trendingBooks.map((book) => (
-                  <BookCard key={book.id} book={book} />
+                  <div key={book.id} className="w-[130px] sm:w-[150px] justify-self-center">
+                    <BookCard book={book} />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -402,9 +408,11 @@ const Bookshelf = () => {
           <TabsContent value="subscribed">
             {subscribedBooks.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
                   {subscribedBooks.map((book: any) => (
-                    <BookCard key={book.id} book={book} />
+                    <div key={book.id} className="w-[130px] sm:w-[150px] justify-self-center">
+                      <BookCard book={book} />
+                    </div>
                   ))}
                 </div>
                 {renderPagination(subscribedBooks.length)}
@@ -432,9 +440,11 @@ const Bookshelf = () => {
               </h2>
               {savedBooks.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
                     {savedBooks.map((book: any) => (
-                      <BookCard key={book.id} book={book} />
+                      <div key={book.id} className="w-[130px] sm:w-[150px] justify-self-center">
+                        <BookCard book={book} />
+                      </div>
                     ))}
                   </div>
                   {renderPagination(savedBooks.length)}

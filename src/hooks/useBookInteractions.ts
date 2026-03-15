@@ -129,8 +129,12 @@ export const useBookInteractions = (bookId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["book-liked", bookId] });
       queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+      queryClient.invalidateQueries({ queryKey: ["books", "detail", bookId] });
+      queryClient.invalidateQueries({ queryKey: ["books", "feed"] });
+      queryClient.invalidateQueries({ queryKey: ["books", "trending"] });
+      queryClient.invalidateQueries({ queryKey: ["books", "subscribed"] });
+      queryClient.invalidateQueries({ queryKey: ["books", "saved"] });
       queryClient.invalidateQueries({ queryKey: ["channelMetrics"] });
-      // Don't invalidate entire books list - too aggressive
     },
   });
 
@@ -156,6 +160,8 @@ export const useBookInteractions = (bookId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["book-saved", bookId] });
       queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+      queryClient.invalidateQueries({ queryKey: ["books", "detail", bookId] });
+      queryClient.invalidateQueries({ queryKey: ["books", "saved"] });
       queryClient.invalidateQueries({ queryKey: ["saved-books"] });
     },
   });

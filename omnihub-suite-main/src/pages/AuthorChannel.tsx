@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,8 +37,6 @@ const AuthorChannel = () => {
       return data;
     },
     enabled: !!channelId,
-    // Keep channel stats in sync in near real-time
-    refetchInterval: 3000,
   });
 
   // Fetch books with real-time updates
@@ -57,8 +55,6 @@ const AuthorChannel = () => {
       return data;
     },
     enabled: !!channelId,
-    // Real-time updates for books
-    refetchInterval: 3000,
   });
 
   // Fetch real-time channel metrics with proper cleanup
@@ -85,20 +81,19 @@ const AuthorChannel = () => {
       };
     },
     enabled: !!channelId,
-    // Real-time metrics updates
-    refetchInterval: 3000,
   });
 
   const { data: isSubscribed } = useQuery({
     queryKey: ["author-subscribed", channelId, user?.id],
     queryFn: async () => {
       if (!user?.id || !channelId) return false;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("subscriptions")
         .select("id")
         .eq("channel_id", channelId)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
+      if (error) throw error;
       return !!data;
     },
     enabled: !!channelId && !!user?.id,
@@ -109,40 +104,88 @@ const AuthorChannel = () => {
       if (!user?.id || !channelId) throw new Error("Not authenticated");
 
       if (isSubscribed) {
-        await supabase
-          .from("subscriptions")
-          .delete()
-          .eq("channel_id", channelId)
-          .eq("user_id", user.id);
-
-        // Decrement subscribers
-        await supabase
-          .from("channels")
-          .update({ subscribers_count: Math.max(0, (channel?.subscribers_count || 1) - 1) })
-          .eq("id", channelId);
+        const { error } = await (supabase as any).rpc("unsubscribe_from_channel", {
+          target_channel_id: channelId,
+        });
+        if (error) throw error;
       } else {
-        await supabase
-          .from("subscriptions")
-          .insert({ channel_id: channelId, user_id: user.id });
-
-        // Increment subscribers
-        await supabase
-          .from("channels")
-          .update({ subscribers_count: (channel?.subscribers_count || 0) + 1 })
-          .eq("id", channelId);
+        const { error } = await (supabase as any).rpc("subscribe_to_channel", {
+          target_channel_id: channelId,
+        });
+        if (error) throw error;
       }
+    },
+    onMutate: async () => {
+      if (!channelId || !user?.id) return;
+
+      await queryClient.cancelQueries({ queryKey: ["author-channel", channelId] });
+      await queryClient.cancelQueries({ queryKey: ["author-subscribed", channelId, user.id] });
+
+      const previousChannel = queryClient.getQueryData(["author-channel", channelId]);
+      const previousSubscribed = queryClient.getQueryData(["author-subscribed", channelId, user.id]);
+
+      queryClient.setQueryData(["author-subscribed", channelId, user.id], !isSubscribed);
+      queryClient.setQueryData(["author-channel", channelId], (old: any) => {
+        if (!old) return old;
+        const current = old.subscribers_count || 0;
+        return {
+          ...old,
+          subscribers_count: isSubscribed ? Math.max(0, current - 1) : current + 1,
+        };
+      });
+
+      return { previousChannel, previousSubscribed };
+    },
+    onError: (_error, _variables, context) => {
+      if (!channelId || !user?.id || !context) return;
+      queryClient.setQueryData(["author-channel", channelId], context.previousChannel);
+      queryClient.setQueryData(["author-subscribed", channelId, user.id], context.previousSubscribed);
     },
     onSuccess: () => {
       // Update subscription state for this channel
-      queryClient.invalidateQueries({ queryKey: ["author-subscribed", channelId] });
+      queryClient.invalidateQueries({ queryKey: ["author-subscribed", channelId, user?.id] });
       // Refresh this channel's latest stats (subscribers, etc.)
       queryClient.invalidateQueries({ queryKey: ["author-channel", channelId] });
+      queryClient.invalidateQueries({ queryKey: ["channel-metrics", channelId] });
       // Refresh bookshelf author listings so subscriber counts stay in sync
       queryClient.invalidateQueries({ queryKey: ["channels", "books"] });
       queryClient.invalidateQueries({ queryKey: ["channels"] });
+      queryClient.invalidateQueries({ queryKey: ["books", "subscribed"] });
       toast.success(isSubscribed ? "Unsubscribed" : "Subscribed!");
     },
   });
+
+  // True realtime sync for subscriber count + button state + dependent tabs
+  useEffect(() => {
+    if (!channelId) return;
+
+    const rt = supabase
+      .channel(`author-channel-rt-${channelId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "channels", filter: `id=eq.${channelId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["author-channel", channelId] });
+          queryClient.invalidateQueries({ queryKey: ["channel-metrics", channelId] });
+          queryClient.invalidateQueries({ queryKey: ["channels", "books"] });
+          queryClient.invalidateQueries({ queryKey: ["channels"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "subscriptions", filter: `channel_id=eq.${channelId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["author-channel", channelId] });
+          queryClient.invalidateQueries({ queryKey: ["author-subscribed"] });
+          queryClient.invalidateQueries({ queryKey: ["books", "subscribed"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(rt);
+    };
+  }, [channelId, queryClient]);
 
   // handleShare removed - using ShareDialog instead
 
@@ -346,7 +389,10 @@ const AuthorChannel = () => {
                   <Card
                     key={book.id}
                     className="p-4 flex gap-4 hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => navigate(`/bookshelf/book/${book.id}`)}
+                    onClick={() => {
+                      void (supabase as any).rpc("increment_book_views", { book_id: book.id });
+                      navigate(`/bookshelf/book/${book.id}`, { state: { countedView: true } });
+                    }}
                   >
                     <div className="w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-primary">
                       {book.cover_url ? (

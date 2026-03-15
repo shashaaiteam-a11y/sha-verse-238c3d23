@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +31,7 @@ import CommentSection from "@/components/bookshelf/CommentSection";
 const BookDetail = () => {
   const { bookId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showRatingDialog, setShowRatingDialog] = useState(false);
@@ -174,6 +175,10 @@ const BookDetail = () => {
   useEffect(() => {
     if (book && bookId && !viewsTracked) {
       const trackView = async () => {
+        if ((location.state as any)?.countedView) {
+          setViewsTracked(true);
+          return;
+        }
         try {
           // ✅ Use atomic RPC function to prevent race conditions
           const { error } = await (supabase.rpc as any)('increment_book_views', {
@@ -195,7 +200,7 @@ const BookDetail = () => {
 
       trackView();
     }
-  }, [book, bookId, viewsTracked, queryClient]);
+  }, [book, bookId, viewsTracked, queryClient, location.state]);
 
   const {
     isLiked,

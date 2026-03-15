@@ -194,14 +194,14 @@ const ChatSidebar = ({
                           </div>
                         ) : (
                           <>
-                            <span className="flex-1 truncate text-sm">{formatConversationTitle(conv.title)}</span>
+                            <span className="truncate text-sm">{formatConversationTitle(conv.title)}</span>
                             
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="w-6 h-6 opacity-60 hover:opacity-100 hover:bg-accent rounded-full transition-all"
+                                  className="w-6 h-6 flex-shrink-0 opacity-60 hover:opacity-100 hover:bg-accent rounded-full transition-all"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <MoreHorizontal className="w-4 h-4" />
@@ -222,6 +222,7 @@ const ChatSidebar = ({
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
+                            <div className="flex-1" />
                           </>
                         )}
                       </div>

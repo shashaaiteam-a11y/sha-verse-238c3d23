@@ -60,7 +60,7 @@ const ChatSidebar = ({
     const words = normalized.split(/\s+/).filter(Boolean);
     if (!words.length) return fallback;
     const preview = words.slice(0, 3).join(' ');
-    return `${preview} ...`;
+    return words.length > 3 ? `${preview}...` : preview;
   };
 
   const filteredConversations = conversations?.filter(c => 
@@ -201,7 +201,7 @@ const ChatSidebar = ({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="w-6 h-6 opacity-60 hover:opacity-100 hover:bg-accent rounded-full transition-all"
+                                  className="w-6 h-6 mr-1 opacity-60 hover:opacity-100 hover:bg-accent rounded-full transition-all"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <MoreHorizontal className="w-4 h-4" />

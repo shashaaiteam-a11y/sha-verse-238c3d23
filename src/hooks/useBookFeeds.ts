@@ -145,7 +145,19 @@ export const useSubscribedBooks = (options: { search?: string; category?: string
 
 export const useSavedBooks = (options: { search?: string; category?: string; page?: number; limit?: number } = {}) => {
     const { user } = useAuth();
+    const queryClient = useQueryClient();
     const { search = "", category = "All", page = 0, limit = 20 } = options;
+
+    useEffect(() => {
+        if (!user?.id) return;
+        const rt = supabase
+            .channel(`saved-books-rt-${user.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'saved_books', filter: `user_id=eq.${user.id}` }, () => {
+                queryClient.invalidateQueries({ queryKey: ["books", "saved", user.id] });
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(rt); };
+    }, [user?.id, queryClient]);
 
     return useQuery({
         queryKey: ["books", "saved", user?.id, { search, category, page }],
