@@ -3742,6 +3742,11 @@ export type Database = {
         }
         Returns: string
       }
+      decrement_book_comment_count: {
+        Args: { book_id: string }
+        Returns: undefined
+      }
+      decrement_book_likes: { Args: { book_id: string }; Returns: undefined }
       generate_feed_for_user: {
         Args: { target_user_id: string }
         Returns: undefined
@@ -3762,6 +3767,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_book_comment_count: {
+        Args: { book_id: string }
+        Returns: undefined
+      }
+      increment_book_downloads: {
+        Args: { book_id: string }
+        Returns: undefined
+      }
+      increment_book_likes: { Args: { book_id: string }; Returns: undefined }
+      increment_book_views: { Args: { book_id: string }; Returns: undefined }
       increment_member_warnings: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: undefined
