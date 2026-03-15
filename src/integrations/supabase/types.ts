@@ -1270,44 +1270,59 @@ export type Database = {
         Row: {
           approval_status: string | null
           comments_count: number | null
-          content: string
+          content: string | null
           created_at: string | null
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
           group_id: string
           id: string
           image_url: string | null
           is_announcement: boolean | null
           likes_count: number | null
           pinned: boolean | null
+          post_type: string | null
           shares_count: number | null
           user_id: string
+          video_url: string | null
         }
         Insert: {
           approval_status?: string | null
           comments_count?: number | null
-          content: string
+          content?: string | null
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           group_id: string
           id?: string
           image_url?: string | null
           is_announcement?: boolean | null
           likes_count?: number | null
           pinned?: boolean | null
+          post_type?: string | null
           shares_count?: number | null
           user_id: string
+          video_url?: string | null
         }
         Update: {
           approval_status?: string | null
           comments_count?: number | null
-          content?: string
+          content?: string | null
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           group_id?: string
           id?: string
           image_url?: string | null
           is_announcement?: boolean | null
           likes_count?: number | null
           pinned?: boolean | null
+          post_type?: string | null
           shares_count?: number | null
           user_id?: string
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -3727,6 +3742,11 @@ export type Database = {
         }
         Returns: string
       }
+      decrement_book_comment_count: {
+        Args: { book_id: string }
+        Returns: undefined
+      }
+      decrement_book_likes: { Args: { book_id: string }; Returns: undefined }
       generate_feed_for_user: {
         Args: { target_user_id: string }
         Returns: undefined
@@ -3747,6 +3767,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_book_comment_count: {
+        Args: { book_id: string }
+        Returns: undefined
+      }
+      increment_book_downloads: {
+        Args: { book_id: string }
+        Returns: undefined
+      }
+      increment_book_likes: { Args: { book_id: string }; Returns: undefined }
+      increment_book_views: { Args: { book_id: string }; Returns: undefined }
       increment_member_warnings: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: undefined

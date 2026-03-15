@@ -171,33 +171,33 @@ const BookDetail = () => {
     };
   }, [book?.channel?.id, bookId, queryClient]);
 
-  // Track view when book is loaded
+  // Track view when book is loaded — once per session per book
   useEffect(() => {
     if (book && bookId && !viewsTracked) {
+      const sessionKey = `book_viewed_${bookId}`;
+      if (sessionStorage.getItem(sessionKey)) {
+        setViewsTracked(true);
+        return;
+      }
       const trackView = async () => {
         if ((location.state as any)?.countedView) {
           setViewsTracked(true);
           return;
         }
         try {
-          // ✅ Use atomic RPC function to prevent race conditions
           const { error } = await (supabase.rpc as any)('increment_book_views', {
             book_id: bookId
           });
-
-          if (error) {
-            console.error("Failed to track view:", error);
-          } else {
+          if (!error) {
             setViewsTracked(true);
-            // Invalidate the queries to get fresh data
+            sessionStorage.setItem(sessionKey, '1');
             queryClient.invalidateQueries({ queryKey: ["book", bookId] });
             queryClient.invalidateQueries({ queryKey: ["channelMetrics"] });
           }
-        } catch (error) {
-          console.error("Failed to track view:", error);
+        } catch (e) {
+          console.error("Failed to track view:", e);
         }
       };
-
       trackView();
     }
   }, [book, bookId, viewsTracked, queryClient, location.state]);
