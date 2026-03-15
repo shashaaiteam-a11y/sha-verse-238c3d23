@@ -223,6 +223,7 @@ export const useBookInteractions = (bookId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["book", bookId] });
       queryClient.invalidateQueries({ queryKey: ["books", "detail", bookId] });
+      queryClient.invalidateQueries({ queryKey: ["channelMetrics"] });
     },
     onError: (error) => {
       console.error("Download increment failed:", error);

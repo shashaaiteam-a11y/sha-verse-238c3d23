@@ -84,67 +84,89 @@ const BookDetail = () => {
     enabled: !!book?.channel?.id,
   });
 
-  // Setup Realtime Subscriptions for live stats
+  // Setup Realtime Subscriptions for ALL live stats
   useEffect(() => {
-    if (!book?.channel?.id || !bookId) return;
+    if (!bookId) return;
+    const channelId = book?.channel?.id;
 
-    // Listen to current book changes (likes, views, etc)
-    const bookChannel = supabase
-      .channel(`book-${bookId}`)
+    // Master realtime channel — listens to books, likes, ratings, subscriptions, comments
+    const realtimeChannel = supabase
+      .channel(`book-detail-realtime-${bookId}`)
+      // 1. Book row itself (views, likes_count, downloads_count, rating_avg etc)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'books',
-          filter: `id=eq.${bookId}`
-        },
+        { event: '*', schema: 'public', table: 'books', filter: `id=eq.${bookId}` },
         () => {
+          queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+        }
+      )
+      // 2. Likes on this book — refresh like status & count
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'likes', filter: `book_id=eq.${bookId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["book-liked", bookId] });
+          queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+        }
+      )
+      // 3. Ratings on this book — refresh rating aggregates
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'book_ratings', filter: `book_id=eq.${bookId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["book-ratings", bookId] });
+          queryClient.invalidateQueries({ queryKey: ["book-user-rating", bookId] });
+          queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+        }
+      )
+      // 4. Comments on this book — refresh comment count
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments', filter: `book_id=eq.${bookId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["book-comments", bookId] });
           queryClient.invalidateQueries({ queryKey: ["book", bookId] });
         }
       )
       .subscribe();
 
-    // Listen to ALL books in this channel (to update total channel metrics instantly)
-    const channelBooks = supabase
-      .channel(`channel-books-${book.channel.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'books',
-          filter: `channel_id=eq.${book.channel.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["channelMetrics", book.channel.id] });
-        }
-      )
-      .subscribe();
-
-    // Listen to channel changes itself (e.g. subscriber count changes)
-    const channelStats = supabase
-      .channel(`channel-stats-${book.channel.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'channels',
-          filter: `id=eq.${book.channel.id}`
-        },
-        () => {
-          // Invalidate both because book query includes channel subscriber_count in its join
-          queryClient.invalidateQueries({ queryKey: ["book", bookId] });
-          queryClient.invalidateQueries({ queryKey: ["channelMetrics", book.channel.id] });
-        }
-      )
-      .subscribe();
+    // Channel-level realtime (subscriber count, channel books metrics)
+    let channelRealtimeSub: any = null;
+    if (channelId) {
+      channelRealtimeSub = supabase
+        .channel(`book-channel-realtime-${channelId}`)
+        // Channel row updates (subscriber_count changes)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'channels', filter: `id=eq.${channelId}` },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+            queryClient.invalidateQueries({ queryKey: ["channelMetrics", channelId] });
+          }
+        )
+        // All books in this channel (for channel metrics: total views, downloads etc)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'books', filter: `channel_id=eq.${channelId}` },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["channelMetrics", channelId] });
+          }
+        )
+        // Subscriptions to this channel (subscriber count live)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'subscriptions', filter: `channel_id=eq.${channelId}` },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["book", bookId] });
+            queryClient.invalidateQueries({ queryKey: ["channelMetrics", channelId] });
+          }
+        )
+        .subscribe();
+    }
 
     return () => {
-      supabase.removeChannel(bookChannel);
-      supabase.removeChannel(channelBooks);
-      supabase.removeChannel(channelStats);
+      supabase.removeChannel(realtimeChannel);
+      if (channelRealtimeSub) supabase.removeChannel(channelRealtimeSub);
     };
   }, [book?.channel?.id, bookId, queryClient]);
 
