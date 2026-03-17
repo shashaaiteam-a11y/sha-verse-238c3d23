@@ -243,7 +243,7 @@ const AuthorChannel = () => {
             {!isOwner && (
               <Button
                 variant={isSubscribed ? "outline" : "default"}
-                onClick={() => toggleSubscribe.mutate()}
+                onClick={() => toggleSubscribe.mutate(undefined)}
                 disabled={!user}
               >
                 {isSubscribed ? (

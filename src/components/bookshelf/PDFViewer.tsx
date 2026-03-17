@@ -3,11 +3,8 @@ import * as pdfjsLib from "pdfjs-dist";
 import { Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Use local bundled worker (compatible with pdfjs-dist v5 + Vite)
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
-).href;
+// Configure PDF.js worker from CDN (compatible with pdfjs-dist v5)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 export interface PDFOutlineItem {
   title: string;
