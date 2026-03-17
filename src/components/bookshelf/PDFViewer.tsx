@@ -151,7 +151,10 @@ const PDFViewer = ({
 
   // Render current page
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !canvasRef.current || containerWidth === 0) return;
+    if (!pdfDoc || !canvasRef.current || containerWidth === 0) {
+      console.log("[PDFViewer] renderPage skipped:", { hasPdfDoc: !!pdfDoc, hasCanvas: !!canvasRef.current, containerWidth });
+      return;
+    }
 
     try {
       setIsPageLoading(true);
@@ -161,6 +164,7 @@ const PDFViewer = ({
         renderTaskRef.current.cancel();
       }
 
+      console.log("[PDFViewer] Rendering page:", currentPage);
       const page = await pdfDoc.getPage(currentPage);
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
@@ -174,6 +178,7 @@ const PDFViewer = ({
         scale
       );
       const viewport = page.getViewport({ scale: responsiveScale });
+      console.log("[PDFViewer] Viewport:", { width: viewport.width, height: viewport.height, scale: responsiveScale });
 
       // Set canvas dimensions
       const pixelRatio = window.devicePixelRatio || 1;
@@ -191,16 +196,16 @@ const PDFViewer = ({
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
-        canvas: canvas,
       };
 
       renderTaskRef.current = page.render(renderContext);
       await renderTaskRef.current.promise;
+      console.log("[PDFViewer] Page rendered successfully");
 
       setIsPageLoading(false);
     } catch (err: any) {
       if (err?.name !== "RenderingCancelledException") {
-        console.error("Error rendering page:", err);
+        console.error("[PDFViewer] Error rendering page:", err);
         setError("Failed to render page.");
       }
       setIsPageLoading(false);
