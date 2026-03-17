@@ -196,6 +196,7 @@ const PDFViewer = ({
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
+        canvas: canvas,
       };
 
       renderTaskRef.current = page.render(renderContext);
