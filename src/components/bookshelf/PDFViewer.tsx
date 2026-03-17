@@ -66,7 +66,7 @@ const PDFViewer = ({
 
         const loadingTask = pdfjsLib.getDocument({
           url,
-          cMapUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/cmaps/`,
+          cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
           cMapPacked: true,
         });
 
