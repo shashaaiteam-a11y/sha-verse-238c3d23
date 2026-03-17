@@ -4,7 +4,9 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Configure PDF.js worker from CDN (compatible with pdfjs-dist v5)
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+const workerUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+console.log("[PDFViewer] pdfjs version:", pdfjsLib.version, "worker URL:", workerUrl);
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 export interface PDFOutlineItem {
   title: string;
