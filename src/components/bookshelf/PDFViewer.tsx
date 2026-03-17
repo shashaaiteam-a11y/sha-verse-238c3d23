@@ -65,6 +65,7 @@ const PDFViewer = ({
       try {
         setIsLoading(true);
         setError(null);
+        console.log("[PDFViewer] Loading PDF from URL:", url);
 
         const loadingTask = pdfjsLib.getDocument({
           url,
@@ -73,6 +74,7 @@ const PDFViewer = ({
         });
 
         const pdf = await loadingTask.promise;
+        console.log("[PDFViewer] PDF loaded, pages:", pdf.numPages);
 
         if (!isMounted) return;
 
@@ -93,7 +95,7 @@ const PDFViewer = ({
         setIsLoading(false);
       } catch (err) {
         if (!isMounted) return;
-        console.error("Error loading PDF:", err);
+        console.error("[PDFViewer] Error loading PDF:", err);
         setError("Failed to load PDF. Please try again.");
         setIsLoading(false);
       }
