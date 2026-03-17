@@ -4,7 +4,9 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Configure PDF.js worker from CDN (compatible with pdfjs-dist v5)
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+const workerUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+console.log("[PDFViewer] pdfjs version:", pdfjsLib.version, "worker URL:", workerUrl);
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 export interface PDFOutlineItem {
   title: string;
@@ -42,17 +44,27 @@ const PDFViewer = ({
   const [containerWidth, setContainerWidth] = useState(0);
   const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
 
-  // Update container width on resize
+  // Update container width on resize using ResizeObserver for reliability
   useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.clientWidth);
-      }
-    };
+    const container = containerRef.current;
+    if (!container) return;
 
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        if (width > 0) {
+          setContainerWidth(width);
+        }
+      }
+    });
+
+    observer.observe(container);
+    // Initial measurement
+    if (container.clientWidth > 0) {
+      setContainerWidth(container.clientWidth);
+    }
+
+    return () => observer.disconnect();
   }, []);
 
   // Load PDF document
@@ -63,6 +75,7 @@ const PDFViewer = ({
       try {
         setIsLoading(true);
         setError(null);
+        console.log("[PDFViewer] Loading PDF from URL:", url);
 
         const loadingTask = pdfjsLib.getDocument({
           url,
@@ -71,6 +84,7 @@ const PDFViewer = ({
         });
 
         const pdf = await loadingTask.promise;
+        console.log("[PDFViewer] PDF loaded, pages:", pdf.numPages);
 
         if (!isMounted) return;
 
@@ -91,7 +105,7 @@ const PDFViewer = ({
         setIsLoading(false);
       } catch (err) {
         if (!isMounted) return;
-        console.error("Error loading PDF:", err);
+        console.error("[PDFViewer] Error loading PDF:", err);
         setError("Failed to load PDF. Please try again.");
         setIsLoading(false);
       }
@@ -147,7 +161,10 @@ const PDFViewer = ({
 
   // Render current page
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !canvasRef.current || containerWidth === 0) return;
+    if (!pdfDoc || !canvasRef.current || containerWidth === 0) {
+      console.log("[PDFViewer] renderPage skipped:", { hasPdfDoc: !!pdfDoc, hasCanvas: !!canvasRef.current, containerWidth });
+      return;
+    }
 
     try {
       setIsPageLoading(true);
@@ -157,6 +174,7 @@ const PDFViewer = ({
         renderTaskRef.current.cancel();
       }
 
+      console.log("[PDFViewer] Rendering page:", currentPage);
       const page = await pdfDoc.getPage(currentPage);
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
@@ -170,6 +188,7 @@ const PDFViewer = ({
         scale
       );
       const viewport = page.getViewport({ scale: responsiveScale });
+      console.log("[PDFViewer] Viewport:", { width: viewport.width, height: viewport.height, scale: responsiveScale });
 
       // Set canvas dimensions
       const pixelRatio = window.devicePixelRatio || 1;
@@ -192,11 +211,12 @@ const PDFViewer = ({
 
       renderTaskRef.current = page.render(renderContext);
       await renderTaskRef.current.promise;
+      console.log("[PDFViewer] Page rendered successfully");
 
       setIsPageLoading(false);
     } catch (err: any) {
       if (err?.name !== "RenderingCancelledException") {
-        console.error("Error rendering page:", err);
+        console.error("[PDFViewer] Error rendering page:", err);
         setError("Failed to render page.");
       }
       setIsPageLoading(false);
