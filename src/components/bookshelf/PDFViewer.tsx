@@ -44,17 +44,27 @@ const PDFViewer = ({
   const [containerWidth, setContainerWidth] = useState(0);
   const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
 
-  // Update container width on resize
+  // Update container width on resize using ResizeObserver for reliability
   useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.clientWidth);
-      }
-    };
+    const container = containerRef.current;
+    if (!container) return;
 
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        if (width > 0) {
+          setContainerWidth(width);
+        }
+      }
+    });
+
+    observer.observe(container);
+    // Initial measurement
+    if (container.clientWidth > 0) {
+      setContainerWidth(container.clientWidth);
+    }
+
+    return () => observer.disconnect();
   }, []);
 
   // Load PDF document
