@@ -397,6 +397,10 @@ const Groups = () => {
                         setEditName(group.name);
                         setEditDesc(group.description || "");
                         setEditPrivate(group.is_private || false);
+                        setEditAvatarFile(null);
+                        setEditCoverFile(null);
+                        setEditAvatarPreview(group.avatar_url || null);
+                        setEditCoverPreview(group.cover_url || null);
                       }}
                     >
                       <Pencil className="w-3.5 h-3.5" />
