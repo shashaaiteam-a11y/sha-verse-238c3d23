@@ -169,6 +169,23 @@ export const useGroupPosts = (groupId?: string) => {
   useEffect(() => {
     if (!groupId) return;
 
+    // Subscribe to group details changes (avatar, cover, name etc.)
+    const groupChannel = supabase
+      .channel(`group-detail-${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'groups',
+          filter: `id=eq.${groupId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+        }
+      )
+      .subscribe();
+
     // Subscribe to group posts changes
     const postsChannel = supabase
       .channel(`group-posts-${groupId}`)
@@ -225,6 +242,7 @@ export const useGroupPosts = (groupId?: string) => {
       .subscribe();
 
     return () => {
+      supabase.removeChannel(groupChannel);
       supabase.removeChannel(postsChannel);
       supabase.removeChannel(commentsChannel);
       supabase.removeChannel(likesChannel);
