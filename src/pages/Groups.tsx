@@ -199,6 +199,10 @@ const Groups = () => {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editPrivate, setEditPrivate] = useState(false);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [headerSearch, setHeaderSearch] = useState("");
 

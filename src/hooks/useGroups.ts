@@ -213,19 +213,51 @@ export const useGroups = () => {
     },
   });
 
-  // Update group (name/description/is_private)
+  // Update group (name/description/is_private/avatar/cover)
   const updateGroup = useMutation({
-    mutationFn: async ({ groupId, name, description, isPrivate }: { groupId: string; name: string; description?: string; isPrivate?: boolean }) => {
+    mutationFn: async ({ groupId, name, description, isPrivate, avatarFile, coverFile }: { 
+      groupId: string; name: string; description?: string; isPrivate?: boolean;
+      avatarFile?: File; coverFile?: File;
+    }) => {
       if (!user) throw new Error('Not authenticated');
+
+      const updates: Record<string, any> = { 
+        name, 
+        description: description || null, 
+        is_private: isPrivate ?? false 
+      };
+
+      // Upload avatar if provided
+      if (avatarFile) {
+        const ext = avatarFile.name.split('.').pop();
+        const path = `${user.id}/groups/${groupId}-avatar-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true });
+        if (upErr) throw upErr;
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+        updates.avatar_url = publicUrl;
+      }
+
+      // Upload cover if provided
+      if (coverFile) {
+        const ext = coverFile.name.split('.').pop();
+        const path = `${user.id}/groups/${groupId}-cover-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('avatars').upload(path, coverFile, { upsert: true });
+        if (upErr) throw upErr;
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+        updates.cover_url = publicUrl;
+      }
+
       const { error } = await supabase
         .from('groups')
-        .update({ name, description: description || null, is_private: isPrivate ?? false })
+        .update(updates)
         .eq('id', groupId)
         .eq('creator_id', user.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
       toast({ title: 'Group updated!' });
     },
     onError: (error: any) => {
