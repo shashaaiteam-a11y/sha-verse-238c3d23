@@ -7,7 +7,6 @@ import {
   Home as HomeIcon, 
   Heart, 
   Calendar,
-  Globe,
   Users
 } from "lucide-react";
 import { formatDistanceToNow, format } from 'date-fns';
@@ -37,8 +36,7 @@ export const ProfileIntroCard = ({ profile, friendsCount, isOwnProfile, isFriend
                   (canShow('education') && profile?.education) ||
                   (canShow('location') && profile?.current_city) ||
                   (canShow('location') && profile?.hometown) ||
-                  (canShow('relationship') && profile?.relationship_status) ||
-                  (canShow('website') && profile?.website);
+                  (canShow('relationship') && profile?.relationship_status);
 
   return (
     <Card className="p-4 shadow-sm">
@@ -91,20 +89,6 @@ export const ProfileIntroCard = ({ profile, friendsCount, isOwnProfile, isFriend
           <div className="flex items-center gap-2.5">
             <Heart className="w-5 h-5 text-muted-foreground flex-shrink-0" />
             <span className="text-sm font-semibold">{profile.relationship_status}</span>
-          </div>
-        )}
-
-        {canShow('website') && profile?.website && (
-          <div className="flex items-center gap-2.5">
-            <Globe className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-            <a 
-              href={profile.website} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-sm text-primary hover:underline truncate"
-            >
-              {profile.website.replace(/^https?:\/\//, '')}
-            </a>
           </div>
         )}
 

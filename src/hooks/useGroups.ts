@@ -21,7 +21,8 @@ export interface CreateGroupPayload {
 const GROUP_SELECT = `
   id, name, description, avatar_url, cover_url,
   is_private, members_count, posts_count,
-  created_at, creator_id
+  created_at, creator_id,
+  group_posts(count)
 `;
 
 export const useGroups = () => {
@@ -243,6 +244,14 @@ export const useGroups = () => {
         queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'groups' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_posts' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'group_posts' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
         queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
       })
       .subscribe();

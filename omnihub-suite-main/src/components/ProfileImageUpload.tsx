@@ -1,16 +1,18 @@
 import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Camera } from 'lucide-react';
+import { Camera, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 interface ProfileImageUploadProps {
   type: 'avatar' | 'cover';
   onUpload: (url: string) => void;
+  onRemove?: () => void;
+  hasImage?: boolean;
   disabled?: boolean;
 }
 
-export const ProfileImageUpload = ({ type, onUpload, disabled }: ProfileImageUploadProps) => {
+export const ProfileImageUpload = ({ type, onUpload, onRemove, hasImage = false, disabled }: ProfileImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +73,20 @@ export const ProfileImageUpload = ({ type, onUpload, disabled }: ProfileImageUpl
 
   if (type === 'avatar') {
     return (
-      <div className="relative inline-block">
+      <div className="relative inline-flex items-center gap-1">
+        {hasImage && onRemove && (
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="h-8 w-8 rounded-full shadow-md"
+            onClick={onRemove}
+            disabled={disabled || uploading}
+            title="Remove profile photo"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
         <Button
           type="button"
           variant="secondary"
@@ -95,7 +110,20 @@ export const ProfileImageUpload = ({ type, onUpload, disabled }: ProfileImageUpl
   }
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-flex items-center gap-2">
+      {hasImage && onRemove && (
+        <Button
+          type="button"
+          variant="destructive"
+          size="icon"
+          className="h-9 w-9 shadow-md"
+          onClick={onRemove}
+          disabled={disabled || uploading}
+          title="Remove cover photo"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
       <Button
         type="button"
         variant="secondary"

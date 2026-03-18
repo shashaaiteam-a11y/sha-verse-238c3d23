@@ -46,20 +46,19 @@ export const useGroupPosts = (groupId?: string) => {
     enabled: !!groupId,
   });
 
-  // Fetch group details
+  // Fetch group details (with real-time member count from group_members)
   const { data: group, isLoading: groupLoading } = useQuery({
     queryKey: ['group', groupId],
     queryFn: async () => {
       if (!groupId) return null;
 
-      const { data, error } = await supabase
-        .from('groups')
-        .select('*')
-        .eq('id', groupId)
-        .single();
+      const [{ data, error }, { count }] = await Promise.all([
+        supabase.from('groups').select('*').eq('id', groupId).single(),
+        supabase.from('group_members').select('id', { count: 'exact', head: true }).eq('group_id', groupId),
+      ]);
 
       if (error) throw error;
-      return data;
+      return { ...data, members_count: count ?? data?.members_count ?? 0 };
     },
     enabled: !!groupId,
   });
@@ -169,6 +168,24 @@ export const useGroupPosts = (groupId?: string) => {
   useEffect(() => {
     if (!groupId) return;
 
+    // Subscribe to group details changes (avatar, cover, settings, etc)
+    const groupChannel = supabase
+      .channel(`group-details-${groupId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'groups',
+          filter: `id=eq.${groupId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+          queryClient.invalidateQueries({ queryKey: ['group-details', groupId] });
+        }
+      )
+      .subscribe();
+
     // Subscribe to group posts changes
     const postsChannel = supabase
       .channel(`group-posts-${groupId}`)
@@ -224,10 +241,27 @@ export const useGroupPosts = (groupId?: string) => {
       )
       .subscribe();
 
+    // Subscribe to group_members changes to update member count in real-time
+    const memberCountChannel = supabase
+      .channel(`group-member-count-${groupId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'group_members', filter: `group_id=eq.${groupId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['group', groupId] }); }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'group_members', filter: `group_id=eq.${groupId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ['group', groupId] }); }
+      )
+      .subscribe();
+
     return () => {
+      supabase.removeChannel(groupChannel);
       supabase.removeChannel(postsChannel);
       supabase.removeChannel(commentsChannel);
       supabase.removeChannel(likesChannel);
+      supabase.removeChannel(memberCountChannel);
     };
   }, [groupId, queryClient]);
 

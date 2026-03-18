@@ -15,7 +15,6 @@ import {
   MoreHorizontal,
   Bookmark,
   BookmarkCheck,
-  Pin,
   Pencil,
   Trash2,
   Globe,
@@ -130,10 +129,6 @@ export const ProfilePostCard = ({
               {isOwnPost && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onPin?.(post.id)}>
-                    <Pin className="w-4 h-4 mr-2" />
-                    {post.pinned ? 'Unpin from profile' : 'Pin to profile'}
-                  </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Pencil className="w-4 h-4 mr-2" />
                     Edit post
@@ -206,27 +201,29 @@ export const ProfilePostCard = ({
       )}
 
       {/* Action Buttons */}
-      <div className="px-4 py-1 flex items-center justify-around border-b border-border">
-        <EmojiReactionPicker
-          currentReaction={userReaction}
-          onReact={(emoji) => toggleReaction.mutate(emoji)}
-          reactionCounts={reactionCounts}
-        />
-        
-        <Button variant="ghost" size="sm" className="flex-1 gap-2 text-muted-foreground hover:text-foreground">
-          <MessageCircle className="w-5 h-5" />
-          <span className="hidden sm:inline">Comment</span>
-        </Button>
-        
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="flex-1 gap-2 text-muted-foreground hover:text-foreground"
-          onClick={() => setShowShareDialog(true)}
-        >
-          <Share2 className="w-5 h-5" />
-          <span className="hidden sm:inline">Share</span>
-        </Button>
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <div className="flex-1 flex items-center justify-around">
+          <EmojiReactionPicker
+            currentReaction={userReaction}
+            onReact={(emoji) => toggleReaction.mutate(emoji)}
+            reactionCounts={reactionCounts}
+          />
+          
+          <button 
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all rounded-lg px-3 py-2 font-medium"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span className="text-sm">Comment</span>
+          </button>
+          
+          <button 
+            onClick={() => setShowShareDialog(true)}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all rounded-lg px-3 py-2 font-medium"
+          >
+            <Share2 className="w-5 h-5" />
+            <span className="text-sm">Share</span>
+          </button>
+        </div>
       </div>
 
       {/* Comments Section */}

@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
   Facebook, 
   Instagram, 
@@ -11,7 +9,6 @@ import {
   Globe, 
   ExternalLink,
   Check,
-  X,
   AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -38,17 +35,61 @@ const SOCIAL_PLATFORMS = [
   { id: 'website', name: 'Website', icon: Globe, color: 'bg-gray-600', placeholder: 'https://yourwebsite.com' }
 ];
 
+const getProfileFieldName = (platform: string) => {
+  return platform === 'website' ? 'website' : `${platform}_url`;
+};
+
 export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: SocialLinksSectionProps) => {
   const [links, setLinks] = useState<SocialLink[]>([]);
+  const [visiblePlatforms, setVisiblePlatforms] = useState<string[]>([]);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const normalizeUrl = (url: string): string => {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) return '';
+
+    if (/^https?:\/\//i.test(trimmedUrl)) {
+      return trimmedUrl;
+    }
+
+    return `https://${trimmedUrl}`;
+  };
+
+  const getCompanyNameFromUrl = (url: string): string => {
+    const safeUrl = normalizeUrl(url);
+    if (!safeUrl) return 'Website';
+
+    try {
+      const hostname = new URL(safeUrl).hostname.toLowerCase().replace(/^www\./, '');
+      const knownNames: Record<string, string> = {
+        'facebook.com': 'Facebook',
+        'instagram.com': 'Instagram',
+        'twitter.com': 'Twitter',
+        'x.com': 'X',
+        'youtube.com': 'YouTube',
+        'linkedin.com': 'LinkedIn',
+        'tiktok.com': 'TikTok',
+        'snapchat.com': 'Snapchat',
+      };
+
+      if (knownNames[hostname]) {
+        return knownNames[hostname];
+      }
+
+      const rootName = hostname.split('.')[0] || 'Website';
+      return rootName.charAt(0).toUpperCase() + rootName.slice(1);
+    } catch {
+      return 'Website';
+    }
+  };
+
   // Initialize links from profile data
   useEffect(() => {
     const initialLinks = SOCIAL_PLATFORMS.map(platform => {
-      const url = profile?.[`${platform.id}_url`] || '';
+      const url = profile?.[getProfileFieldName(platform.id)] || '';
       return {
         platform: platform.id,
         url,
@@ -56,7 +97,17 @@ export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: 
         error: url && !validateUrl(platform.id, url) ? getErrorMessage(platform.id) : undefined
       };
     });
+
+    const initialVisiblePlatforms = initialLinks
+      .filter(link => link.url.trim() !== '')
+      .map(link => link.platform);
+
     setLinks(initialLinks);
+    setVisiblePlatforms(
+      initialVisiblePlatforms.length > 0
+        ? initialVisiblePlatforms
+        : [SOCIAL_PLATFORMS[0].id]
+    );
   }, [profile]);
 
   // URL validation functions
@@ -64,39 +115,15 @@ export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: 
     if (!url) return true; // Empty is valid (optional fields)
     
     try {
-      const parsedUrl = new URL(url);
-      
-      switch (platform) {
-        case 'facebook':
-          return parsedUrl.hostname === 'www.facebook.com' || parsedUrl.hostname === 'facebook.com';
-        case 'instagram':
-          return parsedUrl.hostname === 'www.instagram.com' || parsedUrl.hostname === 'instagram.com';
-        case 'twitter':
-          return parsedUrl.hostname === 'www.twitter.com' || parsedUrl.hostname === 'twitter.com' || 
-                 parsedUrl.hostname === 'x.com';
-        case 'website':
-          return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
-        default:
-          return true;
-      }
+      const parsedUrl = new URL(normalizeUrl(url));
+      return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
     } catch {
       return false;
     }
   };
 
   const getErrorMessage = (platform: string): string => {
-    switch (platform) {
-      case 'facebook':
-        return 'Please enter a valid Facebook profile URL (facebook.com/username)';
-      case 'instagram':
-        return 'Please enter a valid Instagram profile URL (instagram.com/username)';
-      case 'twitter':
-        return 'Please enter a valid Twitter/X profile URL (twitter.com/username or x.com/username)';
-      case 'website':
-        return 'Please enter a valid website URL (https://...)';
-      default:
-        return 'Please enter a valid URL';
-    }
+    return 'Please enter a valid URL (example: https://instagram.com/username)';
   };
 
   const handleUrlChange = (platform: string, url: string) => {
@@ -121,7 +148,7 @@ export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: 
       // Prepare update data
       const updateData: Record<string, string> = {};
       links.forEach(link => {
-        updateData[`${link.platform}_url`] = link.url;
+        updateData[getProfileFieldName(link.platform)] = link.url.trim();
       });
 
       const { error } = await supabase
@@ -155,7 +182,7 @@ export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: 
   const handleCancel = () => {
     // Reset to original values
     const resetLinks = SOCIAL_PLATFORMS.map(platform => {
-      const url = profile?.[`${platform.id}_url`] || '';
+      const url = profile?.[getProfileFieldName(platform.id)] || '';
       return {
         platform: platform.id,
         url,
@@ -163,17 +190,72 @@ export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: 
         error: url && !validateUrl(platform.id, url) ? getErrorMessage(platform.id) : undefined
       };
     });
+
+    const resetVisiblePlatforms = resetLinks
+      .filter(link => link.url.trim() !== '')
+      .map(link => link.platform);
+
     setLinks(resetLinks);
+    setVisiblePlatforms(
+      resetVisiblePlatforms.length > 0
+        ? resetVisiblePlatforms
+        : [SOCIAL_PLATFORMS[0].id]
+    );
     setEditing(false);
+  };
+
+  const handleAddLink = () => {
+    const nextPlatform = SOCIAL_PLATFORMS.find(
+      platform => !visiblePlatforms.includes(platform.id)
+    );
+
+    if (!nextPlatform) return;
+
+    setVisiblePlatforms(prev => [...prev, nextPlatform.id]);
   };
 
   const getPlatformConfig = (platformId: string) => {
     return SOCIAL_PLATFORMS.find(p => p.id === platformId);
   };
 
+  const getFaviconUrl = (url: string) => {
+    const safeUrl = normalizeUrl(url);
+    if (!safeUrl) return '';
+
+    try {
+      const parsed = new URL(safeUrl);
+      const host = parsed.hostname;
+      return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+    } catch {
+      return '';
+    }
+  };
+
+  const getCompanyNameForLink = (link: SocialLink) => {
+    if (link.url.trim()) {
+      return getCompanyNameFromUrl(link.url);
+    }
+
+    const platformConfig = getPlatformConfig(link.platform);
+    return platformConfig?.name || 'Website';
+  };
+
+  const renderLinkIcon = (link: SocialLink, className: string) => {
+    const platformConfig = getPlatformConfig(link.platform);
+    const Icon = platformConfig?.icon || Globe;
+    const faviconUrl = getFaviconUrl(link.url);
+    const companyName = getCompanyNameForLink(link);
+
+    if (faviconUrl) {
+      return <img src={faviconUrl} alt={`${companyName} logo`} className={className} />;
+    }
+
+    return <Icon className={className} />;
+  };
+
   const shouldShowLink = (platform: string) => {
     const link = links.find(l => l.platform === platform);
-    if (!link || !link.url) return false;
+    if (!link || !link.url.trim()) return false;
     
     // For own profile, always show
     if (isOwnProfile) return true;
@@ -185,6 +267,8 @@ export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: 
   if (!isOwnProfile && !links.some(link => shouldShowLink(link.platform))) {
     return null;
   }
+
+  const activeLinks = links.filter(link => shouldShowLink(link.platform));
 
   return (
     <div className="mt-6 pt-6 border-t border-border">
@@ -203,29 +287,43 @@ export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: 
 
       {editing ? (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Add your social media profiles. Only valid platform URLs will be saved.
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Add your social links. Company name will be detected automatically from each URL.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleAddLink}
+              disabled={visiblePlatforms.length >= SOCIAL_PLATFORMS.length}
+            >
+              Add Link
+            </Button>
+          </div>
           
           <div className="grid gap-4">
-            {links.map((link) => {
+            {visiblePlatforms.map((platformId) => {
+              const link = links.find(item => item.platform === platformId);
+              if (!link) return null;
+
               const platformConfig = getPlatformConfig(link.platform);
               if (!platformConfig) return null;
               
               const Icon = platformConfig.icon;
+              const companyName = getCompanyNameForLink(link);
               
               return (
                 <div key={link.platform} className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <Icon className="w-4 h-4" />
-                    {platformConfig.name}
+                    {renderLinkIcon(link, 'w-4 h-4 rounded-sm')}
+                    {companyName}
                   </Label>
                   
                   <div className="relative">
                     <Input
                       value={link.url}
                       onChange={(e) => handleUrlChange(link.platform, e.target.value)}
-                      placeholder={platformConfig.placeholder}
+                      placeholder="https://instagram.com/username"
                       className={link.isValid ? '' : 'border-destructive'}
                     />
                     {link.url && (
@@ -260,79 +358,27 @@ export const SocialLinksSection = ({ profile, isOwnProfile, friendshipStatus }: 
           </div>
         </div>
       ) : (
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            {SOCIAL_PLATFORMS.map(platform => {
-              const hasLink = shouldShowLink(platform.id);
-              return hasLink && (
-                <TabsTrigger key={platform.id} value={platform.id} className="flex items-center gap-1">
-                  <platform.icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{platform.name}</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+        <div className="flex flex-wrap gap-3">
+          {activeLinks.map(link => {
+            const platform = getPlatformConfig(link.platform);
+            const companyName = getCompanyNameForLink(link);
+            const redirectUrl = normalizeUrl(link.url);
 
-          <TabsContent value="all" className="mt-0">
-            <div className="flex flex-wrap gap-3">
-              {SOCIAL_PLATFORMS.map(platform => {
-                const link = links.find(l => l.platform === platform.id);
-                if (!link || !shouldShowLink(platform.id)) return null;
-                
-                const Icon = platform.icon;
-                
-                return (
-                  <a
-                    key={platform.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`flex items-center gap-2 px-4 py-2 ${platform.color} text-white rounded-lg text-sm hover:opacity-90 transition-opacity`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{platform.name}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                );
-              })}
-            </div>
-          </TabsContent>
-
-          {SOCIAL_PLATFORMS.map(platform => {
-            const link = links.find(l => l.platform === platform.id);
-            if (!link || !shouldShowLink(platform.id)) return null;
-            
-            const Icon = platform.icon;
-            
             return (
-              <TabsContent key={platform.id} value={platform.id} className="mt-0">
-                <div className="flex flex-col items-center gap-4 p-6 bg-secondary/10 rounded-lg">
-                  <div className={`p-3 ${platform.color} rounded-full`}>
-                    <Icon className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="text-center">
-                    <h3 className="font-semibold text-lg">{platform.name}</h3>
-                    <p className="text-muted-foreground text-sm">
-                      {platform.id === 'website' 
-                        ? 'Personal Website' 
-                        : `${platform.name} Profile`}
-                    </p>
-                  </div>
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                  >
-                    Visit {platform.name} Profile
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
-              </TabsContent>
+              <a
+                key={link.platform}
+                href={redirectUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-2 px-4 py-2 ${platform?.color || 'bg-gray-600'} text-white rounded-lg text-sm hover:opacity-90 transition-opacity`}
+              >
+                {renderLinkIcon(link, 'w-4 h-4 rounded-sm')}
+                <span>{companyName}</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             );
           })}
-        </Tabs>
+        </div>
       )}
     </div>
   );

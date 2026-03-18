@@ -5,7 +5,7 @@ import {
   MapPin, Link as LinkIcon, Calendar, Heart, MessageCircle, 
   Share2, Briefcase, GraduationCap, Home as HomeIcon, Phone, Users as UsersIcon, 
   UserPlus, UserMinus, ArrowLeft, Check, X, Send, Camera, Video, Image,
-  Globe, Lock, Cake, User as UserIcon, Plus, Bookmark
+  Lock, Cake, User as UserIcon, Plus, Bookmark
 } from "lucide-react";
 import { useProfile } from '@/hooks/useProfile';
 import { useFriends } from '@/hooks/useFriends';
@@ -31,6 +31,7 @@ import { FriendsPreview } from '@/components/profile/FriendsPreview';
 import { SocialLinksSection } from '@/components/profile/SocialLinksSection';
 import { ProfilePostCard } from '@/components/profile/ProfilePostCard';
 import { ProfileSettingsDialog } from '@/components/profile/ProfileSettingsDialog';
+import { CreatePostCard } from '@/components/CreatePostCard';
 import AppMenu from '@/components/AppMenu';
 import { useQueryClient } from '@tanstack/react-query';
 import NotificationBell from '@/components/NotificationBell';
@@ -62,6 +63,7 @@ const Profile = () => {
   const { mutualFriendsCount, mutualFriends } = useMutualFriends(userId);
   const { toggleLike, togglePinPost } = usePosts();
   const { sharePost } = useShares();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
@@ -129,6 +131,8 @@ const Profile = () => {
 
       if (error) throw error;
 
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+
       toast({
         title: 'Avatar updated!',
         description: 'Your profile picture has been updated',
@@ -158,6 +162,8 @@ const Profile = () => {
 
       if (error) throw error;
 
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+
       toast({
         title: 'Cover photo updated!',
         description: 'Your cover photo has been updated',
@@ -177,6 +183,68 @@ const Profile = () => {
     if (!userId) return;
     // Navigate to Messages page with user ID
     navigate(`/messages?userId=${userId}`);
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!isOwnProfile) return;
+    try {
+      setUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+
+      toast({
+        title: 'Profile photo removed',
+        description: 'Your profile picture has been removed',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Remove failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCoverRemove = async () => {
+    if (!isOwnProfile) return;
+    try {
+      setUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ cover_url: null })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+
+      toast({
+        title: 'Cover photo removed',
+        description: 'Your cover photo has been removed',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Remove failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   // Story handlers
@@ -409,6 +477,9 @@ const Profile = () => {
               <ProfileImageUpload 
                 type="cover" 
                 onUpload={handleCoverUpload}
+                onRemove={handleCoverRemove}
+                hasImage={!!profile?.cover_url}
+                disabled={uploading}
               />
             </div>
           )}
@@ -427,6 +498,9 @@ const Profile = () => {
               <ProfileImageUpload 
                 type="avatar" 
                 onUpload={handleAvatarUpload}
+                onRemove={handleAvatarRemove}
+                hasImage={!!profile?.avatar_url}
+                disabled={uploading}
               />
             </div>
           )}
@@ -531,6 +605,12 @@ const Profile = () => {
               >
                 Videos
               </TabsTrigger>
+              <TabsTrigger 
+                value="links" 
+                className="px-4 py-3 text-sm font-semibold data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none bg-transparent"
+              >
+                Links
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -566,56 +646,7 @@ const Profile = () => {
                 {/* Posts Feed */}
                 <div className="lg:col-span-3 space-y-4">
                   {/* Create Post Box (only on own profile) */}
-                  {isOwnProfile && (
-                    <Card className="p-4 shadow-sm">
-                      <div className="flex gap-3">
-                        <Avatar className="h-10 w-10">
-                          {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
-                          <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                            {profile?.display_name?.[0] || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <Button 
-                          variant="secondary" 
-                          className="flex-1 justify-start text-muted-foreground font-normal rounded-full"
-                          onClick={() => navigate('/')}
-                        >
-                          What's on your mind?
-                        </Button>
-                      </div>
-                      <div className="flex justify-around mt-3 pt-3 border-t border-border">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="flex-1 gap-2 text-muted-foreground"
-                          onClick={() => {
-                            toast({ title: 'Coming Soon', description: 'Live video feature coming soon!' });
-                          }}
-                        >
-                          <Video className="w-5 h-5 text-red-500" />
-                          <span className="hidden sm:inline">Live video</span>
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="flex-1 gap-2 text-muted-foreground"
-                          onClick={() => navigate('/')}
-                        >
-                          <Image className="w-5 h-5 text-green-500" />
-                          <span className="hidden sm:inline">Photo/video</span>
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="flex-1 gap-2 text-muted-foreground"
-                          onClick={() => navigate('/')}
-                        >
-                          <Heart className="w-5 h-5 text-yellow-500" />
-                          <span className="hidden sm:inline">Life event</span>
-                        </Button>
-                      </div>
-                    </Card>
-                  )}
+                  {isOwnProfile && <CreatePostCard />}
 
                   {/* Posts */}
                   {postsLoading ? (
@@ -756,22 +787,6 @@ const Profile = () => {
                       </div>
                     )}
 
-                    {shouldShowInfo(profile?.privacy?.website, isOwnProfile, friendshipStatus?.status === 'accepted') && profile?.website && (
-                      <div className="flex items-start gap-4">
-                        <Globe className="w-6 h-6 text-muted-foreground mt-0.5" />
-                        <div>
-                          <a 
-                            href={profile.website} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-sm text-primary hover:underline"
-                          >
-                            {profile.website}
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
                     <div className="flex items-start gap-4">
                       <Calendar className="w-6 h-6 text-muted-foreground mt-0.5" />
                       <div>
@@ -781,13 +796,6 @@ const Profile = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Social Links - Enhanced with real-time sync */}
-                  <SocialLinksSection 
-                    profile={profile} 
-                    isOwnProfile={isOwnProfile} 
-                    friendshipStatus={friendshipStatus} 
-                  />
                 </div>
               </Card>
             </div>
@@ -980,6 +988,17 @@ const Profile = () => {
                   </div>
                 )}
               </Card>
+            </div>
+          </TabsContent>
+
+          {/* Links Tab */}
+          <TabsContent value="links" className="mt-0">
+            <div className="max-w-3xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
+              <SocialLinksSection 
+                profile={profile} 
+                isOwnProfile={isOwnProfile} 
+                friendshipStatus={friendshipStatus} 
+              />
             </div>
           </TabsContent>
         </Tabs>

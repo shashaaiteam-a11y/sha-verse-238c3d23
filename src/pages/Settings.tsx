@@ -15,8 +15,9 @@ import { useToast } from "@/components/ui/use-toast";
 const Settings = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const { toast } = useToast();
+  const isDarkMode = (resolvedTheme ?? theme) === "dark";
 
   const settingsGroups = [
     {
@@ -46,12 +47,12 @@ const Settings = () => {
       title: "Preferences",
       items: [
         {
-          icon: theme === "dark" ? Sun : Moon,
+          icon: isDarkMode ? Sun : Moon,
           label: "Dark Mode",
-          description: theme === "dark" ? "Currently using dark theme" : "Currently using light theme",
+          description: isDarkMode ? "Currently using dark theme" : "Currently using light theme",
           toggle: true,
-          checked: theme === "dark",
-          onToggle: () => setTheme(theme === "dark" ? "light" : "dark")
+          checked: isDarkMode,
+          onToggle: () => setTheme(isDarkMode ? "light" : "dark")
         },
         {
           icon: Globe,

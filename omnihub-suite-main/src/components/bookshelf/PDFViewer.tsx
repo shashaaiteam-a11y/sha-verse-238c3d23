@@ -3,8 +3,11 @@ import * as pdfjsLib from "pdfjs-dist";
 import { Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Configure PDF.js worker from CDN
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Use local bundled worker (compatible with pdfjs-dist v5 + Vite)
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).href;
 
 export interface PDFOutlineItem {
   title: string;
@@ -66,8 +69,9 @@ const PDFViewer = ({
 
         const loadingTask = pdfjsLib.getDocument({
           url,
-          cMapUrl: `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/cmaps/`,
+          cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/cmaps/`,
           cMapPacked: true,
+          withCredentials: false,
         });
 
         const pdf = await loadingTask.promise;

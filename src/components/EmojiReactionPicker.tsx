@@ -193,41 +193,43 @@ export const EmojiReactionPicker = ({
 
       {/* Full Emoji Chart Dialog - Responsive for all devices */}
       <Dialog open={showPicker} onOpenChange={setShowPicker}>
-        <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-md md:max-w-lg h-[70vh] sm:h-auto sm:max-h-[80vh] p-0 rounded-xl sm:rounded-xl overflow-hidden fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]">
-          <DialogHeader className="p-3 sm:p-4 pb-2 border-b sticky top-0 bg-card z-10">
+        <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-2xl lg:max-w-4xl h-[65vh] sm:h-[75vh] lg:h-[85vh] p-0 rounded-xl overflow-hidden flex flex-col">
+          <DialogHeader className="p-3 sm:p-4 pb-2 border-b flex-shrink-0 bg-card z-10">
             <DialogTitle className="flex items-center justify-between text-base sm:text-lg">
               <span>Choose your reaction</span>
             </DialogTitle>
           </DialogHeader>
           
-          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full flex flex-col h-[calc(100%-120px)] sm:h-auto">
+          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full flex flex-col flex-1 min-h-0">
             {/* Category tabs - scrollable horizontally */}
-            <div className="px-2 border-b flex-shrink-0">
-              <ScrollArea className="w-full" type="scroll">
-                <TabsList className="h-auto p-1 bg-transparent flex gap-1 w-max">
-                  {Object.keys(emojiCategories).map((category) => (
-                    <TabsTrigger 
-                      key={category} 
-                      value={category}
-                      className="px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full whitespace-nowrap"
-                    >
-                      {category}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+            <div className="border-b flex-shrink-0">
+              <ScrollArea className="w-full h-auto" type="always">
+                <div className="px-2 py-1">
+                  <TabsList className="h-auto p-1 bg-transparent inline-flex gap-1 w-max">
+                    {Object.keys(emojiCategories).map((category) => (
+                      <TabsTrigger 
+                        key={category} 
+                        value={category}
+                        className="px-2.5 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full whitespace-nowrap"
+                      >
+                        {category}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
               </ScrollArea>
             </div>
 
             {/* Emoji grid for each category */}
-            <ScrollArea className="flex-1 h-[calc(100%-60px)] sm:h-[300px] p-2 sm:p-3">
+            <ScrollArea className="flex-1 min-h-0 p-2 sm:p-3">
               {Object.entries(emojiCategories).map(([category, emojis]) => (
                 <TabsContent key={category} value={category} className="m-0 mt-0">
-                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-0.5 sm:gap-1">
+                  <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-12 gap-0.5 sm:gap-1">
                     {emojis.map((emoji, index) => (
                       <button
                         key={`${emoji}-${index}`}
                         onClick={() => handleReaction(emoji)}
-                        className="p-1.5 sm:p-2 text-xl sm:text-2xl hover:bg-secondary rounded-lg transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="p-1.5 sm:p-2 lg:p-2.5 text-xl sm:text-2xl lg:text-3xl hover:bg-secondary rounded-lg transition-all hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary"
                         title={`React with ${emoji}`}
                       >
                         {emoji}

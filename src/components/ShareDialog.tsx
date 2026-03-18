@@ -276,7 +276,7 @@ export const ShareDialog = ({
               <Send className="w-4 h-4 text-primary" />
             </div>
             Share Post
-            <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground font-normal bg-secondary px-2.5 py-1 rounded-full">
+            <span className="ml-auto mr-10 flex items-center gap-1.5 text-xs text-muted-foreground font-normal bg-secondary px-2.5 py-1 rounded-full">
               {getVisibilityIcon()}
               {postVisibility}
             </span>

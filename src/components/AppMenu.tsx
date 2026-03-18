@@ -41,13 +41,14 @@ const AppMenu = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const { savedPosts } = useSavedPosts();
   const { pendingRequests } = useFriends();
   const { unreadCount } = useNotifications();
 
   const savedCount = savedPosts?.length || 0;
   const pendingCount = pendingRequests?.length || 0;
+  const isDarkMode = (resolvedTheme ?? theme) === "dark";
 
   const mainModules = [
     { icon: Home, label: "Home", path: "/", color: "text-blue-500" },
@@ -168,17 +169,17 @@ const AppMenu = () => {
 
           {/* Dark Mode Toggle */}
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setTheme(isDarkMode ? "light" : "dark")}
             className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-secondary transition-colors"
           >
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-secondary">
-                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </div>
               <span className="text-sm font-medium">Dark Mode</span>
             </div>
-            <div className={`w-10 h-6 rounded-full transition-colors ${theme === "dark" ? "bg-primary" : "bg-muted"}`}>
-              <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${theme === "dark" ? "translate-x-4.5 ml-0.5" : "translate-x-0.5"}`} />
+            <div className={`w-10 h-6 rounded-full transition-colors ${isDarkMode ? "bg-primary" : "bg-muted"}`}>
+              <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${isDarkMode ? "translate-x-4.5 ml-0.5" : "translate-x-0.5"}`} />
             </div>
           </button>
 

@@ -132,21 +132,21 @@ export const LocationPicker = ({ value, onChange }: LocationPickerProps) => {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="w-[min(92vw,32rem)] max-h-[85vh] overflow-hidden p-0">
+          <DialogHeader className="border-b border-border px-4 py-4 sm:px-5">
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-primary" />
               Add Location
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto px-4 pb-4 sm:px-5 sm:pb-5">
             {/* Detect Current Location */}
             <Button 
               onClick={detectLocation} 
               disabled={isDetecting}
               variant="outline"
-              className="w-full gap-2"
+              className="h-11 w-full gap-2"
             >
               {isDetecting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -163,7 +163,7 @@ export const LocationPicker = ({ value, onChange }: LocationPickerProps) => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search location..."
-                className="pl-10"
+                className="h-11 pl-10"
               />
             </div>
 
@@ -171,7 +171,7 @@ export const LocationPicker = ({ value, onChange }: LocationPickerProps) => {
             {search && !filteredLocations.includes(search) && (
               <Button 
                 variant="ghost" 
-                className="w-full justify-start gap-2"
+                className="h-11 w-full justify-start gap-2 rounded-lg border border-dashed border-border"
                 onClick={() => selectLocation(search)}
               >
                 <MapPin className="w-4 h-4" />
@@ -180,19 +180,21 @@ export const LocationPicker = ({ value, onChange }: LocationPickerProps) => {
             )}
 
             {/* Popular Locations */}
-            <div className="max-h-[200px] overflow-y-auto space-y-1">
-              <p className="text-xs text-muted-foreground px-2 mb-2">Popular Locations</p>
+            <div className="rounded-lg border border-border bg-secondary/30 p-2">
+              <p className="mb-2 px-2 text-xs text-muted-foreground">Popular Locations</p>
+              <div className="max-h-[240px] space-y-1 overflow-y-auto pr-1">
               {filteredLocations.map((location) => (
                 <Button
                   key={location}
                   variant="ghost"
-                  className="w-full justify-start gap-2 text-sm"
+                  className="h-11 w-full justify-start gap-2 rounded-lg text-sm"
                   onClick={() => selectLocation(location)}
                 >
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   {location}
                 </Button>
               ))}
+              </div>
             </div>
           </div>
         </DialogContent>

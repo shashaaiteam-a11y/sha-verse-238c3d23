@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 // ReactionType is now any emoji string (not just predefined types)
 type ReactionType = string;
-type TargetType = 'post' | 'group_post' | 'comment' | 'video' | 'book';
+type TargetType = 'post' | 'group_post' | 'comment' | 'video';
 
 export const useReactions = (targetId: string, targetType: TargetType = 'post') => {
   const { user } = useAuth();
@@ -16,7 +16,6 @@ export const useReactions = (targetId: string, targetType: TargetType = 'post') 
     if (targetType === 'post') return { post_id: targetId };
     if (targetType === 'group_post') return { group_post_id: targetId };
     if (targetType === 'video') return { video_id: targetId };
-    if (targetType === 'book') return { book_id: targetId };
     return { comment_id: targetId };
   };
 
@@ -37,8 +36,6 @@ export const useReactions = (targetId: string, targetType: TargetType = 'post') 
         query = query.eq('group_post_id', targetId);
       } else if (targetType === 'video') {
         query = query.eq('video_id', targetId);
-      } else if (targetType === 'book') {
-        query = query.eq('book_id', targetId);
       } else {
         query = query.eq('comment_id', targetId);
       }
@@ -61,8 +58,6 @@ export const useReactions = (targetId: string, targetType: TargetType = 'post') 
         query = query.eq('group_post_id', targetId);
       } else if (targetType === 'video') {
         query = query.eq('video_id', targetId);
-      } else if (targetType === 'book') {
-        query = query.eq('book_id', targetId);
       } else {
         query = query.eq('comment_id', targetId);
       }
@@ -99,8 +94,6 @@ export const useReactions = (targetId: string, targetType: TargetType = 'post') 
         checkQuery = checkQuery.eq('group_post_id', targetId);
       } else if (targetType === 'video') {
         checkQuery = checkQuery.eq('video_id', targetId);
-      } else if (targetType === 'book') {
-        checkQuery = checkQuery.eq('book_id', targetId);
       } else {
         checkQuery = checkQuery.eq('comment_id', targetId);
       }
@@ -125,8 +118,6 @@ export const useReactions = (targetId: string, targetType: TargetType = 'post') 
           insertData.group_post_id = targetId;
         } else if (targetType === 'video') {
           insertData.video_id = targetId;
-        } else if (targetType === 'book') {
-          insertData.book_id = targetId;
         } else {
           insertData.comment_id = targetId;
         }
@@ -147,7 +138,7 @@ export const useReactions = (targetId: string, targetType: TargetType = 'post') 
   useEffect(() => {
     if (!targetId) return;
 
-    const filterColumn = targetType === 'post' ? 'post_id' : targetType === 'group_post' ? 'group_post_id' : targetType === 'video' ? 'video_id' : targetType === 'book' ? 'book_id' : 'comment_id';
+    const filterColumn = targetType === 'post' ? 'post_id' : targetType === 'group_post' ? 'group_post_id' : 'comment_id';
 
     const channel = supabase
       .channel(`reactions-${targetId}`)

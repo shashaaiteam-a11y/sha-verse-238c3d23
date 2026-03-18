@@ -279,6 +279,7 @@ export const CreatePostCard = () => {
       setPollOptions([{ id: '1', text: '' }, { id: '2', text: '' }]);
       setPollDuration('1d');
       queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['user-posts'] });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -553,22 +554,22 @@ export const CreatePostCard = () => {
 
       {/* Poll Creation Dialog - Facebook Style */}
       <Dialog open={showPollDialog} onOpenChange={setShowPollDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="w-[min(92vw,32rem)] max-h-[85vh] overflow-hidden p-0 flex flex-col">
+          <DialogHeader className="border-b border-border px-4 py-4 sm:px-5 shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <BarChart2 className="w-5 h-5 text-primary" />
               Create a Poll
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="flex-1 space-y-5 overflow-y-auto px-4 pt-4 pb-4 sm:px-5 sm:pb-5">
             <div>
               <label className="text-sm font-medium">Question</label>
               <Input
                 value={pollQuestion}
                 onChange={(e) => setPollQuestion(e.target.value)}
                 placeholder="Ask a question..."
-                className="mt-1"
+                className="mt-2 h-11"
                 maxLength={200}
               />
               <p className="text-xs text-muted-foreground mt-1 text-right">{pollQuestion.length}/200</p>
@@ -577,14 +578,15 @@ export const CreatePostCard = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Options (2-4)</label>
               {pollOptions.map((opt, idx) => (
-                <div key={opt.id} className="flex gap-2">
-                  <div className="flex items-center justify-center w-6 h-9 text-sm text-muted-foreground">
+                <div key={opt.id} className="flex items-center gap-2">
+                  <div className="flex h-11 w-7 flex-shrink-0 items-center justify-center text-sm text-muted-foreground">
                     {idx + 1}.
                   </div>
                   <Input
                     value={opt.text}
                     onChange={(e) => updatePollOption(opt.id, e.target.value)}
                     placeholder={`Option ${idx + 1}`}
+                    className="h-11"
                     maxLength={100}
                   />
                   {pollOptions.length > 2 && (
@@ -592,7 +594,7 @@ export const CreatePostCard = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => removePollOption(opt.id)}
-                      className="text-destructive hover:text-destructive"
+                      className="h-11 w-11 flex-shrink-0 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -604,7 +606,7 @@ export const CreatePostCard = () => {
                   variant="outline"
                   size="sm"
                   onClick={addPollOption}
-                  className="w-full gap-2 mt-2"
+                  className="mt-2 h-11 w-full gap-2 border-dashed"
                 >
                   <Plus className="w-4 h-4" />
                   Add Option
@@ -615,7 +617,7 @@ export const CreatePostCard = () => {
             {/* Poll Duration */}
             <div>
               <label className="text-sm font-medium">Poll Duration</label>
-              <div className="flex gap-2 mt-2">
+              <div className="mt-2 grid grid-cols-3 gap-2">
                 {[
                   { value: '1d' as const, label: '1 Day' },
                   { value: '3d' as const, label: '3 Days' },
@@ -626,7 +628,7 @@ export const CreatePostCard = () => {
                     variant={pollDuration === opt.value ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setPollDuration(opt.value)}
-                    className="flex-1"
+                    className="h-10 w-full"
                   >
                     {opt.label}
                   </Button>
@@ -635,17 +637,18 @@ export const CreatePostCard = () => {
             </div>
 
             {/* Poll Rules Info */}
-            <div className="text-xs text-muted-foreground bg-secondary/50 p-3 rounded-lg space-y-1">
+            <div className="space-y-1 rounded-lg border border-border bg-secondary/40 p-3 text-xs text-muted-foreground">
               <p>• Single vote only - users can't change their vote</p>
               <p>• Results hidden until you vote</p>
               <p>• Poll can't be edited after publishing</p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={() => setShowPollDialog(false)}>
+            <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+              <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setShowPollDialog(false)}>
                 Cancel
               </Button>
               <Button
+                className="w-full sm:w-auto"
                 onClick={() => setShowPollDialog(false)}
                 disabled={!pollQuestion.trim() || pollOptions.filter(o => o.text.trim()).length < 2}
               >
