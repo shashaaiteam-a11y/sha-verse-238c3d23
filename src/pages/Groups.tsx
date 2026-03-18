@@ -199,6 +199,10 @@ const Groups = () => {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editPrivate, setEditPrivate] = useState(false);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [headerSearch, setHeaderSearch] = useState("");
 
@@ -393,6 +397,10 @@ const Groups = () => {
                         setEditName(group.name);
                         setEditDesc(group.description || "");
                         setEditPrivate(group.is_private || false);
+                        setEditAvatarFile(null);
+                        setEditCoverFile(null);
+                        setEditAvatarPreview(group.avatar_url || null);
+                        setEditCoverPreview(group.cover_url || null);
                       }}
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -666,6 +674,40 @@ const Groups = () => {
             <DialogTitle>Edit Group</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Cover Image */}
+            <div className="space-y-1.5">
+              <Label>Cover Image</Label>
+              <label className="block cursor-pointer">
+                <div className="w-full h-24 rounded-lg bg-muted border-2 border-dashed border-border hover:border-primary transition-colors overflow-hidden">
+                  {editCoverPreview ? (
+                    <img src={editCoverPreview} alt="Cover" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Click to upload</div>
+                  )}
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) { setEditCoverFile(file); setEditCoverPreview(URL.createObjectURL(file)); }
+                }} />
+              </label>
+            </div>
+            {/* Avatar */}
+            <div className="space-y-1.5">
+              <Label>Profile Picture</Label>
+              <label className="block cursor-pointer w-20 h-20">
+                <div className="w-20 h-20 rounded-full bg-muted border-2 border-dashed border-border hover:border-primary transition-colors overflow-hidden">
+                  {editAvatarPreview ? (
+                    <img src={editAvatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Upload</div>
+                  )}
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) { setEditAvatarFile(file); setEditAvatarPreview(URL.createObjectURL(file)); }
+                }} />
+              </label>
+            </div>
             <div className="space-y-1.5">
               <Label>Group Name</Label>
               <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Enter group name" />
@@ -689,7 +731,14 @@ const Groups = () => {
               onClick={() => {
                 if (!editGroup) return;
                 updateGroup.mutate(
-                  { groupId: editGroup.id, name: editName.trim(), description: editDesc.trim(), isPrivate: editPrivate },
+                  { 
+                    groupId: editGroup.id, 
+                    name: editName.trim(), 
+                    description: editDesc.trim(), 
+                    isPrivate: editPrivate,
+                    avatarFile: editAvatarFile || undefined,
+                    coverFile: editCoverFile || undefined,
+                  },
                   { onSuccess: () => setEditGroup(null) }
                 );
               }}
