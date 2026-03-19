@@ -236,8 +236,11 @@ const BookDetail = () => {
   };
 
   const handleStartReading = () => {
-    if (!bookId) return;
-    navigate(`/bookshelf/read/${bookId}`);
+    if (!book?.book_url) {
+      toast.error("Book PDF not available");
+      return;
+    }
+    window.open(book.book_url, "_blank");
   };
 
   const handleCommentSubmit = async () => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupAdmin } from '@/hooks/useGroupAdmin';
 import { useAuth } from '@/contexts/AuthContext';
@@ -82,22 +82,22 @@ const GroupAdmin = () => {
   const [isPrivate, setIsPrivate] = useState(false);
   const [requireJoinApproval, setRequireJoinApproval] = useState(false);
   const [requirePostApproval, setRequirePostApproval] = useState(false);
-  const [settingsInitialized, setSettingsInitialized] = useState(false);
 
   // New rule dialog
   const [newRuleTitle, setNewRuleTitle] = useState('');
   const [newRuleDescription, setNewRuleDescription] = useState('');
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
 
-  // Initialize form when group details load
-  if (groupDetails && !settingsInitialized) {
-    setName(groupDetails.name || '');
-    setDescription(groupDetails.description || '');
-    setIsPrivate(groupDetails.is_private || false);
-    setRequireJoinApproval(groupDetails.require_join_approval || false);
-    setRequirePostApproval(groupDetails.require_post_approval || false);
-    setSettingsInitialized(true);
-  }
+  // Sync form whenever groupDetails loads or changes (e.g. after realtime update)
+  useEffect(() => {
+    if (groupDetails) {
+      setName(groupDetails.name || '');
+      setDescription(groupDetails.description || '');
+      setIsPrivate(groupDetails.is_private || false);
+      setRequireJoinApproval((groupDetails as any).require_join_approval || false);
+      setRequirePostApproval((groupDetails as any).require_post_approval || false);
+    }
+  }, [groupDetails]);
 
   if (groupLoading) {
     return (

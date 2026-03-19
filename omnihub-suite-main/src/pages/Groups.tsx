@@ -190,7 +190,10 @@ const CATEGORIES = [
 ];
 
 const Groups = () => {
-  const { myGroups, myGroupsLoading, suggestedGroups, suggestedLoading, joinGroup, deleteGroup, updateGroup } = useGroups();
+  const { myGroups, myGroupsLoading, suggestedGroups, suggestedLoading, pendingRequestGroupIds, joinGroup, leaveGroup, deleteGroup, updateGroup } = useGroups();
+  const joinedGroupIds = new Set<string>(
+    (myGroups as any[] || []).map((m: any) => m.groups?.id).filter(Boolean)
+  );
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -199,8 +202,11 @@ const Groups = () => {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editPrivate, setEditPrivate] = useState(false);
+  const [editRequireJoinApproval, setEditRequireJoinApproval] = useState(false);
+  const [editRequirePostApproval, setEditRequirePostApproval] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [headerSearch, setHeaderSearch] = useState("");
+  const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
 
   // Realtime search across all groups
   const allGroupsPool = [
@@ -393,6 +399,8 @@ const Groups = () => {
                         setEditName(group.name);
                         setEditDesc(group.description || "");
                         setEditPrivate(group.is_private || false);
+                        setEditRequireJoinApproval(group.require_join_approval || false);
+                        setEditRequirePostApproval(group.require_post_approval || false);
                       }}
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -458,28 +466,52 @@ const Groups = () => {
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-        {suggestedGroups.map((group: any) => (
-          <Card key={group.id} className="p-3 sm:p-4 text-center">
-            <Avatar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2">
-              {group.avatar_url && <AvatarImage src={group.avatar_url} />}
-              <AvatarFallback className="bg-gradient-accent text-accent-foreground font-bold text-sm sm:text-base">
-                {group.name[0]}
-              </AvatarFallback>
-            </Avatar>
-            <h3 className="font-semibold text-xs sm:text-sm mb-1 truncate">{group.name}</h3>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">
-              {group.members_count} members
-            </p>
-            <Button 
-              size="sm" 
-              className="w-full bg-gradient-primary text-xs sm:text-sm h-8 sm:h-9"
-              onClick={() => joinGroup.mutate({ groupId: group.id })}
-              disabled={joinGroup.isPending}
+        {suggestedGroups.map((group: any) => {
+          const isJoined = joinedGroupIds.has(group.id);
+          const isPending = pendingRequestGroupIds.has(group.id);
+          return (
+            <Card
+              key={group.id}
+              className="p-3 sm:p-4 text-center cursor-pointer hover:shadow-md transition-all"
+              onClick={() => navigate(`/groups/${group.id}`)}
             >
-              Join
-            </Button>
-          </Card>
-        ))}
+              <Avatar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2">
+                {group.avatar_url && <AvatarImage src={group.avatar_url} />}
+                <AvatarFallback className="bg-gradient-accent text-accent-foreground font-bold text-sm sm:text-base">
+                  {group.name[0]}
+                </AvatarFallback>
+              </Avatar>
+              <h3 className="font-semibold text-xs sm:text-sm mb-1 truncate">{group.name}</h3>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">
+                {group.members_count} members
+              </p>
+              <Button
+                size="sm"
+                className={`w-full text-xs sm:text-sm h-8 sm:h-9 ${
+                  isJoined
+                    ? 'bg-muted text-muted-foreground'
+                    : isPending
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                    : 'bg-gradient-primary'
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isJoined) { navigate(`/groups/${group.id}`); return; }
+                  if (!isPending && joiningGroupId !== group.id) {
+                    setJoiningGroupId(group.id);
+                    joinGroup.mutate(
+                      { groupId: group.id },
+                      { onSettled: () => setJoiningGroupId(null) }
+                    );
+                  }
+                }}
+                disabled={joiningGroupId === group.id || isPending}
+              >
+                {isJoined ? 'View' : isPending ? 'Requested' : joiningGroupId === group.id ? 'Joining…' : 'Join'}
+              </Button>
+            </Card>
+          );
+        })}
       </div>
     );
   };
@@ -681,6 +713,20 @@ const Groups = () => {
               </div>
               <Switch checked={editPrivate} onCheckedChange={setEditPrivate} />
             </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Require Join Approval</Label>
+                <p className="text-xs text-muted-foreground">Admin must approve join requests</p>
+              </div>
+              <Switch checked={editRequireJoinApproval} onCheckedChange={setEditRequireJoinApproval} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Require Post Approval</Label>
+                <p className="text-xs text-muted-foreground">Admin must approve posts before they appear</p>
+              </div>
+              <Switch checked={editRequirePostApproval} onCheckedChange={setEditRequirePostApproval} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditGroup(null)}>Cancel</Button>
@@ -689,7 +735,7 @@ const Groups = () => {
               onClick={() => {
                 if (!editGroup) return;
                 updateGroup.mutate(
-                  { groupId: editGroup.id, name: editName.trim(), description: editDesc.trim(), isPrivate: editPrivate },
+                  { groupId: editGroup.id, name: editName.trim(), description: editDesc.trim(), isPrivate: editPrivate, requireJoinApproval: editRequireJoinApproval, requirePostApproval: editRequirePostApproval },
                   { onSuccess: () => setEditGroup(null) }
                 );
               }}

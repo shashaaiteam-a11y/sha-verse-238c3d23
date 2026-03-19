@@ -244,6 +244,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
         queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
+        // Also refresh current user's own role so isAdmin/isModerator updates immediately
+        queryClient.invalidateQueries({ queryKey: ['group-role', groupId] });
+        queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       })
       // Posts change (new post / approved / rejected)
       .on('postgres_changes', {
@@ -275,6 +278,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         filter: `id=eq.${groupId}`,
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['group-details', groupId] });
+        queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+        queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
       })
       .subscribe();
 
@@ -305,7 +311,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-details', groupId] });
       queryClient.invalidateQueries({ queryKey: ['groups'] });
-      queryClient.invalidateQueries({ queryKey: ['group', groupId] }); // refresh GroupDetail display
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
       toast({ title: 'Group settings updated!' });
     },
     onError: (error: any) => {
@@ -355,11 +363,41 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     }
   });
 
+  // Remove group image (avatar or cover)
+  const removeImage = useMutation({
+    mutationFn: async (type: 'avatar' | 'cover') => {
+      if (!groupId) throw new Error('No group ID');
+      const updateData = type === 'avatar'
+        ? { avatar_url: null }
+        : { cover_url: null };
+
+      const { error } = await supabase
+        .from('groups')
+        .update(updateData)
+        .eq('id', groupId);
+      if (error) throw error;
+    },
+    onSuccess: (_, type) => {
+      queryClient.invalidateQueries({ queryKey: ['group-details', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+      toast({ title: `${type === 'avatar' ? 'Profile' : 'Cover'} image removed` });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Remove failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
   // Approve join request
   const approveJoinRequest = useMutation({
     mutationFn: async (requestId: string) => {
-      const request = joinRequests?.find(r => r.id === requestId);
-      if (!request) throw new Error('Request not found');
+      // Fetch user_id from DB directly — never rely on stale closure
+      const { data: reqData, error: fetchError } = await supabase
+        .from('group_join_requests')
+        .select('user_id, group_id')
+        .eq('id', requestId)
+        .single();
+      if (fetchError || !reqData) throw new Error('Request not found');
 
       // Update request status
       const { error: updateError } = await supabase
@@ -368,15 +406,23 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .eq('id', requestId);
       if (updateError) throw updateError;
 
-      // Add as member
+      // Add as member — upsert to survive duplicate-key edge cases
       const { error: memberError } = await supabase
         .from('group_members')
-        .insert({ group_id: groupId, user_id: request.user_id, role: 'member' });
+        .upsert(
+          { group_id: groupId, user_id: reqData.user_id, role: 'member' },
+          { onConflict: 'group_id,user_id', ignoreDuplicates: true }
+        );
       if (memberError) throw memberError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
+      // Approved user's my-groups + pending-requests update via realtime on their client
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
       toast({ title: 'Member approved!' });
     },
   });
@@ -392,6 +438,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
       toast({ title: 'Request rejected' });
     },
   });
@@ -408,6 +457,12 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
+      // Removed user's group list + suggestions update via realtime on their client
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['group-role', groupId] });
       toast({ title: 'Member removed' });
     },
   });
@@ -430,7 +485,12 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-blocked-users', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['group-role', groupId] });
       toast({ title: 'User blocked' });
     },
   });
@@ -447,6 +507,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-blocked-users', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       toast({ title: 'User unblocked' });
     },
   });
@@ -480,6 +543,13 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+      // Invalidate the target member's role so their access updates immediately
+      queryClient.invalidateQueries({ queryKey: ['group-role', groupId] });
+      // my-groups carries the role field — refresh it so GroupDetail isAdminOrMod updates
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+      // Refresh post-related queries so post approval rules apply to new role
+      queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] });
       toast({ title: 'Role updated!' });
     },
   });
@@ -606,6 +676,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     insights,
     updateGroup,
     uploadImage,
+    removeImage,
     approveJoinRequest,
     rejectJoinRequest,
     removeMember,

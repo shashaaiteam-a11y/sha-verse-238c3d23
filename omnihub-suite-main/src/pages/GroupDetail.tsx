@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   ArrowLeft, Users, Send, MessageCircle, Lock, Globe, Share2,
   Bookmark, MoreHorizontal, Settings, ImagePlus, Film, FileText,
-  Paperclip, X, Download, Pin, Pin as PinIcon,
+  Paperclip, X, Download, Pin, Pin as PinIcon, Trash2, Pencil,
 } from 'lucide-react';
 import { useGroupPosts } from '@/hooks/useGroupPosts';
 import { useGroups } from '@/hooks/useGroups';
@@ -102,14 +102,14 @@ const GroupDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { posts, isLoading, group, groupLoading, members, createPost } = useGroupPosts(groupId);
+  const { posts, isLoading, group, groupLoading, members, createPost, deletePost, updatePost } = useGroupPosts(groupId);
   const { leaveGroup, myGroups } = useGroups();
   const { shareGroupPost } = useShares();
   const { isPostSaved, toggleSavePost } = useSavedPosts();
   const { toast } = useToast();
   
   // Need group admin right to change images here
-  const { isAdmin, uploadImage } = useGroupAdmin(groupId);
+  const { isAdmin, uploadImage, removeImage } = useGroupAdmin(groupId);
 
   // Post composer state
   const [newPost, setNewPost] = useState('');
@@ -128,6 +128,8 @@ const GroupDetail = () => {
 
   const [shareDialogPost, setShareDialogPost] = useState<{ id: string; content: string; image?: string } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
 
   const isMember = (myGroups as any[])?.some((m: any) => m.groups?.id === groupId);
   const memberRole = (myGroups as any[])?.find((m: any) => m.groups?.id === groupId)?.role;
@@ -166,7 +168,7 @@ const GroupDetail = () => {
     if (file.size > 50 * 1024 * 1024) { toast({ title: 'Max file size is 50 MB', variant: 'destructive' }); return; }
     setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
     try {
-      const url = await uploadToStorage('post-files', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
+      const url = await uploadToStorage('post-images', file, user.id, 'group-files/', (p) => setUploadProgress(p));
       setPostFile(url);
       setPostFileName(file.name);
       setPostFileType(file.type);
@@ -280,6 +282,17 @@ const GroupDetail = () => {
             </div>
           )}
         </label>
+        {isAdmin && (group as any).cover_url && (
+          <button
+            type="button"
+            className="absolute top-[6.5rem] sm:top-[8.5rem] right-3 sm:right-4 z-20 h-8 w-8 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-colors"
+            onClick={() => removeImage.mutate('cover')}
+            disabled={removeImage.isPending}
+            title="Remove cover photo"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
         {isAdmin && (
           <input 
             type="file" 
@@ -303,6 +316,17 @@ const GroupDetail = () => {
               <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center border-3 sm:border-4 border-transparent">
                 <ImagePlus className="w-6 h-6 text-white" />
               </div>
+            )}
+            {isAdmin && (group as any).avatar_url && (
+              <button
+                type="button"
+                className="absolute bottom-0 right-0 z-20 h-7 w-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90 transition-colors border-2 border-card"
+                onClick={(e) => { e.preventDefault(); removeImage.mutate('avatar'); }}
+                disabled={removeImage.isPending}
+                title="Remove profile photo"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             )}
           </label>
           {isAdmin && (
@@ -544,7 +568,24 @@ const GroupDetail = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem 
+                      {post.user_id === user?.id && (
+                        <DropdownMenuItem
+                          onClick={() => { setEditingPostId(post.id); setEditContent(post.content || ''); }}
+                        >
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
+                      {post.user_id === user?.id && (
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => deletePost.mutate(post.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
                         onClick={() => toggleSavePost.mutate({ postId: post.id, type: 'group_post' })}
                       >
                         <Bookmark className={`w-4 h-4 mr-2 ${isPostSaved(post.id, 'group_post') ? 'fill-current' : ''}`} />
@@ -554,8 +595,42 @@ const GroupDetail = () => {
                   </DropdownMenu>
                 </div>
 
-                {post.content && (
-                  <p className="text-xs sm:text-sm mb-3 break-words whitespace-pre-wrap">{post.content}</p>
+                {editingPostId === post.id ? (
+                  <div className="mb-3">
+                    <Textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="text-xs sm:text-sm min-h-[80px] resize-none"
+                      autoFocus
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (editContent.trim()) {
+                            updatePost.mutate(
+                              { postId: post.id, content: editContent.trim() },
+                              { onSuccess: () => setEditingPostId(null) }
+                            );
+                          }
+                        }}
+                        disabled={updatePost.isPending}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingPostId(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  post.content && (
+                    <p className="text-xs sm:text-sm mb-3 break-words whitespace-pre-wrap">{post.content}</p>
+                  )
                 )}
 
                 {/* Image */}

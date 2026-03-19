@@ -30,6 +30,7 @@ export const useGroupPosts = (groupId?: string) => {
           comments_count,
           created_at,
           user_id,
+          approval_status,
           profiles:user_id (
             id,
             display_name,
@@ -38,6 +39,7 @@ export const useGroupPosts = (groupId?: string) => {
           )
         `)
         .eq('group_id', groupId)
+        .or('approval_status.eq.approved,approval_status.is.null')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -113,11 +115,24 @@ export const useGroupPosts = (groupId?: string) => {
       if (!user || !groupId) throw new Error('Not authenticated or no group');
 
       const sb = supabase as any;
+
+      // Check if the group requires post approval
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('require_post_approval, creator_id')
+        .eq('id', groupId)
+        .single();
+
+      // If user is group creator or admin, post is auto-approved
+      const isCreator = groupData?.creator_id === user.id;
+      const requiresApproval = groupData?.require_post_approval && !isCreator;
+
       // Build insert object with only provided fields
       const insertData: Record<string, any> = {
         group_id: groupId,
         user_id: user.id,
         content: content || '',
+        approval_status: requiresApproval ? 'pending' : 'approved',
       };
       if (imageUrl) insertData.image_url = imageUrl;
       if (videoUrl) insertData.video_url = videoUrl;
@@ -131,10 +146,15 @@ export const useGroupPosts = (groupId?: string) => {
         .insert(insertData);
 
       if (error) throw error;
+      return requiresApproval;
     },
-    onSuccess: () => {
+    onSuccess: (requiresApproval) => {
       queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] });
-      toast({ title: 'Post created!' });
+      if (requiresApproval) {
+        toast({ title: 'Post submitted for approval', description: 'An admin will review your post before it goes live.' });
+      } else {
+        toast({ title: 'Post created!' });
+      }
     },
     onError: (error: any) => {
       toast({ title: 'Failed to create post', description: error.message, variant: 'destructive' });
@@ -265,6 +285,46 @@ export const useGroupPosts = (groupId?: string) => {
     };
   }, [groupId, queryClient]);
 
+  // Delete a group post
+  const deletePost = useMutation({
+    mutationFn: async (postId: string) => {
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('group_posts')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] });
+      toast({ title: 'Post deleted' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to delete post', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Update (edit) a group post's content
+  const updatePost = useMutation({
+    mutationFn: async ({ postId, content }: { postId: string; content: string }) => {
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase
+        .from('group_posts')
+        .update({ content })
+        .eq('id', postId)
+        .eq('user_id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] });
+      toast({ title: 'Post updated' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to update post', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     posts,
     isLoading,
@@ -274,5 +334,7 @@ export const useGroupPosts = (groupId?: string) => {
     membersLoading,
     createPost,
     toggleLike,
+    deletePost,
+    updatePost,
   };
 };

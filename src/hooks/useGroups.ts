@@ -45,32 +45,39 @@ export const useGroups = () => {
     enabled: !!user,
   });
 
-  // Fetch suggested / discover groups
+  // Fetch all groups for Discover — no exclusion, show everything
   const { data: suggestedGroups, isLoading: suggestedLoading } = useQuery({
     queryKey: ['suggested-groups', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data: joinedGroups } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user.id);
-      const joinedIds = joinedGroups?.map(g => g.group_id) || [];
-
-      let query: any = supabase
+      const { data, error } = await supabase
         .from('groups')
         .select(GROUP_SELECT)
         .order('members_count', { ascending: false })
-        .limit(20);
-
-      if (joinedIds.length > 0) {
-        query = query.not('id', 'in', `(${joinedIds.join(',')})`);
-      }
-      const { data, error } = await query;
+        .limit(50);
       if (error) throw error;
       return data || [];
     },
     enabled: !!user,
   });
+
+  // Fetch group IDs where user has a pending join request
+  const { data: pendingRequestGroups } = useQuery({
+    queryKey: ['pending-join-requests', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('group_join_requests')
+        .select('group_id')
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+      if (error) throw error;
+      return data?.map((r: any) => r.group_id) || [];
+    },
+    enabled: !!user,
+  });
+
+  const pendingRequestGroupIds = new Set<string>(pendingRequestGroups || []);
 
   // Search groups
   const searchGroups = async (query: string, filters?: { country?: string; language?: string; category?: string }) => {
@@ -148,30 +155,54 @@ export const useGroups = () => {
       // Check group privacy
       const { data: group } = await supabase
         .from('groups')
-        .select('is_private, members_count')
+        .select('is_private, require_join_approval, members_count')
         .eq('id', groupId)
         .single();
 
       if (!group) throw new Error('Group not found');
 
-      if (!group.is_private) {
+      // Blocked user cannot join or request to join
+      const { data: blockedEntry, error: blockedErr } = await supabase
+        .from('group_blocked_users')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      // If RLS denies access the user has no block row — safe to proceed
+      if (!blockedErr && blockedEntry) throw new Error('You have been blocked from this group.');
+
+      const needsRequest = group.is_private || group.require_join_approval;
+
+      if (!needsRequest) {
+        // Check if already a member
+        const { data: existing } = await supabase
+          .from('group_members')
+          .select('id')
+          .eq('group_id', groupId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (existing) return { type: 'joined' };
         const { error } = await supabase
           .from('group_members')
           .insert({ group_id: groupId, user_id: user.id, role: 'member' });
         if (error) throw error;
         return { type: 'joined' };
       } else {
-        // Delete any old rejected/pending request first
-        await supabase
+        // private or requires approval → join request — ignore if already pending
+        const { data: existing } = await supabase
           .from('group_join_requests')
-          .delete()
+          .select('id, status')
           .eq('group_id', groupId)
-          .eq('user_id', user.id);
-
-        // private → join request
+          .eq('user_id', user.id)
+          .eq('status', 'pending')
+          .maybeSingle();
+        if (existing) return { type: 'requested' };
         const { error } = await supabase
           .from('group_join_requests')
-          .insert({ group_id: groupId, user_id: user.id });
+          .upsert(
+            { group_id: groupId, user_id: user.id, status: 'pending' },
+            { onConflict: 'group_id,user_id' }
+          );
         if (error) throw error;
         return { type: 'requested' };
       }
@@ -179,6 +210,7 @@ export const useGroups = () => {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
       toast({ title: result.type === 'joined' ? 'Joined group!' : 'Join request sent!' });
     },
     onError: (error: any) => {
@@ -230,8 +262,9 @@ export const useGroups = () => {
 
   // Update group (name/description/is_private/avatar/cover)
   const updateGroup = useMutation({
-    mutationFn: async ({ groupId, name, description, isPrivate, avatarFile, coverFile }: { 
+    mutationFn: async ({ groupId, name, description, isPrivate, requireJoinApproval, requirePostApproval, avatarFile, coverFile }: { 
       groupId: string; name: string; description?: string; isPrivate?: boolean;
+      requireJoinApproval?: boolean; requirePostApproval?: boolean;
       avatarFile?: File; coverFile?: File;
     }) => {
       if (!user) throw new Error('Not authenticated');
@@ -239,7 +272,9 @@ export const useGroups = () => {
       const updates: Record<string, any> = { 
         name, 
         description: description || null, 
-        is_private: isPrivate ?? false 
+        is_private: isPrivate ?? false,
+        require_join_approval: requireJoinApproval ?? false,
+        require_post_approval: requirePostApproval ?? false,
       };
 
       // Upload avatar if provided
@@ -289,7 +324,17 @@ export const useGroups = () => {
         queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
         queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
       })
+      // Admin approved or rejected our join request — update pending list + suggestions immediately
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'group_join_requests', filter: `user_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
+      })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'groups' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'groups' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
         queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_posts' }, () => {
@@ -309,6 +354,7 @@ export const useGroups = () => {
     myGroupsLoading,
     suggestedGroups,
     suggestedLoading,
+    pendingRequestGroupIds,
     searchGroups,
     createGroup,
     joinGroup,

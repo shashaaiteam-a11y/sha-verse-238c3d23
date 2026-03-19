@@ -459,7 +459,11 @@ const Bookshelf = () => {
                     <Card
                       key={item.id}
                       className="p-4 flex gap-4 hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/bookshelf/read/${item.book.id}`)}
+                      onClick={() => {
+                        if (item.book.book_url) {
+                          window.open(item.book.book_url, "_blank");
+                        }
+                      }}
                     >
                       <div className="w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-primary">
                         {item.book.cover_url ? (
