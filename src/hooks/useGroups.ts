@@ -77,8 +77,6 @@ export const useGroups = () => {
     let q: any = (supabase
       .from('groups') as any)
       .select(GROUP_SELECT)
-      .eq('is_suspended', false)
-      .neq('privacy', 'invite_only')
       .ilike('name', `%${query}%`)
       .order('members_count', { ascending: false })
       .limit(30);
@@ -157,7 +155,7 @@ export const useGroups = () => {
         // private → join request
         const { error } = await supabase
           .from('group_join_requests')
-          .insert({ group_id: groupId, user_id: user.id, message: message || null });
+          .insert({ group_id: groupId, user_id: user.id });
         if (error) throw error;
         return { type: 'requested' };
       }

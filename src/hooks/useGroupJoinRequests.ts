@@ -16,7 +16,7 @@ export const useGroupJoinRequests = (groupId?: string) => {
       const { data, error } = await supabase
         .from('group_join_requests')
         .select(`
-          id, status, message, created_at,
+          id, status, created_at,
           profiles:user_id (id, display_name, avatar_url, username)
         `)
         .eq('group_id', groupId)
