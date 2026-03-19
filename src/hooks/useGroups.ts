@@ -136,6 +136,15 @@ export const useGroups = () => {
     mutationFn: async ({ groupId, message }: { groupId: string; message?: string }) => {
       if (!user) throw new Error('Not authenticated');
 
+      // Check if already a member
+      const { data: existingMember } = await supabase
+        .from('group_members')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (existingMember) throw new Error('You are already a member of this group');
+
       // Check group privacy
       const { data: group } = await supabase
         .from('groups')
@@ -152,6 +161,13 @@ export const useGroups = () => {
         if (error) throw error;
         return { type: 'joined' };
       } else {
+        // Delete any old rejected/pending request first
+        await supabase
+          .from('group_join_requests')
+          .delete()
+          .eq('group_id', groupId)
+          .eq('user_id', user.id);
+
         // private → join request
         const { error } = await supabase
           .from('group_join_requests')
