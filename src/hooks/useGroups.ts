@@ -77,8 +77,6 @@ export const useGroups = () => {
     let q: any = (supabase
       .from('groups') as any)
       .select(GROUP_SELECT)
-      .eq('is_suspended', false)
-      .neq('privacy', 'invite_only')
       .ilike('name', `%${query}%`)
       .order('members_count', { ascending: false })
       .limit(30);
