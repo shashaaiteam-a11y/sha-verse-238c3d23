@@ -157,7 +157,7 @@ export const useGroups = () => {
         // private → join request
         const { error } = await supabase
           .from('group_join_requests')
-          .insert({ group_id: groupId, user_id: user.id, message: message || null });
+          .insert({ group_id: groupId, user_id: user.id });
         if (error) throw error;
         return { type: 'requested' };
       }
