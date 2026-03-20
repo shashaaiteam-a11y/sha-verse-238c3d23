@@ -146,16 +146,22 @@ export const useGroups = () => {
       // Check if already a member
       const { data: existingMember } = await supabase
         .from('group_members')
-        .select('id')
+        .select('id, role')
         .eq('group_id', groupId)
         .eq('user_id', user.id)
         .maybeSingle();
-      if (existingMember) throw new Error('You are already a member of this group');
+      if (existingMember) {
+        // If admin/creator, don't allow join request
+        if (existingMember.role === 'admin') {
+          throw new Error('You are the group creator/admin.');
+        }
+        throw new Error('You are already a member of this group');
+      }
 
       // Check group privacy
       const { data: group } = await supabase
         .from('groups')
-        .select('is_private, require_join_approval, members_count')
+        .select('is_private, require_join_approval, members_count, creator_id')
         .eq('id', groupId)
         .single();
 
@@ -170,6 +176,11 @@ export const useGroups = () => {
         .maybeSingle();
       // If RLS denies access the user has no block row — safe to proceed
       if (!blockedErr && blockedEntry) throw new Error('You have been blocked from this group.');
+
+      // If user is group creator, don't allow join request
+      if (group.creator_id === user.id) {
+        throw new Error('You are the group creator/admin.');
+      }
 
       const needsRequest = group.is_private || group.require_join_approval;
 

@@ -213,21 +213,36 @@ const Groups = () => {
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
 
   // Realtime search across all groups
-  const allGroupsPool = [
-    ...((suggestedGroups as any[]) || []),
-    ...((myGroups as any[]) || []).map((m: any) => m.groups).filter(Boolean),
-  ];
-  const deduped = Array.from(
-    new Map(allGroupsPool.map((g: any) => [g.id, g])).values()
-  );
-  const searchTerm = headerSearch.trim().toLowerCase();
-  const searchResults = searchTerm
-    ? deduped.filter(
-        (g: any) =>
-          g.name?.toLowerCase().includes(searchTerm) ||
-          g.description?.toLowerCase().includes(searchTerm)
-      )
-    : [];
+    // All groups: deduped pool of joined + suggested
+    const allGroupsPool = [
+      ...((suggestedGroups as any[]) || []),
+      ...((myGroups as any[]) || []).map((m: any) => m.groups).filter(Boolean),
+    ];
+    const allGroupsDeduped = Array.from(
+      new Map(allGroupsPool.map((g: any) => [g.id, g])).values()
+    );
+    // Joined groups: only those user has joined
+    const joinedGroupsList = (myGroups as any[] || []).map((m: any) => m.groups).filter(Boolean);
+    // Created groups: only those user has created
+    const createdGroupsList = (myGroups as any[] || []).filter(
+      (m: any) => m.role === 'admin' || m.groups?.creator_id === user?.id
+    ).map((m: any) => m.groups).filter(Boolean);
+    // Discover groups: only those user has NOT joined/requested/created
+    const discoverGroupsList = (suggestedGroups as any[] || []).filter(
+      (g: any) =>
+        !joinedGroupIds.has(g.id) &&
+        !pendingRequestGroupIds.has(g.id) &&
+        g.creator_id !== user?.id
+    );
+    // Search logic for All tab
+    const searchTerm = headerSearch.trim().toLowerCase();
+    const searchResults = searchTerm
+      ? allGroupsDeduped.filter(
+          (g: any) =>
+            g.name?.toLowerCase().includes(searchTerm) ||
+            g.description?.toLowerCase().includes(searchTerm)
+        )
+      : allGroupsDeduped;
 
   // Fetch groups filtered by category, sorted by members_count desc
   const { data: categoryGroups, isLoading: categoryGroupsLoading } = useQuery({
