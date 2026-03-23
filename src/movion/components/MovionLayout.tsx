@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Menu, Search, Bell, Home, Zap, Clapperboard, 
   Library as LibraryIcon, Plus, X, User, Settings,
-  Loader2
+  Loader2, ArrowLeft
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useMovionStore } from '../store';
@@ -86,8 +86,15 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden text-foreground">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 h-16 sticky top-0 bg-card z-[60] border-b border-border">
-        <div className="flex items-center gap-4">
+      <header className="flex items-center justify-between px-2 sm:px-4 h-16 sticky top-0 bg-card z-[60] border-b border-border">
+        <div className="flex items-center gap-1 sm:gap-4">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="p-2 hover:bg-muted rounded-full transition-all active:scale-90"
+            title="Go Back"
+          >
+            <ArrowLeft size={24} className="text-foreground" />
+          </button>
           <button 
             onClick={() => {
               if (window.innerWidth >= 1024) {

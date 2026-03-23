@@ -34,6 +34,7 @@ const EditBook = () => {
   });
 
   const [coverPreview, setCoverPreview] = useState<string>("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch book data
@@ -93,6 +94,7 @@ const EditBook = () => {
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setCoverFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setCoverPreview(reader.result as string);
@@ -118,16 +120,46 @@ const EditBook = () => {
       language: formData.language,
     };
 
-    const fn = () => (supabase as any).from("books").update(updates).eq("id", bookId).eq("user_id", user?.id);
+    const updateBook = async () => {
+      let finalCoverUrl = book.cover_url;
+
+      if (coverFile) {
+        const coverExt = coverFile.name.split(".").pop();
+        const coverName = `${user?.id}/covers/${Date.now()}.${coverExt}`;
+
+        const { error: coverError } = await supabase.storage
+          .from("books")
+          .upload(coverName, coverFile);
+
+        if (coverError) throw coverError;
+
+        const { data: coverData } = supabase.storage
+          .from("books")
+          .getPublicUrl(coverName);
+
+        finalCoverUrl = coverData.publicUrl;
+      }
+
+      const { error } = await supabase
+        .from("books")
+        .update({
+          ...updates,
+          cover_url: finalCoverUrl
+        })
+        .eq("id", bookId);
+      
+      if (error) throw error;
+    };
     
-    fn()
+    updateBook()
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ["book", bookId] });
         queryClient.invalidateQueries({ queryKey: ["books"] });
         toast.success("Book updated successfully");
         navigate(`/bookshelf/book/${bookId}`);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Update error:", err);
         toast.error("Failed to update book");
       })
       .finally(() => {

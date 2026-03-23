@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
+import {
   Search, Bell, Menu, X, Mic, Video, Cast,
-  User, History, Bookmark, Clock, ListVideo, Settings, LogOut
+  User, History, Bookmark, Clock, ListVideo, Settings, LogOut, ArrowLeft
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -28,11 +28,11 @@ interface MovionHeaderProps {
   onVoiceSearch?: () => void;
 }
 
-export const MovionHeader = ({ 
-  onSearch, 
-  onMenuClick, 
+export const MovionHeader = ({
+  onSearch,
+  onMenuClick,
   showMenuButton = true,
-  onVoiceSearch 
+  onVoiceSearch
 }: MovionHeaderProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
@@ -57,7 +57,7 @@ export const MovionHeader = ({
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     const recognition = new SpeechRecognition();
-    
+
     recognition.lang = 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -94,21 +94,30 @@ export const MovionHeader = ({
   return (
     <header className="sticky top-0 z-40 bg-background border-b border-border/50">
       <div className="flex items-center justify-between px-4 h-14">
-        {/* Left: Menu + Logo */}
-        <div className="flex items-center gap-2">
+        {/* Left: Back + Menu + Logo */}
+        <div className="flex items-center gap-1 md:gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full"
+            onClick={() => navigate(-1)}
+            title="Go Back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           {showMenuButton && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="rounded-full hidden md:flex"
               onClick={onMenuClick}
             >
               <Menu className="w-5 h-5" />
             </Button>
           )}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="rounded-full md:hidden"
             onClick={onMenuClick}
           >
@@ -137,17 +146,17 @@ export const MovionHeader = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               className="rounded-l-full rounded-r-none border-r-0 focus-visible:ring-1 focus-visible:ring-primary h-10 pl-4 bg-muted/50"
             />
-            <Button 
-              type="submit" 
-              variant="secondary" 
+            <Button
+              type="submit"
+              variant="secondary"
               className="rounded-l-none rounded-r-full px-6 h-10 border border-l-0 border-input bg-muted/50 hover:bg-muted"
             >
               <Search className="w-5 h-5" />
             </Button>
           </div>
-          <Button 
-            type="button" 
-            variant="secondary" 
+          <Button
+            type="button"
+            variant="secondary"
             size="icon"
             className={`rounded-full ml-2 h-10 w-10 ${isListening ? 'bg-destructive text-destructive-foreground animate-pulse' : ''}`}
             onClick={handleVoiceSearch}
@@ -159,9 +168,9 @@ export const MovionHeader = ({
         {/* Right: Actions */}
         <div className="flex items-center gap-1">
           {/* Mobile Search Toggle */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="md:hidden rounded-full"
             onClick={() => setShowSearch(!showSearch)}
           >
@@ -216,7 +225,7 @@ export const MovionHeader = ({
                   </DropdownMenuItem>
                 </>
               ) : (
-                <CreateChannelDialog 
+                <CreateChannelDialog
                   trigger={
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                       <Video className="w-4 h-4 mr-2" />
@@ -272,10 +281,10 @@ export const MovionHeader = ({
               <Search className="w-4 h-4" />
             </Button>
           </div>
-          <Button 
-            type="button" 
-            variant="secondary" 
-            size="icon" 
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
             className={`rounded-full h-10 w-10 ${isListening ? 'bg-destructive text-destructive-foreground animate-pulse' : ''}`}
             onClick={handleVoiceSearch}
           >

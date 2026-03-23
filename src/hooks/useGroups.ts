@@ -199,21 +199,32 @@ export const useGroups = () => {
         if (error) throw error;
         return { type: 'joined' };
       } else {
-        // private or requires approval → join request — ignore if already pending
+        // private or requires approval → send join request
+        // Check for any existing request (pending or rejected)
         const { data: existing } = await supabase
           .from('group_join_requests')
           .select('id, status')
           .eq('group_id', groupId)
           .eq('user_id', user.id)
-          .eq('status', 'pending')
           .maybeSingle();
-        if (existing) return { type: 'requested' };
+
+        if (existing?.status === 'pending') {
+          // Already requested — return early
+          return { type: 'requested' };
+        }
+
+        if (existing) {
+          // Old rejected/approved request exists — delete it first, then re-insert
+          await supabase
+            .from('group_join_requests')
+            .delete()
+            .eq('id', existing.id);
+        }
+
+        // Insert fresh join request
         const { error } = await supabase
           .from('group_join_requests')
-          .upsert(
-            { group_id: groupId, user_id: user.id, status: 'pending' },
-            { onConflict: 'group_id,user_id' }
-          );
+          .insert({ group_id: groupId, user_id: user.id, status: 'pending' });
         if (error) throw error;
         return { type: 'requested' };
       }

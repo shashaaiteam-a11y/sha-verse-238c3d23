@@ -50,6 +50,21 @@ export const useGroupAdmin = (groupId: string | undefined) => {
   const isAdmin = userRole === 'admin';
   const isModerator = userRole === 'moderator' || isAdmin;
 
+  // Helper: send notification (silent fail — never blocks main action)
+  const sendNotification = async (
+    toUserId: string,
+    type: string,
+    title: string,
+    message: string,
+    data: Record<string, any> = {}
+  ) => {
+    try {
+      await (supabase as any).from('notifications').insert({
+        user_id: toUserId, type, title, message, data, read: false,
+      });
+    } catch (_) { /* silent */ }
+  };
+
   // Fetch group details for editing
   const { data: groupDetails, isLoading: groupLoading } = useQuery({
     queryKey: ['group-details', groupId],
@@ -414,6 +429,16 @@ export const useGroupAdmin = (groupId: string | undefined) => {
           { onConflict: 'group_id,user_id', ignoreDuplicates: true }
         );
       if (memberError) throw memberError;
+
+      // Notify the requester
+      const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
+      await sendNotification(
+        reqData.user_id,
+        'group_join_approved',
+        'Join Request Approved ✅',
+        `Your request to join "${(grp as any)?.name || 'the group'}" has been approved. Welcome!`,
+        { group_id: groupId }
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId] });
@@ -430,11 +455,30 @@ export const useGroupAdmin = (groupId: string | undefined) => {
   // Reject join request
   const rejectJoinRequest = useMutation({
     mutationFn: async (requestId: string) => {
+      // Fetch user_id before update
+      const { data: reqData } = await supabase
+        .from('group_join_requests')
+        .select('user_id, group_id')
+        .eq('id', requestId)
+        .single();
+
       const { error } = await supabase
         .from('group_join_requests')
         .update({ status: 'rejected', reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
         .eq('id', requestId);
       if (error) throw error;
+
+      // Notify the requester
+      if (reqData) {
+        const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
+        await sendNotification(
+          reqData.user_id,
+          'group_join_rejected',
+          'Join Request Declined',
+          `Your request to join "${(grp as any)?.name || 'the group'}" was not approved.`,
+          { group_id: groupId }
+        );
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId] });

@@ -21,6 +21,8 @@ import { HashtagText } from '@/components/HashtagText';
 import { ShareDialog } from '@/components/ShareDialog';
 import { FeedItem, FeedItemType } from '@/hooks/useFeed';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface FeedCardProps {
   item: FeedItem;
@@ -48,22 +50,31 @@ const ContentTypeBadge = ({ type }: { type: FeedItemType }) => {
 };
 
 // Reactions Component - Now uses full emoji chart
-const ItemReactions = ({ itemId, type }: { itemId: string; type: 'post' | 'group_post' | 'video' | 'book' }) => {
-  const { userReaction, reactionCounts, toggleReaction } = useReactions(itemId, type);
+const ItemReactions = ({ itemId, type, videoStats }: { itemId: string; type: 'post' | 'group_post' | 'video' | 'book'; videoStats?: { likes_count: number } | null }) => {
+  // Cast type to TargetType (book is not yet supported in useReactions but we handle it gracefully)
+  const targetType = type === 'book' ? ('post' as any) : type;
+  const { userReaction, reactionCounts, toggleReaction } = useReactions(itemId, targetType);
+  
+  // For videos, merge real-time stats with reaction counts
+  const mergedReactionCounts = type === 'video' && videoStats 
+    ? { ...reactionCounts, '👍': videoStats.likes_count }
+    : reactionCounts;
   
   return (
     <EmojiReactionPicker
       currentReaction={userReaction}
       onReact={(emoji) => toggleReaction.mutate(emoji)}
-      reactionCounts={reactionCounts}
+      reactionCounts={mergedReactionCounts}
       disabled={toggleReaction.isPending}
     />
   );
 };
 
 // Reaction Summary (shows emoji counts at top) - Now supports all emojis
-const ItemReactionsSummary = ({ itemId, type }: { itemId: string; type: 'post' | 'group_post' | 'video' | 'book' }) => {
-  const { reactionCounts } = useReactions(itemId, type);
+const ItemReactionsSummary = ({ itemId, type }: { itemId: string; type: FeedItemType }) => {
+  // Cast type since useReactions doesn't support 'book' yet
+  const targetType = type === 'book' ? ('post' as any) : type;
+  const { reactionCounts } = useReactions(itemId, targetType);
   
   const totalReactions = Object.values(reactionCounts).reduce((sum, count) => sum + count, 0);
   
@@ -86,7 +97,81 @@ const ItemReactionsSummary = ({ itemId, type }: { itemId: string; type: 'post' |
   );
 };
 
-// Facebook-style Poll Component with database voting
+// Hook for real-time video stats updates
+const useVideoStats = (videoId: string, enabled: boolean) => {
+  const [stats, setStats] = useState<{ views_count: number; likes_count: number; comments_count: number } | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !videoId) return;
+
+    // Fetch initial stats
+    const fetchStats = async () => {
+      const { data, error } = await (supabase as any)
+        .from('videos')
+        .select('views_count, likes_count, comments_count')
+        .eq('id', videoId)
+        .single();
+      
+      if (data) {
+        setStats({
+          views_count: data.views_count || 0,
+          likes_count: data.likes_count || 0,
+          comments_count: data.comments_count || 0
+        });
+      }
+    };
+
+    fetchStats();
+
+    // Set up polling for real-time updates (every 5 seconds)
+    const pollInterval = setInterval(async () => {
+      const { data, error } = await (supabase as any)
+        .from('videos')
+        .select('views_count, likes_count, comments_count')
+        .eq('id', videoId)
+        .single();
+      
+      if (data) {
+        setStats({
+          views_count: data.views_count || 0,
+          likes_count: data.likes_count || 0,
+          comments_count: data.comments_count || 0
+        });
+      }
+    }, 5000);
+
+    // Also set up Supabase real-time subscription
+    const channel = supabase
+      .channel(`video-${videoId}-stats`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'videos',
+          filter: `id=eq.${videoId}`
+        },
+        (payload) => {
+          const newStats = {
+            views_count: payload.new.views_count || 0,
+            likes_count: payload.new.likes_count || 0,
+            comments_count: payload.new.comments_count || 0
+          };
+          setStats(newStats);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(pollInterval);
+      supabase.removeChannel(channel);
+    };
+  }, [videoId, enabled]);
+
+  return stats;
+};
+
+// Facebook-style Poll component with database voting
 const PollDisplay = ({ pollData, postId }: { pollData: any; postId: string }) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -275,6 +360,9 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const commentsRef = useRef<PostCommentsRef>(null);
 
+  // Real-time stats for videos
+  const videoStats = useVideoStats(item.id, item.type === 'video');
+
   const author = item.profiles;
   const isOwner = user?.id === item.user_id;
   const itemLocation = item.metadata?.location;
@@ -336,6 +424,10 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
   const renderContent = () => {
     switch (item.type) {
       case 'video':
+        // Use real-time stats if available, otherwise fallback to item stats
+        const displayViews = videoStats ? videoStats.views_count : (item.views_count || 0);
+        const displayLikes = videoStats ? videoStats.likes_count : (item.likes_count || 0);
+        
         return (
           <div 
             className="relative cursor-pointer group"
@@ -365,10 +457,10 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
             )}
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Eye className="w-3 h-3" /> {item.views_count || 0} views
+                <Eye className="w-3 h-3" /> {displayViews} views
               </span>
               <span className="flex items-center gap-1">
-                <ThumbsUp className="w-3 h-3" /> {item.likes_count || 0}
+                <ThumbsUp className="w-3 h-3" /> {displayLikes}
               </span>
             </div>
           </div>

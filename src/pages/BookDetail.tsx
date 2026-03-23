@@ -240,7 +240,7 @@ const BookDetail = () => {
       toast.error("Book PDF not available");
       return;
     }
-    window.open(book.book_url, "_blank");
+    navigate(`/bookshelf/read/${bookId}`);
   };
 
   const handleCommentSubmit = async () => {

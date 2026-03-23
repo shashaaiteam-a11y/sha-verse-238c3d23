@@ -64,26 +64,23 @@ export const useBookComments = (bookId?: string) => {
           content,
           parent_id: parentId || null,
         })
-        .select(`
-          *,
-          profile:profiles(display_name, avatar_url)
-        `)
+        .select('*')
         .single();
 
       if (error) throw error;
       return data as BookComment;
     },
-    onSuccess: (newComment) => {
+    onSuccess: async (newComment) => {
+      // Invalidate comments list
       queryClient.invalidateQueries({ queryKey: ["book-comments", bookId] });
-
-      // ✅ Use atomic increment function to update comment count
-      if (bookId && !(newComment as any).parent_id) {
-        (supabase.rpc as any)('increment_book_comment_count', { p_book_id: bookId });
-      }
-
+      // Invalidate books feed — DB trigger updates comments_count automatically
+      queryClient.invalidateQueries({ queryKey: ["books", "feed"] });
+      queryClient.invalidateQueries({ queryKey: ["books", "trending"] });
+      queryClient.invalidateQueries({ queryKey: ["book", bookId] });
       toast.success("Comment added successfully!");
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("❌ [Book Comment Error]", error?.message, error?.code, error?.details, error?.hint);
       toast.error("Failed to add comment");
     },
   });
@@ -128,18 +125,17 @@ export const useBookComments = (bookId?: string) => {
         .from("book_comments")
         .delete()
         .eq("id", commentId)
-        .or(`user_id.eq.${user.id},profile.user_id.eq.${user.id}`); // User or channel owner can delete
+        .eq("user_id", user.id);
 
       if (error) throw error;
     },
-    onSuccess: (_, deletedId) => {
+    onSuccess: async () => {
+      // Invalidate comments list
       queryClient.invalidateQueries({ queryKey: ["book-comments", bookId] });
-
-      // Update book's comment count
-      if (bookId) {
-        (supabase.rpc as any)('decrement_book_comment_count', { p_book_id: bookId });
-      }
-
+      // Invalidate books feed — DB trigger updates comments_count automatically
+      queryClient.invalidateQueries({ queryKey: ["books", "feed"] });
+      queryClient.invalidateQueries({ queryKey: ["books", "trending"] });
+      queryClient.invalidateQueries({ queryKey: ["book", bookId] });
       toast.success("Comment deleted");
     },
     onError: () => {

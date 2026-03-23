@@ -79,7 +79,7 @@ const Comment = ({
               )}
             </div>
             
-            {(canEditDelete || onLike) && (
+            {isOwner && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -87,30 +87,17 @@ const Comment = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {onLike && (
-                    <DropdownMenuItem 
-                      onClick={() => onLike(comment.id)}
-                      className={isLiked ? "text-primary" : ""}
-                    >
-                      <ThumbsUp className="w-3 h-3 mr-2" />
-                      {isLiked ? "Unlike" : "Like"}
-                    </DropdownMenuItem>
-                  )}
-                  {canEditDelete && (
-                    <>
-                      <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                        <Edit className="w-3 h-3 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={handleDelete}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="w-3 h-3 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </>
-                  )}
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <Edit className="w-3 h-3 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleDelete}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="w-3 h-3 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -147,61 +134,7 @@ const Comment = ({
             </p>
           )}
           
-          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-            {onLike && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs hover:text-primary"
-                onClick={() => onLike(comment.id)}
-              >
-                <ThumbsUp className={`w-3 h-3 mr-1 ${isLiked ? "fill-current" : ""}`} />
-                Like {(comment as any).likes_count ? `(${(comment as any).likes_count})` : ""}
-              </Button>
-            )}
-            
-            {onReply && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs hover:text-primary"
-                onClick={() => onReply(comment.id)}
-              >
-                <Reply className="w-3 h-3 mr-1" />
-                Reply
-              </Button>
-            )}
-            
-            {comment.reply_count && comment.reply_count > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs hover:text-primary"
-                onClick={() => setShowReplies(!showReplies)}
-              >
-                <MessageCircle className="w-3 h-3 mr-1" />
-                {showReplies ? "Hide" : "Show"} {comment.reply_count} {comment.reply_count === 1 ? "reply" : "replies"}
-              </Button>
-            )}
-          </div>
-          
-          {/* Replies would be rendered here if implemented */}
-          {showReplies && comment.replies && comment.replies.length > 0 && (
-            <div className="mt-3 ml-6 pl-3 border-l-2 border-border space-y-2">
-              {comment.replies.map((reply) => (
-                <Comment
-                  key={reply.id}
-                  comment={reply}
-                  onLike={onLike}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  isLiked={isLiked}
-                  isOwner={reply.user_id === user?.id}
-                  isChannelOwner={isChannelOwner}
-                />
-              ))}
-            </div>
-          )}
+          {/* Like & Reply buttons — temporarily removed, will be added later */}
         </div>
       </div>
     </div>

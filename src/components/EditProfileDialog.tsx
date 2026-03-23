@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,18 @@ interface EditProfileDialogProps {
   profile: any;
 }
 
+const FieldRow = ({ icon: Icon, label, children }: { icon: any; label: string; children: React.ReactNode }) => (
+  <div className="flex items-start gap-3">
+    <div className="mt-2.5 shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+      <Icon className="w-4 h-4 text-primary" />
+    </div>
+    <div className="flex-1 space-y-1.5">
+      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  </div>
+);
+
 export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,7 +43,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
     current_city: profile?.current_city || '',
     relationship_status: profile?.relationship_status || '',
     phone: profile?.phone || '',
-    website_url: profile?.website_url || profile?.website || '',
+    website: profile?.website || profile?.website_url || '',
     facebook_url: profile?.facebook_url || '',
     instagram_url: profile?.instagram_url || '',
     twitter_url: profile?.twitter_url || '',
@@ -51,7 +63,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
         current_city: profile.current_city || '',
         relationship_status: profile.relationship_status || '',
         phone: profile.phone || '',
-        website_url: profile.website_url || profile.website || '',
+        website: profile.website || profile.website_url || '',
         facebook_url: profile.facebook_url || '',
         instagram_url: profile.instagram_url || '',
         twitter_url: profile.twitter_url || '',
@@ -76,9 +88,14 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      const updateData: any = { ...formData };
+      if (updateData.birthdate === '') {
+        updateData.birthdate = null;
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update(formData)
+        .update(updateData)
         .eq('id', user.id);
 
       if (error) throw error;
@@ -93,17 +110,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
     }
   };
 
-  const FieldRow = ({ icon: Icon, label, children }: { icon: any; label: string; children: React.ReactNode }) => (
-    <div className="flex items-start gap-3">
-      <div className="mt-2.5 shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-        <Icon className="w-4 h-4 text-primary" />
-      </div>
-      <div className="flex-1 space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</Label>
-        {children}
-      </div>
-    </div>
-  );
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -198,7 +205,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 234 567 8900" />
               </FieldRow>
               <FieldRow icon={Globe} label="Website">
-                <Input name="website_url" value={formData.website_url} onChange={handleChange} placeholder="https://yourwebsite.com" />
+                <Input name="website" value={formData.website} onChange={handleChange} placeholder="https://yourwebsite.com" />
               </FieldRow>
             </TabsContent>
 

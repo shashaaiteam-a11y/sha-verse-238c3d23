@@ -145,29 +145,49 @@ const CommentSection = ({
             </div>
           ) : (
             <div className="space-y-0">
-              {comments.map((comment) => {
-                const { data: isLiked } = useCommentLikeStatus(comment.id);
-                const isOwner = comment.user_id === user?.id;
-                
-                return (
-                  <Comment
-                    key={comment.id}
-                    comment={comment}
-                    onReply={user ? () => {} : undefined}
-                    onEdit={isOwner ? (id, content) => updateComment.mutate({ commentId: id, content }) : undefined}
-                    onDelete={(isOwner || isChannelOwner) ? (id) => deleteComment.mutate(id) : undefined}
-                    onLike={user ? (id) => likeComment.mutate(id) : undefined}
-                    isLiked={!!isLiked}
-                    isOwner={isOwner}
-                    isChannelOwner={isChannelOwner}
-                  />
-                );
-              })}
+              {comments.map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  user={user}
+                  useCommentLikeStatus={useCommentLikeStatus}
+                  updateComment={updateComment}
+                  deleteComment={deleteComment}
+                  likeComment={likeComment}
+                  isChannelOwner={isChannelOwner}
+                />
+              ))}
             </div>
           )}
         </>
       )}
     </Card>
+  );
+};
+
+const CommentItem = ({
+  comment,
+  user,
+  useCommentLikeStatus,
+  updateComment,
+  deleteComment,
+  likeComment,
+  isChannelOwner,
+}: any) => {
+  const { data: isLiked } = useCommentLikeStatus(comment.id);
+  const isOwner = comment.user_id === user?.id;
+
+  return (
+    <Comment
+      comment={comment}
+      onReply={user ? () => {} : undefined}
+      onEdit={isOwner ? (id: string, content: string) => updateComment.mutate({ commentId: id, content }) : undefined}
+      onDelete={(isOwner || isChannelOwner) ? (id: string) => deleteComment.mutate(id) : undefined}
+      onLike={user ? (id: string) => likeComment.mutate(id) : undefined}
+      isLiked={!!isLiked}
+      isOwner={isOwner}
+      isChannelOwner={isChannelOwner}
+    />
   );
 };
 

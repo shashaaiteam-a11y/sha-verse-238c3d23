@@ -219,12 +219,9 @@ export const useBooks = (options: {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'books' },
         (payload) => {
-          // If update is just views/likes, avoid invalidating the whole feed if possible
-          // But for now, we'll keep it simple but separated
-          // Ideally check payload.new vs payload.old
           queryClient.invalidateQueries({ queryKey: ['books', 'trending'] });
           queryClient.invalidateQueries({ queryKey: ['books', 'saved'] });
-          // queryClient.invalidateQueries({ queryKey: ['books', 'feed'] }); // Optional: might not need to refresh feed for just a view count
+          queryClient.invalidateQueries({ queryKey: ['books', 'feed'] });
         }
       )
       .subscribe();
