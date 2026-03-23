@@ -68,6 +68,8 @@ export const useVideoComments = (videoId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
+      queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
       toast.success('Comment added!');
     },
   });
@@ -100,6 +102,8 @@ export const useVideoComments = (videoId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
+      queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
       toast.success('Comment deleted');
     },
   });
@@ -118,6 +122,8 @@ export const useVideoComments = (videoId?: string) => {
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
         queryClient.invalidateQueries({ queryKey: ['video', videoId] });
+        queryClient.invalidateQueries({ queryKey: ['shorts'] });
+        queryClient.invalidateQueries({ queryKey: ['videos'] });
       })
       .on('postgres_changes', {
         event: 'DELETE',
@@ -127,6 +133,8 @@ export const useVideoComments = (videoId?: string) => {
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
         queryClient.invalidateQueries({ queryKey: ['video', videoId] });
+        queryClient.invalidateQueries({ queryKey: ['shorts'] });
+        queryClient.invalidateQueries({ queryKey: ['videos'] });
       })
       .subscribe();
 
