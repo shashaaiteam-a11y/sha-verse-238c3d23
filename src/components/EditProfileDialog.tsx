@@ -53,7 +53,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
   });
 
   useEffect(() => {
-    if (profile) {
+    if (open && profile) {
       setFormData({
         display_name: profile.display_name || '',
         bio: profile.bio || '',
@@ -72,7 +72,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
         birthdate: profile.birthdate || '',
       });
     }
-  }, [profile]);
+  }, [open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
