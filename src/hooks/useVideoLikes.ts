@@ -47,7 +47,7 @@ export const useVideoLike = (videoId?: string) => {
     mutationFn: async () => {
       if (!user || !videoId) throw new Error('Not authenticated');
 
-      // Remove dislike if exists
+      // 1. If currently disliked, remove dislike first
       if (isDisliked) {
         await supabase
           .from('video_dislikes')
@@ -56,6 +56,7 @@ export const useVideoLike = (videoId?: string) => {
           .eq('video_id', videoId);
       }
 
+      // 2. toggle like row
       if (isLiked) {
         const { error } = await supabase
           .from('likes')
@@ -64,20 +65,6 @@ export const useVideoLike = (videoId?: string) => {
           .eq('video_id', videoId);
         
         if (error) throw error;
-
-        // Update likes count
-        const { data: video } = await supabase
-          .from('videos')
-          .select('likes_count')
-          .eq('id', videoId)
-          .single();
-
-        if (video) {
-          await supabase
-            .from('videos')
-            .update({ likes_count: Math.max(0, (video.likes_count || 0) - 1) })
-            .eq('id', videoId);
-        }
       } else {
         const { error } = await supabase
           .from('likes')
@@ -87,36 +74,30 @@ export const useVideoLike = (videoId?: string) => {
           });
         
         if (error) throw error;
-
-        // Update likes count
-        const { data: video } = await supabase
-          .from('videos')
-          .select('likes_count')
-          .eq('id', videoId)
-          .single();
-
-        if (video) {
-          await supabase
-            .from('videos')
-            .update({ likes_count: (video.likes_count || 0) + 1 })
-            .eq('id', videoId);
-        }
       }
+
+      // 3. Update likes_count on videos table
+      const { count } = await supabase
+        .from('likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('video_id', videoId);
+      
+      await supabase
+        .from('videos')
+        .update({ likes_count: count || 0 })
+        .eq('id', videoId);
     },
     // Optimistic updates for instant UI feedback
     onMutate: async () => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['video-like', videoId] });
       await queryClient.cancelQueries({ queryKey: ['video', videoId] });
       
-      // Snapshot the previous value
       const previousLiked = queryClient.getQueryData(['video-like', videoId, user?.id]);
       const previousVideo = queryClient.getQueryData(['video', videoId]);
       
-      // Optimistically update to the new value
       queryClient.setQueryData(['video-like', videoId, user?.id], !isLiked);
       
-      // Optimistically update video likes count
+      // Optimistically update counts if video object exists
       if (previousVideo) {
         queryClient.setQueryData(['video', videoId], (old: any) => ({
           ...old,
@@ -129,7 +110,6 @@ export const useVideoLike = (videoId?: string) => {
       return { previousLiked, previousVideo };
     },
     onError: (err, _, context) => {
-      // Rollback on error
       queryClient.setQueryData(['video-like', videoId, user?.id], context?.previousLiked);
       queryClient.setQueryData(['video', videoId], context?.previousVideo);
     },
@@ -138,6 +118,7 @@ export const useVideoLike = (videoId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['video-dislike', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
       queryClient.invalidateQueries({ queryKey: ['videos'] });
+      queryClient.invalidateQueries({ queryKey: ['shorts'] });
     },
   });
 
@@ -145,29 +126,16 @@ export const useVideoLike = (videoId?: string) => {
     mutationFn: async () => {
       if (!user || !videoId) throw new Error('Not authenticated');
 
-      // Remove like if exists
+      // 1. If currently liked, remove like first
       if (isLiked) {
         await supabase
           .from('likes')
           .delete()
           .eq('user_id', user.id)
           .eq('video_id', videoId);
-        
-        // Decrease likes count
-        const { data: video } = await supabase
-          .from('videos')
-          .select('likes_count')
-          .eq('id', videoId)
-          .single();
-
-        if (video) {
-          await supabase
-            .from('videos')
-            .update({ likes_count: Math.max(0, (video.likes_count || 0) - 1) })
-            .eq('id', videoId);
-        }
       }
 
+      // 2. toggle dislike row
       if (isDisliked) {
         const { error } = await supabase
           .from('video_dislikes')
@@ -192,6 +160,7 @@ export const useVideoLike = (videoId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['video-dislike', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
       queryClient.invalidateQueries({ queryKey: ['videos'] });
+      queryClient.invalidateQueries({ queryKey: ['shorts'] });
     },
   });
 

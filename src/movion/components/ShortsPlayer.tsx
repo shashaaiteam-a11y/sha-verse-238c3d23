@@ -3,13 +3,28 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, Share2, Music2, Volume2, VolumeX,
-  Pause, Loader2, Heart, ArrowLeft, MoreVertical, AlertCircle, ThumbsDown
+  Pause, Loader2, Heart, ArrowLeft, MoreVertical, AlertCircle, ThumbsDown,
+  Send, X, Flag, EyeOff, Download
 } from 'lucide-react';
 import { MovionVideo } from '../types';
 import { useMovionStore } from '../store';
 import { cn } from '@/lib/utils';
 import SubscribeButton from './SubscribeButton';
 import { useVideos } from '@/hooks/useVideos';
+import { useVideoLike } from '@/hooks/useVideoLikes';
+import { useVideoComments } from '@/hooks/useVideoComments';
+import { useAuth } from '@/contexts/AuthContext';
+import { ShareDialog } from '@/components/ShareDialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface ShortsPlayerProps {
   video: MovionVideo;
@@ -29,17 +44,21 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
   basePath = '/movion'
 }) => {
   const navigate = useNavigate();
-  const { toggleLike, toggleDislike, likedVideos, dislikedVideos, recordEngagement, emitEvent } = useMovionStore();
+  const { recordEngagement, emitEvent } = useMovionStore();
   const { incrementView } = useVideos();
+  const { isLiked, isDisliked, toggleLike, toggleDislike } = useVideoLike(video.id);
+  const { comments, addComment } = useVideoComments(video.id);
+  const { user } = useAuth();
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showHeart, setShowHeart] = useState(false);
-  
-  const isLiked = likedVideos.some((v) => v.id === video.id);
-  const isDisliked = dislikedVideos.some((v) => v.id === video.id);
+  const [showComments, setShowComments] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
     if (isActive) {
@@ -70,7 +89,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
   const handleVideoClick = (e: React.MouseEvent) => {
     if (e.detail === 2) {
-      if (!isLiked) toggleLike(video);
+      if (!isLiked) toggleLike.mutate();
       setShowHeart(true);
       setTimeout(() => setShowHeart(false), 800);
     } else {
@@ -88,6 +107,24 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return num.toString();
+  };
+
+  const handleAddComment = () => {
+    if (!commentText.trim() || !user) return;
+    addComment.mutate(commentText.trim());
+    setCommentText('');
+  };
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) { toast.error('Please login to like'); return; }
+    toggleLike.mutate();
+  };
+
+  const handleDislike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) { toast.error('Please login to dislike'); return; }
+    toggleDislike.mutate();
   };
 
   return (
@@ -136,16 +173,30 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             <button onClick={onMuteToggle} className="p-2.5 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full text-white transition-all active:scale-90">
               {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
             </button>
-            <button className="p-2.5 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full text-white transition-all active:scale-90">
-              <MoreVertical size={24} />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-2.5 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full text-white transition-all active:scale-90">
+                  <MoreVertical size={24} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => { toast.info('Not interested noted'); }}>
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Not interested
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { toast.info('Reported'); }}>
+                  <Flag className="w-4 h-4 mr-2" />
+                  Report
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         {/* Right Action Buttons */}
         <div className="absolute right-3 bottom-24 flex flex-col items-center gap-6 z-30">
           <button 
-            onClick={() => toggleLike(video)}
+            onClick={handleLike}
             className="flex flex-col items-center gap-1"
           >
             <div className={cn(
@@ -158,7 +209,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
           </button>
 
           <button 
-            onClick={() => toggleDislike(video)}
+            onClick={handleDislike}
             className="flex flex-col items-center gap-1"
           >
             <div className={cn(
@@ -170,14 +221,20 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             <span className="text-white text-xs font-bold drop-shadow-lg">Dislike</span>
           </button>
 
-          <button className="flex flex-col items-center gap-1">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setShowComments(true); }}
+            className="flex flex-col items-center gap-1"
+          >
             <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
               <MessageSquare size={28} />
             </div>
-            <span className="text-white text-xs font-bold drop-shadow-lg">0</span>
+            <span className="text-white text-xs font-bold drop-shadow-lg">{formatCount(comments?.length || 0)}</span>
           </button>
 
-          <button className="flex flex-col items-center gap-1">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setShowShareDialog(true); }}
+            className="flex flex-col items-center gap-1"
+          >
             <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
               <Share2 size={28} />
             </div>
@@ -248,6 +305,73 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
           />
         </div>
       </div>
+
+      {/* Comments Bottom Sheet */}
+      <Sheet open={showComments} onOpenChange={setShowComments}>
+        <SheetContent side="bottom" className="h-[70vh] flex flex-col rounded-t-2xl p-0">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b">
+            <SheetTitle className="text-center">Comments ({comments?.length || 0})</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">
+            {(!comments || comments.length === 0) ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No comments yet. Be the first!
+              </div>
+            ) : (
+              comments.map((comment: any) => (
+                <div key={comment.id} className="flex gap-3">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    {comment.profiles?.avatar_url && <AvatarImage src={comment.profiles.avatar_url} />}
+                    <AvatarFallback className="text-xs">
+                      {comment.profiles?.display_name?.[0] || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm truncate">
+                        {comment.profiles?.display_name || 'User'}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <p className="text-sm mt-0.5">{comment.content}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {user && (
+            <div className="border-t px-4 py-3 flex gap-2">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                placeholder="Add a comment..."
+                className="flex-1 bg-secondary rounded-full px-4 py-2 text-sm outline-none"
+              />
+              <button 
+                onClick={handleAddComment}
+                disabled={!commentText.trim() || addComment.isPending}
+                className="p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+              >
+                <Send size={18} />
+              </button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Share Dialog */}
+      <ShareDialog
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        postId={video.id}
+        postType="video"
+        postContent={video.title}
+        postImage={video.thumbnail}
+      />
     </div>
   );
 };
