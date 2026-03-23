@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +21,11 @@ import {
   Globe,
   Users,
   Lock,
-  Flag
+  Flag,
+  Check,
+  X
 } from "lucide-react";
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { PostComments } from '@/components/PostComments';
 import { EmojiReactionPicker } from '@/components/EmojiReactionPicker';
 import { useReactions } from '@/hooks/useReactions';
@@ -31,6 +34,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ShareDialog } from '@/components/ShareDialog';
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProfilePostCardProps {
   post: any;
@@ -62,13 +68,39 @@ export const ProfilePostCard = ({
 }: ProfilePostCardProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { userReaction, reactionCounts, toggleReaction } = useReactions(post.id, 'post');
   const { isPostSaved, toggleSavePost } = useSavedPosts();
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const isSaved = isPostSaved(post.id, 'post');
   const totalReactions = Object.values(reactionCounts || {}).reduce((a: any, b: any) => a + b, 0);
   const isOwnPost = user?.id === post.user_id;
+  const canEdit = isOwnPost && differenceInMinutes(new Date(), new Date(post.created_at)) <= 15;
+
+  const handleEdit = async () => {
+    if (!editContent.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ content: editContent, edited_at: new Date().toISOString() })
+        .eq('id', post.id);
+      if (error) throw error;
+      toast({ title: 'Post updated' });
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['profile-posts'] });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSaveToggle = () => {
     toggleSavePost.mutate({ postId: post.id, type: 'post' });
@@ -129,10 +161,12 @@ export const ProfilePostCard = ({
               {isOwnPost && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Edit post
-                  </DropdownMenuItem>
+                  {canEdit && (
+                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Edit post
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem 
                     onClick={() => onDelete?.(post.id)}
                     className="text-destructive focus:text-destructive"
@@ -159,7 +193,37 @@ export const ProfilePostCard = ({
 
       {/* Post Content */}
       <div className="px-4 py-3">
-        <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+        {isEditing ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="text-sm min-h-[80px] resize-none"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setIsEditing(false); setEditContent(post.content); }}
+                disabled={isSubmitting}
+              >
+                <X className="w-4 h-4 mr-1" />
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleEdit}
+                disabled={isSubmitting || !editContent.trim()}
+              >
+                <Check className="w-4 h-4 mr-1" />
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+        )}
       </div>
 
       {/* Post Image */}
