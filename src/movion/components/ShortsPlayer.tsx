@@ -9,6 +9,7 @@ import { MovionVideo } from '../types';
 import { useMovionStore } from '../store';
 import { cn } from '@/lib/utils';
 import SubscribeButton from './SubscribeButton';
+import { useVideos } from '@/hooks/useVideos';
 
 interface ShortsPlayerProps {
   video: MovionVideo;
@@ -29,6 +30,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 }) => {
   const navigate = useNavigate();
   const { toggleLike, toggleDislike, likedVideos, dislikedVideos, recordEngagement, emitEvent } = useMovionStore();
+  const { incrementView } = useVideos();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +44,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
   useEffect(() => {
     if (isActive) {
       emitEvent({ type: 'watch_started', videoId: video.id });
+      incrementView.mutate(video.id);
       if (videoRef.current) {
         setHasError(false);
         videoRef.current.load();

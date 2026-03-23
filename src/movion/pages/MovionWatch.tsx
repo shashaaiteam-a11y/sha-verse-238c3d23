@@ -39,7 +39,7 @@ const MovionWatch = () => {
   
   // Supabase hooks
   const { video, isLoading: videoLoading } = useVideo(videoId);
-  const { videos: allVideos } = useVideos();
+  const { videos: allVideos, incrementView } = useVideos();
   const { comments, addComment, isLoading: commentsLoading } = useVideoComments(videoId);
   const { isLiked, isDisliked, toggleLike, toggleDislike } = useVideoLike(videoId);
   const addToHistory = useAddToHistory();
@@ -62,10 +62,11 @@ const MovionWatch = () => {
   const [commentText, setCommentText] = useState("");
   const [isCommentsOpen, setIsCommentsOpen] = useState(true);
   
-  // Add to history on mount
+  // Add to history and increment views on mount
   useEffect(() => {
     if (video && user) {
       addToHistory.mutate({ videoId: video.id });
+      incrementView.mutate(video.id);
     }
   }, [video?.id, user?.id]);
   
