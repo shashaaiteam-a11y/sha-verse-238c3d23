@@ -28,6 +28,25 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
   
   const { user } = useAuth();
   const { channel: myChannel, isLoading: channelLoading } = useMyChannel();
+
+  // Count navigations inside Movion to know how far back to go to exit
+  const movionNavCount = useRef(0);
+  const prevPathname = useRef(location.pathname);
+  useEffect(() => {
+    if (prevPathname.current !== location.pathname) {
+      movionNavCount.current += 1;
+      prevPathname.current = location.pathname;
+    }
+  }, [location.pathname]);
+
+  const handleBackToApp = () => {
+    const stepsBack = movionNavCount.current;
+    if (stepsBack > 0) {
+      window.history.go(-(stepsBack));
+    } else {
+      navigate('/');
+    }
+  };
   
   const userAvatar = useMemo(() => 
     myChannel?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id || 'default'}`,
@@ -89,7 +108,7 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
       <header className="flex items-center justify-between px-2 sm:px-4 h-16 sticky top-0 bg-card z-[60] border-b border-border">
         <div className="flex items-center gap-1 sm:gap-4">
           <button 
-            onClick={() => navigate(-1)} 
+            onClick={handleBackToApp} 
             className="p-2 hover:bg-muted rounded-full transition-all active:scale-90"
             title="Go Back"
           >

@@ -197,9 +197,6 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
               <FieldRow icon={Phone} label="Phone">
                 <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 234 567 8900" />
               </FieldRow>
-              <FieldRow icon={Globe} label="Website">
-                <Input name="website" value={formData.website} onChange={handleChange} placeholder="https://yourwebsite.com" />
-              </FieldRow>
             </TabsContent>
 
             {/* Social */}
