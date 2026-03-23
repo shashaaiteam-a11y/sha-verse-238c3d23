@@ -43,7 +43,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
     current_city: profile?.current_city || '',
     relationship_status: profile?.relationship_status || '',
     phone: profile?.phone || '',
-    website_url: profile?.website_url || profile?.website || '',
+    website: profile?.website || profile?.website_url || ''
     facebook_url: profile?.facebook_url || '',
     instagram_url: profile?.instagram_url || '',
     twitter_url: profile?.twitter_url || '',
@@ -63,7 +63,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
         current_city: profile.current_city || '',
         relationship_status: profile.relationship_status || '',
         phone: profile.phone || '',
-        website_url: profile.website_url || profile.website || '',
+        website: profile.website || profile.website_url || ''
         facebook_url: profile.facebook_url || '',
         instagram_url: profile.instagram_url || '',
         twitter_url: profile.twitter_url || '',
@@ -198,7 +198,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 234 567 8900" />
               </FieldRow>
               <FieldRow icon={Globe} label="Website">
-                <Input name="website_url" value={formData.website_url} onChange={handleChange} placeholder="https://yourwebsite.com" />
+                <Input name="website" value={formData.website} onChange={handleChange} placeholder="https://yourwebsite.com" />
               </FieldRow>
             </TabsContent>
 
