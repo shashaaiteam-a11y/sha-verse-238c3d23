@@ -43,7 +43,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
     current_city: profile?.current_city || '',
     relationship_status: profile?.relationship_status || '',
     phone: profile?.phone || '',
-    website: profile?.website || profile?.website_url || ''
+    website: profile?.website || '',
     facebook_url: profile?.facebook_url || '',
     instagram_url: profile?.instagram_url || '',
     twitter_url: profile?.twitter_url || '',
@@ -63,7 +63,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
         current_city: profile.current_city || '',
         relationship_status: profile.relationship_status || '',
         phone: profile.phone || '',
-        website: profile.website || profile.website_url || ''
+        website: profile.website || '',
         facebook_url: profile.facebook_url || '',
         instagram_url: profile.instagram_url || '',
         twitter_url: profile.twitter_url || '',
