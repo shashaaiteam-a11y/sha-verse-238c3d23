@@ -73,6 +73,61 @@ export type Database = {
           },
         ]
       }
+      book_comments: {
+        Row: {
+          book_id: string
+          content: string
+          created_at: string | null
+          id: string
+          likes_count: number | null
+          parent_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          likes_count?: number | null
+          parent_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          likes_count?: number | null
+          parent_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_comments_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "book_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       book_deletion_requests: {
         Row: {
           admin_notes: string | null
@@ -511,6 +566,35 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "book_comments"
             referencedColumns: ["id"]
           },
         ]
@@ -3732,6 +3816,7 @@ export type Database = {
         Returns: boolean
       }
       cleanup_expired_stories: { Args: never; Returns: undefined }
+      comment_likes_count: { Args: { p_comment_id: string }; Returns: number }
       create_notification: {
         Args: {
           notif_body?: string
@@ -3743,7 +3828,7 @@ export type Database = {
         Returns: string
       }
       decrement_book_comment_count: {
-        Args: { book_id: string }
+        Args: { p_book_id: string }
         Returns: undefined
       }
       decrement_book_likes: { Args: { book_id: string }; Returns: undefined }
@@ -3768,7 +3853,7 @@ export type Database = {
         Returns: boolean
       }
       increment_book_comment_count: {
-        Args: { book_id: string }
+        Args: { p_book_id: string }
         Returns: undefined
       }
       increment_book_downloads: {
@@ -3800,7 +3885,15 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      subscribe_to_channel: {
+        Args: { target_channel_id: string }
+        Returns: undefined
+      }
       unaccent: { Args: { "": string }; Returns: string }
+      unsubscribe_from_channel: {
+        Args: { target_channel_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       page_role: "admin" | "editor" | "moderator" | "advertiser" | "analyst"
