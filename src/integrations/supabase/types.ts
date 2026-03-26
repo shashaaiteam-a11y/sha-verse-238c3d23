@@ -1011,6 +1011,41 @@ export type Database = {
           },
         ]
       }
+      earnings: {
+        Row: {
+          amount_cents: number | null
+          created_at: string | null
+          earning_type: string | null
+          id: string
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          amount_cents?: number | null
+          created_at?: string | null
+          earning_type?: string | null
+          id?: string
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          amount_cents?: number | null
+          created_at?: string | null
+          earning_type?: string | null
+          id?: string
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "earnings_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friend_suggestions: {
         Row: {
           created_at: string | null
@@ -3651,6 +3686,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "video_qualities_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_views: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string | null
+          video_id: string
+          watch_time: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          video_id: string
+          watch_time?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          video_id?: string
+          watch_time?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_views_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
             referencedRelation: "videos"
