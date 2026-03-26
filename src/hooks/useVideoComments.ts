@@ -48,21 +48,7 @@ export const useVideoComments = (videoId?: string) => {
         .single();
 
       if (error) throw error;
-
-      // Update comments count
-      const { data: video } = await supabase
-        .from('videos')
-        .select('comments_count')
-        .eq('id', videoId)
-        .single();
-
-      if (video) {
-        await supabase
-          .from('videos')
-          .update({ comments_count: (video.comments_count || 0) + 1 })
-          .eq('id', videoId);
-      }
-
+      // comments_count is auto-synced by database trigger
       return data;
     },
     onSuccess: () => {
