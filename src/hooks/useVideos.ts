@@ -61,18 +61,10 @@ export const useVideos = () => {
 
   const incrementView = useMutation({
     mutationFn: async (videoId: string) => {
-      const { data: video } = await supabase
-        .from('videos')
-        .select('views_count')
-        .eq('id', videoId)
-        .single();
-      
-      if (video) {
-        await supabase
-          .from('videos')
-          .update({ views_count: (video.views_count || 0) + 1 })
-          .eq('id', videoId);
-      }
+      // Insert into video_views — trigger auto-updates videos.views_count
+      await supabase
+        .from('video_views')
+        .insert({ video_id: videoId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });

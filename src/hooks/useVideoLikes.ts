@@ -75,17 +75,7 @@ export const useVideoLike = (videoId?: string) => {
         
         if (error) throw error;
       }
-
-      // 3. Update likes_count on videos table
-      const { count } = await supabase
-        .from('likes')
-        .select('*', { count: 'exact', head: true })
-        .eq('video_id', videoId);
-      
-      await supabase
-        .from('videos')
-        .update({ likes_count: count || 0 })
-        .eq('id', videoId);
+      // likes_count is auto-synced by database trigger
     },
     // Optimistic updates for instant UI feedback
     onMutate: async () => {
