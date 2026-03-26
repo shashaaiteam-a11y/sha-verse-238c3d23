@@ -68,22 +68,7 @@ export const useVideoComments = (videoId?: string) => {
         .eq('id', commentId);
 
       if (error) throw error;
-
-      // Update comments count
-      if (videoId) {
-        const { data: video } = await supabase
-          .from('videos')
-          .select('comments_count')
-          .eq('id', videoId)
-          .single();
-
-        if (video) {
-          await supabase
-            .from('videos')
-            .update({ comments_count: Math.max(0, (video.comments_count || 0) - 1) })
-            .eq('id', videoId);
-        }
-      }
+      // comments_count is auto-synced by database trigger
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
