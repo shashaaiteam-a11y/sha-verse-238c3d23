@@ -100,7 +100,8 @@ export const useQuickMotions = () => {
             name,
             avatar_url,
             user_id,
-            subscribers_count
+            subscribers_count,
+            channel_type
           )
         `)
         .eq('is_short', true)
