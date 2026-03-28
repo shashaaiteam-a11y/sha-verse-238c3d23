@@ -3795,6 +3795,7 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           transcoding_status: string | null
+          trending_score: number | null
           video_url: string | null
           views_count: number | null
         }
@@ -3814,6 +3815,7 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           transcoding_status?: string | null
+          trending_score?: number | null
           video_url?: string | null
           views_count?: number | null
         }
@@ -3833,6 +3835,7 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           transcoding_status?: string | null
+          trending_score?: number | null
           video_url?: string | null
           views_count?: number | null
         }
@@ -3930,6 +3933,7 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      calculate_trending_scores: { Args: never; Returns: undefined }
       can_view_private_profile_data: {
         Args: { _profile_owner_id: string; _viewer_id: string }
         Returns: boolean
