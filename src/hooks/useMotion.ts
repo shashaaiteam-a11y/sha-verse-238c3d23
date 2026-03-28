@@ -71,7 +71,8 @@ export const useTrendingMotions = () => {
             name,
             avatar_url,
             user_id,
-            subscribers_count
+            subscribers_count,
+            channel_type
           )
         `)
         .order('views_count', { ascending: false })
