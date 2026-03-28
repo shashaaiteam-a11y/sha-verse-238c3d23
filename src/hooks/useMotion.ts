@@ -134,7 +134,8 @@ export const useMotion = (motionId?: string) => {
             user_id,
             subscribers_count,
             description,
-            banner_url
+            banner_url,
+            channel_type
           )
         `)
         .eq('id', motionId)
