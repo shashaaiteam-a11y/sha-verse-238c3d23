@@ -122,7 +122,10 @@ export const useVideoLike = (videoId?: string) => {
           ...old,
           likes_count: isLiked 
             ? Math.max(0, (old?.likes_count || 0) - 1) 
-            : (old?.likes_count || 0) + 1
+            : (old?.likes_count || 0) + 1,
+          likes: isLiked 
+            ? Math.max(0, (old?.likes || 0) - 1) 
+            : (old?.likes || 0) + 1,
         }));
       }
       

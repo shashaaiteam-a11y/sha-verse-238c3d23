@@ -100,6 +100,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
       <div className="relative h-full w-full md:w-auto md:h-[94%] md:aspect-[9/16] bg-black shadow-2xl overflow-hidden md:rounded-3xl z-10 border-0 md:border border-white/5 group">
         <video
+          key={video.id}
           ref={videoRef}
           src={shouldPreload || isActive ? video.videoUrl : ""}
           className="h-full w-full object-cover cursor-pointer"

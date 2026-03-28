@@ -2,6 +2,29 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Transform Supabase video data to component-compatible format
+const transformVideoData = (video: any) => {
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return {
+    ...video,
+    thumbnail: video.thumbnail_url || 'https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=400',
+    videoUrl: video.video_url || video.hls_url || '',
+    duration: formatDuration(video.duration),
+    channelName: video.channels?.name || 'Unknown Channel',
+    channelAvatar: video.channels?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${video.channel_id}`,
+    views: video.views_count || 0,
+    likes: video.likes_count || 0,
+    dislikes: video.dislikes_count || 0,
+    timestamp: video.created_at ? new Date(video.created_at).toLocaleDateString() : 'Recently',
+  };
+};
+
 export const useShorts = () => {
   const queryClient = useQueryClient();
 
@@ -25,7 +48,7 @@ export const useShorts = () => {
         .limit(50);
       
       if (error) throw error;
-      return data;
+      return (data || []).map(transformVideoData);
     },
   });
 
@@ -86,7 +109,7 @@ export const useLongVideos = (category?: string) => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data;
+      return (data || []).map(transformVideoData);
     },
   });
 

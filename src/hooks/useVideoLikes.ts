@@ -97,7 +97,10 @@ export const useVideoLike = (videoId?: string) => {
           ...old,
           likes_count: isLiked 
             ? Math.max(0, (old?.likes_count || 0) - 1) 
-            : (old?.likes_count || 0) + 1
+            : (old?.likes_count || 0) + 1,
+          likes: isLiked 
+            ? Math.max(0, (old?.likes || 0) - 1) 
+            : (old?.likes || 0) + 1,
         }));
       }
 
@@ -105,7 +108,11 @@ export const useVideoLike = (videoId?: string) => {
       queryClient.setQueryData(['shorts'], (old: any) => {
         if (!Array.isArray(old)) return old;
         return old.map((v: any) => 
-          v.id === videoId ? { ...v, likes_count: isLiked ? Math.max(0, (v.likes_count || 0) - 1) : (v.likes_count || 0) + 1 } : v
+          v.id === videoId ? { 
+            ...v, 
+            likes_count: isLiked ? Math.max(0, (v.likes_count || 0) - 1) : (v.likes_count || 0) + 1,
+            likes: isLiked ? Math.max(0, (v.likes || 0) - 1) : (v.likes || 0) + 1,
+          } : v
         );
       });
 
@@ -113,7 +120,11 @@ export const useVideoLike = (videoId?: string) => {
       queryClient.setQueryData(['videos'], (old: any) => {
         if (!Array.isArray(old)) return old;
         return old.map((v: any) => 
-          v.id === videoId ? { ...v, likes_count: isLiked ? Math.max(0, (v.likes_count || 0) - 1) : (v.likes_count || 0) + 1 } : v
+          v.id === videoId ? { 
+            ...v, 
+            likes_count: isLiked ? Math.max(0, (v.likes_count || 0) - 1) : (v.likes_count || 0) + 1,
+            likes: isLiked ? Math.max(0, (v.likes || 0) - 1) : (v.likes || 0) + 1,
+          } : v
         );
       });
 
