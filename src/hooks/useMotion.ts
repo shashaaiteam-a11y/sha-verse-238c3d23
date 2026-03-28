@@ -20,7 +20,8 @@ export const useMotions = (filter?: MotionFilter) => {
             avatar_url,
             user_id,
             subscribers_count,
-            description
+            description,
+            channel_type
           )
         `);
 
