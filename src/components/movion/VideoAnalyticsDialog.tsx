@@ -104,6 +104,10 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
   const likes = likesData?.count || (stats as any)?.likes_count || 0;
   const comments = commentsData?.count || (stats as any)?.comments_count || 0;
   const shares = (stats as any)?.shares_count || 0;
+  
+  const geoData = generateGeoData(views);
+  const indiaViews = geoData.find(g => g.code === 'IN')?.views || 0;
+  const stateData = generateStateData(indiaViews);
 
   const formatCount = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
