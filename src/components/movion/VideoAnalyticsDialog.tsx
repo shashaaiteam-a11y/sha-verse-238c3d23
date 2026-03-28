@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Eye, ThumbsUp, MessageSquare, Share2, Clock, 
-  Globe, MapPin, TrendingUp, Users, Calendar
+  TrendingUp, Users, Calendar
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,42 +32,7 @@ interface VideoAnalyticsDialogProps {
   } | null;
 }
 
-// Simulated geographic data (in production, this would come from real analytics)
-const generateGeoData = (totalViews: number) => {
-  const countries = [
-    { name: "India", code: "IN", percentage: 45 },
-    { name: "United States", code: "US", percentage: 20 },
-    { name: "Pakistan", code: "PK", percentage: 12 },
-    { name: "Bangladesh", code: "BD", percentage: 8 },
-    { name: "United Kingdom", code: "GB", percentage: 5 },
-    { name: "Canada", code: "CA", percentage: 4 },
-    { name: "Australia", code: "AU", percentage: 3 },
-    { name: "Other", code: "XX", percentage: 3 },
-  ];
-  
-  return countries.map(c => ({
-    ...c,
-    views: Math.round((totalViews * c.percentage) / 100),
-  }));
-};
 
-const generateStateData = (countryViews: number) => {
-  const states = [
-    { name: "Maharashtra", percentage: 25 },
-    { name: "Delhi", percentage: 18 },
-    { name: "Karnataka", percentage: 15 },
-    { name: "Tamil Nadu", percentage: 12 },
-    { name: "Uttar Pradesh", percentage: 10 },
-    { name: "Gujarat", percentage: 8 },
-    { name: "West Bengal", percentage: 7 },
-    { name: "Other", percentage: 5 },
-  ];
-  
-  return states.map(s => ({
-    ...s,
-    views: Math.round((countryViews * s.percentage) / 100),
-  }));
-};
 
 export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyticsDialogProps) {
   const queryClient = useQueryClient();
@@ -139,10 +104,6 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
   const likes = likesData?.count || (stats as any)?.likes_count || 0;
   const comments = commentsData?.count || (stats as any)?.comments_count || 0;
   const shares = (stats as any)?.shares_count || 0;
-  
-  const geoData = generateGeoData(views);
-  const indiaViews = geoData.find(g => g.code === 'IN')?.views || 0;
-  const stateData = generateStateData(indiaViews);
 
   const formatCount = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -193,9 +154,8 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="geography">Geography</TabsTrigger>
             <TabsTrigger value="engagement">Engagement</TabsTrigger>
           </TabsList>
 
@@ -307,54 +267,6 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                 </Card>
               </>
             )}
-          </TabsContent>
-
-          <TabsContent value="geography" className="space-y-4 mt-4">
-            {/* Countries */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Globe className="w-4 h-4" />
-                  Top Countries
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {geoData.map((country) => (
-                  <div key={country.code}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">{country.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatCount(country.views)} ({country.percentage}%)
-                      </span>
-                    </div>
-                    <Progress value={country.percentage} className="h-2" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* States (India breakdown) */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Top States (India)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {stateData.map((state) => (
-                  <div key={state.name}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">{state.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatCount(state.views)} ({state.percentage}%)
-                      </span>
-                    </div>
-                    <Progress value={state.percentage} className="h-2" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="engagement" className="space-y-4 mt-4">
