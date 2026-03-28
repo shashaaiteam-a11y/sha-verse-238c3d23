@@ -20,7 +20,8 @@ export const useMotions = (filter?: MotionFilter) => {
             avatar_url,
             user_id,
             subscribers_count,
-            description
+            description,
+            channel_type
           )
         `);
 
@@ -70,7 +71,8 @@ export const useTrendingMotions = () => {
             name,
             avatar_url,
             user_id,
-            subscribers_count
+            subscribers_count,
+            channel_type
           )
         `)
         .order('views_count', { ascending: false })
@@ -98,7 +100,8 @@ export const useQuickMotions = () => {
             name,
             avatar_url,
             user_id,
-            subscribers_count
+            subscribers_count,
+            channel_type
           )
         `)
         .eq('is_short', true)
@@ -131,7 +134,8 @@ export const useMotion = (motionId?: string) => {
             user_id,
             subscribers_count,
             description,
-            banner_url
+            banner_url,
+            channel_type
           )
         `)
         .eq('id', motionId)

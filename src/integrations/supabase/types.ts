@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_impressions: {
+        Row: {
+          created_at: string | null
+          id: string
+          revenue: number | null
+          video_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          revenue?: number | null
+          video_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          revenue?: number | null
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_impressions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_conversations: {
         Row: {
           created_at: string | null
@@ -3372,6 +3401,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_interests: {
+        Row: {
+          category: string
+          id: string
+          score: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          id?: string
+          score?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          id?: string
+          score?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           id: string
@@ -3733,6 +3786,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           duration: number | null
+          engagement_score: number | null
           hls_url: string | null
           id: string
           is_short: boolean | null
@@ -3751,6 +3805,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           duration?: number | null
+          engagement_score?: number | null
           hls_url?: string | null
           id?: string
           is_short?: boolean | null
@@ -3769,6 +3824,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           duration?: number | null
+          engagement_score?: number | null
           hls_url?: string | null
           id?: string
           is_short?: boolean | null

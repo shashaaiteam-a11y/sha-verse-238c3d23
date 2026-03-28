@@ -58,10 +58,10 @@ export const useVideos = () => {
         .limit(20);
       
       if (error) throw error;
-      // Sort by trending score: views + likes*2
+      // Sort by engagement_score (DB-calculated) then trending score
       return (data || []).sort((a, b) => {
-        const scoreA = (a.views_count || 0) + (a.likes_count || 0) * 2;
-        const scoreB = (b.views_count || 0) + (b.likes_count || 0) * 2;
+        const scoreA = ((a as any).engagement_score || 0) + (a.views_count || 0) + (a.likes_count || 0) * 2;
+        const scoreB = ((b as any).engagement_score || 0) + (b.views_count || 0) + (b.likes_count || 0) * 2;
         return scoreB - scoreA;
       });
     },
