@@ -125,9 +125,47 @@ const MovionStudio = () => {
     );
   }
 
+  const studioNavItems = [
+    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { id: "content", icon: Video, label: "Content" },
+    { id: "analytics", icon: BarChart3, label: "Analytics" },
+    { id: "monetization", icon: DollarSign, label: "Monetization" },
+    { id: "comments", icon: MessageSquare, label: "Comments" },
+    { id: "settings", icon: Settings, label: "Settings" },
+  ];
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
+      {/* Mobile Top Nav */}
+      <div className="md:hidden border-b border-border bg-background sticky top-0 z-20">
+        <div className="flex items-center gap-3 p-3 border-b border-border">
+          <Avatar className="w-8 h-8">
+            <AvatarImage src={channel.avatar_url} />
+            <AvatarFallback>{channel.name?.[0] || 'C'}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{channel.name}</p>
+            <p className="text-xs text-muted-foreground">Your channel</p>
+          </div>
+        </div>
+        <div className="flex overflow-x-auto no-scrollbar">
+          {studioNavItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => item.id === "settings" ? setShowSettings(true) : setActiveTab(item.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors flex-shrink-0
+                ${activeTab === item.id 
+                  ? "border-primary text-primary font-semibold" 
+                  : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop Sidebar */}
       <div className="w-60 border-r border-border p-4 hidden md:block">
         <div className="flex items-center gap-3 mb-6">
           <Avatar className="w-10 h-10">
@@ -141,14 +179,7 @@ const MovionStudio = () => {
         </div>
         
         <nav className="space-y-1">
-          {[
-            { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-            { id: "content", icon: Video, label: "Content" },
-            { id: "analytics", icon: BarChart3, label: "Analytics" },
-            { id: "monetization", icon: DollarSign, label: "Monetization" },
-            { id: "comments", icon: MessageSquare, label: "Comments" },
-            { id: "settings", icon: Settings, label: "Settings" },
-          ].map((item) => (
+          {studioNavItems.map((item) => (
             <button
               key={item.id}
               onClick={() => item.id === "settings" ? setShowSettings(true) : setActiveTab(item.id)}
@@ -165,7 +196,7 @@ const MovionStudio = () => {
       </div>
       
       {/* Main Content */}
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 p-4 md:p-6 overflow-auto">
         {/* Dashboard */}
         {activeTab === "dashboard" && (
           <div className="space-y-6">
