@@ -39,8 +39,9 @@ export const useVideos = () => {
   const { data: trendingVideos } = useQuery({
     queryKey: ['trending-videos'],
     queryFn: async () => {
-      // Trending: last 24 hours, scored by (views + likes*2)
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      // First refresh trending scores via RPC
+      await supabase.rpc('calculate_trending_scores');
+      
       const { data, error } = await supabase
         .from('videos')
         .select(`
@@ -53,17 +54,11 @@ export const useVideos = () => {
             subscribers_count
           )
         `)
-        .gte('created_at', oneDayAgo)
-        .order('views_count', { ascending: false })
+        .order('trending_score', { ascending: false })
         .limit(20);
       
       if (error) throw error;
-      // Sort by engagement_score (DB-calculated) then trending score
-      return (data || []).sort((a, b) => {
-        const scoreA = ((a as any).engagement_score || 0) + (a.views_count || 0) + (a.likes_count || 0) * 2;
-        const scoreB = ((b as any).engagement_score || 0) + (b.views_count || 0) + (b.likes_count || 0) * 2;
-        return scoreB - scoreA;
-      });
+      return data || [];
     },
   });
 
