@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, Send, Phone, Video, MoreVertical, CheckCheck,
-  Search, Plus, FileText, Bell, BellOff, CheckSquare2, X
+  Search, Plus, FileText, Bell, BellOff, CheckSquare2, X, ShieldX
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfileSettings } from '@/hooks/useProfileSettings';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ChatTypingBar } from './chat/ChatTypingBar';
@@ -18,6 +19,8 @@ import { VideoCallDialog } from './chat/VideoCallDialog';
 import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +37,9 @@ interface MessengerChatProps {
 
 export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatProps) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { conversations, isLoading: conversationsLoading, startConversation } = useConversations();
+  const { blockUser, unblockUser, blockedUsers } = useProfileSettings();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [initializing, setInitializing] = useState(false);
@@ -51,6 +56,58 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     selectedConversation?.id || null
   );
 
+  const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
+  const otherUserName = selectedConversation?.otherMembers?.[0]?.display_name || 'User';
+
+  // Check if the other user is blocked by current user
+  const isOtherUserBlocked = blockedUsers?.some(
+    (b: any) => b.blocked_id === otherUserId
+  ) || false;
+
+  // Check if current user is blocked by the other user
+  const { data: isBlockedByOther } = useQuery({
+    queryKey: ['blocked-by-other', otherUserId, user?.id],
+    queryFn: async () => {
+      if (!otherUserId || !user) return false;
+      const { data } = await supabase
+        .from('user_blocks')
+        .select('id')
+        .eq('blocker_id', otherUserId)
+        .eq('blocked_id', user.id)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!otherUserId && !!user,
+  });
+
+  const isChatBlocked = isOtherUserBlocked || isBlockedByOther;
+
+  // Realtime subscription for block/unblock updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('chat-blocks-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_blocks',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['blocked-users'] });
+          queryClient.invalidateQueries({ queryKey: ['blocked-by-other'] });
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
   // Filter messages based on search query
   const filteredMessages = isSearching && messageSearchQuery.trim()
     ? messages?.filter(m => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
@@ -61,7 +118,6 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     const initConversation = async () => {
       if (!initialUserId || !conversations || initializing) return;
       
-      // Check if conversation already exists with this user
       const existingConvo = conversations.find((c: any) => 
         c.otherMembers?.some((m: any) => m.id === initialUserId)
       );
@@ -69,12 +125,9 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       if (existingConvo) {
         setSelectedConversation(existingConvo);
       } else {
-        // Create new conversation
         setInitializing(true);
         try {
           const conversationId = await startConversation.mutateAsync(initialUserId);
-          // The conversation will appear in the list after refetch
-          // For now, set a temporary selected conversation
           setSelectedConversation({ id: conversationId, otherMembers: [] });
         } catch (error) {
           console.error('Failed to create conversation:', error);
@@ -86,7 +139,6 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     
     initConversation();
   }, [initialUserId, conversations, initializing]);
-
 
   const filteredConversations = conversations?.filter((convo: any) => {
     const otherUser = convo.otherMembers?.[0];
@@ -107,6 +159,33 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     if (isToday(date)) return 'Today';
     if (isYesterday(date)) return 'Yesterday';
     return format(date, 'MMMM d, yyyy');
+  };
+
+  const handleBlockUser = () => {
+    if (!otherUserId) return;
+    if (window.confirm(`Are you sure you want to block ${otherUserName}? They won't be able to message or call you.`)) {
+      blockUser.mutate(
+        { userId: otherUserId, reason: 'Blocked from chat' },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['blocked-by-other'] });
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          }
+        }
+      );
+    }
+  };
+
+  const handleUnblockUser = () => {
+    if (!otherUserId) return;
+    const blockRecord = blockedUsers?.find((b: any) => b.blocked_id === otherUserId);
+    if (!blockRecord) return;
+    unblockUser.mutate(blockRecord.id, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['blocked-by-other'] });
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      }
+    });
   };
 
   if (!isOpen) return null;
@@ -289,46 +368,56 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                       {selectedConversation.otherMembers?.[0]?.display_name?.[0] || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-card" />
+                  {!isChatBlocked && (
+                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-card" />
+                  )}
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-sm truncate">
-                    {selectedConversation.otherMembers?.[0]?.display_name || 'Chat'}
+                    {otherUserName || 'Chat'}
                   </h3>
-                  <p className="text-xs text-emerald-600">Online</p>
+                  {isChatBlocked ? (
+                    <p className="text-xs text-destructive">Blocked</p>
+                  ) : (
+                    <p className="text-xs text-emerald-600">Online</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full text-primary"
-                    onClick={() => {
-                      setIsVideoCall(true);
-                      setShowCallDialog(true);
-                    }}
-                  >
-                    <Video className="w-5 h-5" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full text-primary"
-                    onClick={() => {
-                      setIsVideoCall(false);
-                      setShowCallDialog(true);
-                    }}
-                  >
-                    <Phone className="w-5 h-5" />
-                  </Button>
+                  {!isChatBlocked && (
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="rounded-full text-primary"
+                        onClick={() => {
+                          setIsVideoCall(true);
+                          setShowCallDialog(true);
+                        }}
+                      >
+                        <Video className="w-5 h-5" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="rounded-full text-primary"
+                        onClick={() => {
+                          setIsVideoCall(false);
+                          setShowCallDialog(true);
+                        }}
+                      >
+                        <Phone className="w-5 h-5" />
+                      </Button>
+                    </>
+                  )}
                   <ChatHeaderMenu 
                     conversationId={selectedConversation.id}
-                    otherUserId={selectedConversation.otherMembers?.[0]?.id}
-                    otherUserName={selectedConversation.otherMembers?.[0]?.display_name || 'User'}
+                    otherUserId={otherUserId}
+                    otherUserName={otherUserName}
+                    isBlocked={isOtherUserBlocked}
                     onClearChat={() => {
                         if (window.confirm('Are you sure you want to clear all messages in this chat? This cannot be undone.')) {
-                            // Call clearMessages hook function
                             clearMessages.mutate();
                         }
                     }}
@@ -336,6 +425,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                         setIsSearching(!isSearching);
                         if (isSearching) setMessageSearchQuery('');
                     }}
+                    onBlock={handleBlockUser}
+                    onUnblock={handleUnblockUser}
                   />
                 </div>
               </div>
@@ -463,12 +554,35 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               ) : null
             }
             inputBar={
-              <ChatTypingBar 
-                onSendMessage={(content, mediaUrl, mediaType) => {
-                  sendMessage.mutate({ content, mediaUrl, mediaType });
-                }}
-                isSending={sendMessage.isPending}
-              />
+              isChatBlocked ? (
+                <div className="p-4 border-t border-border bg-card">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground py-2">
+                    <ShieldX className="w-5 h-5 text-destructive" />
+                    {isOtherUserBlocked ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm">You blocked this contact.</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary"
+                          onClick={handleUnblockUser}
+                        >
+                          Unblock
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-sm">You can't send messages to this contact.</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <ChatTypingBar 
+                  onSendMessage={(content, mediaUrl, mediaType) => {
+                    sendMessage.mutate({ content, mediaUrl, mediaType });
+                  }}
+                  isSending={sendMessage.isPending}
+                />
+              )
             }
             isLoading={messagesLoading}
             emptyState={

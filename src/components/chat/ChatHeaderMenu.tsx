@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Search, Trash2, UserX } from 'lucide-react';
+import { MoreVertical, Search, Trash2, UserX, UserCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,30 +7,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useProfileSettings } from '@/hooks/useProfileSettings';
 
 interface ChatHeaderMenuProps {
   conversationId: string;
   otherUserId?: string;
   otherUserName: string;
+  isBlocked?: boolean;
   onClearChat?: () => void;
   onSearchToggle?: () => void;
+  onBlock?: () => void;
+  onUnblock?: () => void;
 }
 
 export const ChatHeaderMenu = ({
   conversationId,
   otherUserId,
   otherUserName,
+  isBlocked,
   onClearChat,
   onSearchToggle,
+  onBlock,
+  onUnblock,
 }: ChatHeaderMenuProps) => {
-  const { blockUser } = useProfileSettings();
-
-  const handleBlock = () => {
-    if (!otherUserId) return;
-    blockUser.mutate({ userId: otherUserId, reason: 'Blocked from chat' });
-  };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -49,10 +47,17 @@ export const ChatHeaderMenu = ({
           Clear chat
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleBlock} className="text-destructive">
-          <UserX className="w-4 h-4 mr-3" />
-          Block {otherUserName}
-        </DropdownMenuItem>
+        {isBlocked ? (
+          <DropdownMenuItem onClick={onUnblock} className="text-emerald-500">
+            <UserCheck className="w-4 h-4 mr-3" />
+            Unblock {otherUserName}
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onClick={onBlock} className="text-destructive">
+            <UserX className="w-4 h-4 mr-3" />
+            Block {otherUserName}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
