@@ -549,7 +549,7 @@ const GroupAdmin = () => {
             <Card className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Live Stats</h3>
-                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">Auto-refreshes every 30s</span>
+                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">Auto-refreshes every 15s</span>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
