@@ -390,12 +390,10 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
               {isOwner && (
                 <>
                   <DropdownMenuSeparator />
-                  {canEdit && (
-                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Edit Post
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={() => { setIsEditing(true); setEditContent(post.content); setEditVisibility(post.visibility || 'public'); }}>
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit Post
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onPin}>
                     <Pin className={`w-4 h-4 mr-2 ${post.pinned ? 'fill-current' : ''}`} />
                     {post.pinned ? 'Unpin Post' : 'Pin Post'}
