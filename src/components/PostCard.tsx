@@ -115,6 +115,7 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+  const [editVisibility, setEditVisibility] = useState(post.visibility || 'public');
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
