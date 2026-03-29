@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_impressions: {
+        Row: {
+          created_at: string | null
+          id: string
+          revenue: number | null
+          video_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          revenue?: number | null
+          video_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          revenue?: number | null
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_impressions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_conversations: {
         Row: {
           created_at: string | null
@@ -3372,6 +3401,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_interests: {
+        Row: {
+          category: string
+          id: string
+          score: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          id?: string
+          score?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          id?: string
+          score?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           id: string
@@ -3733,6 +3786,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           duration: number | null
+          engagement_score: number | null
           hls_url: string | null
           id: string
           is_short: boolean | null
@@ -3741,6 +3795,7 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           transcoding_status: string | null
+          trending_score: number | null
           video_url: string | null
           views_count: number | null
         }
@@ -3751,6 +3806,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           duration?: number | null
+          engagement_score?: number | null
           hls_url?: string | null
           id?: string
           is_short?: boolean | null
@@ -3759,6 +3815,7 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           transcoding_status?: string | null
+          trending_score?: number | null
           video_url?: string | null
           views_count?: number | null
         }
@@ -3769,6 +3826,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           duration?: number | null
+          engagement_score?: number | null
           hls_url?: string | null
           id?: string
           is_short?: boolean | null
@@ -3777,6 +3835,7 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           transcoding_status?: string | null
+          trending_score?: number | null
           video_url?: string | null
           views_count?: number | null
         }
@@ -3866,6 +3925,36 @@ export type Database = {
         Args: { request_id: string }
         Returns: undefined
       }
+      admin_block_group_user: {
+        Args: {
+          p_admin_id: string
+          p_group_id: string
+          p_reason?: string
+          p_target_user_id: string
+        }
+        Returns: undefined
+      }
+      admin_remove_member: {
+        Args: {
+          p_admin_id: string
+          p_group_id: string
+          p_target_user_id: string
+        }
+        Returns: undefined
+      }
+      admin_update_member_role: {
+        Args: {
+          p_admin_id: string
+          p_group_id: string
+          p_new_role: string
+          p_target_user_id: string
+        }
+        Returns: undefined
+      }
+      approve_group_join_request: {
+        Args: { p_admin_id: string; p_request_id: string }
+        Returns: undefined
+      }
       are_friends: {
         Args: { _user1: string; _user2: string }
         Returns: boolean
@@ -3874,6 +3963,7 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      calculate_trending_scores: { Args: never; Returns: undefined }
       can_view_private_profile_data: {
         Args: { _profile_owner_id: string; _viewer_id: string }
         Returns: boolean

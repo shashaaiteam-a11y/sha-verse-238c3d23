@@ -14,16 +14,16 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     queryKey: ['group-role', groupId, user?.id],
     queryFn: async () => {
       if (!user || !groupId) return null;
-
+      
       // Check if user is creator
       const { data: group } = await supabase
         .from('groups')
         .select('creator_id')
         .eq('id', groupId)
         .single();
-
+      
       if (group?.creator_id === user.id) return 'admin';
-
+      
       // Check group_roles
       const { data: role } = await supabase
         .from('group_roles')
@@ -31,9 +31,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .eq('group_id', groupId)
         .eq('user_id', user.id)
         .maybeSingle();
-
+      
       if (role) return role.role;
-
+      
       // Check group_members
       const { data: member } = await supabase
         .from('group_members')
@@ -41,7 +41,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .eq('group_id', groupId)
         .eq('user_id', user.id)
         .maybeSingle();
-
+      
       return member?.role || null;
     },
     enabled: !!user && !!groupId,
@@ -340,7 +340,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
   const uploadImage = useMutation({
     mutationFn: async ({ file, type }: { file: File, type: 'avatar' | 'cover' }) => {
       if (!groupId) throw new Error('No group ID');
-
+      
       if (!user) throw new Error('Not authenticated');
       const fileExt = file.name.split('.').pop();
       const fileName = `${groupId}-${type}-${Date.now()}.${fileExt}`;
@@ -358,22 +358,22 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .getPublicUrl(filePath);
 
       // Instantly update the group with the new URL
-      const updateData = type === 'avatar'
+      const updateData = type === 'avatar' 
         ? { avatar_url: publicUrl }
         : { cover_url: publicUrl };
-
+        
       await updateGroup.mutateAsync(updateData);
-
+      
       return publicUrl;
     },
     onSuccess: (_, { type }) => {
       toast({ title: `${type === 'avatar' ? 'Profile' : 'Cover'} image updated successfully!` });
     },
     onError: (error: any) => {
-      toast({
-        title: 'Upload failed',
-        description: error.message,
-        variant: 'destructive'
+      toast({ 
+        title: 'Upload failed', 
+        description: error.message, 
+        variant: 'destructive' 
       });
     }
   });
@@ -403,52 +403,45 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Approve join request
+  // Approve join request — uses security definer RPC to bypass RLS
   const approveJoinRequest = useMutation({
     mutationFn: async (requestId: string) => {
-      // Fetch user_id from DB directly — never rely on stale closure
-      const { data: reqData, error: fetchError } = await supabase
+      // Fetch user_id for notification before RPC
+      const { data: reqData } = await supabase
         .from('group_join_requests')
-        .select('user_id, group_id')
+        .select('user_id')
         .eq('id', requestId)
         .single();
-      if (fetchError || !reqData) throw new Error('Request not found');
 
-      // Update request status
-      const { error: updateError } = await supabase
-        .from('group_join_requests')
-        .update({ status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
-        .eq('id', requestId);
-      if (updateError) throw updateError;
-
-      // Add as member — upsert to survive duplicate-key edge cases
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .upsert(
-          { group_id: groupId, user_id: reqData.user_id, role: 'member' },
-          { onConflict: 'group_id,user_id', ignoreDuplicates: true }
-        );
-      if (memberError) throw memberError;
+      const { error } = await (supabase.rpc as any)('approve_group_join_request', {
+        p_request_id: requestId,
+        p_admin_id: user!.id,
+      });
+      if (error) throw error;
 
       // Notify the requester
-      const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
-      await sendNotification(
-        reqData.user_id,
-        'group_join_approved',
-        'Join Request Approved ✅',
-        `Your request to join "${(grp as any)?.name || 'the group'}" has been approved. Welcome!`,
-        { group_id: groupId }
-      );
+      if (reqData) {
+        const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
+        await sendNotification(
+          reqData.user_id,
+          'group_join_approved',
+          'Join Request Approved ✅',
+          `Your request to join "${(grp as any)?.name || 'the group'}" has been approved. Welcome!`,
+          { group_id: groupId }
+        );
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
-      // Approved user's my-groups + pending-requests update via realtime on their client
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
       queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
       toast({ title: 'Member approved!' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Approve failed', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -489,14 +482,14 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Remove member
+  // Remove member (via RPC to bypass RLS)
   const removeMember = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
+      const { error } = await (supabase.rpc as any)('admin_remove_member', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_admin_id: user!.id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -511,20 +504,15 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Block user
+  // Block user (via RPC to bypass RLS)
   const blockUser = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
-      // Remove from members
-      await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
-
-      // Add to blocked
-      const { error } = await supabase
-        .from('group_blocked_users')
-        .insert({ group_id: groupId, user_id: userId, blocked_by: user?.id, reason });
+      const { error } = await (supabase.rpc as any)('admin_block_group_user', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_admin_id: user!.id,
+        p_reason: reason || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -558,32 +546,16 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Update member role
+  // Update member role (via RPC to bypass RLS)
   const updateMemberRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      // Update in group_members
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .update({ role })
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
-
-      if (memberError) throw memberError;
-
-      // Also update/insert in group_roles if admin/moderator
-      if (role === 'admin' || role === 'moderator') {
-        const { error: roleError } = await supabase
-          .from('group_roles')
-          .upsert({ group_id: groupId, user_id: userId, role, assigned_by: user?.id });
-        if (roleError) throw roleError;
-      } else {
-        // Remove from group_roles if demoted
-        await supabase
-          .from('group_roles')
-          .delete()
-          .eq('group_id', groupId)
-          .eq('user_id', userId);
-      }
+      const { error } = await (supabase.rpc as any)('admin_update_member_role', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_new_role: role,
+        p_admin_id: user!.id,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
