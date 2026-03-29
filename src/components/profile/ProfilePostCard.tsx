@@ -192,18 +192,35 @@ export const ProfilePostCard = ({
       {/* Post Content */}
       <div className="px-4 py-3">
         {isEditing ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               className="text-sm min-h-[80px] resize-none"
               autoFocus
             />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Visibility:</span>
+              {(['public', 'friends', 'private'] as const).map((v) => (
+                <Button
+                  key={v}
+                  size="sm"
+                  variant={editVisibility === v ? 'default' : 'outline'}
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setEditVisibility(v)}
+                >
+                  {v === 'public' && <Globe className="w-3 h-3" />}
+                  {v === 'friends' && <Users className="w-3 h-3" />}
+                  {v === 'private' && <Lock className="w-3 h-3" />}
+                  {v === 'public' ? 'Public' : v === 'friends' ? 'Friends' : 'Only Me'}
+                </Button>
+              ))}
+            </div>
             <div className="flex gap-2 justify-end">
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => { setIsEditing(false); setEditContent(post.content); }}
+                onClick={() => { setIsEditing(false); setEditContent(post.content); setEditVisibility(post.visibility || 'public'); }}
                 disabled={isSubmitting}
               >
                 <X className="w-4 h-4 mr-1" />
