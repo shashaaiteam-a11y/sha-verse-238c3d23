@@ -107,7 +107,7 @@ const Groups = () => {
         .order("members_count", { ascending: false })
         .limit(50);
       if (selectedCategory !== "trending") {
-        // category filter skipped until cache refreshes
+        query = query.eq("category", selectedCategory);
       }
       const { data, error } = await query;
       if (error) throw error;
