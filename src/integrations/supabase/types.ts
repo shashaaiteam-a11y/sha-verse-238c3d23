@@ -3925,6 +3925,10 @@ export type Database = {
         Args: { request_id: string }
         Returns: undefined
       }
+      approve_group_join_request: {
+        Args: { p_admin_id: string; p_request_id: string }
+        Returns: undefined
+      }
       are_friends: {
         Args: { _user1: string; _user2: string }
         Returns: boolean
