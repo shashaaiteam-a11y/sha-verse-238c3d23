@@ -570,13 +570,14 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Approve post
+  // Approve post via RPC
   const approvePost = useMutation({
     mutationFn: async (postId: string) => {
-      const { error } = await supabase
-        .from('group_posts')
-        .update({ approval_status: 'approved' })
-        .eq('id', postId);
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase.rpc('admin_approve_group_post', {
+        p_post_id: postId,
+        p_admin_id: user.id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -586,13 +587,14 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Reject post
+  // Reject post via RPC (deletes the post)
   const rejectPost = useMutation({
     mutationFn: async (postId: string) => {
-      const { error } = await supabase
-        .from('group_posts')
-        .update({ approval_status: 'rejected' })
-        .eq('id', postId);
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase.rpc('admin_reject_group_post', {
+        p_post_id: postId,
+        p_admin_id: user.id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
