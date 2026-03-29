@@ -182,7 +182,7 @@ export const useGroups = () => {
         throw new Error('You are the group creator/admin.');
       }
 
-      const needsRequest = group.is_private || group.require_join_approval;
+      const needsRequest = group.is_private; // Like Facebook: public = instant join, private = request
 
       if (!needsRequest) {
         // Check if already a member
@@ -193,13 +193,18 @@ export const useGroups = () => {
           .eq('user_id', user.id)
           .maybeSingle();
         if (existing) return { type: 'joined' };
+        
         const { error } = await supabase
           .from('group_members')
           .insert({ group_id: groupId, user_id: user.id, role: 'member' });
-        if (error) throw error;
+          
+        if (error) {
+          if (error.code === '23505') return { type: 'joined' }; // Ignore duplicates gracefully
+          throw error;
+        }
         return { type: 'joined' };
       } else {
-        // private or requires approval → send join request
+        // private group → send join request
         // Check for any existing request (pending or rejected)
         const { data: existing } = await supabase
           .from('group_join_requests')
@@ -213,19 +218,19 @@ export const useGroups = () => {
           return { type: 'requested' };
         }
 
-        if (existing) {
-          // Old rejected/approved request exists — delete it first, then re-insert
-          await supabase
-            .from('group_join_requests')
-            .delete()
-            .eq('id', existing.id);
-        }
-
-        // Insert fresh join request
+        // Insert fresh join request or UPSERT if fixing a previous rejected state
+        // This permanently fixes the 'duplicate key value violates unique constraint' error
         const { error } = await supabase
           .from('group_join_requests')
-          .insert({ group_id: groupId, user_id: user.id, status: 'pending' });
-        if (error) throw error;
+          .upsert(
+            { group_id: groupId, user_id: user.id, status: 'pending' },
+            { onConflict: 'group_id,user_id', ignoreDuplicates: false }
+          );
+          
+        if (error) {
+          if (error.code === '23505') return { type: 'requested' }; // Safely ignore the error if it still throws
+          throw error;
+        }
         return { type: 'requested' };
       }
     },

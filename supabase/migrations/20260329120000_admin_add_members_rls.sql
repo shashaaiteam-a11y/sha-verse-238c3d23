@@ -1,0 +1,1 @@
+CREATE POLICY "Admin can add members" ON public.group_members FOR INSERT TO authenticated WITH CHECK (public.is_group_admin(group_id, auth.uid()));

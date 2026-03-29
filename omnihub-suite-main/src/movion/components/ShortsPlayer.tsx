@@ -63,7 +63,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
       setIsPlaying(false);
       setProgress(0);
     }
-  }, [isActive, video.id, recordEngagement, emitEvent]);
+  }, [isActive, video.id]);
 
   const handleVideoClick = (e: React.MouseEvent) => {
     if (e.detail === 2) {

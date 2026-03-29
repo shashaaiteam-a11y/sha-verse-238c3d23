@@ -14,16 +14,16 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     queryKey: ['group-role', groupId, user?.id],
     queryFn: async () => {
       if (!user || !groupId) return null;
-      
+
       // Check if user is creator
       const { data: group } = await supabase
         .from('groups')
         .select('creator_id')
         .eq('id', groupId)
         .single();
-      
+
       if (group?.creator_id === user.id) return 'admin';
-      
+
       // Check group_roles
       const { data: role } = await supabase
         .from('group_roles')
@@ -31,9 +31,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .eq('group_id', groupId)
         .eq('user_id', user.id)
         .maybeSingle();
-      
+
       if (role) return role.role;
-      
+
       // Check group_members
       const { data: member } = await supabase
         .from('group_members')
@@ -41,7 +41,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .eq('group_id', groupId)
         .eq('user_id', user.id)
         .maybeSingle();
-      
+
       return member?.role || null;
     },
     enabled: !!user && !!groupId,
@@ -340,7 +340,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
   const uploadImage = useMutation({
     mutationFn: async ({ file, type }: { file: File, type: 'avatar' | 'cover' }) => {
       if (!groupId) throw new Error('No group ID');
-      
+
       if (!user) throw new Error('Not authenticated');
       const fileExt = file.name.split('.').pop();
       const fileName = `${groupId}-${type}-${Date.now()}.${fileExt}`;
@@ -358,22 +358,22 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .getPublicUrl(filePath);
 
       // Instantly update the group with the new URL
-      const updateData = type === 'avatar' 
+      const updateData = type === 'avatar'
         ? { avatar_url: publicUrl }
         : { cover_url: publicUrl };
-        
+
       await updateGroup.mutateAsync(updateData);
-      
+
       return publicUrl;
     },
     onSuccess: (_, { type }) => {
       toast({ title: `${type === 'avatar' ? 'Profile' : 'Cover'} image updated successfully!` });
     },
     onError: (error: any) => {
-      toast({ 
-        title: 'Upload failed', 
-        description: error.message, 
-        variant: 'destructive' 
+      toast({
+        title: 'Upload failed',
+        description: error.message,
+        variant: 'destructive'
       });
     }
   });
@@ -567,7 +567,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .update({ role })
         .eq('group_id', groupId)
         .eq('user_id', userId);
-      
+
       if (memberError) throw memberError;
 
       // Also update/insert in group_roles if admin/moderator
