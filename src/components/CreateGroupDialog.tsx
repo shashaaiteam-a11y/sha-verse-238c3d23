@@ -96,13 +96,15 @@ export const CreateGroupDialog = () => {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="General">General</SelectItem>
-                      <SelectItem value="Technology">Technology</SelectItem>
-                      <SelectItem value="Gaming">Gaming</SelectItem>
-                      <SelectItem value="Art & Design">Art & Design</SelectItem>
-                      <SelectItem value="Music">Music</SelectItem>
-                      <SelectItem value="Education">Education</SelectItem>
-                      <SelectItem value="Sports">Sports</SelectItem>
+                      <ScrollArea className="h-[200px]">
+                        {GROUP_CATEGORIES
+                          .filter(c => c.value !== "trending")
+                          .map(c => (
+                            <SelectItem key={c.value} value={c.value}>
+                              {c.label}
+                            </SelectItem>
+                          ))}
+                      </ScrollArea>
                     </SelectContent>
                   </Select>
                 </div>
