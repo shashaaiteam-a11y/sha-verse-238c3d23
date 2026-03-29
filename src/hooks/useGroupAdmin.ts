@@ -482,14 +482,14 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Remove member
+  // Remove member (via RPC to bypass RLS)
   const removeMember = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
+      const { error } = await (supabase.rpc as any)('admin_remove_member', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_admin_id: user!.id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
