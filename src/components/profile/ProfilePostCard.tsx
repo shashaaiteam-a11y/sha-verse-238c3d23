@@ -161,12 +161,10 @@ export const ProfilePostCard = ({
               {isOwnPost && (
                 <>
                   <DropdownMenuSeparator />
-                  {canEdit && (
-                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Edit post
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={() => { setIsEditing(true); setEditContent(post.content); setEditVisibility(post.visibility || 'public'); }}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit post
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => onDelete?.(post.id)}
                     className="text-destructive focus:text-destructive"
