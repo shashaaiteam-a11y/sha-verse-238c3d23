@@ -8,7 +8,7 @@ import {
   Edit2, Trash2, Flag, BadgeCheck, X, Check, Image as ImageIcon, FileText, BarChart2,
   MapPin
 } from "lucide-react";
-import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSavedPosts } from '@/hooks/useSavedPosts';
@@ -115,12 +115,12 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+  const [editVisibility, setEditVisibility] = useState(post.visibility || 'public');
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
 
   const isOwner = user?.id === post.user_id;
-  const canEdit = isOwner && differenceInMinutes(new Date(), new Date(post.created_at)) <= 15;
   const author = post.profiles;
   const postLocation = post.metadata?.location;
 
@@ -139,6 +139,7 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
         .from('posts')
         .update({ 
           content: editContent,
+          visibility: editVisibility,
           edited_at: new Date().toISOString()
         })
         .eq('id', post.id);
@@ -389,12 +390,10 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
               {isOwner && (
                 <>
                   <DropdownMenuSeparator />
-                  {canEdit && (
-                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Edit Post
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={() => { setIsEditing(true); setEditContent(post.content); setEditVisibility(post.visibility || 'public'); }}>
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit Post
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onPin}>
                     <Pin className={`w-4 h-4 mr-2 ${post.pinned ? 'fill-current' : ''}`} />
                     {post.pinned ? 'Unpin Post' : 'Pin Post'}
@@ -421,20 +420,38 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
 
         {/* Content */}
         {isEditing ? (
-          <div className="mb-3">
+          <div className="mb-3 space-y-3">
             <Textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               className="min-h-[100px] text-sm"
               placeholder="What's on your mind?"
             />
-            <div className="flex justify-end gap-2 mt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Visibility:</span>
+              {(['public', 'friends', 'private'] as const).map((v) => (
+                <Button
+                  key={v}
+                  size="sm"
+                  variant={editVisibility === v ? 'default' : 'outline'}
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setEditVisibility(v)}
+                >
+                  {v === 'public' && <Globe className="w-3 h-3" />}
+                  {v === 'friends' && <Users className="w-3 h-3" />}
+                  {v === 'private' && <Lock className="w-3 h-3" />}
+                  {v === 'public' ? 'Public' : v === 'friends' ? 'Friends' : 'Only Me'}
+                </Button>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={() => {
                   setIsEditing(false);
                   setEditContent(post.content);
+                  setEditVisibility(post.visibility || 'public');
                 }}
               >
                 <X className="w-4 h-4 mr-1" />

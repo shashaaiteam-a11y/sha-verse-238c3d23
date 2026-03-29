@@ -25,7 +25,7 @@ import {
   Check,
   X
 } from "lucide-react";
-import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { PostComments } from '@/components/PostComments';
 import { EmojiReactionPicker } from '@/components/EmojiReactionPicker';
 import { useReactions } from '@/hooks/useReactions';
@@ -75,12 +75,12 @@ export const ProfilePostCard = ({
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+  const [editVisibility, setEditVisibility] = useState(post.visibility || 'public');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const isSaved = isPostSaved(post.id, 'post');
   const totalReactions = Object.values(reactionCounts || {}).reduce((a: any, b: any) => a + b, 0);
   const isOwnPost = user?.id === post.user_id;
-  const canEdit = isOwnPost && differenceInMinutes(new Date(), new Date(post.created_at)) <= 15;
 
   const handleEdit = async () => {
     if (!editContent.trim()) return;
@@ -88,7 +88,7 @@ export const ProfilePostCard = ({
     try {
       const { error } = await supabase
         .from('posts')
-        .update({ content: editContent, edited_at: new Date().toISOString() })
+        .update({ content: editContent, visibility: editVisibility, edited_at: new Date().toISOString() })
         .eq('id', post.id);
       if (error) throw error;
       toast({ title: 'Post updated' });
@@ -161,12 +161,10 @@ export const ProfilePostCard = ({
               {isOwnPost && (
                 <>
                   <DropdownMenuSeparator />
-                  {canEdit && (
-                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Edit post
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={() => { setIsEditing(true); setEditContent(post.content); setEditVisibility(post.visibility || 'public'); }}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit post
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => onDelete?.(post.id)}
                     className="text-destructive focus:text-destructive"
@@ -194,18 +192,35 @@ export const ProfilePostCard = ({
       {/* Post Content */}
       <div className="px-4 py-3">
         {isEditing ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               className="text-sm min-h-[80px] resize-none"
               autoFocus
             />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Visibility:</span>
+              {(['public', 'friends', 'private'] as const).map((v) => (
+                <Button
+                  key={v}
+                  size="sm"
+                  variant={editVisibility === v ? 'default' : 'outline'}
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setEditVisibility(v)}
+                >
+                  {v === 'public' && <Globe className="w-3 h-3" />}
+                  {v === 'friends' && <Users className="w-3 h-3" />}
+                  {v === 'private' && <Lock className="w-3 h-3" />}
+                  {v === 'public' ? 'Public' : v === 'friends' ? 'Friends' : 'Only Me'}
+                </Button>
+              ))}
+            </div>
             <div className="flex gap-2 justify-end">
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => { setIsEditing(false); setEditContent(post.content); }}
+                onClick={() => { setIsEditing(false); setEditContent(post.content); setEditVisibility(post.visibility || 'public'); }}
                 disabled={isSubmitting}
               >
                 <X className="w-4 h-4 mr-1" />
