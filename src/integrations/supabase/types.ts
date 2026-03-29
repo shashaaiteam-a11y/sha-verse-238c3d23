@@ -3925,6 +3925,10 @@ export type Database = {
         Args: { request_id: string }
         Returns: undefined
       }
+      admin_approve_group_post: {
+        Args: { p_admin_id: string; p_post_id: string }
+        Returns: undefined
+      }
       admin_block_group_user: {
         Args: {
           p_admin_id: string
@@ -3932,6 +3936,10 @@ export type Database = {
           p_reason?: string
           p_target_user_id: string
         }
+        Returns: undefined
+      }
+      admin_reject_group_post: {
+        Args: { p_admin_id: string; p_post_id: string }
         Returns: undefined
       }
       admin_remove_member: {
