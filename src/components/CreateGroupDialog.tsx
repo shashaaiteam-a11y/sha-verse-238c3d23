@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Plus, Users, ShieldAlert, Globe, Lock, Key } from 'lucide-react';
 import { useGroups, GroupPrivacy } from '@/hooks/useGroups';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GROUP_CATEGORIES } from '@/lib/constants/groupCategories';
+import { WORLD_LANGUAGES } from '@/lib/constants/languages';
 
 export const CreateGroupDialog = () => {
   const [open, setOpen] = useState(false);
@@ -17,12 +18,35 @@ export const CreateGroupDialog = () => {
   const [description, setDescription] = useState('');
   const [privacy, setPrivacy] = useState<GroupPrivacy>('public');
   const [category, setCategory] = useState('General');
+  const [categorySearch, setCategorySearch] = useState('');
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('English');
+  const [languageSearch, setLanguageSearch] = useState('');
   const [rules, setRules] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
   
   const { createGroup } = useGroups();
+
+  // Filter categories based on search input
+  const filteredCategories = useMemo(() => {
+    if (!categorySearch.trim()) {
+      return GROUP_CATEGORIES.filter(c => c.value !== "trending");
+    }
+    return GROUP_CATEGORIES.filter(c => 
+      c.value !== "trending" &&
+      c.label.toLowerCase().includes(categorySearch.toLowerCase())
+    );
+  }, [categorySearch]);
+
+  // Filter languages based on search input
+  const filteredLanguages = useMemo(() => {
+    if (!languageSearch.trim()) {
+      return WORLD_LANGUAGES;
+    }
+    return WORLD_LANGUAGES.filter(lang =>
+      lang.toLowerCase().includes(languageSearch.toLowerCase())
+    );
+  }, [languageSearch]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,8 +62,10 @@ export const CreateGroupDialog = () => {
           setDescription('');
           setPrivacy('public');
           setCategory('General');
+          setCategorySearch('');
           setCountry('');
           setLanguage('English');
+          setLanguageSearch('');
           setRules('');
           setActiveTab('basic');
         },
@@ -91,22 +117,36 @@ export const CreateGroupDialog = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <ScrollArea className="h-[200px]">
-                        {GROUP_CATEGORIES
-                          .filter(c => c.value !== "trending")
-                          .map(c => (
-                            <SelectItem key={c.value} value={c.value}>
+                  <div className="space-y-2">
+                    <Input
+                      id="category-search"
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                      placeholder="Search categories (e.g., Tech, Music, Gaming...)"
+                      className="text-sm"
+                    />
+                    <Select value={category} onValueChange={(value) => {
+                      setCategory(value);
+                      setCategorySearch('');
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[250px]">
+                        {filteredCategories.length > 0 ? (
+                          filteredCategories.map(c => (
+                            <SelectItem key={c.value} value={c.value} className="cursor-pointer">
                               {c.label}
                             </SelectItem>
-                          ))}
-                      </ScrollArea>
-                    </SelectContent>
-                  </Select>
+                          ))
+                        ) : (
+                          <div className="p-2 text-center text-sm text-muted-foreground">
+                            No categories found
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
@@ -161,17 +201,36 @@ export const CreateGroupDialog = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="language">Language</Label>
-                    <Select value={language} onValueChange={setLanguage}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="English">English</SelectItem>
-                        <SelectItem value="Hindi">Hindi</SelectItem>
-                        <SelectItem value="Spanish">Spanish</SelectItem>
-                        <SelectItem value="French">French</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Input
+                        id="language-search"
+                        value={languageSearch}
+                        onChange={(e) => setLanguageSearch(e.target.value)}
+                        placeholder="Search languages..."
+                        className="text-sm"
+                      />
+                      <Select value={language} onValueChange={(value) => {
+                        setLanguage(value);
+                        setLanguageSearch('');
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select language" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[250px]">
+                          {filteredLanguages.length > 0 ? (
+                            filteredLanguages.map(lang => (
+                              <SelectItem key={lang} value={lang} className="cursor-pointer">
+                                {lang}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-center text-sm text-muted-foreground">
+                              No languages found
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="country">Country (Optional)</Label>
