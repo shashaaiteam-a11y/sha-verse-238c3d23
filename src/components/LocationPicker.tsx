@@ -136,7 +136,7 @@ export const LocationPicker = ({ value, onChange }: LocationPickerProps) => {
           <DialogHeader className="border-b border-border px-4 py-4 sm:px-5">
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-primary" />
-              Add Location
+              Add Location (Where to Share)
             </DialogTitle>
           </DialogHeader>
 
