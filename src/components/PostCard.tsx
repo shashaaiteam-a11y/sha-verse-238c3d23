@@ -120,7 +120,6 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
   const [showShareDialog, setShowShareDialog] = useState(false);
 
   const isOwner = user?.id === post.user_id;
-  const canEdit = isOwner && differenceInMinutes(new Date(), new Date(post.created_at)) <= 15;
   const author = post.profiles;
   const postLocation = post.metadata?.location;
 
