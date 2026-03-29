@@ -220,7 +220,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
       };
     },
     enabled: !!groupId && isModerator,
-    refetchInterval: 30000, // auto-refresh every 30s
+    refetchInterval: 15000, // auto-refresh every 15s
   });
 
   // ── Realtime subscriptions ───────────────────────────────────────────
