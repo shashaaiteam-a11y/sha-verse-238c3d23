@@ -24,7 +24,7 @@ export const CreateGroupDialog = () => {
   const [languageSearch, setLanguageSearch] = useState('');
   const [rules, setRules] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
-  
+
   const { createGroup } = useGroups();
 
   // Filter categories based on search input
@@ -32,7 +32,7 @@ export const CreateGroupDialog = () => {
     if (!categorySearch.trim()) {
       return GROUP_CATEGORIES.filter(c => c.value !== "trending");
     }
-    return GROUP_CATEGORIES.filter(c => 
+    return GROUP_CATEGORIES.filter(c =>
       c.value !== "trending" &&
       c.label.toLowerCase().includes(categorySearch.toLowerCase())
     );
@@ -165,7 +165,7 @@ export const CreateGroupDialog = () => {
                 <div className="space-y-3">
                   <Label>Privacy Setting</Label>
                   <div className="grid gap-3">
-                    <div 
+                    <div
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${privacy === 'public' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                       onClick={() => setPrivacy('public')}
                     >
@@ -175,7 +175,7 @@ export const CreateGroupDialog = () => {
                         <p className="text-xs text-muted-foreground">Anyone can find the group and see its posts.</p>
                       </div>
                     </div>
-                    <div 
+                    <div
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${privacy === 'private' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                       onClick={() => setPrivacy('private')}
                     >
@@ -185,7 +185,7 @@ export const CreateGroupDialog = () => {
                         <p className="text-xs text-muted-foreground">Only members can see posts. People can request to join.</p>
                       </div>
                     </div>
-                    <div 
+                    <div
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${privacy === 'invite_only' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                       onClick={() => setPrivacy('invite_only')}
                     >
@@ -268,9 +268,9 @@ export const CreateGroupDialog = () => {
             <div className="p-6 pt-4 border-t border-border bg-muted/30 flex justify-between items-center">
               <div className="flex gap-2">
                 {activeTab !== 'basic' && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setActiveTab(activeTab === 'rules' ? 'settings' : 'basic')}
                   >
                     Back
@@ -279,8 +279,8 @@ export const CreateGroupDialog = () => {
               </div>
               <div className="flex gap-2">
                 {activeTab !== 'rules' ? (
-                  <Button 
-                    type="button" 
+                  <Button
+                    type="button"
                     onClick={() => setActiveTab(activeTab === 'basic' ? 'settings' : 'rules')}
                   >
                     Next Step
