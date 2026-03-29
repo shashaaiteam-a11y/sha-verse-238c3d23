@@ -482,14 +482,14 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Remove member
+  // Remove member (via RPC to bypass RLS)
   const removeMember = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
+      const { error } = await (supabase.rpc as any)('admin_remove_member', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_admin_id: user!.id,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -504,20 +504,15 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Block user
+  // Block user (via RPC to bypass RLS)
   const blockUser = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
-      // Remove from members
-      await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
-
-      // Add to blocked
-      const { error } = await supabase
-        .from('group_blocked_users')
-        .insert({ group_id: groupId, user_id: userId, blocked_by: user?.id, reason });
+      const { error } = await (supabase.rpc as any)('admin_block_group_user', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_admin_id: user!.id,
+        p_reason: reason || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -551,32 +546,16 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Update member role
+  // Update member role (via RPC to bypass RLS)
   const updateMemberRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      // Update in group_members
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .update({ role })
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
-      
-      if (memberError) throw memberError;
-
-      // Also update/insert in group_roles if admin/moderator
-      if (role === 'admin' || role === 'moderator') {
-        const { error: roleError } = await supabase
-          .from('group_roles')
-          .upsert({ group_id: groupId, user_id: userId, role, assigned_by: user?.id });
-        if (roleError) throw roleError;
-      } else {
-        // Remove from group_roles if demoted
-        await supabase
-          .from('group_roles')
-          .delete()
-          .eq('group_id', groupId)
-          .eq('user_id', userId);
-      }
+      const { error } = await (supabase.rpc as any)('admin_update_member_role', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_new_role: role,
+        p_admin_id: user!.id,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
