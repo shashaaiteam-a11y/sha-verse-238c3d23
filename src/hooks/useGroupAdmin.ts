@@ -546,32 +546,16 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Update member role
+  // Update member role (via RPC to bypass RLS)
   const updateMemberRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      // Update in group_members
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .update({ role })
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
-      
-      if (memberError) throw memberError;
-
-      // Also update/insert in group_roles if admin/moderator
-      if (role === 'admin' || role === 'moderator') {
-        const { error: roleError } = await supabase
-          .from('group_roles')
-          .upsert({ group_id: groupId, user_id: userId, role, assigned_by: user?.id });
-        if (roleError) throw roleError;
-      } else {
-        // Remove from group_roles if demoted
-        await supabase
-          .from('group_roles')
-          .delete()
-          .eq('group_id', groupId)
-          .eq('user_id', userId);
-      }
+      const { error } = await (supabase.rpc as any)('admin_update_member_role', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_new_role: role,
+        p_admin_id: user!.id,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
