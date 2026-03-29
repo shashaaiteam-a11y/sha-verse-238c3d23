@@ -139,6 +139,7 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
         .from('posts')
         .update({ 
           content: editContent,
+          visibility: editVisibility,
           edited_at: new Date().toISOString()
         })
         .eq('id', post.id);
