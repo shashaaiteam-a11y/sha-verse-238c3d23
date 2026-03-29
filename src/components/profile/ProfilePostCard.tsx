@@ -75,12 +75,12 @@ export const ProfilePostCard = ({
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+  const [editVisibility, setEditVisibility] = useState(post.visibility || 'public');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const isSaved = isPostSaved(post.id, 'post');
   const totalReactions = Object.values(reactionCounts || {}).reduce((a: any, b: any) => a + b, 0);
   const isOwnPost = user?.id === post.user_id;
-  const canEdit = isOwnPost && differenceInMinutes(new Date(), new Date(post.created_at)) <= 15;
 
   const handleEdit = async () => {
     if (!editContent.trim()) return;
