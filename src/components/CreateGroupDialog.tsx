@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Users, ShieldAlert, Globe, Lock, Key } from 'lucide-react';
 import { useGroups, GroupPrivacy } from '@/hooks/useGroups';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { GROUP_CATEGORIES } from '@/lib/constants/groupCategories';
 
 export const CreateGroupDialog = () => {
   const [open, setOpen] = useState(false);
@@ -95,13 +96,15 @@ export const CreateGroupDialog = () => {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="General">General</SelectItem>
-                      <SelectItem value="Technology">Technology</SelectItem>
-                      <SelectItem value="Gaming">Gaming</SelectItem>
-                      <SelectItem value="Art & Design">Art & Design</SelectItem>
-                      <SelectItem value="Music">Music</SelectItem>
-                      <SelectItem value="Education">Education</SelectItem>
-                      <SelectItem value="Sports">Sports</SelectItem>
+                      <ScrollArea className="h-[200px]">
+                        {GROUP_CATEGORIES
+                          .filter(c => c.value !== "trending")
+                          .map(c => (
+                            <SelectItem key={c.value} value={c.value}>
+                              {c.label}
+                            </SelectItem>
+                          ))}
+                      </ScrollArea>
                     </SelectContent>
                   </Select>
                 </div>

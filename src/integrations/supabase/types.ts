@@ -1671,6 +1671,7 @@ export type Database = {
       groups: {
         Row: {
           avatar_url: string | null
+          category: string | null
           cover_url: string | null
           created_at: string | null
           creator_id: string
@@ -1685,6 +1686,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          category?: string | null
           cover_url?: string | null
           created_at?: string | null
           creator_id: string
@@ -1699,6 +1701,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          category?: string | null
           cover_url?: string | null
           created_at?: string | null
           creator_id?: string
