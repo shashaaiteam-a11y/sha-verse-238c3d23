@@ -413,7 +413,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .eq('id', requestId)
         .single();
 
-      const { error } = await supabase.rpc('approve_group_join_request', {
+      const { error } = await (supabase.rpc as any)('approve_group_join_request', {
         p_request_id: requestId,
         p_admin_id: user!.id,
       });
