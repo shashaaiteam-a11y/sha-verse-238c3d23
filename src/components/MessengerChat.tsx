@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, Send, Phone, Video, MoreVertical, CheckCheck,
-  Search, Plus, FileText
+  Search, Plus, FileText, Bell, BellOff, CheckSquare2, X
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessages } from '@/hooks/useMessages';
@@ -16,7 +16,15 @@ import { ChatTypingBar } from './chat/ChatTypingBar';
 import { ChatHeaderMenu } from './chat/ChatHeaderMenu';
 import { VideoCallDialog } from './chat/VideoCallDialog';
 import { ChatLayout } from './chat/ChatLayout';
+import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface MessengerChatProps {
   isOpen: boolean;
@@ -32,6 +40,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [initializing, setInitializing] = useState(false);
   const [showCallDialog, setShowCallDialog] = useState(false);
   const [isVideoCall, setIsVideoCall] = useState(false);
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   
   // Search state for messages within chat
   const [isSearching, setIsSearching] = useState(false);
@@ -112,7 +122,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={onClose} className="sm:hidden">
+              <Button variant="ghost" size="icon" onClick={onClose}>
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <Avatar className="h-10 w-10">
@@ -125,10 +135,45 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <MoreVertical className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="rounded-full bg-primary/10 text-primary">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <MoreVertical className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => setNotificationsEnabled(!notificationsEnabled)}>
+                    {notificationsEnabled ? (
+                      <>
+                        <BellOff className="w-4 h-4 mr-3" />
+                        Mute Notifications
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="w-4 h-4 mr-3" />
+                        Unmute Notifications
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => {
+                    if (conversations?.length === 0) {
+                      toast.info('No conversations to mark');
+                      return;
+                    }
+                    toast.success('All chats marked as read');
+                  }}>
+                    <CheckSquare2 className="w-4 h-4 mr-3" />
+                    Mark all as read
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full bg-primary/10 text-primary"
+                onClick={() => setShowUserSearch(true)}
+              >
                 <Plus className="w-5 h-5" />
               </Button>
             </div>
@@ -230,7 +275,6 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="sm:hidden"
                   onClick={() => setSelectedConversation(null)}
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -299,25 +343,39 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               {/* Search bar beneath header if searching is active */}
               {isSearching && (
                 <div className="p-2 border-b border-border bg-muted/30">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search messages..."
-                      value={messageSearchQuery}
-                      onChange={(e) => setMessageSearchQuery(e.target.value)}
-                      className="pl-9 bg-background focus-visible:ring-1"
-                      autoFocus
-                    />
-                    {messageSearchQuery && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
-                        onClick={() => setMessageSearchQuery('')}
-                      >
-                        <span className="text-xs">x</span>
-                      </Button>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search messages..."
+                        value={messageSearchQuery}
+                        onChange={(e) => setMessageSearchQuery(e.target.value)}
+                        className="pl-9 bg-background focus-visible:ring-1"
+                        autoFocus
+                      />
+                      {messageSearchQuery && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
+                          onClick={() => setMessageSearchQuery('')}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 flex-shrink-0"
+                      onClick={() => {
+                        setIsSearching(false);
+                        setMessageSearchQuery('');
+                      }}
+                      title="Close search"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
                   </div>
                 </div>
               )}
@@ -444,6 +502,24 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         onClose={() => setShowCallDialog(false)}
         otherUser={selectedConversation?.otherMembers?.[0] || null}
         isVideoCall={isVideoCall}
+      />
+
+      {/* User Search Dialog for Starting New Conversations */}
+      <ChatUserSearchDialog
+        open={showUserSearch}
+        onOpenChange={setShowUserSearch}
+        onSelectUser={async (selectedUser) => {
+          try {
+            const conversationId = await startConversation.mutateAsync(selectedUser.id);
+            const newConvo = conversations?.find((c: any) => c.id === conversationId);
+            if (newConvo) {
+              setSelectedConversation(newConvo);
+            }
+            toast.success(`Chat started with ${selectedUser.display_name}`);
+          } catch (error: any) {
+            toast.error('Failed to start conversation');
+          }
+        }}
       />
     </div>
   );

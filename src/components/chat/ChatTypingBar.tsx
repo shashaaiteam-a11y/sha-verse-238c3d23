@@ -125,7 +125,7 @@ export const ChatTypingBar = ({ onSendMessage, isSending }: ChatTypingBarProps) 
   };
 
   return (
-    <div className="flex-shrink-0 bg-card border-t border-border pb-16 sm:pb-0">
+    <div className="flex-shrink-0 bg-card border-t border-border">
       {/* File Preview */}
       {selectedFile && (
         <div className="p-2 border-b border-border">
