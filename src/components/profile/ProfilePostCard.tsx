@@ -88,7 +88,7 @@ export const ProfilePostCard = ({
     try {
       const { error } = await supabase
         .from('posts')
-        .update({ content: editContent, edited_at: new Date().toISOString() })
+        .update({ content: editContent, visibility: editVisibility, edited_at: new Date().toISOString() })
         .eq('id', post.id);
       if (error) throw error;
       toast({ title: 'Post updated' });
