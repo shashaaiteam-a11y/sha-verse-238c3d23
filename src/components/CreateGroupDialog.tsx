@@ -1,16 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Users, ShieldAlert, Globe, Lock, Key } from 'lucide-react';
+import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown } from 'lucide-react';
 import { useGroups, GroupPrivacy } from '@/hooks/useGroups';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GROUP_CATEGORIES } from '@/lib/constants/groupCategories';
 import { WORLD_LANGUAGES } from '@/lib/constants/languages';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 export const CreateGroupDialog = () => {
   const [open, setOpen] = useState(false);
@@ -18,35 +20,17 @@ export const CreateGroupDialog = () => {
   const [description, setDescription] = useState('');
   const [privacy, setPrivacy] = useState<GroupPrivacy>('public');
   const [category, setCategory] = useState('General');
-  const [categorySearch, setCategorySearch] = useState('');
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('English');
-  const [languageSearch, setLanguageSearch] = useState('');
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [rules, setRules] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
-
+  
   const { createGroup } = useGroups();
 
-  // Filter categories based on search input
-  const filteredCategories = useMemo(() => {
-    if (!categorySearch.trim()) {
-      return GROUP_CATEGORIES.filter(c => c.value !== "trending");
-    }
-    return GROUP_CATEGORIES.filter(c =>
-      c.value !== "trending" &&
-      c.label.toLowerCase().includes(categorySearch.toLowerCase())
-    );
-  }, [categorySearch]);
-
-  // Filter languages based on search input
-  const filteredLanguages = useMemo(() => {
-    if (!languageSearch.trim()) {
-      return WORLD_LANGUAGES;
-    }
-    return WORLD_LANGUAGES.filter(lang =>
-      lang.toLowerCase().includes(languageSearch.toLowerCase())
-    );
-  }, [languageSearch]);
+  const categoryItems = GROUP_CATEGORIES.filter(c => c.value !== "trending");
+  const categoryLabel = categoryItems.find(c => c.value === category)?.label || category;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,15 +41,12 @@ export const CreateGroupDialog = () => {
       {
         onSuccess: () => {
           setOpen(false);
-          // reset form
           setName('');
           setDescription('');
           setPrivacy('public');
           setCategory('General');
-          setCategorySearch('');
           setCountry('');
           setLanguage('English');
-          setLanguageSearch('');
           setRules('');
           setActiveTab('basic');
         },
@@ -116,37 +97,43 @@ export const CreateGroupDialog = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <div className="space-y-2">
-                    <Input
-                      id="category-search"
-                      value={categorySearch}
-                      onChange={(e) => setCategorySearch(e.target.value)}
-                      placeholder="Search categories (e.g., Tech, Music, Gaming...)"
-                      className="text-sm"
-                    />
-                    <Select value={category} onValueChange={(value) => {
-                      setCategory(value);
-                      setCategorySearch('');
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[250px]">
-                        {filteredCategories.length > 0 ? (
-                          filteredCategories.map(c => (
-                            <SelectItem key={c.value} value={c.value} className="cursor-pointer">
-                              {c.label}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="p-2 text-center text-sm text-muted-foreground">
-                            No categories found
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Label>Category</Label>
+                  <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={categoryOpen}
+                        className="w-full justify-between font-normal"
+                      >
+                        {categoryLabel}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search categories..." />
+                        <CommandList className="max-h-[200px]">
+                          <CommandEmpty>No category found.</CommandEmpty>
+                          <CommandGroup>
+                            {categoryItems.map((c) => (
+                              <CommandItem
+                                key={c.value}
+                                value={c.label}
+                                onSelect={() => {
+                                  setCategory(c.value);
+                                  setCategoryOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", category === c.value ? "opacity-100" : "opacity-0")} />
+                                {c.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
@@ -165,7 +152,7 @@ export const CreateGroupDialog = () => {
                 <div className="space-y-3">
                   <Label>Privacy Setting</Label>
                   <div className="grid gap-3">
-                    <div
+                    <div 
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${privacy === 'public' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                       onClick={() => setPrivacy('public')}
                     >
@@ -175,7 +162,7 @@ export const CreateGroupDialog = () => {
                         <p className="text-xs text-muted-foreground">Anyone can find the group and see its posts.</p>
                       </div>
                     </div>
-                    <div
+                    <div 
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${privacy === 'private' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                       onClick={() => setPrivacy('private')}
                     >
@@ -185,7 +172,7 @@ export const CreateGroupDialog = () => {
                         <p className="text-xs text-muted-foreground">Only members can see posts. People can request to join.</p>
                       </div>
                     </div>
-                    <div
+                    <div 
                       className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${privacy === 'invite_only' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                       onClick={() => setPrivacy('invite_only')}
                     >
@@ -200,37 +187,43 @@ export const CreateGroupDialog = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="language">Language</Label>
-                    <div className="space-y-2">
-                      <Input
-                        id="language-search"
-                        value={languageSearch}
-                        onChange={(e) => setLanguageSearch(e.target.value)}
-                        placeholder="Search languages..."
-                        className="text-sm"
-                      />
-                      <Select value={language} onValueChange={(value) => {
-                        setLanguage(value);
-                        setLanguageSearch('');
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select language" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[250px]">
-                          {filteredLanguages.length > 0 ? (
-                            filteredLanguages.map(lang => (
-                              <SelectItem key={lang} value={lang} className="cursor-pointer">
-                                {lang}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="p-2 text-center text-sm text-muted-foreground">
-                              No languages found
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Label>Language</Label>
+                    <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={languageOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {language}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search languages..." />
+                          <CommandList className="max-h-[200px]">
+                            <CommandEmpty>No language found.</CommandEmpty>
+                            <CommandGroup>
+                              {WORLD_LANGUAGES.map((lang) => (
+                                <CommandItem
+                                  key={lang}
+                                  value={lang}
+                                  onSelect={() => {
+                                    setLanguage(lang);
+                                    setLanguageOpen(false);
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", language === lang ? "opacity-100" : "opacity-0")} />
+                                  {lang}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="country">Country (Optional)</Label>
@@ -268,9 +261,9 @@ export const CreateGroupDialog = () => {
             <div className="p-6 pt-4 border-t border-border bg-muted/30 flex justify-between items-center">
               <div className="flex gap-2">
                 {activeTab !== 'basic' && (
-                  <Button
-                    type="button"
-                    variant="outline"
+                  <Button 
+                    type="button" 
+                    variant="outline" 
                     onClick={() => setActiveTab(activeTab === 'rules' ? 'settings' : 'basic')}
                   >
                     Back
@@ -279,8 +272,8 @@ export const CreateGroupDialog = () => {
               </div>
               <div className="flex gap-2">
                 {activeTab !== 'rules' ? (
-                  <Button
-                    type="button"
+                  <Button 
+                    type="button" 
                     onClick={() => setActiveTab(activeTab === 'basic' ? 'settings' : 'rules')}
                   >
                     Next Step
