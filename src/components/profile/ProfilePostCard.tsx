@@ -25,7 +25,7 @@ import {
   Check,
   X
 } from "lucide-react";
-import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { PostComments } from '@/components/PostComments';
 import { EmojiReactionPicker } from '@/components/EmojiReactionPicker';
 import { useReactions } from '@/hooks/useReactions';

@@ -8,7 +8,7 @@ import {
   Edit2, Trash2, Flag, BadgeCheck, X, Check, Image as ImageIcon, FileText, BarChart2,
   MapPin
 } from "lucide-react";
-import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSavedPosts } from '@/hooks/useSavedPosts';
