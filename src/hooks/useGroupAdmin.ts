@@ -403,52 +403,45 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Approve join request
+  // Approve join request — uses security definer RPC to bypass RLS
   const approveJoinRequest = useMutation({
     mutationFn: async (requestId: string) => {
-      // Fetch user_id from DB directly — never rely on stale closure
-      const { data: reqData, error: fetchError } = await supabase
+      // Fetch user_id for notification before RPC
+      const { data: reqData } = await supabase
         .from('group_join_requests')
-        .select('user_id, group_id')
+        .select('user_id')
         .eq('id', requestId)
         .single();
-      if (fetchError || !reqData) throw new Error('Request not found');
 
-      // Update request status
-      const { error: updateError } = await supabase
-        .from('group_join_requests')
-        .update({ status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
-        .eq('id', requestId);
-      if (updateError) throw updateError;
-
-      // Add as member — upsert to survive duplicate-key edge cases
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .upsert(
-          { group_id: groupId, user_id: reqData.user_id, role: 'member' },
-          { onConflict: 'group_id,user_id', ignoreDuplicates: true }
-        );
-      if (memberError) throw memberError;
+      const { error } = await (supabase.rpc as any)('approve_group_join_request', {
+        p_request_id: requestId,
+        p_admin_id: user!.id,
+      });
+      if (error) throw error;
 
       // Notify the requester
-      const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
-      await sendNotification(
-        reqData.user_id,
-        'group_join_approved',
-        'Join Request Approved ✅',
-        `Your request to join "${(grp as any)?.name || 'the group'}" has been approved. Welcome!`,
-        { group_id: groupId }
-      );
+      if (reqData) {
+        const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
+        await sendNotification(
+          reqData.user_id,
+          'group_join_approved',
+          'Join Request Approved ✅',
+          `Your request to join "${(grp as any)?.name || 'the group'}" has been approved. Welcome!`,
+          { group_id: groupId }
+        );
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
-      // Approved user's my-groups + pending-requests update via realtime on their client
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
       queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
       queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
       toast({ title: 'Member approved!' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Approve failed', description: error.message, variant: 'destructive' });
     },
   });
 
