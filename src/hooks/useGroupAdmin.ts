@@ -504,20 +504,15 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Block user
+  // Block user (via RPC to bypass RLS)
   const blockUser = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
-      // Remove from members
-      await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId);
-
-      // Add to blocked
-      const { error } = await supabase
-        .from('group_blocked_users')
-        .insert({ group_id: groupId, user_id: userId, blocked_by: user?.id, reason });
+      const { error } = await (supabase.rpc as any)('admin_block_group_user', {
+        p_group_id: groupId,
+        p_target_user_id: userId,
+        p_admin_id: user!.id,
+        p_reason: reason || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
