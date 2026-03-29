@@ -420,20 +420,38 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
 
         {/* Content */}
         {isEditing ? (
-          <div className="mb-3">
+          <div className="mb-3 space-y-3">
             <Textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               className="min-h-[100px] text-sm"
               placeholder="What's on your mind?"
             />
-            <div className="flex justify-end gap-2 mt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Visibility:</span>
+              {(['public', 'friends', 'private'] as const).map((v) => (
+                <Button
+                  key={v}
+                  size="sm"
+                  variant={editVisibility === v ? 'default' : 'outline'}
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setEditVisibility(v)}
+                >
+                  {v === 'public' && <Globe className="w-3 h-3" />}
+                  {v === 'friends' && <Users className="w-3 h-3" />}
+                  {v === 'private' && <Lock className="w-3 h-3" />}
+                  {v === 'public' ? 'Public' : v === 'friends' ? 'Friends' : 'Only Me'}
+                </Button>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={() => {
                   setIsEditing(false);
                   setEditContent(post.content);
+                  setEditVisibility(post.visibility || 'public');
                 }}
               >
                 <X className="w-4 h-4 mr-1" />
