@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Search, Trash2, UserX, UserCheck } from 'lucide-react';
+import { MoreVertical, Search, Trash2, UserX, UserCheck, Bell, BellOff } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,10 +13,12 @@ interface ChatHeaderMenuProps {
   otherUserId?: string;
   otherUserName: string;
   isBlocked?: boolean;
+  isMuted?: boolean;
   onClearChat?: () => void;
   onSearchToggle?: () => void;
   onBlock?: () => void;
   onUnblock?: () => void;
+  onMuteToggle?: () => void;
 }
 
 export const ChatHeaderMenu = ({
@@ -24,10 +26,12 @@ export const ChatHeaderMenu = ({
   otherUserId,
   otherUserName,
   isBlocked,
+  isMuted,
   onClearChat,
   onSearchToggle,
   onBlock,
   onUnblock,
+  onMuteToggle,
 }: ChatHeaderMenuProps) => {
   return (
     <DropdownMenu>
@@ -40,6 +44,20 @@ export const ChatHeaderMenu = ({
         <DropdownMenuItem onClick={onSearchToggle}>
           <Search className="w-4 h-4 mr-3" />
           Search in chat
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onMuteToggle}>
+          {isMuted ? (
+            <>
+              <Bell className="w-4 h-4 mr-3" />
+              Unmute notifications
+            </>
+          ) : (
+            <>
+              <BellOff className="w-4 h-4 mr-3" />
+              Mute notifications
+            </>
+          )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onClearChat}>
