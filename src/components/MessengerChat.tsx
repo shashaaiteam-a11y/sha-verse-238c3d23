@@ -4,13 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  ArrowLeft, Send, Phone, Video, MoreVertical, CheckCheck,
-  Search, Plus, FileText, Bell, BellOff, CheckSquare2, X, ShieldX
+  ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
+  Search, Plus, FileText, Bell, BellOff, CheckSquare2, X, ShieldX, Ban
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileSettings } from '@/hooks/useProfileSettings';
+import { useIsUserOnline } from '@/hooks/usePresence';
+import { useMarkMessagesRead } from '@/hooks/useReadReceipts';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ChatTypingBar } from './chat/ChatTypingBar';
@@ -20,7 +22,7 @@ import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,7 +48,6 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [showCallDialog, setShowCallDialog] = useState(false);
   const [isVideoCall, setIsVideoCall] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   
   // Search state for messages within chat
   const [isSearching, setIsSearching] = useState(false);
@@ -58,6 +59,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
   const otherUserName = selectedConversation?.otherMembers?.[0]?.display_name || 'User';
+
+  // Online/Last seen for current chat partner
+  const { isOnline: isOtherUserOnline, lastSeen: otherUserLastSeen } = useIsUserOnline(otherUserId);
+
+  // Mark messages as read when conversation is opened
+  useMarkMessagesRead(selectedConversation?.id || null);
 
   // Check if the other user is blocked by current user
   const isOtherUserBlocked = blockedUsers?.some(
@@ -82,6 +89,90 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   const isChatBlocked = isOtherUserBlocked || isBlockedByOther;
 
+  // Mute state per conversation
+  const { data: isMuted } = useQuery({
+    queryKey: ['chat-muted', selectedConversation?.id, user?.id],
+    queryFn: async () => {
+      if (!selectedConversation?.id || !user) return false;
+      const { data } = await supabase
+        .from('conversation_members')
+        .select('is_muted')
+        .eq('conversation_id', selectedConversation.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return data?.is_muted || false;
+    },
+    enabled: !!selectedConversation?.id && !!user,
+  });
+
+  const toggleMute = useMutation({
+    mutationFn: async () => {
+      if (!selectedConversation?.id || !user) throw new Error('No conversation');
+      const { error } = await supabase
+        .from('conversation_members')
+        .update({ is_muted: !isMuted })
+        .eq('conversation_id', selectedConversation.id)
+        .eq('user_id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-muted', selectedConversation?.id] });
+      toast.success(isMuted ? 'Notifications unmuted' : 'Notifications muted');
+    }
+  });
+
+  // Unread count per conversation
+  const { data: unreadCounts } = useQuery({
+    queryKey: ['unread-counts', user?.id],
+    queryFn: async () => {
+      if (!user) return {};
+      const { data } = await supabase
+        .from('messages')
+        .select('conversation_id, id')
+        .eq('is_read', false)
+        .neq('sender_id', user.id);
+      
+      const counts: Record<string, number> = {};
+      data?.forEach((m: any) => {
+        counts[m.conversation_id] = (counts[m.conversation_id] || 0) + 1;
+      });
+      return counts;
+    },
+    enabled: !!user,
+  });
+
+  // Mark all conversations as read
+  const markAllAsRead = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('Not authenticated');
+      // Get all conversation IDs for this user
+      const { data: memberData } = await supabase
+        .from('conversation_members')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+      
+      if (!memberData?.length) return;
+      
+      const conversationIds = memberData.map((m: any) => m.conversation_id);
+      
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .in('conversation_id', conversationIds)
+        .neq('sender_id', user.id)
+        .eq('is_read', false);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      toast.success('All chats marked as read');
+    }
+  });
+
   // Realtime subscription for block/unblock updates
   useEffect(() => {
     if (!user) return;
@@ -90,11 +181,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       .channel('chat-blocks-realtime')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_blocks',
-        },
+        { event: '*', schema: 'public', table: 'user_blocks' },
         () => {
           queryClient.invalidateQueries({ queryKey: ['blocked-users'] });
           queryClient.invalidateQueries({ queryKey: ['blocked-by-other'] });
@@ -103,14 +190,30 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
+  }, [user, queryClient]);
+
+  // Realtime for unread counts
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('unread-counts-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user, queryClient]);
 
   // Filter messages based on search query
   const filteredMessages = isSearching && messageSearchQuery.trim()
-    ? messages?.filter(m => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
+    ? messages?.filter((m: any) => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
     : messages;
 
   // Handle initial user ID - find or create conversation
@@ -161,6 +264,15 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     return format(date, 'MMMM d, yyyy');
   };
 
+  const getOnlineStatusText = () => {
+    if (isChatBlocked) return null;
+    if (isOtherUserOnline) return 'Online';
+    if (otherUserLastSeen) {
+      return `Last seen ${formatDistanceToNow(otherUserLastSeen, { addSuffix: true })}`;
+    }
+    return 'Offline';
+  };
+
   const handleBlockUser = () => {
     if (!otherUserId) return;
     if (window.confirm(`Are you sure you want to block ${otherUserName}? They won't be able to message or call you.`)) {
@@ -186,6 +298,18 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         queryClient.invalidateQueries({ queryKey: ['conversations'] });
       }
     });
+  };
+
+  // Get tick icon for message status
+  const renderMessageTicks = (message: any) => {
+    if (message.sender_id !== user?.id) return null;
+    
+    if (message.is_read) {
+      // Blue double tick = Read
+      return <CheckCheck className="w-3.5 h-3.5 text-blue-500" />;
+    }
+    // Grey single tick = Sent (not yet read)
+    return <Check className="w-3.5 h-3.5 text-muted-foreground" />;
   };
 
   if (!isOpen) return null;
@@ -221,27 +345,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => setNotificationsEnabled(!notificationsEnabled)}>
-                    {notificationsEnabled ? (
-                      <>
-                        <BellOff className="w-4 h-4 mr-3" />
-                        Mute Notifications
-                      </>
-                    ) : (
-                      <>
-                        <Bell className="w-4 h-4 mr-3" />
-                        Unmute Notifications
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => {
-                    if (conversations?.length === 0) {
-                      toast.info('No conversations to mark');
-                      return;
-                    }
-                    toast.success('All chats marked as read');
-                  }}>
+                  <DropdownMenuItem onClick={() => markAllAsRead.mutate()}>
                     <CheckSquare2 className="w-4 h-4 mr-3" />
                     Mark all as read
                   </DropdownMenuItem>
@@ -281,49 +385,20 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               {filteredConversations.map((convo: any) => {
                 const otherUser = convo.otherMembers?.[0];
                 const isSelected = selectedConversation?.id === convo.id;
+                const isConvoBlocked = blockedUsers?.some((b: any) => b.blocked_id === otherUser?.id);
+                const unreadCount = unreadCounts?.[convo.id] || 0;
                 
                 return (
-                  <button
+                  <ConversationListItem
                     key={convo.id}
+                    convo={convo}
+                    otherUser={otherUser}
+                    isSelected={isSelected}
+                    isBlocked={isConvoBlocked}
+                    unreadCount={unreadCount}
+                    currentUserId={user?.id}
                     onClick={() => setSelectedConversation(convo)}
-                    className={cn(
-                      "w-full p-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors",
-                      isSelected && "bg-primary/10"
-                    )}
-                  >
-                    <div className="relative">
-                      <Avatar className="h-12 w-12">
-                        {otherUser?.avatar_url && <AvatarImage src={otherUser.avatar_url} />}
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                          {otherUser?.display_name?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      {/* Online indicator */}
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-card" />
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-semibold text-sm truncate">
-                          {otherUser?.display_name || 'Unknown User'}
-                        </h4>
-                        {convo.lastMessage && (
-                          <span className="text-[11px] text-muted-foreground">
-                            {formatDistanceToNow(new Date(convo.lastMessage.created_at), { addSuffix: false })}
-                          </span>
-                        )}
-                      </div>
-                      {convo.lastMessage && (
-                        <div className="flex items-center gap-1">
-                          {convo.lastMessage.sender_id === user?.id && (
-                            <CheckCheck className="w-4 h-4 text-primary flex-shrink-0" />
-                          )}
-                          <p className="text-sm text-muted-foreground truncate">
-                            {convo.lastMessage.content}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </button>
+                  />
                 );
               })}
             </div>
@@ -368,7 +443,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                       {selectedConversation.otherMembers?.[0]?.display_name?.[0] || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  {!isChatBlocked && (
+                  {!isChatBlocked && isOtherUserOnline && (
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-card" />
                   )}
                 </div>
@@ -380,7 +455,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   {isChatBlocked ? (
                     <p className="text-xs text-destructive">Blocked</p>
                   ) : (
-                    <p className="text-xs text-emerald-600">Online</p>
+                    <p className={cn(
+                      "text-xs",
+                      isOtherUserOnline ? "text-emerald-600" : "text-muted-foreground"
+                    )}>
+                      {getOnlineStatusText()}
+                    </p>
                   )}
                 </div>
 
@@ -416,8 +496,9 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                     otherUserId={otherUserId}
                     otherUserName={otherUserName}
                     isBlocked={isOtherUserBlocked}
+                    isMuted={isMuted || false}
                     onClearChat={() => {
-                        if (window.confirm('Are you sure you want to clear all messages in this chat? This cannot be undone.')) {
+                        if (window.confirm('Are you sure you want to clear all messages in this chat? This action only clears messages on your side.')) {
                             clearMessages.mutate();
                         }
                     }}
@@ -427,6 +508,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                     }}
                     onBlock={handleBlockUser}
                     onUnblock={handleUnblockUser}
+                    onMuteToggle={() => toggleMute.mutate()}
                   />
                 </div>
               </div>
@@ -541,9 +623,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                               <span className="text-[10px]">
                                 {format(new Date(message.created_at), 'HH:mm')}
                               </span>
-                              {isOwn && (
-                                <CheckCheck className="w-3.5 h-3.5 text-primary" />
-                              )}
+                              {renderMessageTicks(message)}
                             </div>
                           </div>
                         </div>
@@ -636,5 +716,76 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         }}
       />
     </div>
+  );
+};
+
+// Conversation List Item with online status & blocked indicator
+const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, unreadCount, currentUserId, onClick }: {
+  convo: any;
+  otherUser: any;
+  isSelected: boolean;
+  isBlocked: boolean;
+  unreadCount: number;
+  currentUserId?: string;
+  onClick: () => void;
+}) => {
+  const { isOnline } = useIsUserOnline(otherUser?.id);
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full p-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors",
+        isSelected && "bg-primary/10"
+      )}
+    >
+      <div className="relative">
+        <Avatar className="h-12 w-12">
+          {otherUser?.avatar_url && <AvatarImage src={otherUser.avatar_url} />}
+          <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+            {otherUser?.display_name?.[0] || 'U'}
+          </AvatarFallback>
+        </Avatar>
+        {isBlocked ? (
+          <div className="absolute bottom-0 right-0 w-4 h-4 bg-destructive rounded-full border-2 border-card flex items-center justify-center">
+            <Ban className="w-2.5 h-2.5 text-white" />
+          </div>
+        ) : isOnline ? (
+          <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-card" />
+        ) : null}
+      </div>
+      <div className="flex-1 min-w-0 text-left">
+        <div className="flex justify-between items-center">
+          <h4 className="font-semibold text-sm truncate">
+            {otherUser?.display_name || 'Unknown User'}
+          </h4>
+          {convo.lastMessage && (
+            <span className={cn(
+              "text-[11px]",
+              unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+            )}>
+              {formatDistanceToNow(new Date(convo.lastMessage.created_at), { addSuffix: false })}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            {convo.lastMessage?.sender_id === currentUserId && (
+              convo.lastMessage?.is_read 
+                ? <CheckCheck className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                : <Check className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            )}
+            <p className="text-sm text-muted-foreground truncate">
+              {isBlocked ? '🚫 Blocked' : (convo.lastMessage?.content || 'No messages yet')}
+            </p>
+          </div>
+          {unreadCount > 0 && !isBlocked && (
+            <span className="bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
   );
 };
