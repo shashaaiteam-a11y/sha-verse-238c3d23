@@ -599,6 +599,35 @@ export type Database = {
           },
         ]
       }
+      chat_clears: {
+        Row: {
+          cleared_at: string
+          conversation_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          cleared_at?: string
+          conversation_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          cleared_at?: string
+          conversation_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_clears_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -749,6 +778,7 @@ export type Database = {
         Row: {
           conversation_id: string | null
           id: string
+          is_muted: boolean | null
           joined_at: string | null
           last_read_at: string | null
           role: string | null
@@ -757,6 +787,7 @@ export type Database = {
         Insert: {
           conversation_id?: string | null
           id?: string
+          is_muted?: boolean | null
           joined_at?: string | null
           last_read_at?: string | null
           role?: string | null
@@ -765,6 +796,7 @@ export type Database = {
         Update: {
           conversation_id?: string | null
           id?: string
+          is_muted?: boolean | null
           joined_at?: string | null
           last_read_at?: string | null
           role?: string | null
