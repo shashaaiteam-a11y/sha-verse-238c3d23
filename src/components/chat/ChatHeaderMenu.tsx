@@ -1,10 +1,13 @@
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Search, Trash2, UserX, UserCheck, Bell, BellOff } from 'lucide-react';
+import { MoreVertical, Search, Trash2, UserX, UserCheck, Bell, BellOff, Clock } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
@@ -18,7 +21,8 @@ interface ChatHeaderMenuProps {
   onSearchToggle?: () => void;
   onBlock?: () => void;
   onUnblock?: () => void;
-  onMuteToggle?: () => void;
+  onMuteToggle?: (duration?: 'always' | '8hours' | '1week') => void;
+  onUnmute?: () => void;
 }
 
 export const ChatHeaderMenu = ({
@@ -32,6 +36,7 @@ export const ChatHeaderMenu = ({
   onBlock,
   onUnblock,
   onMuteToggle,
+  onUnmute,
 }: ChatHeaderMenuProps) => {
   return (
     <DropdownMenu>
@@ -46,19 +51,33 @@ export const ChatHeaderMenu = ({
           Search in chat
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onMuteToggle}>
-          {isMuted ? (
-            <>
-              <Bell className="w-4 h-4 mr-3" />
-              Unmute notifications
-            </>
-          ) : (
-            <>
+        {isMuted ? (
+          <DropdownMenuItem onClick={onUnmute}>
+            <Bell className="w-4 h-4 mr-3" />
+            Unmute notifications
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
               <BellOff className="w-4 h-4 mr-3" />
               Mute notifications
-            </>
-          )}
-        </DropdownMenuItem>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onClick={() => onMuteToggle?.('8hours')}>
+                <Clock className="w-4 h-4 mr-3" />
+                8 hours
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onMuteToggle?.('1week')}>
+                <Clock className="w-4 h-4 mr-3" />
+                1 week
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onMuteToggle?.('always')}>
+                <BellOff className="w-4 h-4 mr-3" />
+                Always
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onClearChat}>
           <Trash2 className="w-4 h-4 mr-3" />
