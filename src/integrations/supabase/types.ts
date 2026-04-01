@@ -781,6 +781,7 @@ export type Database = {
           is_muted: boolean | null
           joined_at: string | null
           last_read_at: string | null
+          muted_until: string | null
           role: string | null
           user_id: string | null
         }
@@ -790,6 +791,7 @@ export type Database = {
           is_muted?: boolean | null
           joined_at?: string | null
           last_read_at?: string | null
+          muted_until?: string | null
           role?: string | null
           user_id?: string | null
         }
@@ -799,6 +801,7 @@ export type Database = {
           is_muted?: boolean | null
           joined_at?: string | null
           last_read_at?: string | null
+          muted_until?: string | null
           role?: string | null
           user_id?: string | null
         }
