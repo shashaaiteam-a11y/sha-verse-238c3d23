@@ -1,24 +1,50 @@
 
 
-## Problem
-Category and Language selectors in Create Group dialog use a separate search Input + Radix Select. The search input filters the data but the Select dropdown doesn't auto-open to show results — user has to manually click the dropdown. Also, when filtered results are empty, there's a blank dark area.
+## Problem Analysis
 
-## Solution
-Replace both Category and Language selectors with **Popover + Command (cmdk) combobox** pattern. Both `Popover` and `Command` components already exist in the project (`src/components/ui/popover.tsx`, `src/components/ui/command.tsx`).
+The messenger already has most WhatsApp features implemented (ticks, read/unread, block, clear chat, mute, online/last seen). However, several gaps remain:
 
-## Changes (1 file only)
+1. **Mute** - No duration options (8h/1w/Always), no `muted_until` column, no 🔕 icon in chat list
+2. **Block (silent block)** - Currently blocked user sees "You can't send messages" which is WRONG. WhatsApp uses silent block: blocked person sees everything normal, messages stay at ✓ single tick, no error shown
+3. **Chat list mute indicator** - Missing 🔕 icon for muted conversations
 
-### `src/components/CreateGroupDialog.tsx`
-- Remove the separate `Input` + `Select` combo for both Category and Language
-- Replace each with a `Popover` containing a `Command` (combobox):
-  - A trigger button showing current selection
-  - On click opens a popover with `CommandInput` (built-in search) + `CommandList` + `CommandGroup` + `CommandItem` for each option
-  - `CommandEmpty` shows "No results found" message (fixes the blank/black area)
-  - Selecting an item sets the value and closes the popover
-- Remove `categorySearch`, `languageSearch` state variables and `filteredCategories`, `filteredLanguages` memos (cmdk handles filtering internally)
-- Add `categoryOpen` and `languageOpen` boolean states for popover control
-- Import `Popover, PopoverTrigger, PopoverContent` and `Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem` plus `Check, ChevronsUpDown` icons
+## Plan
 
-### No other files changed
-No database, hooks, or other module changes needed.
+### Step 1: Database Migration
+Add `muted_until` column to `conversation_members`:
+```sql
+ALTER TABLE public.conversation_members 
+  ADD COLUMN IF NOT EXISTS muted_until timestamp with time zone;
+```
+
+### Step 2: Fix Silent Block Behavior (`MessengerChat.tsx`)
+- **Blocker side**: Keep current behavior (shows "You blocked this contact. Unblock?", typing bar hidden)
+- **Blocked side**: Remove the "You can't send messages" state. Let them type and send normally. Messages will insert but never get `is_read = true` (stays at ✓ single tick). Hide online/last seen for blocked user
+- Change `isChatBlocked` logic: only restrict UI for the blocker (`isOtherUserBlocked`), NOT for `isBlockedByOther`
+
+### Step 3: Add Mute Duration Options (`ChatHeaderMenu.tsx`)
+Replace single mute toggle with submenu offering:
+- 8 hours
+- 1 week  
+- Always
+- Unmute (if already muted)
+
+Update `onMuteToggle` to accept duration parameter.
+
+### Step 4: Show Mute Icon in Chat List (`MessengerChat.tsx`)
+- Query `is_muted` for each conversation in the list
+- Show 🔕 `BellOff` icon next to muted conversations
+- Fetch mute status in `ConversationListItem`
+
+### Step 5: Update Mute Logic (`MessengerChat.tsx`)
+- Update `toggleMute` mutation to accept `muted_until` parameter
+- Auto-unmute check: if `muted_until` has passed, treat as unmuted
+
+### Files Changed
+1. `src/components/MessengerChat.tsx` - Silent block fix, mute icon in list, mute duration
+2. `src/components/chat/ChatHeaderMenu.tsx` - Mute duration submenu
+3. `src/hooks/useMessages.ts` - No changes needed
+4. Database migration - Add `muted_until` column
+
+No other modules or features will be touched.
 
