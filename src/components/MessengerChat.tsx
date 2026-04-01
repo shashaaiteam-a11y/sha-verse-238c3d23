@@ -848,5 +848,3 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
     </button>
   );
 };
-  );
-};
