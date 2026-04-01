@@ -437,6 +437,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 const isSelected = selectedConversation?.id === convo.id;
                 const isConvoBlocked = blockedUsers?.some((b: any) => b.blocked_id === otherUser?.id);
                 const unreadCount = unreadCounts?.[convo.id] || 0;
+                const isConvoMuted = allMuteStatuses?.[convo.id] || false;
                 
                 return (
                   <ConversationListItem
@@ -445,6 +446,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                     otherUser={otherUser}
                     isSelected={isSelected}
                     isBlocked={isConvoBlocked}
+                    isMuted={isConvoMuted}
                     unreadCount={unreadCount}
                     currentUserId={user?.id}
                     onClick={() => setSelectedConversation(convo)}
