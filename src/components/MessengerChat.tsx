@@ -558,7 +558,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                     }}
                     onBlock={handleBlockUser}
                     onUnblock={handleUnblockUser}
-                    onMuteToggle={() => toggleMute.mutate()}
+                    onMuteToggle={(duration) => muteConversation.mutate(duration || 'always')}
+                    onUnmute={() => unmuteConversation.mutate()}
                   />
                 </div>
               </div>
