@@ -315,7 +315,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   };
 
   const getOnlineStatusText = () => {
-    if (isChatBlocked) return null;
+    if (isChatBlocked || isBlockedByOther) return null;
     if (isOtherUserOnline) return 'Online';
     if (otherUserLastSeen) {
       return `Last seen ${formatDistanceToNow(otherUserLastSeen, { addSuffix: true })}`;
