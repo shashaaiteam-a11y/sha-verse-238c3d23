@@ -90,35 +90,84 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   // Only the BLOCKER sees restricted UI. Blocked person can still type (WhatsApp silent block).
   const isChatBlocked = isOtherUserBlocked;
 
-  // Mute state per conversation
-  const { data: isMuted } = useQuery({
+  // Mute state per conversation (with muted_until support)
+  const { data: muteData } = useQuery({
     queryKey: ['chat-muted', selectedConversation?.id, user?.id],
     queryFn: async () => {
-      if (!selectedConversation?.id || !user) return false;
+      if (!selectedConversation?.id || !user) return { is_muted: false, muted_until: null };
       const { data } = await supabase
         .from('conversation_members')
-        .select('is_muted')
+        .select('is_muted, muted_until')
         .eq('conversation_id', selectedConversation.id)
         .eq('user_id', user.id)
         .maybeSingle();
-      return data?.is_muted || false;
+      return { is_muted: data?.is_muted || false, muted_until: data?.muted_until || null };
     },
     enabled: !!selectedConversation?.id && !!user,
   });
 
-  const toggleMute = useMutation({
-    mutationFn: async () => {
+  // Check if mute has expired
+  const isMuted = muteData?.is_muted && (
+    !muteData.muted_until || new Date(muteData.muted_until) > new Date()
+  );
+
+  // All conversations mute status for chat list 🔕 icon
+  const { data: allMuteStatuses } = useQuery({
+    queryKey: ['all-mute-statuses', user?.id],
+    queryFn: async () => {
+      if (!user) return {};
+      const { data } = await supabase
+        .from('conversation_members')
+        .select('conversation_id, is_muted, muted_until')
+        .eq('user_id', user.id)
+        .eq('is_muted', true);
+      const statuses: Record<string, boolean> = {};
+      data?.forEach((m: any) => {
+        const stillMuted = !m.muted_until || new Date(m.muted_until) > new Date();
+        if (stillMuted) statuses[m.conversation_id] = true;
+      });
+      return statuses;
+    },
+    enabled: !!user,
+  });
+
+  const muteConversation = useMutation({
+    mutationFn: async (duration: 'always' | '8hours' | '1week') => {
       if (!selectedConversation?.id || !user) throw new Error('No conversation');
+      let mutedUntil: string | null = null;
+      if (duration === '8hours') {
+        mutedUntil = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+      } else if (duration === '1week') {
+        mutedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      }
       const { error } = await supabase
         .from('conversation_members')
-        .update({ is_muted: !isMuted })
+        .update({ is_muted: true, muted_until: mutedUntil } as any)
         .eq('conversation_id', selectedConversation.id)
         .eq('user_id', user.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chat-muted', selectedConversation?.id] });
-      toast.success(isMuted ? 'Notifications unmuted' : 'Notifications muted');
+      queryClient.invalidateQueries({ queryKey: ['chat-muted'] });
+      queryClient.invalidateQueries({ queryKey: ['all-mute-statuses'] });
+      toast.success('Notifications muted');
+    }
+  });
+
+  const unmuteConversation = useMutation({
+    mutationFn: async () => {
+      if (!selectedConversation?.id || !user) throw new Error('No conversation');
+      const { error } = await supabase
+        .from('conversation_members')
+        .update({ is_muted: false, muted_until: null } as any)
+        .eq('conversation_id', selectedConversation.id)
+        .eq('user_id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chat-muted'] });
+      queryClient.invalidateQueries({ queryKey: ['all-mute-statuses'] });
+      toast.success('Notifications unmuted');
     }
   });
 
