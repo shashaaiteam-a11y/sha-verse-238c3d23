@@ -495,7 +495,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                       {selectedConversation.otherMembers?.[0]?.display_name?.[0] || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  {!isChatBlocked && isOtherUserOnline && (
+                  {!isChatBlocked && !isBlockedByOther && isOtherUserOnline && (
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-card" />
                   )}
                 </div>
