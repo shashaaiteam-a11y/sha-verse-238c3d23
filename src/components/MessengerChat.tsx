@@ -773,11 +773,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 };
 
 // Conversation List Item with online status & blocked indicator
-const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, unreadCount, currentUserId, onClick }: {
+const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted, unreadCount, currentUserId, onClick }: {
   convo: any;
   otherUser: any;
   isSelected: boolean;
   isBlocked: boolean;
+  isMuted: boolean;
   unreadCount: number;
   currentUserId?: string;
   onClick: () => void;
@@ -812,14 +813,19 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, unreadC
           <h4 className="font-semibold text-sm truncate">
             {otherUser?.display_name || 'Unknown User'}
           </h4>
-          {convo.lastMessage && (
-            <span className={cn(
-              "text-[11px]",
-              unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
-            )}>
-              {formatDistanceToNow(new Date(convo.lastMessage.created_at), { addSuffix: false })}
-            </span>
-          )}
+          <div className="flex items-center gap-1">
+            {isMuted && (
+              <BellOff className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+            )}
+            {convo.lastMessage && (
+              <span className={cn(
+                "text-[11px]",
+                unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+              )}>
+                {formatDistanceToNow(new Date(convo.lastMessage.created_at), { addSuffix: false })}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -840,5 +846,7 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, unreadC
         </div>
       </div>
     </button>
+  );
+};
   );
 };
