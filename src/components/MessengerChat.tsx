@@ -87,7 +87,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     enabled: !!otherUserId && !!user,
   });
 
-  const isChatBlocked = isOtherUserBlocked || isBlockedByOther;
+  // Only the BLOCKER sees restricted UI. Blocked person can still type (WhatsApp silent block).
+  const isChatBlocked = isOtherUserBlocked;
 
   // Mute state per conversation
   const { data: isMuted } = useQuery({
