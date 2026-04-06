@@ -28,6 +28,7 @@ import BookDeletionDialog from "@/components/bookshelf/BookDeletionDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
 
+// BookDetail page component
 const BookDetail = () => {
   const { bookId } = useParams();
   const navigate = useNavigate();
