@@ -110,8 +110,9 @@ const EPUBViewer = ({
         rendition.on("relocated", (location: any) => {
           if (!isMounted) return;
           const cfi = location.start.cfi;
-          const currentPage = book.locations.locationFromCfi(cfi) || 0;
-          const totalPages = book.locations.total || 1;
+          const loc = book.locations.locationFromCfi(cfi);
+          const currentPage = typeof loc === 'number' ? loc : 0;
+          const totalPages = (book.locations as any).total || (book.locations as any)._locations?.length || 1;
           onLocationChange?.(cfi, currentPage + 1, totalPages);
         });
 
