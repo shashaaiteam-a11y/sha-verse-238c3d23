@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookInteractions } from "@/hooks/useBookInteractions";
+import { useReaderBookmarks } from "@/hooks/useReaderBookmarks";
 import PDFViewer, { PDFOutlineItem } from "@/components/bookshelf/PDFViewer";
+import EPUBViewer, { TocItem } from "@/components/bookshelf/EPUBViewer";
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Moon, Sun, Bookmark, Settings,
-  ZoomIn, ZoomOut, Book, List, X, FileText
+  ArrowLeft, ChevronLeft, ChevronRight, Moon, Sun, Bookmark, BookmarkCheck, Settings,
+  ZoomIn, ZoomOut, Book, List, X, FileText, Type, Minus, Plus, Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -20,30 +22,41 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
-// Helper to detect file type from URL
+type ReaderTheme = "light" | "dark" | "sepia";
+
 const getFileType = (url: string | null): "pdf" | "epub" | "unknown" => {
   if (!url) return "unknown";
   const lowerUrl = url.toLowerCase();
   if (lowerUrl.includes(".epub")) return "epub";
   if (lowerUrl.includes(".pdf")) return "pdf";
-  // Supabase storage public/signed URLs may not end with extension
-  // Default to PDF for any storage URL since most books are PDFs
   if (lowerUrl.includes("/storage/v1/object/")) return "pdf";
   return "unknown";
+};
+
+const THEME_COLORS: Record<ReaderTheme, { bg: string; text: string; headerBg: string }> = {
+  light: { bg: "bg-amber-50", text: "text-zinc-900", headerBg: "bg-white/95" },
+  dark: { bg: "bg-zinc-900", text: "text-zinc-100", headerBg: "bg-zinc-800/95" },
+  sepia: { bg: "bg-[#f4ecd8]", text: "text-[#5b4636]", headerBg: "bg-[#e8dcc8]/95" },
 };
 
 const BookReader = () => {
   const { bookId } = useParams();
   const navigate = useNavigate();
+  const epubRef = useRef<HTMLDivElement>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [fontSize, setFontSize] = useState(16);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [theme, setTheme] = useState<ReaderTheme>("light");
   const [showControls, setShowControls] = useState(true);
   const [showToc, setShowToc] = useState(false);
+  const [showBookmarks, setShowBookmarks] = useState(false);
   const [pdfOutline, setPdfOutline] = useState<PDFOutlineItem[]>([]);
+  const [epubToc, setEpubToc] = useState<TocItem[]>([]);
   const [scale, setScale] = useState(1.5);
+  const [epubCfi, setEpubCfi] = useState<string | undefined>();
 
   const { data: book, isLoading } = useQuery({
     queryKey: ["book", bookId],
@@ -60,8 +73,10 @@ const BookReader = () => {
   });
 
   const { readingProgress, updateProgress } = useBookInteractions(bookId);
+  const { bookmarks, addBookmark, removeBookmark, isPageBookmarked, getBookmarkForPage } = useReaderBookmarks(bookId);
 
   const fileType = getFileType(book?.book_url);
+  const colors = THEME_COLORS[theme];
 
   // Load saved progress
   useEffect(() => {
@@ -76,19 +91,18 @@ const BookReader = () => {
       if (bookId && totalPages > 0) {
         updateProgress.mutate({ currentPage, totalPages });
       }
-    }, 30000); // Save every 30 seconds
-
+    }, 30000);
     return () => clearInterval(interval);
   }, [currentPage, totalPages, bookId, updateProgress]);
 
-  // Save progress on page change
+  // Save on page change
   useEffect(() => {
-    if (bookId && totalPages > 0) {
+    if (bookId && totalPages > 0 && currentPage > 0) {
       updateProgress.mutate({ currentPage, totalPages });
     }
   }, [currentPage, totalPages, bookId, updateProgress]);
 
-  // Increment view count via atomic RPC
+  // Increment view count
   useEffect(() => {
     if (bookId) {
       void (supabase as any).rpc("increment_book_views", { book_id: bookId });
@@ -109,40 +123,85 @@ const BookReader = () => {
     setPdfOutline(outline);
   }, []);
 
-  const toggleControls = () => {
-    setShowControls(!showControls);
+  const handleEpubTocExtracted = useCallback((toc: TocItem[]) => {
+    setEpubToc(toc);
+  }, []);
+
+  const handleEpubLocationChange = useCallback((cfi: string, page: number, total: number) => {
+    setEpubCfi(cfi);
+    setCurrentPage(page);
+    setTotalPages(total);
+  }, []);
+
+  const toggleControls = () => setShowControls(!showControls);
+
+  const handleBookmarkToggle = () => {
+    if (isPageBookmarked(currentPage)) {
+      const bm = getBookmarkForPage(currentPage);
+      if (bm) removeBookmark.mutate(bm.id);
+    } else {
+      addBookmark.mutate({
+        location: fileType === "epub" && epubCfi ? { cfi: epubCfi } : { page: currentPage },
+        label: `Page ${currentPage}`,
+      });
+    }
   };
 
-  const handleZoomIn = () => {
-    setScale((prev) => Math.min(prev + 0.25, 3));
+  // EPUB navigation
+  const epubNext = () => {
+    const el = epubRef.current;
+    if (el && (el as any).__epubMethods) {
+      (el as any).__epubMethods.nextPage();
+    }
+  };
+  const epubPrev = () => {
+    const el = epubRef.current;
+    if (el && (el as any).__epubMethods) {
+      (el as any).__epubMethods.prevPage();
+    }
+  };
+  const epubGoToHref = (href: string) => {
+    const el = epubRef.current;
+    if (el && (el as any).__epubMethods) {
+      (el as any).__epubMethods.goToHref(href);
+    }
+  };
+  const epubGoToCfi = (cfi: string) => {
+    const el = epubRef.current;
+    if (el && (el as any).__epubMethods) {
+      (el as any).__epubMethods.goToCfi(cfi);
+    }
   };
 
-  const handleZoomOut = () => {
-    setScale((prev) => Math.max(prev - 0.25, 0.5));
-  };
-
-  // Render TOC items recursively
   const renderOutlineItems = (items: PDFOutlineItem[], depth = 0) => {
     return items.map((item, index) => (
       <div key={`${item.title}-${index}`}>
         <Button
           variant="ghost"
-          className={cn(
-            "w-full justify-start text-left",
-            depth > 0 && `pl-${4 + depth * 4}`
-          )}
+          className="w-full justify-start text-left"
           style={{ paddingLeft: `${16 + depth * 16}px` }}
-          onClick={() => {
-            goToPage(item.pageNumber);
-            setShowToc(false);
-          }}
+          onClick={() => { goToPage(item.pageNumber); setShowToc(false); }}
         >
           <span className="truncate">{item.title}</span>
-          <span className="ml-auto text-xs text-muted-foreground">
-            p.{item.pageNumber}
-          </span>
+          <span className="ml-auto text-xs text-muted-foreground">p.{item.pageNumber}</span>
         </Button>
         {item.items && item.items.length > 0 && renderOutlineItems(item.items, depth + 1)}
+      </div>
+    ));
+  };
+
+  const renderEpubTocItems = (items: TocItem[], depth = 0) => {
+    return items.map((item, index) => (
+      <div key={`${item.label}-${index}`}>
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-left"
+          style={{ paddingLeft: `${16 + depth * 16}px` }}
+          onClick={() => { epubGoToHref(item.href); setShowToc(false); }}
+        >
+          <span className="truncate">{item.label}</span>
+        </Button>
+        {item.subitems && item.subitems.length > 0 && renderEpubTocItems(item.subitems, depth + 1)}
       </div>
     ));
   };
@@ -160,27 +219,24 @@ const BookReader = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Book className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="text-xl font-semibold">Book not found</h1>
-        <Button variant="link" onClick={() => navigate("/bookshelf")}>
-          Back to Bookshelf
-        </Button>
+        <Button variant="link" onClick={() => navigate("/bookshelf")}>Back to Bookshelf</Button>
       </div>
     );
   }
 
+  const progressPercent = totalPages > 0 ? Math.round((currentPage / totalPages) * 100) : 0;
+  const isCurrentPageBookmarked = isPageBookmarked(currentPage);
+
   return (
     <div
-      className={cn(
-        "min-h-screen transition-colors duration-300",
-        isDarkMode ? "bg-zinc-900 text-zinc-100" : "bg-amber-50 text-zinc-900"
-      )}
+      className={cn("min-h-screen transition-colors duration-300", colors.bg, colors.text)}
       onClick={toggleControls}
     >
       {/* Top Bar */}
       <header
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-transform duration-300",
-          isDarkMode ? "bg-zinc-800/95" : "bg-white/95",
-          "backdrop-blur-sm border-b",
+          colors.headerBg, "backdrop-blur-sm border-b",
           showControls ? "translate-y-0" : "-translate-y-full"
         )}
         onClick={(e) => e.stopPropagation()}
@@ -192,30 +248,42 @@ const BookReader = () => {
             </Button>
             <div className="hidden sm:block">
               <h1 className="font-semibold truncate max-w-[200px]">{book.title}</h1>
-              <p className="text-xs text-muted-foreground">{book.author}</p>
+              <p className="text-xs text-muted-foreground">{book.author} · {progressPercent}%</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {fileType === "pdf" && (
               <>
-                <Button variant="ghost" size="icon" onClick={handleZoomOut}>
+                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.max(prev - 0.25, 0.5))}>
                   <ZoomOut className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={handleZoomIn}>
+                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.min(prev + 0.25, 3))}>
                   <ZoomIn className="w-5 h-5" />
                 </Button>
               </>
             )}
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsDarkMode(!isDarkMode)}
-            >
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+
+            {/* Bookmark Toggle */}
+            <Button variant="ghost" size="icon" onClick={handleBookmarkToggle}>
+              {isCurrentPageBookmarked ? (
+                <BookmarkCheck className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+              ) : (
+                <Bookmark className="w-5 h-5" />
+              )}
             </Button>
 
+            {/* TOC */}
+            <Button variant="ghost" size="icon" onClick={() => { setShowToc(!showToc); setShowBookmarks(false); }}>
+              <List className="w-5 h-5" />
+            </Button>
+
+            {/* Bookmarks List */}
+            <Button variant="ghost" size="icon" onClick={() => { setShowBookmarks(!showBookmarks); setShowToc(false); }}>
+              <Bookmark className="w-5 h-5" />
+            </Button>
+
+            {/* Settings */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -227,9 +295,72 @@ const BookReader = () => {
                   <SheetTitle>Reading Settings</SheetTitle>
                 </SheetHeader>
                 <div className="py-6 space-y-6">
+                  {/* Theme */}
+                  <div>
+                    <label className="text-sm font-medium mb-3 block flex items-center gap-2">
+                      <Palette className="w-4 h-4" /> Theme
+                    </label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={theme === "light" ? "default" : "outline"}
+                        onClick={() => setTheme("light")}
+                        className="flex-1"
+                      >
+                        <Sun className="w-4 h-4 mr-2" /> Light
+                      </Button>
+                      <Button
+                        variant={theme === "sepia" ? "default" : "outline"}
+                        onClick={() => setTheme("sepia")}
+                        className="flex-1"
+                        style={theme === "sepia" ? { backgroundColor: "#d4a574", color: "#3d2b1f" } : {}}
+                      >
+                        <Type className="w-4 h-4 mr-2" /> Sepia
+                      </Button>
+                      <Button
+                        variant={theme === "dark" ? "default" : "outline"}
+                        onClick={() => setTheme("dark")}
+                        className="flex-1"
+                      >
+                        <Moon className="w-4 h-4 mr-2" /> Dark
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Font Size */}
+                  <div>
+                    <label className="text-sm font-medium mb-3 block flex items-center gap-2">
+                      <Type className="w-4 h-4" /> Font Size: {fontSize}px
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setFontSize(prev => Math.max(prev - 2, 10))}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <Slider
+                        value={[fontSize]}
+                        onValueChange={(v) => setFontSize(v[0])}
+                        min={10}
+                        max={32}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setFontSize(prev => Math.min(prev + 2, 32))}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Zoom (PDF only) */}
                   {fileType === "pdf" && (
                     <div>
-                      <label className="text-sm font-medium mb-3 block">Zoom Level</label>
+                      <label className="text-sm font-medium mb-3 block">Zoom: {Math.round(scale * 100)}%</label>
                       <div className="flex items-center gap-4">
                         <ZoomOut className="w-4 h-4" />
                         <Slider
@@ -241,55 +372,44 @@ const BookReader = () => {
                         />
                         <ZoomIn className="w-4 h-4" />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">{Math.round(scale * 100)}%</p>
                     </div>
                   )}
 
-                  <div>
-                    <label className="text-sm font-medium mb-3 block">Theme</label>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={!isDarkMode ? "default" : "outline"}
-                        onClick={() => setIsDarkMode(false)}
-                        className="flex-1"
-                      >
-                        <Sun className="w-4 h-4 mr-2" /> Light
-                      </Button>
-                      <Button
-                        variant={isDarkMode ? "default" : "outline"}
-                        onClick={() => setIsDarkMode(true)}
-                        className="flex-1"
-                      >
-                        <Moon className="w-4 h-4 mr-2" /> Dark
-                      </Button>
-                    </div>
-                  </div>
+                  <Separator />
 
+                  {/* Go to Page */}
                   <div>
                     <label className="text-sm font-medium mb-3 block">Go to Page</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
                         value={currentPage}
-                        onChange={(e) => goToPage(parseInt(e.target.value) || 1)}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value) || 1;
+                          goToPage(page);
+                        }}
                         min={1}
                         max={totalPages}
-                        className="w-20 px-3 py-2 border rounded-md text-center"
+                        className="w-20 px-3 py-2 border rounded-md text-center bg-background"
                       />
                       <span className="text-muted-foreground">of {totalPages}</span>
                     </div>
                   </div>
+
+                  {/* Reading Progress */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Progress</label>
+                    <div className="w-full bg-muted rounded-full h-3">
+                      <div
+                        className="bg-primary h-3 rounded-full transition-all"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{progressPercent}% complete</p>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
-
-            <Button variant="ghost" size="icon" onClick={() => setShowToc(!showToc)}>
-              <List className="w-5 h-5" />
-            </Button>
-
-            <Button variant="ghost" size="icon">
-              <Bookmark className="w-5 h-5" />
-            </Button>
           </div>
         </div>
       </header>
@@ -298,9 +418,8 @@ const BookReader = () => {
       {showToc && (
         <div
           className={cn(
-            "fixed top-0 left-0 bottom-0 w-72 z-50",
-            isDarkMode ? "bg-zinc-800" : "bg-white",
-            "border-r shadow-lg"
+            "fixed top-0 left-0 bottom-0 w-72 z-50 border-r shadow-lg",
+            theme === "dark" ? "bg-zinc-800" : theme === "sepia" ? "bg-[#e8dcc8]" : "bg-white"
           )}
           onClick={(e) => e.stopPropagation()}
         >
@@ -312,56 +431,27 @@ const BookReader = () => {
           </div>
           <ScrollArea className="h-[calc(100%-60px)]">
             <div className="p-2">
-              {pdfOutline.length > 0 ? (
+              {fileType === "epub" && epubToc.length > 0 ? (
+                renderEpubTocItems(epubToc)
+              ) : pdfOutline.length > 0 ? (
                 renderOutlineItems(pdfOutline)
               ) : (
-                // Fallback TOC based on page count
                 <>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => { goToPage(1); setShowToc(false); }}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Start (Page 1)
+                  <Button variant="ghost" className="w-full justify-start" onClick={() => { goToPage(1); setShowToc(false); }}>
+                    <FileText className="w-4 h-4 mr-2" /> Start (Page 1)
                   </Button>
                   {totalPages > 10 && (
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                      onClick={() => { goToPage(Math.floor(totalPages * 0.25)); setShowToc(false); }}
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      25% (Page {Math.floor(totalPages * 0.25)})
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { goToPage(Math.floor(totalPages * 0.25)); setShowToc(false); }}>
+                      <FileText className="w-4 h-4 mr-2" /> 25% (Page {Math.floor(totalPages * 0.25)})
                     </Button>
                   )}
                   {totalPages > 5 && (
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                      onClick={() => { goToPage(Math.floor(totalPages * 0.5)); setShowToc(false); }}
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Middle (Page {Math.floor(totalPages * 0.5)})
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { goToPage(Math.floor(totalPages * 0.5)); setShowToc(false); }}>
+                      <FileText className="w-4 h-4 mr-2" /> Middle (Page {Math.floor(totalPages * 0.5)})
                     </Button>
                   )}
-                  {totalPages > 10 && (
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                      onClick={() => { goToPage(Math.floor(totalPages * 0.75)); setShowToc(false); }}
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      75% (Page {Math.floor(totalPages * 0.75)})
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => { goToPage(totalPages); setShowToc(false); }}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    End (Page {totalPages})
+                  <Button variant="ghost" className="w-full justify-start" onClick={() => { goToPage(totalPages); setShowToc(false); }}>
+                    <FileText className="w-4 h-4 mr-2" /> End (Page {totalPages})
                   </Button>
                 </>
               )}
@@ -370,12 +460,65 @@ const BookReader = () => {
         </div>
       )}
 
+      {/* Bookmarks Sidebar */}
+      {showBookmarks && (
+        <div
+          className={cn(
+            "fixed top-0 right-0 bottom-0 w-72 z-50 border-l shadow-lg",
+            theme === "dark" ? "bg-zinc-800" : theme === "sepia" ? "bg-[#e8dcc8]" : "bg-white"
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="font-semibold">Bookmarks ({bookmarks.length})</h2>
+            <Button variant="ghost" size="icon" onClick={() => setShowBookmarks(false)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <ScrollArea className="h-[calc(100%-60px)]">
+            <div className="p-2 space-y-1">
+              {bookmarks.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-8">
+                  No bookmarks yet. Tap the bookmark icon to add one.
+                </p>
+              ) : (
+                bookmarks.map((bm) => (
+                  <div key={bm.id} className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      className="flex-1 justify-start text-left"
+                      onClick={() => {
+                        if (bm.location?.page) {
+                          goToPage(bm.location.page);
+                        } else if (bm.location?.cfi) {
+                          epubGoToCfi(bm.location.cfi);
+                        }
+                        setShowBookmarks(false);
+                      }}
+                    >
+                      <BookmarkCheck className="w-4 h-4 mr-2 text-yellow-500" />
+                      <span className="truncate">{bm.label || `Page ${bm.location?.page || '?'}`}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => removeBookmark.mutate(bm.id)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+
       {/* Main Content */}
-      <main
-        className="min-h-screen flex items-center justify-center p-4 pt-20 pb-24"
-      >
+      <main className="min-h-screen flex items-center justify-center p-4 pt-20 pb-24">
         <div className="max-w-4xl w-full">
-          {/* PDF Viewer for PDF files */}
+          {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (
             <PDFViewer
               url={book.book_url}
@@ -383,25 +526,30 @@ const BookReader = () => {
               onPageChange={setCurrentPage}
               onTotalPagesChange={handleTotalPagesChange}
               onOutlineExtracted={handleOutlineExtracted}
-              isDarkMode={isDarkMode}
+              isDarkMode={theme === "dark"}
               scale={scale}
             />
           )}
 
-          {/* Iframe fallback for EPUB or other formats */}
+          {/* EPUB Viewer */}
           {fileType === "epub" && book.book_url && (
-            <iframe
-              src={book.book_url}
-              className="w-full h-[70vh] rounded-lg border"
-              title={book.title}
-            />
+            <div ref={epubRef}>
+              <EPUBViewer
+                url={book.book_url}
+                initialCfi={epubCfi}
+                onLocationChange={handleEpubLocationChange}
+                onTocExtracted={handleEpubTocExtracted}
+                theme={theme}
+                fontSize={fontSize}
+              />
+            </div>
           )}
 
-          {/* Fallback for books without proper file */}
+          {/* No file fallback */}
           {(fileType === "unknown" || !book.book_url) && (
             <Card className={cn(
               "p-8 sm:p-12 min-h-[60vh]",
-              isDarkMode ? "bg-zinc-800 border-zinc-700" : "bg-white"
+              theme === "dark" ? "bg-zinc-800 border-zinc-700" : ""
             )}>
               <div className="prose max-w-none dark:prose-invert">
                 <h2 className="text-center mb-8">{book.title}</h2>
@@ -424,8 +572,7 @@ const BookReader = () => {
       <footer
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300",
-          isDarkMode ? "bg-zinc-800/95" : "bg-white/95",
-          "backdrop-blur-sm border-t",
+          colors.headerBg, "backdrop-blur-sm border-t",
           showControls ? "translate-y-0" : "translate-y-full"
         )}
         onClick={(e) => e.stopPropagation()}
@@ -435,7 +582,14 @@ const BookReader = () => {
           <div className="mb-3">
             <Slider
               value={[currentPage]}
-              onValueChange={(v) => setCurrentPage(v[0])}
+              onValueChange={(v) => {
+                if (fileType === "epub") {
+                  // For EPUB, we just update the page tracker
+                  setCurrentPage(v[0]);
+                } else {
+                  setCurrentPage(v[0]);
+                }
+              }}
               min={1}
               max={totalPages}
               step={1}
@@ -446,24 +600,24 @@ const BookReader = () => {
           <div className="flex items-center justify-between">
             <Button
               variant="outline"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage <= 1}
+              size="sm"
+              onClick={() => fileType === "epub" ? epubPrev() : goToPage(currentPage - 1)}
+              disabled={fileType !== "epub" && currentPage <= 1}
             >
-              <ChevronLeft className="w-5 h-5 mr-1" />
-              Previous
+              <ChevronLeft className="w-4 h-4 mr-1" /> Prev
             </Button>
 
             <span className="text-sm font-medium">
-              {currentPage} / {totalPages}
+              {currentPage} / {totalPages} · {progressPercent}%
             </span>
 
             <Button
               variant="outline"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage >= totalPages}
+              size="sm"
+              onClick={() => fileType === "epub" ? epubNext() : goToPage(currentPage + 1)}
+              disabled={fileType !== "epub" && currentPage >= totalPages}
             >
-              Next
-              <ChevronRight className="w-5 h-5 ml-1" />
+              Next <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
         </div>
