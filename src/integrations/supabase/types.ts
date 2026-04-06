@@ -2792,6 +2792,44 @@ export type Database = {
         }
         Relationships: []
       }
+      reader_bookmarks: {
+        Row: {
+          book_id: string
+          color: string | null
+          created_at: string
+          id: string
+          label: string | null
+          location: Json
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          location: Json
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          location?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reader_bookmarks_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           created_at: string | null
