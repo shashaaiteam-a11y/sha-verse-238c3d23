@@ -51,9 +51,11 @@ const BookReader = () => {
   const { bookId } = useParams();
   const navigate = useNavigate();
   const epubRef = useRef<HTMLDivElement>(null);
+  const saveProgressRef = useRef(updateProgress.mutate);
+  const lastSavedProgressRef = useRef<string>("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [fontSize, setFontSize] = useState(16);
   const [theme, setTheme] = useState<ReaderTheme>("light");
   const [showControls, setShowControls] = useState(true);
@@ -84,40 +86,56 @@ const BookReader = () => {
   const fileType = getFileType(book?.book_url);
   const colors = THEME_COLORS[theme];
 
+  useEffect(() => {
+    saveProgressRef.current = updateProgress.mutate;
+  }, [updateProgress.mutate]);
+
   // Load saved progress
   useEffect(() => {
-    if (readingProgress?.current_page) {
-      setCurrentPage(readingProgress.current_page);
+    const savedPage = readingProgress?.current_page;
+    const savedTotalPages = readingProgress?.total_pages;
+
+    if (savedPage && savedPage > 0) {
+      setCurrentPage(savedPage);
+    }
+
+    if (savedTotalPages && savedTotalPages > 0) {
+      setTotalPages(savedTotalPages);
+    }
+
+    if (savedPage && savedTotalPages) {
+      lastSavedProgressRef.current = `${savedPage}:${savedTotalPages}`;
     }
   }, [readingProgress]);
 
-  // Save progress periodically
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (bookId && totalPages > 0) {
-        updateProgress.mutate({ currentPage, totalPages });
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [currentPage, totalPages, bookId, updateProgress]);
-
-  // Save on page change
-  useEffect(() => {
-    if (bookId && totalPages > 0 && currentPage > 0) {
-      updateProgress.mutate({ currentPage, totalPages });
+    if (!totalPages && book?.pages && book.pages > 0) {
+      setTotalPages(book.pages);
     }
-  }, [currentPage, totalPages, bookId, updateProgress]);
+  }, [book?.pages, totalPages]);
+
+  // Save progress without creating a refetch loop
+  useEffect(() => {
+    if (!bookId || currentPage < 1 || totalPages < 1) return;
+
+    const progressKey = `${currentPage}:${totalPages}`;
+    if (lastSavedProgressRef.current === progressKey) return;
+
+    const timeout = window.setTimeout(() => {
+      if (lastSavedProgressRef.current === progressKey) return;
+      lastSavedProgressRef.current = progressKey;
+      saveProgressRef.current({ currentPage, totalPages });
+    }, 600);
+
+    return () => window.clearTimeout(timeout);
+  }, [currentPage, totalPages, bookId]);
 
   // Increment view count
   useEffect(() => {
     if (bookId) {
       void (supabase as any).rpc("increment_book_views", { book_id: bookId });
     }
-    // Log book info for debugging
-    if (book) {
-      console.log("[BookReader] Book loaded:", { title: book.title, book_url: book.book_url, fileType });
-    }
-  }, [bookId, book, fileType]);
+  }, [bookId]);
 
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -399,7 +417,7 @@ const BookReader = () => {
                           goToPage(page);
                         }}
                         min={1}
-                        max={totalPages}
+                        max={Math.max(totalPages, 1)}
                         className="w-20 px-3 py-2 border rounded-md text-center bg-background"
                       />
                       <span className="text-muted-foreground">of {totalPages}</span>
@@ -601,7 +619,7 @@ const BookReader = () => {
                 }
               }}
               min={1}
-              max={totalPages}
+              max={Math.max(totalPages, 1)}
               step={1}
             />
           </div>

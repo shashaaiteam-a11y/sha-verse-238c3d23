@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Configure PDF.js worker from CDN (compatible with pdfjs-dist v5)
-const workerUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-console.log("[PDFViewer] pdfjs version:", pdfjsLib.version, "worker URL:", workerUrl);
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 export interface PDFOutlineItem {
   title: string;
@@ -49,9 +47,16 @@ const PDFViewer = ({
     const container = containerRef.current;
     if (!container) return;
 
+    const measureContainer = () => {
+      const width = Math.floor(container.getBoundingClientRect().width);
+      if (width > 0) {
+        setContainerWidth(width);
+      }
+    };
+
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const width = entry.contentRect.width;
+        const width = Math.floor(entry.contentRect.width);
         if (width > 0) {
           setContainerWidth(width);
         }
@@ -59,12 +64,14 @@ const PDFViewer = ({
     });
 
     observer.observe(container);
-    // Initial measurement
-    if (container.clientWidth > 0) {
-      setContainerWidth(container.clientWidth);
-    }
+    const frame = requestAnimationFrame(measureContainer);
+    window.addEventListener("resize", measureContainer);
 
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", measureContainer);
+    };
   }, []);
 
   // Load PDF document
@@ -75,7 +82,6 @@ const PDFViewer = ({
       try {
         setIsLoading(true);
         setError(null);
-        console.log("[PDFViewer] Loading PDF from URL:", url);
 
         const loadingTask = pdfjsLib.getDocument({
           url,
@@ -84,7 +90,6 @@ const PDFViewer = ({
         });
 
         const pdf = await loadingTask.promise;
-        console.log("[PDFViewer] PDF loaded, pages:", pdf.numPages);
 
         if (!isMounted) return;
 
@@ -162,7 +167,6 @@ const PDFViewer = ({
   // Render current page
   const renderPage = useCallback(async () => {
     if (!pdfDoc || !canvasRef.current || containerWidth === 0) {
-      console.log("[PDFViewer] renderPage skipped:", { hasPdfDoc: !!pdfDoc, hasCanvas: !!canvasRef.current, containerWidth });
       return;
     }
 
@@ -174,7 +178,6 @@ const PDFViewer = ({
         renderTaskRef.current.cancel();
       }
 
-      console.log("[PDFViewer] Rendering page:", currentPage);
       const page = await pdfDoc.getPage(currentPage);
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
@@ -183,12 +186,12 @@ const PDFViewer = ({
 
       // Calculate scale to fit container width
       const originalViewport = page.getViewport({ scale: 1 });
+      const availableWidth = Math.max(containerWidth - 32, 320);
       const responsiveScale = Math.min(
-        (containerWidth - 32) / originalViewport.width,
+        availableWidth / originalViewport.width,
         scale
       );
       const viewport = page.getViewport({ scale: responsiveScale });
-      console.log("[PDFViewer] Viewport:", { width: viewport.width, height: viewport.height, scale: responsiveScale });
 
       // Set canvas dimensions
       const pixelRatio = window.devicePixelRatio || 1;
@@ -197,6 +200,7 @@ const PDFViewer = ({
       canvas.style.width = `${viewport.width}px`;
       canvas.style.height = `${viewport.height}px`;
 
+      context.setTransform(1, 0, 0, 1, 0, 0);
       context.scale(pixelRatio, pixelRatio);
 
       // Clear canvas
@@ -211,7 +215,6 @@ const PDFViewer = ({
 
       renderTaskRef.current = page.render(renderContext);
       await renderTaskRef.current.promise;
-      console.log("[PDFViewer] Page rendered successfully");
 
       setIsPageLoading(false);
     } catch (err: any) {
@@ -266,7 +269,7 @@ const PDFViewer = ({
     <div
       ref={containerRef}
       className={cn(
-        "flex flex-col items-center justify-center w-full",
+        "flex min-h-[70vh] w-full flex-col items-center justify-center",
         className
       )}
     >
@@ -279,7 +282,7 @@ const PDFViewer = ({
         <canvas
           ref={canvasRef}
           className={cn(
-            "rounded-lg shadow-lg",
+            "rounded-lg shadow-lg bg-background",
             isDarkMode ? "filter invert hue-rotate-180" : ""
           )}
         />

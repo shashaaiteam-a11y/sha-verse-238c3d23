@@ -90,12 +90,15 @@ export const useBookInteractions = (bookId?: string) => {
     queryKey: ["book-progress", bookId, user?.id],
     queryFn: async () => {
       if (!user?.id || !bookId) return null;
-      const { data } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from("book_reading_progress")
         .select("*")
         .eq("book_id", bookId)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
+
+      if (error) throw error;
+
       return data;
     },
     enabled: !!bookId && !!user?.id,
@@ -199,6 +202,7 @@ export const useBookInteractions = (bookId?: string) => {
   const updateProgress = useMutation({
     mutationFn: async ({ currentPage, totalPages }: { currentPage: number; totalPages: number }) => {
       if (!user?.id || !bookId) throw new Error("Not authenticated");
+      if (currentPage < 1 || totalPages < 1) return;
 
       const completed = currentPage >= totalPages;
 
@@ -212,9 +216,6 @@ export const useBookInteractions = (bookId?: string) => {
           last_read_at: new Date().toISOString(),
           completed,
         }, { onConflict: "book_id,user_id" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["book-progress", bookId] });
     },
   });
 
