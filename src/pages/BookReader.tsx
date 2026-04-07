@@ -29,8 +29,14 @@ type ReaderTheme = "light" | "dark" | "sepia";
 const getFileType = (url: string | null): "pdf" | "epub" | "unknown" => {
   if (!url) return "unknown";
   const lowerUrl = url.toLowerCase();
+  // Strip query params for extension check
+  const pathOnly = lowerUrl.split("?")[0];
+  if (pathOnly.endsWith(".epub")) return "epub";
+  if (pathOnly.endsWith(".pdf")) return "pdf";
+  // Check within URL path segments for format hints
   if (lowerUrl.includes(".epub")) return "epub";
   if (lowerUrl.includes(".pdf")) return "pdf";
+  // Default: treat storage URLs as PDF (most common), otherwise unknown
   if (lowerUrl.includes("/storage/v1/object/")) return "pdf";
   return "unknown";
 };
@@ -107,7 +113,11 @@ const BookReader = () => {
     if (bookId) {
       void (supabase as any).rpc("increment_book_views", { book_id: bookId });
     }
-  }, [bookId]);
+    // Log book info for debugging
+    if (book) {
+      console.log("[BookReader] Book loaded:", { title: book.title, book_url: book.book_url, fileType });
+    }
+  }, [bookId, book, fileType]);
 
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
