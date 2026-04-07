@@ -193,7 +193,7 @@ const EPUBViewer = ({
   }
 
   return (
-    <div className={cn("relative w-full", className)} style={{ height: "70vh" }}>
+    <div className={cn("relative w-full", className)} style={{ minHeight: "70vh", height: "70vh" }}>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
           <div className="flex flex-col items-center gap-3">
@@ -206,6 +206,7 @@ const EPUBViewer = ({
         ref={viewerRef}
         className="w-full h-full"
         style={{
+          minHeight: "70vh",
           backgroundColor:
             theme === "dark" ? "#1a1a1a" : theme === "sepia" ? "#f4ecd8" : "#fffbf0",
         }}
