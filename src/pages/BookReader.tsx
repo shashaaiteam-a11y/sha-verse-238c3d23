@@ -51,7 +51,6 @@ const BookReader = () => {
   const { bookId } = useParams();
   const navigate = useNavigate();
   const epubRef = useRef<HTMLDivElement>(null);
-  const saveProgressRef = useRef(updateProgress.mutate);
   const lastSavedProgressRef = useRef<string>("");
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,6 +81,7 @@ const BookReader = () => {
 
   const { readingProgress, updateProgress } = useBookInteractions(bookId);
   const { bookmarks, addBookmark, removeBookmark, isPageBookmarked, getBookmarkForPage } = useReaderBookmarks(bookId);
+  const saveProgressRef = useRef(updateProgress.mutate);
 
   const fileType = getFileType(book?.book_url);
   const colors = THEME_COLORS[theme];
