@@ -113,7 +113,11 @@ const BookReader = () => {
     if (bookId) {
       void (supabase as any).rpc("increment_book_views", { book_id: bookId });
     }
-  }, [bookId]);
+    // Log book info for debugging
+    if (book) {
+      console.log("[BookReader] Book loaded:", { title: book.title, book_url: book.book_url, fileType });
+    }
+  }, [bookId, book, fileType]);
 
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
