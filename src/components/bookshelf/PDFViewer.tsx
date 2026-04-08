@@ -192,7 +192,7 @@ const PDFViewer = ({
 
       // Calculate scale to fit container width
       const originalViewport = page.getViewport({ scale: 1 });
-      const availableWidth = Math.max(containerWidth - 32, 320);
+      const availableWidth = Math.max(effectiveWidth - 32, 320);
       const responsiveScale = Math.min(
         availableWidth / originalViewport.width,
         scale
