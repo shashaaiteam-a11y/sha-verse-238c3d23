@@ -10,6 +10,7 @@ import { MobileProvider } from "./contexts/MobileContext";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
+import { SwipeWrapper } from "./components/SwipeWrapper";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("./pages/Home"));
