@@ -112,8 +112,13 @@ const PDFViewer = ({
         setRetryCount(0);
         setContainerWidth(0);
 
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const arrayBuffer = await response.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+
         const loadingTask = pdfjsLib.getDocument({
-          url,
+          data,
           cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
           cMapPacked: true,
         });

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -269,8 +270,8 @@ const FacebookStoryViewer = ({
     return null;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+  const viewer = (
+    <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden">
       {/* Close button */}
       <Button
         variant="ghost"
@@ -569,6 +570,8 @@ const FacebookStoryViewer = ({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined" ? createPortal(viewer, document.body) : viewer;
 };
 
 export default FacebookStoryViewer;
