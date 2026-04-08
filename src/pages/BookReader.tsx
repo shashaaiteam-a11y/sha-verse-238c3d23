@@ -544,8 +544,8 @@ const BookReader = () => {
       )}
 
       {/* Main Content */}
-      <main className="h-screen flex flex-col items-center justify-center pt-16 pb-20 overflow-auto">
-        <div className="w-full flex-1 flex flex-col">
+      <main className="min-h-screen flex items-center justify-center p-4 pt-20 pb-24">
+        <div className="max-w-4xl w-full">
           {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (
             <PDFViewer
