@@ -1,50 +1,75 @@
 
+Goal
 
-## Problem Analysis
+Fix the Bookshelf reader so clicking Start Reading opens the book immediately and the page renders reliably, without touching any other module or changing unrelated UI.
 
-The messenger already has most WhatsApp features implemented (ticks, read/unread, block, clear chat, mute, online/last seen). However, several gaps remain:
+What I verified
 
-1. **Mute** - No duration options (8h/1w/Always), no `muted_until` column, no 🔕 icon in chat list
-2. **Block (silent block)** - Currently blocked user sees "You can't send messages" which is WRONG. WhatsApp uses silent block: blocked person sees everything normal, messages stay at ✓ single tick, no error shown
-3. **Chat list mute indicator** - Missing 🔕 icon for muted conversations
+- The Start Reading flow already exists: `src/pages/BookDetail.tsx` navigates to `/bookshelf/read/:bookId`.
+- The reader route already exists in `src/App.tsx`.
+- The book record for the current failing case has a valid public `book_url` and `pages = 241`.
+- The screenshot shows the reader screen opens and PDF metadata loads (`1 / 241` visible), but the actual page canvas stays blank.
 
-## Plan
+Root cause
 
-### Step 1: Database Migration
-Add `muted_until` column to `conversation_members`:
-```sql
-ALTER TABLE public.conversation_members 
-  ADD COLUMN IF NOT EXISTS muted_until timestamp with time zone;
-```
+This is not mainly a button/navigation issue now. The book reader opens, but `src/components/bookshelf/PDFViewer.tsx` can skip rendering when `containerWidth === 0`. In that state, the PDF loads successfully, but the canvas never paints a page, so the user sees a blank rectangle.
 
-### Step 2: Fix Silent Block Behavior (`MessengerChat.tsx`)
-- **Blocker side**: Keep current behavior (shows "You blocked this contact. Unblock?", typing bar hidden)
-- **Blocked side**: Remove the "You can't send messages" state. Let them type and send normally. Messages will insert but never get `is_read = true` (stays at ✓ single tick). Hide online/last seen for blocked user
-- Change `isChatBlocked` logic: only restrict UI for the blocker (`isOtherUserBlocked`), NOT for `isBlockedByOther`
+Implementation plan
 
-### Step 3: Add Mute Duration Options (`ChatHeaderMenu.tsx`)
-Replace single mute toggle with submenu offering:
-- 8 hours
-- 1 week  
-- Always
-- Unmute (if already muted)
+1. Stabilize `PDFViewer.tsx` initial rendering
+- Remove the fragile dependency on a non-zero measured width before first render.
+- Resolve width using a safe fallback chain:
+  - container width
+  - parent width
+  - viewport width fallback
+- If width is still unavailable momentarily, render with a safe fallback width instead of returning early.
 
-Update `onMuteToggle` to accept duration parameter.
+2. Make first page render immediately after Start Reading
+- Ensure page rendering runs as soon as the PDF document is ready.
+- Keep responsive sizing, but do not let resize measurement block the first paint.
+- Give the canvas explicit responsive sizing so the page is visible on desktop, tablet, and mobile.
 
-### Step 4: Show Mute Icon in Chat List (`MessengerChat.tsx`)
-- Query `is_muted` for each conversation in the list
-- Show 🔕 `BellOff` icon next to muted conversations
-- Fetch mute status in `ConversationListItem`
+3. Add Bookshelf-only resilience
+- If PDF loading succeeds but page painting fails, show a proper retry/error state instead of a blank placeholder.
+- Keep this fully isolated to the Bookshelf reader only.
 
-### Step 5: Update Mute Logic (`MessengerChat.tsx`)
-- Update `toggleMute` mutation to accept `muted_until` parameter
-- Auto-unmute check: if `muted_until` has passed, treat as unmuted
+4. Keep the existing Bookshelf reader UX intact
+- Preserve current reader controls:
+  - next/prev
+  - slider progress
+  - zoom
+  - bookmarks
+  - TOC
+  - themes
+  - progress saving
+- No changes to chat, groups, posts, auth, movion, profile, or any other global UI/module.
 
-### Files Changed
-1. `src/components/MessengerChat.tsx` - Silent block fix, mute icon in list, mute duration
-2. `src/components/chat/ChatHeaderMenu.tsx` - Mute duration submenu
-3. `src/hooks/useMessages.ts` - No changes needed
-4. Database migration - Add `muted_until` column
+Technical details
 
-No other modules or features will be touched.
+Files to update:
+- `src/components/bookshelf/PDFViewer.tsx`
+- Possibly `src/pages/BookReader.tsx` only for a minimal Bookshelf-specific fallback/remount safeguard if needed
 
+Files not planned to change:
+- `src/App.tsx` route structure
+- `src/components/SwipeWrapper.tsx`
+- `src/components/BottomNav.tsx`
+- Any non-Bookshelf module
+
+No backend changes needed:
+- No database migration
+- No auth/storage policy change
+- No bucket/config change for this specific issue, because the current `book_url` is already valid and reachable
+
+Verification after implementation
+
+- Open a book detail page
+- Click Start Reading
+- Confirm the reader opens immediately
+- Confirm page 1 is visible, not blank
+- Confirm page count, next/prev, slider, zoom, bookmarks, and saved progress still work
+- Confirm the fix works at the current desktop viewport and on mobile width
+
+Expected result
+
+Start Reading will continue to open the existing Bookshelf reader route, and the book page will render immediately instead of showing an empty canvas/blank placeholder.
