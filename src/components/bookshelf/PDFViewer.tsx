@@ -166,9 +166,15 @@ const PDFViewer = ({
 
   // Render current page
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !canvasRef.current || containerWidth === 0) {
-      return;
-    }
+    if (!pdfDoc || !canvasRef.current) return;
+
+    // Use measured width, or fall back to parent/viewport so first paint is never blocked
+    const effectiveWidth =
+      containerWidth > 0
+        ? containerWidth
+        : containerRef.current?.parentElement?.clientWidth ||
+          window.innerWidth ||
+          800;
 
     try {
       setIsPageLoading(true);
