@@ -83,6 +83,8 @@ const PDFViewer = ({
         setIsLoading(true);
         setError(null);
 
+        console.log("[PDFViewer] Loading PDF from URL:", url);
+
         const loadingTask = pdfjsLib.getDocument({
           url,
           cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
@@ -92,6 +94,8 @@ const PDFViewer = ({
         const pdf = await loadingTask.promise;
 
         if (!isMounted) return;
+
+        console.log("[PDFViewer] PDF loaded successfully, pages:", pdf.numPages);
 
         setPdfDoc(pdf);
         onTotalPagesChange(pdf.numPages);
@@ -166,15 +170,28 @@ const PDFViewer = ({
 
   // Render current page
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !canvasRef.current) return;
+    if (!pdfDoc || !canvasRef.current) {
+      console.log("[PDFViewer] Cannot render: pdfDoc or canvasRef missing");
+      return;
+    }
 
-    // Use measured width, or fall back to parent/viewport so first paint is never blocked
-    const effectiveWidth =
+    // Get container width dynamically if not available
+    let effectiveContainerWidth =
       containerWidth > 0
         ? containerWidth
         : containerRef.current?.parentElement?.clientWidth ||
           window.innerWidth ||
           800;
+
+    if (effectiveContainerWidth === 0 && containerRef.current) {
+      effectiveContainerWidth = Math.floor(containerRef.current.getBoundingClientRect().width);
+      console.log("[PDFViewer] Using dynamically measured container width:", effectiveContainerWidth);
+    }
+
+    if (effectiveContainerWidth === 0) {
+      console.log("[PDFViewer] Container width is 0, using default");
+      effectiveContainerWidth = 800; // Default fallback width
+    }
 
     try {
       setIsPageLoading(true);
@@ -192,7 +209,7 @@ const PDFViewer = ({
 
       // Calculate scale to fit container width
       const originalViewport = page.getViewport({ scale: 1 });
-      const availableWidth = Math.max(effectiveWidth - 32, 320);
+      const availableWidth = Math.max(effectiveContainerWidth - 32, 320);
       const responsiveScale = Math.min(
         availableWidth / originalViewport.width,
         scale

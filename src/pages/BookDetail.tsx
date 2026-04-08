@@ -41,6 +41,7 @@ const BookDetail = () => {
   const [comment, setComment] = useState("");
   const [commentsExpanded, setCommentsExpanded] = useState(true);
   const [ratingsExpanded, setRatingsExpanded] = useState(true);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(true);
   const [viewsTracked, setViewsTracked] = useState(false);
 
   const { data: book, isLoading, isError, error } = useQuery({
@@ -531,10 +532,20 @@ const BookDetail = () => {
 
         {/* Description */}
         <Card className="p-4 mb-6">
-          <h2 className="font-semibold mb-2">Description</h2>
-          <p className="text-muted-foreground whitespace-pre-wrap">
-            {book.description || "No description available."}
-          </p>
+          <button
+            onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+            className="w-full flex items-center justify-between mb-2 hover:opacity-70 transition-opacity"
+          >
+            <h2 className="font-semibold">Description</h2>
+            <ChevronDown
+              className={`w-5 h-5 transition-transform duration-200 ${descriptionExpanded ? "rotate-0" : "-rotate-90"}`}
+            />
+          </button>
+          {descriptionExpanded && (
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {book.description || "No description available."}
+            </p>
+          )}
         </Card>
 
         {/* Book Info */}

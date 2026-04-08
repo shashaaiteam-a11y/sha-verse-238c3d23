@@ -58,11 +58,16 @@ export const ChatLayout = ({
               {messages}
             </div>
           </ScrollArea>
-        ) : emptyState ? (
+        ) : (
           <div className="flex items-center justify-center h-full">
-            {emptyState}
+            {emptyState || (
+              <div className="text-center">
+                <p className="text-muted-foreground">No messages yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Start a conversation</p>
+              </div>
+            )}
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* Fixed Input Bar at Bottom */}
