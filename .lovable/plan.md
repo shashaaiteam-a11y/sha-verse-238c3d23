@@ -1,75 +1,32 @@
 
-Goal
 
-Fix the Bookshelf reader so clicking Start Reading opens the book immediately and the page renders reliably, without touching any other module or changing unrelated UI.
+## Fix: Book Reader Full-Screen Layout (All Devices)
 
-What I verified
+### Problem
+The book reader has width constraints (`max-w-4xl`) and padding (`p-4`) that prevent the PDF from filling the entire screen. The theme background color (yellow/sepia) is visible around the book content instead of the book covering the full viewport.
 
-- The Start Reading flow already exists: `src/pages/BookDetail.tsx` navigates to `/bookshelf/read/:bookId`.
-- The reader route already exists in `src/App.tsx`.
-- The book record for the current failing case has a valid public `book_url` and `pages = 241`.
-- The screenshot shows the reader screen opens and PDF metadata loads (`1 / 241` visible), but the actual page canvas stays blank.
+### Root Cause
+- `BookReader.tsx` line 548: `<div className="max-w-4xl w-full">` caps the content width
+- `BookReader.tsx` line 547: `<main className="... p-4 pt-20 pb-24">` adds padding around the content
+- `PDFViewer.tsx` line 236: `availableWidth = effectiveContainerWidth - 32` subtracts 32px unnecessarily
+- `PDFViewer.tsx` line 340: `min-h-[70vh]` instead of filling the full available height
 
-Root cause
+### Plan
 
-This is not mainly a button/navigation issue now. The book reader opens, but `src/components/bookshelf/PDFViewer.tsx` can skip rendering when `containerWidth === 0`. In that state, the PDF loads successfully, but the canvas never paints a page, so the user sees a blank rectangle.
+**File 1: `src/pages/BookReader.tsx`** (lines 547-548)
+- Remove `max-w-4xl` constraint — let content fill full width
+- Remove horizontal padding (`p-4`) — keep only vertical padding for header/footer clearance
+- Change `min-h-screen` to `h-screen` with overflow auto so the PDF fills the viewport
 
-Implementation plan
+**File 2: `src/components/bookshelf/PDFViewer.tsx`**
+- Line 236: Remove the `-32` padding subtraction so the PDF uses the full container width
+- Line 340: Change `min-h-[70vh]` to `flex-1 min-h-0` so it fills available space
+- Remove `rounded-lg shadow-lg` from the canvas (line 353) since it's now edge-to-edge
 
-1. Stabilize `PDFViewer.tsx` initial rendering
-- Remove the fragile dependency on a non-zero measured width before first render.
-- Resolve width using a safe fallback chain:
-  - container width
-  - parent width
-  - viewport width fallback
-- If width is still unavailable momentarily, render with a safe fallback width instead of returning early.
+### Files NOT changed
+- No changes to any other module, route, or component
+- No database/backend changes
 
-2. Make first page render immediately after Start Reading
-- Ensure page rendering runs as soon as the PDF document is ready.
-- Keep responsive sizing, but do not let resize measurement block the first paint.
-- Give the canvas explicit responsive sizing so the page is visible on desktop, tablet, and mobile.
+### Result
+The PDF will render edge-to-edge on desktop, tablet, and mobile — no visible background around the book content.
 
-3. Add Bookshelf-only resilience
-- If PDF loading succeeds but page painting fails, show a proper retry/error state instead of a blank placeholder.
-- Keep this fully isolated to the Bookshelf reader only.
-
-4. Keep the existing Bookshelf reader UX intact
-- Preserve current reader controls:
-  - next/prev
-  - slider progress
-  - zoom
-  - bookmarks
-  - TOC
-  - themes
-  - progress saving
-- No changes to chat, groups, posts, auth, movion, profile, or any other global UI/module.
-
-Technical details
-
-Files to update:
-- `src/components/bookshelf/PDFViewer.tsx`
-- Possibly `src/pages/BookReader.tsx` only for a minimal Bookshelf-specific fallback/remount safeguard if needed
-
-Files not planned to change:
-- `src/App.tsx` route structure
-- `src/components/SwipeWrapper.tsx`
-- `src/components/BottomNav.tsx`
-- Any non-Bookshelf module
-
-No backend changes needed:
-- No database migration
-- No auth/storage policy change
-- No bucket/config change for this specific issue, because the current `book_url` is already valid and reachable
-
-Verification after implementation
-
-- Open a book detail page
-- Click Start Reading
-- Confirm the reader opens immediately
-- Confirm page 1 is visible, not blank
-- Confirm page count, next/prev, slider, zoom, bookmarks, and saved progress still work
-- Confirm the fix works at the current desktop viewport and on mobile width
-
-Expected result
-
-Start Reading will continue to open the existing Bookshelf reader route, and the book page will render immediately instead of showing an empty canvas/blank placeholder.
