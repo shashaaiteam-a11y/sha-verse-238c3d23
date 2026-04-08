@@ -159,7 +159,7 @@ export const EmojiReactionPicker = ({
         onClick={handleClick}
         disabled={disabled}
         className={cn(
-          "flex items-center gap-2 transition-all touch-target rounded-lg px-3 py-2 font-medium",
+          "flex items-center gap-1.5 transition-all touch-target rounded-lg px-2 sm:px-3 py-2 font-medium shrink-0",
           hasReacted 
             ? "text-primary cursor-default" 
             : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
@@ -168,11 +168,11 @@ export const EmojiReactionPicker = ({
         title={hasReacted ? "You've already reacted" : "React to this post"}
       >
         {displayReaction ? (
-          <span className="text-xl">{displayReaction}</span>
+          <span className="text-lg sm:text-xl">{displayReaction}</span>
         ) : (
           <ThumbsUp className="w-5 h-5" />
         )}
-        <span className="text-sm">
+        <span className="text-xs sm:text-sm">
           {displayReaction ? 'Reacted' : 'React'}
         </span>
       </button>
