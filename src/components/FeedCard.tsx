@@ -594,8 +594,8 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
       )}
 
       {/* Actions Bar - Facebook Style */}
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <div className="flex-1 flex items-center justify-around">
+      <div className="flex items-center pt-2 border-t border-border overflow-hidden">
+        <div className="flex-1 flex items-center justify-around min-w-0">
           {canReact && <ItemReactions itemId={item.id} type={commentType as any} />}
           
           <button 

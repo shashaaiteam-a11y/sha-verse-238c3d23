@@ -159,7 +159,7 @@ export const EmojiReactionPicker = ({
         onClick={handleClick}
         disabled={disabled}
         className={cn(
-          "flex items-center gap-2 transition-all touch-target rounded-lg px-3 py-2 font-medium",
+          "flex items-center gap-1.5 transition-all touch-target rounded-lg px-2 sm:px-3 py-2 font-medium shrink-0",
           hasReacted 
             ? "text-primary cursor-default" 
             : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
@@ -168,26 +168,24 @@ export const EmojiReactionPicker = ({
         title={hasReacted ? "You've already reacted" : "React to this post"}
       >
         {displayReaction ? (
-          <span className="text-xl">{displayReaction}</span>
+          <span className="text-lg sm:text-xl">{displayReaction}</span>
         ) : (
           <ThumbsUp className="w-5 h-5" />
         )}
-        <span className="text-sm">
+        <span className="text-xs sm:text-sm">
           {displayReaction ? 'Reacted' : 'React'}
         </span>
       </button>
 
-      {/* Reaction counts display */}
-      {totalReactions > 0 && (
-        <div className="flex items-center gap-1 ml-1">
-          {topReactions.length > 0 && (
-            <div className="flex -space-x-1 bg-card rounded-full px-1.5 py-0.5 shadow-sm border border-border">
-              {topReactions.map((emoji, i) => (
-                <span key={i} className="text-sm">{emoji}</span>
-              ))}
-              <span className="text-xs ml-1 text-muted-foreground font-medium">{totalReactions}</span>
-            </div>
-          )}
+      {/* Reaction counts display - inline with button to save space */}
+      {totalReactions > 0 && topReactions.length > 0 && (
+        <div className="flex items-center gap-0.5 shrink-0">
+          <div className="flex -space-x-1">
+            {topReactions.slice(0, 2).map((emoji, i) => (
+              <span key={i} className="text-xs">{emoji}</span>
+            ))}
+          </div>
+          <span className="text-[10px] text-muted-foreground font-medium">{totalReactions}</span>
         </div>
       )}
 
