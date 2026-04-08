@@ -197,7 +197,7 @@ export const useProfileSettings = () => {
       
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(updates as any)
         .eq('id', user.id);
       
       if (error) throw error;

@@ -149,7 +149,7 @@ export const useBooks = (options: {
           isbn: isbn || undefined,
           publisher: publisher || undefined,
           publication_date: publicationDate || undefined,
-        })
+        } as any)
         .select()
         .single();
 

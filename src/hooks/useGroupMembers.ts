@@ -64,7 +64,7 @@ export const useGroupMembers = (groupId?: string) => {
       const mutedUntil = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
       const { error } = await supabase
         .from('group_members')
-        .update({ status: 'muted', muted_until: mutedUntil })
+        .update({ status: 'muted', muted_until: mutedUntil } as any)
         .eq('group_id', groupId!)
         .eq('user_id', userId);
       if (error) throw error;

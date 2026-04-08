@@ -190,7 +190,7 @@ export const useApproveVideoRequest = () => {
             ...(changes.thumbnail_url && { thumbnail_url: changes.thumbnail_url }),
             ...(changes.tags && { tags: changes.tags }),
             ...(changes.visibility && { visibility: changes.visibility }),
-          })
+          } as any)
           .eq('id', request.video_id);
       }
 

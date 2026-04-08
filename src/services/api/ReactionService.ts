@@ -154,7 +154,7 @@ class ReactionServiceClass extends BaseService {
 
       const { error } = await this.supabase
         .from('likes')
-        .insert(insertData);
+        .insert(insertData as any);
 
       if (error) {
         return this.handleResponse(null, error);

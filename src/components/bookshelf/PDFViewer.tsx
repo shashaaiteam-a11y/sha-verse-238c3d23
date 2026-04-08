@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { Loader2, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -23,6 +24,27 @@ interface PDFViewerProps {
   className?: string;
 }
 
+const getEffectiveContainerWidth = (
+  container: HTMLDivElement | null,
+  measuredWidth: number
+) => {
+  if (measuredWidth > 0) return measuredWidth;
+
+  const containerWidth = Math.floor(container?.getBoundingClientRect().width ?? 0);
+  if (containerWidth > 0) return containerWidth;
+
+  const parentWidth = Math.floor(
+    container?.parentElement?.getBoundingClientRect().width ?? 0
+  );
+  if (parentWidth > 0) return parentWidth;
+
+  if (typeof window !== "undefined" && window.innerWidth > 0) {
+    return Math.max(window.innerWidth - 32, 320);
+  }
+
+  return 800;
+};
+
 const PDFViewer = ({
   url,
   currentPage,
@@ -40,18 +62,18 @@ const PDFViewer = ({
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
   const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
 
   // Update container width on resize using ResizeObserver for reliability
   useEffect(() => {
+    if (isLoading) return;
+
     const container = containerRef.current;
     if (!container) return;
 
     const measureContainer = () => {
-      const width = Math.floor(container.getBoundingClientRect().width);
-      if (width > 0) {
-        setContainerWidth(width);
-      }
+      setContainerWidth(getEffectiveContainerWidth(container, 0));
     };
 
     const observer = new ResizeObserver((entries) => {
@@ -59,8 +81,11 @@ const PDFViewer = ({
         const width = Math.floor(entry.contentRect.width);
         if (width > 0) {
           setContainerWidth(width);
+          return;
         }
       }
+
+      measureContainer();
     });
 
     observer.observe(container);
@@ -72,7 +97,7 @@ const PDFViewer = ({
       observer.disconnect();
       window.removeEventListener("resize", measureContainer);
     };
-  }, []);
+  }, [isLoading]);
 
   // Load PDF document
   useEffect(() => {
@@ -81,9 +106,11 @@ const PDFViewer = ({
     const loadPDF = async () => {
       try {
         setIsLoading(true);
+        setIsPageLoading(false);
+        setPdfDoc(null);
         setError(null);
-
-        console.log("[PDFViewer] Loading PDF from URL:", url);
+        setRetryCount(0);
+        setContainerWidth(0);
 
         const loadingTask = pdfjsLib.getDocument({
           url,
@@ -94,8 +121,6 @@ const PDFViewer = ({
         const pdf = await loadingTask.promise;
 
         if (!isMounted) return;
-
-        console.log("[PDFViewer] PDF loaded successfully, pages:", pdf.numPages);
 
         setPdfDoc(pdf);
         onTotalPagesChange(pdf.numPages);
@@ -124,6 +149,7 @@ const PDFViewer = ({
 
     return () => {
       isMounted = false;
+      renderTaskRef.current?.cancel();
     };
   }, [url, onTotalPagesChange, onOutlineExtracted]);
 
@@ -170,42 +196,35 @@ const PDFViewer = ({
 
   // Render current page
   const renderPage = useCallback(async () => {
-    if (!pdfDoc || !canvasRef.current) {
-      console.log("[PDFViewer] Cannot render: pdfDoc or canvasRef missing");
+    if (isLoading || !pdfDoc || !canvasRef.current) {
       return;
     }
 
-    // Get container width dynamically if not available
-    let effectiveContainerWidth =
-      containerWidth > 0
-        ? containerWidth
-        : containerRef.current?.parentElement?.clientWidth ||
-          window.innerWidth ||
-          800;
-
-    if (effectiveContainerWidth === 0 && containerRef.current) {
-      effectiveContainerWidth = Math.floor(containerRef.current.getBoundingClientRect().width);
-      console.log("[PDFViewer] Using dynamically measured container width:", effectiveContainerWidth);
-    }
-
-    if (effectiveContainerWidth === 0) {
-      console.log("[PDFViewer] Container width is 0, using default");
-      effectiveContainerWidth = 800; // Default fallback width
-    }
+    const effectiveContainerWidth = getEffectiveContainerWidth(
+      containerRef.current,
+      containerWidth
+    );
 
     try {
       setIsPageLoading(true);
+      setError(null);
 
       // Cancel any existing render task
       if (renderTaskRef.current) {
         renderTaskRef.current.cancel();
+        renderTaskRef.current = null;
       }
 
       const page = await pdfDoc.getPage(currentPage);
       const canvas = canvasRef.current;
+      if (!canvas) return;
+
       const context = canvas.getContext("2d");
 
-      if (!context) return;
+      if (!context) {
+        setError("Failed to render page.");
+        return;
+      }
 
       // Calculate scale to fit container width
       const originalViewport = page.getViewport({ scale: 1 });
@@ -224,10 +243,8 @@ const PDFViewer = ({
       canvas.style.height = `${viewport.height}px`;
 
       context.setTransform(1, 0, 0, 1, 0, 0);
-      context.scale(pixelRatio, pixelRatio);
-
-      // Clear canvas
       context.clearRect(0, 0, canvas.width, canvas.height);
+      context.scale(pixelRatio, pixelRatio);
 
       // Render page
       const renderContext = {
@@ -238,21 +255,33 @@ const PDFViewer = ({
 
       renderTaskRef.current = page.render(renderContext);
       await renderTaskRef.current.promise;
-
-      setIsPageLoading(false);
+      setError(null);
     } catch (err: any) {
       if (err?.name !== "RenderingCancelledException") {
         console.error("[PDFViewer] Error rendering page:", err);
         setError("Failed to render page.");
       }
+    } finally {
       setIsPageLoading(false);
     }
-  }, [pdfDoc, currentPage, containerWidth, scale]);
+  }, [pdfDoc, currentPage, containerWidth, scale, isLoading]);
 
   // Render page when dependencies change
   useEffect(() => {
-    renderPage();
-  }, [renderPage]);
+    if (isLoading) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      void renderPage();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [renderPage, isLoading, retryCount]);
+
+  useEffect(() => {
+    return () => {
+      renderTaskRef.current?.cancel();
+    };
+  }, []);
 
   // Keyboard navigation
   useEffect(() => {
@@ -284,6 +313,17 @@ const PDFViewer = ({
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <AlertCircle className="w-12 h-12 text-destructive" />
         <p className="text-destructive">{error}</p>
+        {pdfDoc && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setError(null);
+              setRetryCount((count) => count + 1);
+            }}
+          >
+            Retry page
+          </Button>
+        )}
       </div>
     );
   }
