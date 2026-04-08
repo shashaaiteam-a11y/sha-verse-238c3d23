@@ -10,6 +10,7 @@ import { MobileProvider } from "./contexts/MobileContext";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
+import { SwipeWrapper } from "./components/SwipeWrapper";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("./pages/Home"));
@@ -73,37 +74,39 @@ const App = () => (
           <AuthProvider>
             <MobileProvider>
               <div className="min-h-screen bg-background safe-left safe-right">
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/offline" element={<OfflinePage />} />
-                    <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                    <Route path="/movion/*" element={<ProtectedRoute><Movion /></ProtectedRoute>} />
-                    <Route path="/video/:videoId" element={<ProtectedRoute><VideoWatch /></ProtectedRoute>} />
-                    <Route path="/channel/:channelId" element={<ProtectedRoute><ChannelPage /></ProtectedRoute>} />
-                    <Route path="/novachat" element={<ProtectedRoute><NovaChat /></ProtectedRoute>} />
-                    <Route path="/bookshelf" element={<ProtectedRoute><Bookshelf /></ProtectedRoute>} />
-                    <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute><EditBook /></ProtectedRoute>} />
-                    <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute><BookReader /></ProtectedRoute>} />
-                    <Route path="/bookshelf/book/:bookId" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />
-                    <Route path="/bookshelf/channel/:channelId" element={<ProtectedRoute><AuthorChannel /></ProtectedRoute>} />
-                    <Route path="/bookshelf/channel/:channelId/edit" element={<ProtectedRoute><EditAuthorChannel /></ProtectedRoute>} />
-                    <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
-                    <Route path="/groups/:groupId/admin" element={<ProtectedRoute><GroupAdmin /></ProtectedRoute>} />
-                    <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                    <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                    <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
-                    <Route path="/saved" element={<ProtectedRoute><SavedPosts /></ProtectedRoute>} />
-                    <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-                    <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                    <Route path="/help" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
-                    <Route path="/privacy-center" element={<ProtectedRoute><PrivacyCenter /></ProtectedRoute>} />
-                    <Route path="/admin/seed" element={<ProtectedRoute><AdminSeed /></ProtectedRoute>} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
+                <SwipeWrapper>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/offline" element={<OfflinePage />} />
+                      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                      <Route path="/movion/*" element={<ProtectedRoute><Movion /></ProtectedRoute>} />
+                      <Route path="/video/:videoId" element={<ProtectedRoute><VideoWatch /></ProtectedRoute>} />
+                      <Route path="/channel/:channelId" element={<ProtectedRoute><ChannelPage /></ProtectedRoute>} />
+                      <Route path="/novachat" element={<ProtectedRoute><NovaChat /></ProtectedRoute>} />
+                      <Route path="/bookshelf" element={<ProtectedRoute><Bookshelf /></ProtectedRoute>} />
+                      <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute><EditBook /></ProtectedRoute>} />
+                      <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute><BookReader /></ProtectedRoute>} />
+                      <Route path="/bookshelf/book/:bookId" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />
+                      <Route path="/bookshelf/channel/:channelId" element={<ProtectedRoute><AuthorChannel /></ProtectedRoute>} />
+                      <Route path="/bookshelf/channel/:channelId/edit" element={<ProtectedRoute><EditAuthorChannel /></ProtectedRoute>} />
+                      <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
+                      <Route path="/groups/:groupId/admin" element={<ProtectedRoute><GroupAdmin /></ProtectedRoute>} />
+                      <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                      <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                      <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+                      <Route path="/saved" element={<ProtectedRoute><SavedPosts /></ProtectedRoute>} />
+                      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                      <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                      <Route path="/help" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
+                      <Route path="/privacy-center" element={<ProtectedRoute><PrivacyCenter /></ProtectedRoute>} />
+                      <Route path="/admin/seed" element={<ProtectedRoute><AdminSeed /></ProtectedRoute>} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </SwipeWrapper>
                 <BottomNav />
               </div>
             </MobileProvider>
