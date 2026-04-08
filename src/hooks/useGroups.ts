@@ -327,7 +327,7 @@ export const useGroups = () => {
 
       const { error } = await supabase
         .from('groups')
-        .update(updates)
+        .update(updates as any)
         .eq('id', groupId)
         .eq('creator_id', user.id);
       if (error) throw error;

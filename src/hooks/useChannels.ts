@@ -277,7 +277,7 @@ export const useUpdateChannel = () => {
 
       const { data, error } = await supabase
         .from('channels')
-        .update(updates)
+        .update(updates as any)
         .eq('id', channelId)
         .select()
         .single();

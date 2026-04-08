@@ -264,7 +264,7 @@ class StoryServiceClass extends BaseService {
       .insert({
         story_id: storyId,
         user_id: userId,
-        reaction,
+        reaction_type: reaction,
       });
 
     return this.handleResponse(!error, error);

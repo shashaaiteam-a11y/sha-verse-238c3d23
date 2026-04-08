@@ -86,13 +86,6 @@ const BookReader = () => {
   const fileType = getFileType(book?.book_url);
   const colors = THEME_COLORS[theme];
 
-  // Debug logging
-  useEffect(() => {
-    console.log("[BookReader] Book data:", book);
-    console.log("[BookReader] File type:", fileType);
-    console.log("[BookReader] Book URL:", book?.book_url);
-  }, [book, fileType]);
-
   useEffect(() => {
     saveProgressRef.current = updateProgress.mutate;
   }, [updateProgress.mutate]);
@@ -556,6 +549,7 @@ const BookReader = () => {
           {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (
             <PDFViewer
+              key={`${book.id}-${book.book_url}`}
               url={book.book_url}
               currentPage={currentPage}
               onPageChange={setCurrentPage}

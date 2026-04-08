@@ -57,7 +57,7 @@ export const useGroupReports = (groupId?: string) => {
     mutationFn: async ({ reportId, status }: { reportId: string; status: 'reviewed' | 'dismissed' | 'actioned' }) => {
       const { error } = await supabase
         .from('group_reports')
-        .update({ status, reviewed_by: user!.id })
+        .update({ status, reviewed_by: user!.id } as any)
         .eq('id', reportId);
       if (error) throw error;
     },
