@@ -371,11 +371,13 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       // Blue double tick = Read
       return <CheckCheck className="w-3.5 h-3.5 text-blue-500" />;
     }
-    // Grey single tick = Sent (not yet read)
+    if (message.is_delivered) {
+      // Grey double tick = Delivered
+      return <CheckCheck className="w-3.5 h-3.5 text-muted-foreground" />;
+    }
+    // Grey single tick = Sent (not yet delivered)
     return <Check className="w-3.5 h-3.5 text-muted-foreground" />;
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex">
