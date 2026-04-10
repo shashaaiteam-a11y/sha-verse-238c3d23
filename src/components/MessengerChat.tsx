@@ -351,8 +351,14 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   };
 
   // Get tick icon for message status
+  // WhatsApp silent block: if blocked by other user, always show single grey tick
   const renderMessageTicks = (message: any) => {
     if (message.sender_id !== user?.id) return null;
+    
+    // Silent block: blocked person always sees single grey tick (never delivered/read)
+    if (isBlockedByOther) {
+      return <Check className="w-3.5 h-3.5 text-muted-foreground" />;
+    }
     
     if (message.is_read) {
       // Blue double tick = Read
@@ -488,7 +494,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 
                 <div className="relative">
                   <Avatar className="h-10 w-10">
-                    {selectedConversation.otherMembers?.[0]?.avatar_url && (
+                    {/* WhatsApp silent block: blocked person sees default avatar (frozen DP) */}
+                    {!isBlockedByOther && selectedConversation.otherMembers?.[0]?.avatar_url && (
                       <AvatarImage src={selectedConversation.otherMembers[0].avatar_url} />
                     )}
                     <AvatarFallback className="bg-gradient-primary text-primary-foreground">
@@ -506,6 +513,9 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   </h3>
                   {isChatBlocked ? (
                     <p className="text-xs text-destructive">Blocked</p>
+                  ) : isBlockedByOther ? (
+                    // WhatsApp silent block: blocked person sees no online/last seen (just empty)
+                    <p className="text-xs text-muted-foreground">&nbsp;</p>
                   ) : (
                     <p className={cn(
                       "text-xs",
