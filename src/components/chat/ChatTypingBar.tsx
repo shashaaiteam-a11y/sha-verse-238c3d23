@@ -21,7 +21,7 @@ interface ChatTypingBarProps {
   onStopTyping?: () => void;
 }
 
-export const ChatTypingBar = ({ onSendMessage, isSending }: ChatTypingBarProps) => {
+export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping }: ChatTypingBarProps) => {
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -242,8 +242,14 @@ export const ChatTypingBar = ({ onSendMessage, isSending }: ChatTypingBarProps) 
           {/* Message Input */}
           <Input
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              if (e.target.value.trim()) {
+                onTyping?.();
+              }
+            }}
             onKeyDown={handleKeyDown}
+            onBlur={() => onStopTyping?.()}
             placeholder="Type a message"
             className="flex-1 bg-secondary border-0 rounded-full px-4 h-11"
             disabled={isSending || isUploading}
