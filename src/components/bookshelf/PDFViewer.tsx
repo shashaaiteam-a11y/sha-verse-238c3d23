@@ -231,13 +231,14 @@ const PDFViewer = ({
         return;
       }
 
-      // Calculate scale to fit container width
+      // Calculate scale to fit container width AND height
       const originalViewport = page.getViewport({ scale: 1 });
       const availableWidth = Math.max(effectiveContainerWidth, 320);
-      const responsiveScale = Math.min(
-        availableWidth / originalViewport.width,
-        scale
-      );
+      const containerEl = containerRef.current;
+      const availableHeight = containerEl ? containerEl.clientHeight : window.innerHeight - 120;
+      const scaleByWidth = availableWidth / originalViewport.width;
+      const scaleByHeight = availableHeight > 0 ? availableHeight / originalViewport.height : scaleByWidth;
+      const responsiveScale = Math.min(scaleByWidth, scaleByHeight, scale);
       const viewport = page.getViewport({ scale: responsiveScale });
 
       // Set canvas dimensions
@@ -350,7 +351,7 @@ const PDFViewer = ({
         <canvas
           ref={canvasRef}
           className={cn(
-            "bg-background max-w-full",
+            "bg-background max-w-full max-h-full",
             isDarkMode ? "filter invert hue-rotate-180" : ""
           )}
         />
