@@ -328,62 +328,67 @@ const BookReader = () => {
                     <label className="text-sm font-medium mb-3 block flex items-center gap-2">
                       <Palette className="w-4 h-4" /> Theme
                     </label>
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <Button
                         variant={theme === "light" ? "default" : "outline"}
                         onClick={() => setTheme("light")}
-                        className="flex-1"
+                        className="px-2"
                       >
-                        <Sun className="w-4 h-4 mr-2" /> Light
+                        <Sun className="w-4 h-4 shrink-0" />
+                        <span className="hidden sm:inline ml-1 text-xs">Light</span>
                       </Button>
                       <Button
                         variant={theme === "sepia" ? "default" : "outline"}
                         onClick={() => setTheme("sepia")}
-                        className="flex-1"
+                        className="px-2"
                         style={theme === "sepia" ? { backgroundColor: "#d4a574", color: "#3d2b1f" } : {}}
                       >
-                        <Type className="w-4 h-4 mr-2" /> Sepia
+                        <Type className="w-4 h-4 shrink-0" />
+                        <span className="hidden sm:inline ml-1 text-xs">Sepia</span>
                       </Button>
                       <Button
                         variant={theme === "dark" ? "default" : "outline"}
                         onClick={() => setTheme("dark")}
-                        className="flex-1"
+                        className="px-2"
                       >
-                        <Moon className="w-4 h-4 mr-2" /> Dark
+                        <Moon className="w-4 h-4 shrink-0" />
+                        <span className="hidden sm:inline ml-1 text-xs">Dark</span>
                       </Button>
                     </div>
                   </div>
 
-                  {/* Font Size */}
-                  <div>
-                    <label className="text-sm font-medium mb-3 block flex items-center gap-2">
-                      <Type className="w-4 h-4" /> Font Size: {fontSize}px
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setFontSize(prev => Math.max(prev - 2, 10))}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <Slider
-                        value={[fontSize]}
-                        onValueChange={(v) => setFontSize(v[0])}
-                        min={10}
-                        max={32}
-                        step={1}
-                        className="flex-1"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setFontSize(prev => Math.min(prev + 2, 32))}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
+                  {/* Font Size (EPUB only) */}
+                  {fileType === "epub" && (
+                    <div>
+                      <label className="text-sm font-medium mb-3 block flex items-center gap-2">
+                        <Type className="w-4 h-4" /> Font Size: {fontSize}px
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setFontSize(prev => Math.max(prev - 2, 10))}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <Slider
+                          value={[fontSize]}
+                          onValueChange={(v) => setFontSize(v[0])}
+                          min={10}
+                          max={32}
+                          step={1}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setFontSize(prev => Math.min(prev + 2, 32))}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Zoom (PDF only) */}
                   {fileType === "pdf" && (

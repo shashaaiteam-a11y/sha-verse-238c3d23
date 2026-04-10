@@ -238,7 +238,8 @@ const PDFViewer = ({
       const availableHeight = containerEl ? containerEl.clientHeight : window.innerHeight - 120;
       const scaleByWidth = availableWidth / originalViewport.width;
       const scaleByHeight = availableHeight > 0 ? availableHeight / originalViewport.height : scaleByWidth;
-      const responsiveScale = Math.min(scaleByWidth, scaleByHeight, scale);
+      const fitScale = Math.min(scaleByWidth, scaleByHeight);
+      const responsiveScale = fitScale * (scale / 1.5);
       const viewport = page.getViewport({ scale: responsiveScale });
 
       // Set canvas dimensions
@@ -338,7 +339,7 @@ const PDFViewer = ({
     <div
       ref={containerRef}
       className={cn(
-        "flex flex-1 w-full h-full flex-col items-center justify-center",
+        "flex flex-1 w-full h-full flex-col items-center overflow-auto",
         className
       )}
     >
