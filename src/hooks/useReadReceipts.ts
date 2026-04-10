@@ -103,9 +103,42 @@ export const useMarkMessageRead = () => {
 export const getMessageStatus = (message: {
   sender_id: string;
   is_read?: boolean;
+  is_delivered?: boolean;
   created_at: string;
 }, currentUserId: string): MessageStatus => {
   if (message.sender_id !== currentUserId) return 'read'; // Not my message
   if (message.is_read) return 'read';
+  if (message.is_delivered) return 'delivered';
   return 'sent';
+};
+
+// Auto-mark incoming messages as delivered when app/conversation list loads
+export const useMarkMessagesDelivered = () => {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const markDelivered = async () => {
+      // Get all conversation IDs for this user
+      const { data: memberData } = await supabase
+        .from('conversation_members')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+
+      if (!memberData?.length) return;
+
+      const conversationIds = memberData.map((m: any) => m.conversation_id);
+
+      // Mark all undelivered messages from OTHER users as delivered
+      await supabase
+        .from('messages')
+        .update({ is_delivered: true } as any)
+        .in('conversation_id', conversationIds)
+        .neq('sender_id', user.id)
+        .eq('is_delivered', false);
+    };
+
+    markDelivered();
+  }, [user?.id]);
 };

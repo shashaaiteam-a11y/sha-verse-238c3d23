@@ -17,6 +17,8 @@ import {
 interface ChatTypingBarProps {
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: string) => void;
   isSending?: boolean;
+  onTyping?: () => void;
+  onStopTyping?: () => void;
 }
 
 export const ChatTypingBar = ({ onSendMessage, isSending }: ChatTypingBarProps) => {
