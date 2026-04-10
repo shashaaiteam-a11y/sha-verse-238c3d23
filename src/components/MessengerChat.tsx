@@ -66,6 +66,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   // Mark messages as read when conversation is opened
   useMarkMessagesRead(selectedConversation?.id || null);
+  
+  // Auto-mark messages as delivered when app loads
+  useMarkMessagesDelivered();
+
+  // Typing indicator
+  const { typingText, isAnyoneTyping, handleUserTyping, stopTyping } = useTypingIndicator(selectedConversation?.id || null);
 
   // Check if the other user is blocked by current user
   const isOtherUserBlocked = blockedUsers?.some(
