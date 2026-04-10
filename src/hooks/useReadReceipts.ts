@@ -21,19 +21,22 @@ export const useMarkMessagesRead = (conversationId: string | null) => {
 
     // Mark all messages in this conversation as read
     const markRead = async () => {
-      await supabase
+      const { error } = await supabase
         .from('messages')
-        .update({ is_read: true })
+        .update({ is_read: true, is_delivered: true })
         .eq('conversation_id', conversationId)
         .neq('sender_id', user.id) // Only mark others' messages as read
         .eq('is_read', false);
 
+      if (error) return;
+
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
     };
 
-    markRead();
+    void markRead();
   }, [conversationId, user?.id, queryClient]);
 };
 
@@ -56,6 +59,7 @@ export const useUnreadMessageCount = () => {
         // Only count messages sent to me (not by me)
         if (payload.new.sender_id !== user.id) {
           queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
           queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
         }
       })
@@ -65,6 +69,7 @@ export const useUnreadMessageCount = () => {
         table: 'messages',
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
         queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
       })
       .subscribe();
@@ -86,7 +91,7 @@ export const useMarkMessageRead = () => {
 
       const { error } = await supabase
         .from('messages')
-        .update({ is_read: true })
+        .update({ is_read: true, is_delivered: true })
         .eq('id', messageId)
         .neq('sender_id', user.id);
 
@@ -94,7 +99,9 @@ export const useMarkMessageRead = () => {
     },
     onSuccess: (_, { conversationId }) => {
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts', user?.id] });
     },
   });
 };
@@ -115,30 +122,70 @@ export const getMessageStatus = (message: {
 // Auto-mark incoming messages as delivered when app/conversation list loads
 export const useMarkMessagesDelivered = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!user?.id) return;
 
-    const markDelivered = async () => {
-      // Get all conversation IDs for this user
-      const { data: memberData } = await supabase
+    const invalidateDeliveryState = () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
+    };
+
+    const markDelivered = async (messageId?: string) => {
+      if (messageId) {
+        const { error } = await supabase
+          .from('messages')
+          .update({ is_delivered: true })
+          .eq('id', messageId)
+          .neq('sender_id', user.id)
+          .eq('is_delivered', false);
+
+        if (!error) invalidateDeliveryState();
+        return;
+      }
+
+      const { data: memberData, error: membersError } = await supabase
         .from('conversation_members')
         .select('conversation_id')
         .eq('user_id', user.id);
 
-      if (!memberData?.length) return;
+      if (membersError || !memberData?.length) return;
 
-      const conversationIds = memberData.map((m: any) => m.conversation_id);
+      const conversationIds = memberData
+        .map((member: { conversation_id: string | null }) => member.conversation_id)
+        .filter(Boolean);
 
-      // Mark all undelivered messages from OTHER users as delivered
-      await supabase
+      if (conversationIds.length === 0) return;
+
+      const { error } = await supabase
         .from('messages')
-        .update({ is_delivered: true } as any)
+        .update({ is_delivered: true })
         .in('conversation_id', conversationIds)
         .neq('sender_id', user.id)
         .eq('is_delivered', false);
+
+      if (!error) invalidateDeliveryState();
     };
 
-    markDelivered();
-  }, [user?.id]);
+    void markDelivered();
+
+    const channel = supabase
+      .channel(`message-delivery-${user.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      }, (payload) => {
+        if (payload.new.sender_id === user.id || payload.new.is_delivered) return;
+        void markDelivered(payload.new.id);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
 };

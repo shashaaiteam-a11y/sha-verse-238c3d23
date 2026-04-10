@@ -13,16 +13,38 @@ interface TypingEvent {
   is_typing: boolean;
 }
 
-export const useTypingIndicator = (conversationId: string | null) => {
+interface UseTypingIndicatorOptions {
+  disabled?: boolean;
+}
+
+export const useTypingIndicator = (
+  conversationId: string | null,
+  options?: UseTypingIndicatorOptions
+) => {
   const { user } = useAuth();
+  const { disabled = false } = options ?? {};
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({}); // user_id -> display_name
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
+  const channelRef = useRef<any>(null);
+
+  const clearTypingTimeout = useCallback(() => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
-    if (!conversationId || !user?.id) return;
+    if (!conversationId || !user?.id || disabled) {
+      setTypingUsers({});
+      isTypingRef.current = false;
+      clearTypingTimeout();
+      return;
+    }
 
     const channel = supabase.channel(`typing-${conversationId}`);
+    channelRef.current = channel;
 
     channel
       .on('broadcast', { event: 'typing' }, ({ payload }: { payload: TypingEvent }) => {
@@ -44,15 +66,19 @@ export const useTypingIndicator = (conversationId: string | null) => {
       .subscribe();
 
     return () => {
+      clearTypingTimeout();
+      setTypingUsers({});
+      isTypingRef.current = false;
+      channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [conversationId, user?.id]);
+  }, [conversationId, disabled, user?.id, clearTypingTimeout]);
 
   // Call this when user starts/stops typing
   const sendTypingEvent = useCallback(async (isTyping: boolean, displayName: string) => {
-    if (!conversationId || !user?.id) return;
+    if (!conversationId || !user?.id || disabled || !channelRef.current) return;
 
-    await supabase.channel(`typing-${conversationId}`).send({
+    await channelRef.current.send({
       type: 'broadcast',
       event: 'typing',
       payload: {
@@ -62,33 +88,42 @@ export const useTypingIndicator = (conversationId: string | null) => {
         is_typing: isTyping,
       } as TypingEvent,
     });
-  }, [conversationId, user?.id]);
+  }, [conversationId, disabled, user?.id]);
 
   // Smart typing handler - auto sends stop after 3 seconds of inactivity
   const handleUserTyping = useCallback((displayName: string) => {
+    if (disabled || !displayName.trim()) return;
+
     if (!isTypingRef.current) {
       isTypingRef.current = true;
-      sendTypingEvent(true, displayName);
+      void sendTypingEvent(true, displayName);
     }
 
     // Reset inactivity timer
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    clearTypingTimeout();
 
     typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
-      sendTypingEvent(false, displayName);
+      void sendTypingEvent(false, displayName);
     }, 3000);
-  }, [sendTypingEvent]);
+  }, [disabled, sendTypingEvent, clearTypingTimeout]);
 
   const stopTyping = useCallback((displayName: string) => {
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+    if (disabled || !displayName.trim()) return;
+
+    clearTypingTimeout();
+
+    if (!isTypingRef.current) return;
+
     isTypingRef.current = false;
-    sendTypingEvent(false, displayName);
-  }, [sendTypingEvent]);
+    void sendTypingEvent(false, displayName);
+  }, [disabled, sendTypingEvent, clearTypingTimeout]);
+
+  useEffect(() => {
+    return () => {
+      clearTypingTimeout();
+    };
+  }, [clearTypingTimeout]);
 
   // Build display text: "Suhail is typing..." or "Suhail and Rahul are typing..."
   const typingText = (() => {

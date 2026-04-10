@@ -82,7 +82,8 @@ export const useMessages = (conversationId: string | null) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts', user?.id] });
     }
   });
 
@@ -127,8 +128,9 @@ export const useMessages = (conversationId: string | null) => {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-          queryClient.invalidateQueries({ queryKey: ['conversations'] });
-          queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+          queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-count', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts', user?.id] });
         }
       )
       .on(
@@ -141,7 +143,9 @@ export const useMessages = (conversationId: string | null) => {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-count', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts', user?.id] });
         }
       )
       .subscribe();
@@ -149,7 +153,7 @@ export const useMessages = (conversationId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, queryClient]);
+  }, [conversationId, queryClient, user?.id]);
 
   return {
     messages,

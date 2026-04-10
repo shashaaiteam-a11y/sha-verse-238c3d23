@@ -49,11 +49,11 @@ export const useConversations = () => {
           // Get last message
           const { data: lastMessage } = await supabase
             .from('messages')
-            .select('content, created_at, sender_id')
+            .select('content, created_at, sender_id, is_read, is_delivered')
             .eq('conversation_id', cm.conversation_id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           return {
             ...cm.conversations,
@@ -96,7 +96,8 @@ export const useConversations = () => {
       return result.conversationId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts', user?.id] });
     }
   });
 
@@ -114,7 +115,8 @@ export const useConversations = () => {
           table: 'messages'
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
         }
       )
       .subscribe();
@@ -122,7 +124,7 @@ export const useConversations = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient]);
+  }, [user?.id, queryClient]);
 
   return {
     conversations,
