@@ -70,9 +70,6 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   // Auto-mark messages as delivered when app loads
   useMarkMessagesDelivered();
 
-  // Typing indicator
-  const { typingText, isAnyoneTyping, handleUserTyping, stopTyping } = useTypingIndicator(selectedConversation?.id || null);
-
   // Check if the other user is blocked by current user
   const isOtherUserBlocked = blockedUsers?.some(
     (b: any) => b.blocked_id === otherUserId
@@ -96,6 +93,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   // Only the BLOCKER sees restricted UI. Blocked person can still type (WhatsApp silent block).
   const isChatBlocked = isOtherUserBlocked;
+
+  // Typing indicator
+  const { typingText, isAnyoneTyping, handleUserTyping, stopTyping } = useTypingIndicator(
+    selectedConversation?.id || null,
+    { disabled: !selectedConversation?.id || !!isBlockedByOther || isChatBlocked }
+  );
 
   // Mute state per conversation (with muted_until support)
   const { data: muteData } = useQuery({
@@ -179,15 +182,21 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   });
 
   // Unread count per conversation
+  const conversationIds = conversations?.map((conversation: any) => conversation.id).filter(Boolean) || [];
+
   const { data: unreadCounts } = useQuery({
-    queryKey: ['unread-counts', user?.id],
+    queryKey: ['unread-counts', user?.id, conversationIds.join(',')],
     queryFn: async () => {
-      if (!user) return {};
-      const { data } = await supabase
+      if (!user || conversationIds.length === 0) return {};
+
+      const { data, error } = await supabase
         .from('messages')
         .select('conversation_id, id')
+        .in('conversation_id', conversationIds)
         .eq('is_read', false)
         .neq('sender_id', user.id);
+
+      if (error) throw error;
       
       const counts: Record<string, number> = {};
       data?.forEach((m: any) => {
@@ -214,7 +223,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       
       const { error } = await supabase
         .from('messages')
-        .update({ is_read: true })
+        .update({ is_read: true, is_delivered: true })
         .in('conversation_id', conversationIds)
         .neq('sender_id', user.id)
         .eq('is_read', false);
@@ -222,10 +231,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count', user?.id] });
       toast.success('All chats marked as read');
     }
   });
@@ -260,7 +269,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
         }
       )
       .subscribe();

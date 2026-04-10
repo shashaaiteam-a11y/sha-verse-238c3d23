@@ -110,6 +110,7 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
 
     onSendMessage(message.trim(), mediaUrl, mediaType);
     setMessage('');
+    onStopTyping?.();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -243,9 +244,13 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
           <Input
             value={message}
             onChange={(e) => {
-              setMessage(e.target.value);
-              if (e.target.value.trim()) {
+              const nextMessage = e.target.value;
+              setMessage(nextMessage);
+
+              if (nextMessage.trim()) {
                 onTyping?.();
+              } else {
+                onStopTyping?.();
               }
             }}
             onKeyDown={handleKeyDown}
