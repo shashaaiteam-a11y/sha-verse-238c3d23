@@ -233,7 +233,7 @@ const PDFViewer = ({
 
       // Calculate scale to fit container width
       const originalViewport = page.getViewport({ scale: 1 });
-      const availableWidth = Math.max(effectiveContainerWidth - 32, 320);
+      const availableWidth = Math.max(effectiveContainerWidth, 320);
       const responsiveScale = Math.min(
         availableWidth / originalViewport.width,
         scale
@@ -337,7 +337,7 @@ const PDFViewer = ({
     <div
       ref={containerRef}
       className={cn(
-        "flex min-h-[70vh] w-full flex-col items-center justify-center",
+        "flex flex-1 w-full h-full flex-col items-center justify-center",
         className
       )}
     >
@@ -350,7 +350,7 @@ const PDFViewer = ({
         <canvas
           ref={canvasRef}
           className={cn(
-            "rounded-lg shadow-lg bg-background",
+            "bg-background max-w-full",
             isDarkMode ? "filter invert hue-rotate-180" : ""
           )}
         />

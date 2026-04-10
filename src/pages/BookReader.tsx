@@ -257,7 +257,7 @@ const BookReader = () => {
 
   return (
     <div
-      className={cn("min-h-screen transition-colors duration-300", colors.bg, colors.text)}
+      className={cn("fixed inset-0 w-screen h-screen overflow-hidden transition-colors duration-300", colors.bg, colors.text)}
       onClick={toggleControls}
     >
       {/* Top Bar */}
@@ -544,8 +544,8 @@ const BookReader = () => {
       )}
 
       {/* Main Content */}
-      <main className="min-h-screen flex items-center justify-center p-4 pt-20 pb-24">
-        <div className="max-w-4xl w-full">
+      <main className="absolute inset-0 flex items-center justify-center pt-16 pb-20 overflow-auto">
+        <div className="w-full h-full">
           {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (
             <PDFViewer
