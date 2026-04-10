@@ -525,6 +525,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   ) : isBlockedByOther ? (
                     // WhatsApp silent block: blocked person sees no online/last seen (just empty)
                     <p className="text-xs text-muted-foreground">&nbsp;</p>
+                  ) : isAnyoneTyping && !isBlockedByOther ? (
+                    <p className="text-xs text-emerald-600 animate-pulse">
+                      {typingText}
+                    </p>
                   ) : (
                     <p className={cn(
                       "text-xs",
@@ -730,9 +734,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               ) : (
                 <ChatTypingBar 
                   onSendMessage={(content, mediaUrl, mediaType) => {
+                    stopTyping(user?.email?.split('@')[0] || 'User');
                     sendMessage.mutate({ content, mediaUrl, mediaType });
                   }}
                   isSending={sendMessage.isPending}
+                  onTyping={() => !isBlockedByOther && handleUserTyping(user?.email?.split('@')[0] || 'User')}
+                  onStopTyping={() => stopTyping(user?.email?.split('@')[0] || 'User')}
                 />
               )
             }
