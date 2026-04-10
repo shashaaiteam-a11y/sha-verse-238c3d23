@@ -379,6 +379,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     return <Check className="w-3.5 h-3.5 text-muted-foreground" />;
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex">
       {/* Sidebar - Conversations List */}
