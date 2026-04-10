@@ -339,7 +339,7 @@ const PDFViewer = ({
     <div
       ref={containerRef}
       className={cn(
-        "flex flex-1 w-full h-full flex-col items-center justify-center",
+        "flex flex-1 w-full h-full flex-col items-center overflow-auto",
         className
       )}
     >
