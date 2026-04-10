@@ -858,7 +858,9 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
             {convo.lastMessage?.sender_id === currentUserId && (
               convo.lastMessage?.is_read 
                 ? <CheckCheck className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                : <Check className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                : convo.lastMessage?.is_delivered
+                  ? <CheckCheck className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  : <Check className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             )}
             <p className="text-sm text-muted-foreground truncate">
               {isBlocked ? '🚫 Blocked' : (convo.lastMessage?.content || 'No messages yet')}
