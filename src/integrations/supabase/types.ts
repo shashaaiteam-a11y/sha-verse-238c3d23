@@ -1925,6 +1925,7 @@ export type Database = {
           created_at: string | null
           edited: boolean | null
           id: string
+          is_delivered: boolean | null
           is_read: boolean | null
           metadata: Json | null
           sender_id: string | null
@@ -1935,6 +1936,7 @@ export type Database = {
           created_at?: string | null
           edited?: boolean | null
           id?: string
+          is_delivered?: boolean | null
           is_read?: boolean | null
           metadata?: Json | null
           sender_id?: string | null
@@ -1945,6 +1947,7 @@ export type Database = {
           created_at?: string | null
           edited?: boolean | null
           id?: string
+          is_delivered?: boolean | null
           is_read?: boolean | null
           metadata?: Json | null
           sender_id?: string | null

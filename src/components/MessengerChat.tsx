@@ -12,7 +12,8 @@ import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileSettings } from '@/hooks/useProfileSettings';
 import { useIsUserOnline } from '@/hooks/usePresence';
-import { useMarkMessagesRead } from '@/hooks/useReadReceipts';
+import { useMarkMessagesRead, useMarkMessagesDelivered } from '@/hooks/useReadReceipts';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ChatTypingBar } from './chat/ChatTypingBar';
@@ -65,6 +66,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   // Mark messages as read when conversation is opened
   useMarkMessagesRead(selectedConversation?.id || null);
+  
+  // Auto-mark messages as delivered when app loads
+  useMarkMessagesDelivered();
+
+  // Typing indicator
+  const { typingText, isAnyoneTyping, handleUserTyping, stopTyping } = useTypingIndicator(selectedConversation?.id || null);
 
   // Check if the other user is blocked by current user
   const isOtherUserBlocked = blockedUsers?.some(
@@ -364,7 +371,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       // Blue double tick = Read
       return <CheckCheck className="w-3.5 h-3.5 text-blue-500" />;
     }
-    // Grey single tick = Sent (not yet read)
+    if (message.is_delivered) {
+      // Grey double tick = Delivered
+      return <CheckCheck className="w-3.5 h-3.5 text-muted-foreground" />;
+    }
+    // Grey single tick = Sent (not yet delivered)
     return <Check className="w-3.5 h-3.5 text-muted-foreground" />;
   };
 
@@ -516,6 +527,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   ) : isBlockedByOther ? (
                     // WhatsApp silent block: blocked person sees no online/last seen (just empty)
                     <p className="text-xs text-muted-foreground">&nbsp;</p>
+                  ) : isAnyoneTyping && !isBlockedByOther ? (
+                    <p className="text-xs text-emerald-600 animate-pulse">
+                      {typingText}
+                    </p>
                   ) : (
                     <p className={cn(
                       "text-xs",
@@ -721,9 +736,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               ) : (
                 <ChatTypingBar 
                   onSendMessage={(content, mediaUrl, mediaType) => {
+                    stopTyping(user?.email?.split('@')[0] || 'User');
                     sendMessage.mutate({ content, mediaUrl, mediaType });
                   }}
                   isSending={sendMessage.isPending}
+                  onTyping={() => !isBlockedByOther && handleUserTyping(user?.email?.split('@')[0] || 'User')}
+                  onStopTyping={() => stopTyping(user?.email?.split('@')[0] || 'User')}
                 />
               )
             }
@@ -842,7 +860,9 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
             {convo.lastMessage?.sender_id === currentUserId && (
               convo.lastMessage?.is_read 
                 ? <CheckCheck className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                : <Check className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                : convo.lastMessage?.is_delivered
+                  ? <CheckCheck className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  : <Check className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             )}
             <p className="text-sm text-muted-foreground truncate">
               {isBlocked ? '🚫 Blocked' : (convo.lastMessage?.content || 'No messages yet')}
