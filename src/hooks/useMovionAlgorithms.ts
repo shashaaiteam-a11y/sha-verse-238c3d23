@@ -2,6 +2,63 @@
 import { useMemo } from 'react';
 import { MovionVideo, VideoType, MovionSubscription } from '@/movion/types';
 
+// === Session Storage Keys ===
+const SWIPE_AWAY_KEY = 'movion_swipe_away_session';
+const SESSION_INTERESTS_KEY = 'movion_session_interests';
+
+// === Swipe-Away Tracking (localStorage session data) ===
+export const recordSwipeAway = (videoId: string) => {
+  try {
+    const data: Record<string, number> = JSON.parse(localStorage.getItem(SWIPE_AWAY_KEY) || '{}');
+    data[videoId] = (data[videoId] || 0) + 1;
+    localStorage.setItem(SWIPE_AWAY_KEY, JSON.stringify(data));
+  } catch { /* ignore */ }
+};
+
+const getSwipeAwayData = (): Record<string, number> => {
+  try {
+    return JSON.parse(localStorage.getItem(SWIPE_AWAY_KEY) || '{}');
+  } catch { return {}; }
+};
+
+// === Session Interest Tracking ===
+export const recordSessionInterest = (category: string) => {
+  try {
+    const data: Record<string, number> = JSON.parse(sessionStorage.getItem(SESSION_INTERESTS_KEY) || '{}');
+    data[category] = (data[category] || 0) + 1;
+    sessionStorage.setItem(SESSION_INTERESTS_KEY, JSON.stringify(data));
+  } catch { /* ignore */ }
+};
+
+const getSessionInterests = (): string[] => {
+  try {
+    const data: Record<string, number> = JSON.parse(sessionStorage.getItem(SESSION_INTERESTS_KEY) || '{}');
+    return Object.entries(data)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([cat]) => cat);
+  } catch { return []; }
+};
+
+// === Creator Diversity Pass ===
+// Prevents same channel from appearing consecutively
+const applyCreatorDiversity = (videos: MovionVideo[]): MovionVideo[] => {
+  if (videos.length <= 2) return videos;
+  const result = [...videos];
+  for (let i = 1; i < result.length - 1; i++) {
+    if (result[i].channelId === result[i - 1].channelId) {
+      // Find next video with a different channel to swap
+      for (let j = i + 1; j < result.length; j++) {
+        if (result[j].channelId !== result[i - 1].channelId) {
+          [result[i], result[j]] = [result[j], result[i]];
+          break;
+        }
+      }
+    }
+  }
+  return result;
+};
+
 // Transform Supabase video to MovionVideo type
 export const transformToMovionVideo = (video: any): MovionVideo => {
   const formatDuration = (seconds?: number) => {
@@ -47,6 +104,7 @@ export const transformToMovionVideo = (video: any): MovionVideo => {
 
 /**
  * HOME FEED ALGORITHM - Applied to Supabase data
+ * Now with session interest tracking + creator diversity
  */
 export const usePrioritizedVideos = (
   videos: any[] | undefined,
@@ -58,26 +116,24 @@ export const usePrioritizedVideos = (
   return useMemo(() => {
     if (!videos || videos.length === 0) return [];
 
-    // Get subscribed channel IDs
     const subscribedChannelIds = (subscriptions || []).map((s: any) => s.channel_id);
     
-    // Get user's watched categories for personalization
     const historyCategories = (watchHistory || [])
       .map((h: any) => h.videos?.category)
       .filter(Boolean);
     const userTopCategories = Array.from(new Set(historyCategories));
 
-    // Transform and filter videos
+    // Session interests for dynamic boost
+    const sessionInterests = getSessionInterests();
+
     let results = videos
-      .filter((v: any) => !v.is_short) // Only long videos
+      .filter((v: any) => !v.is_short)
       .map(transformToMovionVideo);
 
-    // Category filter
     if (category && category !== 'All') {
       results = results.filter(v => v.category === category);
     }
 
-    // Search filter
     if (searchQuery && searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       results = results.filter(v => 
@@ -87,67 +143,85 @@ export const usePrioritizedVideos = (
       );
     }
 
-    // Sort by algorithm score
     const now = Date.now();
-    return results.sort((a, b) => {
+    const sorted = results.sort((a, b) => {
       const calculateScore = (v: MovionVideo) => {
         const analytics = v.analytics!;
 
-        // WatchTime (Normalized)
-        const watchTimeScore = Math.min(analytics.watchTimeSeconds / 10000, 1) * 0.4;
-        
-        // Likes (Normalized)
-        const likesScore = Math.min(analytics.likes / 5000, 1) * 0.2;
-
-        // Dislikes (Normalized)
+        const watchTimeScore = Math.min(analytics.watchTimeSeconds / 10000, 1) * 0.35;
+        const likesScore = Math.min(analytics.likes / 5000, 1) * 0.15;
         const dislikesScore = Math.min((analytics.dislikes || 0) / 1000, 1) * 0.1;
-        
-        // Comments (Normalized)
         const commentsScore = Math.min(analytics.commentsCount / 500, 1) * 0.1;
         
         // Freshness - 3 day decay window
         const hoursOld = (now - analytics.uploadTimestampMs) / (1000 * 60 * 60);
         const freshnessScore = Math.max(1 - (hoursOld / 72), 0) * 0.15; 
         
-        // Category Match
-        const categoryMatchScore = userTopCategories.includes(v.category) ? 0.15 : 0;
+        // Category Match (history-based)
+        const categoryMatchScore = userTopCategories.includes(v.category) ? 0.1 : 0;
+
+        // Session interest boost (dynamic)
+        const sessionBoost = sessionInterests.includes(v.category) ? 0.05 : 0;
 
         // Subscription Boost
         const subBoost = subscribedChannelIds.includes(v.channelId) ? 1.2 : 1;
 
-        return (watchTimeScore + likesScore - dislikesScore + commentsScore + freshnessScore + categoryMatchScore) * subBoost;
+        return (watchTimeScore + likesScore - dislikesScore + commentsScore + freshnessScore + categoryMatchScore + sessionBoost) * subBoost;
       };
 
       return calculateScore(b) - calculateScore(a);
     });
+
+    // Apply creator diversity
+    return applyCreatorDiversity(sorted);
   }, [videos, subscriptions, watchHistory, searchQuery, category]);
 };
 
 /**
  * SHORTS/PULSE ALGORITHM - Applied to Supabase data
+ * Now with freshness boost (48hr decay), swipe-away penalty, creator diversity, hidden filter
  */
-export const usePrioritizedPulse = (shorts: any[] | undefined) => {
+export const usePrioritizedPulse = (shorts: any[] | undefined, hiddenVideoIds?: string[]) => {
   return useMemo(() => {
     if (!shorts || shorts.length === 0) return [];
 
-    const results = shorts.map(transformToMovionVideo);
+    const swipeAwayData = getSwipeAwayData();
+    const now = Date.now();
 
-    return results.sort((a, b) => {
+    let results = shorts.map(transformToMovionVideo);
+
+    // Filter out hidden (Not Interested) videos
+    if (hiddenVideoIds && hiddenVideoIds.length > 0) {
+      results = results.filter(v => !hiddenVideoIds.includes(v.id));
+    }
+
+    const sorted = results.sort((a, b) => {
       const calculatePulseScore = (v: MovionVideo) => {
         const analytics = v.analytics!;
 
-        const retentionScore = (analytics.averageRetention || 0.5) * 0.5;
-        const replaysScore = Math.min((analytics.replays || 0) / 10000, 1) * 0.3;
+        const retentionScore = (analytics.averageRetention || 0.5) * 0.4;
+        const replaysScore = Math.min((analytics.replays || 0) / 10000, 1) * 0.2;
         const likesScore = Math.min(analytics.likes / 50000, 1) * 0.1;
         const dislikesScore = Math.min((analytics.dislikes || 0) / 5000, 1) * 0.1;
-        const speedScore = (analytics.engagementSpeed || 0) * 0.2;
+        const speedScore = (analytics.engagementSpeed || 0) * 0.1;
 
-        return retentionScore + replaysScore + likesScore - dislikesScore + speedScore;
+        // Freshness boost - 48hr decay window for new Shorts
+        const hoursOld = (now - analytics.uploadTimestampMs) / (1000 * 60 * 60);
+        const freshnessScore = Math.max(1 - (hoursOld / 48), 0) * 0.2;
+
+        // Swipe-away penalty
+        const swipeCount = swipeAwayData[v.id] || 0;
+        const swipePenalty = Math.min(swipeCount * 0.1, 0.3); // max 0.3 penalty
+
+        return retentionScore + replaysScore + likesScore - dislikesScore + speedScore + freshnessScore - swipePenalty;
       };
 
       return calculatePulseScore(b) - calculatePulseScore(a);
     });
-  }, [shorts]);
+
+    // Apply creator diversity
+    return applyCreatorDiversity(sorted);
+  }, [shorts, hiddenVideoIds]);
 };
 
 /**
@@ -162,7 +236,6 @@ export const usePrioritizedSubscriptions = (
   return useMemo(() => {
     if (!videos || !subscriptions || subscriptions.length === 0) return [];
 
-    // Create subscription map with notification levels
     const subscriptionMap: Record<string, MovionSubscription> = {};
     subscriptions.forEach((s: any) => {
       subscriptionMap[s.channel_id] = {
@@ -174,14 +247,12 @@ export const usePrioritizedSubscriptions = (
 
     const subscribedChannelIds = Object.keys(subscriptionMap);
 
-    // Filter to only subscribed channels
     let results = videos
       .filter((v: any) => subscribedChannelIds.includes(v.channel_id))
       .filter((v: any) => !channelFilter || v.channel_id === channelFilter)
       .map(transformToMovionVideo);
 
     if (sortMode === 'recent') {
-      // Simple recency sort
       return results.sort((a, b) => {
         const dateA = a.analytics?.uploadTimestampMs || 0;
         const dateB = b.analytics?.uploadTimestampMs || 0;
@@ -189,7 +260,6 @@ export const usePrioritizedSubscriptions = (
       });
     }
 
-    // Smart sort: notification level priority + recency
     return results.sort((a, b) => {
       const subA = subscriptionMap[a.channelId];
       const subB = subscriptionMap[b.channelId];
@@ -200,7 +270,6 @@ export const usePrioritizedSubscriptions = (
       
       if (scoreA !== scoreB) return scoreB - scoreA;
       
-      // Recency as tiebreaker
       const dateA = a.analytics?.uploadTimestampMs || 0;
       const dateB = b.analytics?.uploadTimestampMs || 0;
       return dateB - dateA;
@@ -225,15 +294,12 @@ export const useRelatedVideos = (
       .sort((a, b) => {
         let scoreA = 0, scoreB = 0;
         
-        // Same channel bonus
         if (a.channelId === currentVideo.channel_id) scoreA += 2;
         if (b.channelId === currentVideo.channel_id) scoreB += 2;
         
-        // Same category bonus
         if (a.category === currentVideo.category) scoreA += 1;
         if (b.category === currentVideo.category) scoreB += 1;
         
-        // Views as tiebreaker
         scoreA += a.views / 10000000;
         scoreB += b.views / 10000000;
         

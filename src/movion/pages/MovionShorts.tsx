@@ -4,6 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useShorts } from '@/hooks/useShorts';
 import { useGlobalVideoRealtime } from '@/hooks/useMovionRealtime';
 import { usePrioritizedPulse } from '@/hooks/useMovionAlgorithms';
+import { useHiddenVideos } from '@/hooks/useHiddenVideos';
+import { recordSwipeAway } from '@/hooks/useMovionAlgorithms';
 import { ShortsPlayer } from '../components';
 import { Loader2 } from 'lucide-react';
 
@@ -15,13 +17,17 @@ const MovionShorts: React.FC = () => {
   // Enable realtime updates
   useGlobalVideoRealtime();
 
-  // Apply pulse algorithm for smart ordering
-  const shortsVideos = usePrioritizedPulse(shorts);
+  // Hidden videos (Not Interested)
+  const { hiddenVideos, hideVideo } = useHiddenVideos();
+
+  // Apply pulse algorithm for smart ordering (with hidden filter)
+  const shortsVideos = usePrioritizedPulse(shorts, hiddenVideos);
 
   const [activeId, setActiveId] = useState<string>(videoId || '');
   const [isGlobalMuted, setIsGlobalMuted] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
+  const activeStartTimeRef = useRef<number>(Date.now());
 
   // Set initial active ID when shorts load
   useEffect(() => {
@@ -31,6 +37,19 @@ const MovionShorts: React.FC = () => {
   }, [shortsVideos, videoId, activeId]);
 
   const activeIndex = useMemo(() => shortsVideos.findIndex(v => v.id === activeId), [shortsVideos, activeId]);
+
+  // Track swipe-away: when active video changes, record how long user watched
+  useEffect(() => {
+    activeStartTimeRef.current = Date.now();
+    return () => {
+      if (activeId) {
+        const watchMs = Date.now() - activeStartTimeRef.current;
+        if (watchMs < 2000 && watchMs > 200) {
+          recordSwipeAway(activeId);
+        }
+      }
+    };
+  }, [activeId]);
 
   const scrollToId = useCallback((id: string) => {
     if (!containerRef.current || isScrollingRef.current) return;
@@ -101,7 +120,9 @@ const MovionShorts: React.FC = () => {
       ref={containerRef}
     >
       {shortsVideos.map((video, idx) => {
-        const shouldLoadMedia = Math.abs(idx - activeIndex) <= 1;
+        // Pre-fetch: next 3 + previous 1 for smooth swiping
+        const diff = idx - activeIndex;
+        const shouldLoadMedia = diff >= -1 && diff <= 3;
         
         return (
           <ShortsPlayer 
@@ -111,6 +132,7 @@ const MovionShorts: React.FC = () => {
             isMuted={isGlobalMuted}
             onMuteToggle={() => setIsGlobalMuted(!isGlobalMuted)}
             shouldPreload={shouldLoadMedia}
+            onNotInterested={() => hideVideo(video.id)}
           />
         );
       })}
