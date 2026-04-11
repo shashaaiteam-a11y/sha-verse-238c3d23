@@ -1,50 +1,57 @@
 
 
-## WhatsApp-Style Complete Messaging System Enhancement
+## YouTube-Level Internal System Enhancements for Movion
 
-### Current State
-- Silent block trigger (`silent_block_message`) already drops messages at DB level -- working correctly
-- Blocked user sees normal chat UI and can "send" messages -- working correctly  
-- Blocked user sees single grey tick -- working correctly
-- Typing indicator hook exists (`useTypingIndicator.ts`) but is NOT connected to MessengerChat
-- Tick system is missing the **double grey tick** (delivered) state -- only has single grey (sent) and blue double (read)
-- No `is_delivered` column exists in messages table
+### Current State Analysis
+The Movion module already has solid foundations:
+- Shorts swipe with `snap-y snap-mandatory` + IntersectionObserver (70% threshold) 
+- Single active player (only `isActive` video plays, others pause)
+- Home feed algorithm with freshness, engagement, category match
+- Pulse algorithm with retention, replays, engagement speed
+- Subscription feed with notification level priority
+- Library system (History, Watch Later, Liked, Playlists)
 
-### What Needs to Be Done
+### Gaps Found (What's Missing vs YouTube)
 
-**1. Database: Add `is_delivered` column to messages table**
-- Add `is_delivered BOOLEAN DEFAULT false` to the `messages` table via migration
-- This enables the three-stage tick system: sent → delivered → read
+**1. Shorts Pre-fetching**: Currently loads ±1 video. YouTube pre-fetches next 2-3 for smoother experience.
 
-**2. Fix Tick System in `MessengerChat.tsx` (renderMessageTicks)**
-Current logic only handles 2 states. Update to 3 states:
-- `isBlockedByOther` → single grey tick ✓ (always)
-- `message.is_read` → double blue tick ✓✓ (blue)
-- `message.is_delivered` → double grey tick ✓✓ (grey)
-- Default → single grey tick ✓ (sent, not delivered)
+**2. Shorts Swipe-Away Tracking**: No tracking of "swiped away quickly" vs "watched fully" — this is the most important Shorts metric per YouTube's own docs.
 
-**3. Auto-mark messages as delivered (useReadReceipts.ts)**
-- When a user loads/opens the conversation list (not the specific chat), mark incoming messages as `is_delivered = true`
-- This simulates "message reached device" behavior
-- Create a new `useMarkMessagesDelivered` hook that runs on app load for all conversations
+**3. Pulse Algorithm Missing Freshness**: Home feed has freshness boost (3-day decay) but Shorts/Pulse algorithm has none — new Shorts should get priority.
 
-**4. Connect Typing Indicator to MessengerChat**
-- Import and use `useTypingIndicator` in `MessengerChat.tsx`
-- Show "typing..." text below the user name in the chat header (replacing online/last seen status when someone is typing)
-- Connect `ChatTypingBar` input onChange to `handleUserTyping`
-- Block typing indicator display when `isBlockedByOther` is true (blocked user should not see "typing...")
+**4. Creator Diversity in Feed**: No logic to prevent same channel appearing back-to-back in feeds.
 
-**5. Block typing broadcasts for blocked users**
-- In `useTypingIndicator`, do not send typing events if the user is blocked (to avoid leaking activity)
-- In the chat UI, suppress typing indicator display when `isBlockedByOther` is true
+**5. "Not Interested" Feedback**: Button exists in ShortsPlayer but doesn't affect algorithm (just shows a toast).
 
-### Files Changed (Messenger module only)
-- `src/components/MessengerChat.tsx` -- tick system, typing indicator integration
-- `src/hooks/useReadReceipts.ts` -- add `useMarkMessagesDelivered` hook
-- `src/components/chat/ChatTypingBar.tsx` -- pass typing callback prop
-- New migration SQL -- add `is_delivered` column
+**6. Session-Based Interest Tracking**: No tracking of what categories user watches in current session to adjust feed dynamically.
 
-### Files NOT Changed
-- No other modules (Home, Bookshelf, Groups, Profile, Motion)
+### Implementation Plan
+
+**File: `src/movion/pages/MovionShorts.tsx`**
+- Change pre-fetch window from `±1` to `±3` (next 3 + previous 1)
+- Track swipe-away behavior: if user spends <2 seconds on a short before swiping, record negative signal
+
+**File: `src/hooks/useMovionAlgorithms.ts`**
+- **Pulse Algorithm**: Add freshness boost (48hr decay window) — new Shorts ranked higher
+- **Pulse Algorithm**: Add swipe-away penalty using localStorage-based session data
+- **Home Feed + Pulse**: Add creator diversity logic — if same channel appears consecutively, swap positions
+- **Home Feed**: Add session interest tracking — boost categories watched in current session
+
+**File: `src/movion/components/ShortsPlayer.tsx`**
+- "Not Interested" button: store video ID in localStorage hidden list and emit event to algorithm
+- Track watch duration per short for swipe-away metric
+
+**File: `src/hooks/useHiddenVideos.ts`** (existing)
+- Ensure Shorts "Not Interested" uses same hidden videos system
+
+### What Won't Change
+- No other modules (Home feed, Bookshelf, Groups, Profile, NovaChat)
 - No global UI components
+- No database schema changes (all tracking via localStorage for session data)
+
+### Technical Details
+- Pre-fetch: `Math.abs(idx - activeIndex) <= 3` with direction bias (next 3 > prev 1)
+- Freshness in Pulse: `Math.max(1 - (hoursOld / 48), 0) * 0.2`
+- Creator diversity: post-sort pass that swaps consecutive same-channel videos
+- Swipe-away: track `{videoId, watchSeconds}` in session, penalize <2s views in scoring
 
