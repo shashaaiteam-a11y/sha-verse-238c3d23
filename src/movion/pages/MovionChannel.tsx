@@ -111,8 +111,6 @@ const MovionChannel = () => {
             <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
               <span>@{channel.username || channel.name?.toLowerCase().replace(/\s+/g, '')}</span>
               <span>•</span>
-              <span>{formatCount(channel.subscribers_count || 0)} subscribers</span>
-              <span>•</span>
               <span>{channelVideos.length} videos</span>
             </div>
             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
@@ -256,9 +254,6 @@ const MovionChannel = () => {
                   <h4 className="font-medium">Stats</h4>
                   <p className="text-muted-foreground text-sm mt-1">
                     Joined {channel.created_at ? new Date(channel.created_at).toLocaleDateString() : 'Recently'}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    {formatCount(channel.subscribers_count || 0)} subscribers
                   </p>
                 </div>
               </div>

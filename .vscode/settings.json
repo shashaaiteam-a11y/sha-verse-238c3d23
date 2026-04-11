@@ -1,3 +1,4 @@
 {
-    "deepseek.apiKey": "sk-9df59bf5a24d45ac989ef806dd4bfb0a"
+    "deepseek.apiKey": "sk-9df59bf5a24d45ac989ef806dd4bfb0a",
+    "workbench.browser.enableChatTools": true
 }
