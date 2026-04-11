@@ -33,6 +33,7 @@ interface ShortsPlayerProps {
   onMuteToggle: () => void;
   shouldPreload?: boolean;
   basePath?: string;
+  onNotInterested?: () => void;
 }
 
 export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({ 
@@ -41,7 +42,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
   isMuted, 
   onMuteToggle, 
   shouldPreload = false,
-  basePath = '/movion'
+  basePath = '/movion',
+  onNotInterested
 }) => {
   const navigate = useNavigate();
   const { recordEngagement, emitEvent } = useMovionStore();
@@ -181,7 +183,10 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => { toast.info('Not interested noted'); }}>
+                <DropdownMenuItem onClick={() => { 
+                  onNotInterested?.();
+                  toast.info('Not interested noted — video hidden from feed');
+                }}>
                   <EyeOff className="w-4 h-4 mr-2" />
                   Not interested
                 </DropdownMenuItem>
