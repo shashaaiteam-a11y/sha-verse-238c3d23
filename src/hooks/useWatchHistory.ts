@@ -114,6 +114,28 @@ export const useClearHistory = () => {
   });
 };
 
+export const useRemoveFromHistory = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (videoId: string) => {
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('watch_history')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('video_id', videoId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['watch-history'] });
+    },
+  });
+};
+
 export const useUpdateWatchProgress = () => {
   const { user } = useAuth();
 

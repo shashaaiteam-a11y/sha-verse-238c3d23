@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   History, Clock, ThumbsUp, Play, Trash2, Loader2
 } from "lucide-react";
-import { useWatchHistory, useClearHistory } from "@/hooks/useWatchHistory";
+import { useWatchHistory, useClearHistory, useRemoveFromHistory } from "@/hooks/useWatchHistory";
 import { useWatchLater, useToggleWatchLater, useClearWatchLater } from "@/hooks/useWatchLater";
 import { useLikedVideos } from "@/hooks/useLikedVideos";
 import { useMovionRealtime } from "@/hooks/useMovionRealtime";
@@ -84,6 +84,7 @@ const MovionLibrary = () => {
   const { watchLater, isLoading: watchLaterLoading } = useWatchLater();
   const { likedVideos, isLoading: likedLoading } = useLikedVideos();
   const clearHistory = useClearHistory();
+  const removeFromHistory = useRemoveFromHistory();
   const clearWatchLater = useClearWatchLater();
   const toggleWatchLater = useToggleWatchLater();
 
@@ -157,6 +158,15 @@ const MovionLibrary = () => {
                     key={video.id} 
                     video={video} 
                     onPlay={() => navigate(`/movion/watch/${video.id}`)}
+                    actions={
+                      <Button 
+                        variant="ghost" size="icon"
+                        className="opacity-0 group-hover:opacity-100 flex-shrink-0 self-start"
+                        onClick={() => removeFromHistory.mutate(video.id)}
+                      >
+                        <Trash2 className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    }
                   />
                 ))}
               </div>

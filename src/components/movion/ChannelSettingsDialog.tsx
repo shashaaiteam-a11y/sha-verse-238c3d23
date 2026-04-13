@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 interface Channel {
@@ -56,6 +57,7 @@ export const ChannelSettingsDialog = ({
   channel,
   videos = [],
 }: ChannelSettingsDialogProps) => {
+  const { user } = useAuth();
   const [name, setName] = useState(channel.name);
   const [description, setDescription] = useState(channel.description || "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -92,29 +94,31 @@ export const ChannelSettingsDialog = ({
       let bannerUrl = channel.banner_url;
 
       // Upload avatar if changed
-      if (avatarFile) {
-        const fileName = `${channel.id}/avatar-${Date.now()}`;
+      if (avatarFile && user) {
+        const fileName = `${user.id}/channel-avatar-${Date.now()}`;
         const { error: uploadError } = await supabase.storage
           .from("avatars")
           .upload(fileName, avatarFile, { upsert: true });
 
-        if (!uploadError) {
-          const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
-          avatarUrl = data.publicUrl;
+        if (uploadError) {
+          throw new Error(`Avatar upload failed: ${uploadError.message}`);
         }
+        const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+        avatarUrl = data.publicUrl;
       }
 
       // Upload banner if changed
-      if (bannerFile) {
-        const fileName = `${channel.id}/banner-${Date.now()}`;
+      if (bannerFile && user) {
+        const fileName = `${user.id}/channel-banner-${Date.now()}`;
         const { error: uploadError } = await supabase.storage
           .from("avatars")
           .upload(fileName, bannerFile, { upsert: true });
 
-        if (!uploadError) {
-          const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
-          bannerUrl = data.publicUrl;
+        if (uploadError) {
+          throw new Error(`Banner upload failed: ${uploadError.message}`);
         }
+        const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+        bannerUrl = data.publicUrl;
       }
 
       // Update channel
@@ -130,10 +134,19 @@ export const ChannelSettingsDialog = ({
 
       if (error) throw error;
 
+      // Reset file states after successful save
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      setBannerFile(null);
+      setBannerPreview(null);
+
+      // Invalidate all related queries so UI updates everywhere
+      queryClient.invalidateQueries({ queryKey: ["my-channel"] });
       queryClient.invalidateQueries({ queryKey: ["channel", channel.id] });
+      queryClient.invalidateQueries({ queryKey: ["channels"] });
       toast.success("Channel updated successfully");
-    } catch (error) {
-      toast.error("Failed to update channel");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update channel");
     } finally {
       setIsSaving(false);
     }
@@ -206,26 +219,28 @@ export const ChannelSettingsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-4 pt-4 pr-12 sm:px-6 sm:pt-6 sm:pr-12 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
             Channel Settings
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
-            <TabsTrigger value="videos" className="flex-1">Videos</TabsTrigger>
+        <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0 px-4 pb-4 sm:px-6 sm:pb-6">
+          <TabsList className="w-full flex-shrink-0 grid grid-cols-2">
+            <TabsTrigger value="profile" className="text-sm">Profile</TabsTrigger>
+            <TabsTrigger value="videos" className="text-sm">Videos</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile" className="space-y-4 mt-4">
+          <TabsContent value="profile" className="mt-4 flex-1 min-h-0">
+            <ScrollArea className="h-full max-h-[calc(85vh-160px)]">
+              <div className="space-y-4 pr-3">
             {/* Avatar */}
             <div>
               <Label>Channel Avatar</Label>
               <div className="flex items-center gap-4 mt-2">
-                <Avatar className="h-20 w-20">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
                   <AvatarImage src={avatarPreview || channel.avatar_url || undefined} />
                   <AvatarFallback className="text-xl bg-primary text-primary-foreground">
                     {name[0]?.toUpperCase()}
@@ -315,10 +330,13 @@ export const ChannelSettingsDialog = ({
                 </>
               )}
             </Button>
+              </div>
+            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="videos" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
+          <TabsContent value="videos" className="mt-4 flex-1 min-h-0">
+            <ScrollArea className="h-full max-h-[calc(85vh-160px)]">
+              <div className="pr-3">
               {videos.length > 0 ? (
                 <div className="space-y-3">
                   {videos.map((video) => (
@@ -327,7 +345,7 @@ export const ChannelSettingsDialog = ({
                       className="flex gap-3 p-3 rounded-lg border border-border bg-muted/30"
                     >
                       {/* Thumbnail */}
-                      <div className="w-24 h-16 rounded bg-muted overflow-hidden flex-shrink-0">
+                      <div className="w-16 h-12 sm:w-24 sm:h-16 rounded bg-muted overflow-hidden flex-shrink-0">
                         {video.thumbnail_url ? (
                           <img
                             src={video.thumbnail_url}
@@ -426,6 +444,7 @@ export const ChannelSettingsDialog = ({
                   <p>No videos uploaded yet</p>
                 </div>
               )}
+              </div>
             </ScrollArea>
           </TabsContent>
         </Tabs>

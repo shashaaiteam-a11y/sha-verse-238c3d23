@@ -106,17 +106,18 @@ export const VideoEditDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] flex flex-col p-0 gap-0 z-[70] overflow-hidden">
+        <DialogHeader className="px-4 pt-4 pr-12 sm:px-6 sm:pt-6 sm:pr-12 pb-2 flex-shrink-0">
           <DialogTitle>Edit Video</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 min-h-0">
+          <div className="space-y-4 py-4">
           {/* Thumbnail */}
           <div>
             <Label>Thumbnail</Label>
             <label className="cursor-pointer block mt-2">
-              <div className="w-full aspect-video rounded-lg bg-muted border-2 border-dashed border-border hover:border-primary transition-colors overflow-hidden">
+              <div className="w-full aspect-video max-h-[35vh] rounded-lg bg-muted border-2 border-dashed border-border hover:border-primary transition-colors overflow-hidden">
                 {(thumbnailPreview || video.thumbnail_url) ? (
                   <img
                     src={thumbnailPreview || video.thumbnail_url || ""}
@@ -165,9 +166,10 @@ export const VideoEditDialog = ({
               placeholder="Tell viewers about your video..."
             />
           </div>
+          </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-4 pb-4 sm:px-6 sm:pb-6 pt-2 flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

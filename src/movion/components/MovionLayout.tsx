@@ -11,6 +11,9 @@ import Logo from './Logo';
 import { ToastContainer } from './Toast';
 import { useMyChannel } from '@/hooks/useChannels';
 import { useAuth } from '@/contexts/AuthContext';
+import { MovionNotificationPanel } from './MovionNotificationPanel';
+import { MovionSearchOverlay } from './MovionSearchOverlay';
+import { useMovionNotifications } from '@/hooks/useMovionNotifications';
 
 interface MovionLayoutProps {
   children: React.ReactNode;
@@ -22,9 +25,19 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { searchQuery, setSearchQuery, addToSearchHistory } = useMovionStore();
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isMobileSearchFocused, setIsMobileSearchFocused] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const [mobileLocalSearch, setMobileLocalSearch] = useState('');
+  const bellBtnRef = useRef<HTMLButtonElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const { unreadCount } = useMovionNotifications();
   
   const { user } = useAuth();
   const { channel: myChannel, isLoading: channelLoading } = useMyChannel();
@@ -79,6 +92,9 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
     setIsProfileMenuOpen(false);
     setIsMobileMenuOpen(false);
+    setIsNotifOpen(false);
+    setIsSearchFocused(false);
+    setIsMobileSearchFocused(false);
   }, [location.pathname]);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -86,6 +102,12 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
     if (localSearch.trim()) {
       addToSearchHistory(localSearch);
       setSearchQuery(localSearch);
+      setIsSearchFocused(false);
+      setIsMobileSearchFocused(false);
+      // Navigate to home so search results are visible
+      if (!location.pathname.endsWith('/movion') && location.pathname !== '/movion') {
+        navigate('/movion');
+      }
     }
   };
 
@@ -133,28 +155,82 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
         </div>
 
         <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-[720px] items-center gap-2 px-8">
-          <div className="flex flex-1 items-center bg-background border border-border rounded-full overflow-hidden focus-within:border-primary h-10">
-            <input 
-              type="text" 
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder="Search MOVION" 
-              className="w-full bg-transparent px-5 py-2 outline-none text-foreground text-[15px] placeholder:text-muted-foreground"
+          <div ref={searchContainerRef} className="relative flex flex-1 items-center bg-background border border-border rounded-full overflow-visible focus-within:border-primary h-10">
+            <div className="flex flex-1 items-center bg-background border-0 rounded-full overflow-hidden h-10 w-full">
+              <input 
+                type="text" 
+                value={localSearch}
+                onChange={(e) => {
+                  setLocalSearch(e.target.value);
+                  setIsSearchFocused(true);
+                }}
+                onFocus={() => setIsSearchFocused(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setIsSearchFocused(false);
+                }}
+                placeholder="Search videos, channels, categories..." 
+                className="w-full bg-transparent px-5 py-2 outline-none text-foreground text-[15px] placeholder:text-muted-foreground"
+                autoComplete="off"
+              />
+              <button type="submit" className="bg-muted px-6 h-full border-l border-border hover:bg-muted/80 flex-shrink-0">
+                <Search size={20} className="text-muted-foreground" />
+              </button>
+            </div>
+            <MovionSearchOverlay
+              query={localSearch}
+              isVisible={isSearchFocused && localSearch.trim().length > 0}
+              onClose={() => setIsSearchFocused(false)}
+              onQueryChange={(q) => { setLocalSearch(q); setSearchQuery(q); }}
+              containerRef={searchContainerRef}
             />
-            <button type="submit" className="bg-muted px-6 h-full border-l border-border hover:bg-muted/80">
-              <Search size={20} className="text-muted-foreground" />
-            </button>
           </div>
         </form>
 
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile-only Search icon */}
+          <button
+            onClick={() => { setMobileLocalSearch(localSearch); setShowMobileSearch(true); }}
+            className="md:hidden p-2 hover:bg-muted rounded-full transition-all active:scale-90"
+            title="Search"
+          >
+            <Search size={20} />
+          </button>
+          {/* Mobile-only Create icon */}
+          <button
+            onClick={() => navigate(`${basePath}/upload`)}
+            className="sm:hidden p-2 hover:bg-muted rounded-full transition-all active:scale-90"
+            title="Create"
+          >
+            <Plus size={20} />
+          </button>
+          {/* Desktop Create button */}
           <button onClick={() => navigate(`${basePath}/upload`)} className="hidden sm:flex items-center gap-2 px-4 h-10 hover:bg-muted rounded-full border border-border">
             <Plus size={20} />
             <span className="font-bold text-sm">Create</span>
           </button>
-          <button className="p-2 hover:bg-muted rounded-full">
-            <Bell size={20} />
-          </button>
+          {/* Notification Bell with real-time unread count */}
+          <div className="relative">
+            <button
+              ref={bellBtnRef}
+              onClick={() => setIsNotifOpen(prev => !prev)}
+              className={`p-2 hover:bg-muted rounded-full relative transition-all ${
+                isNotifOpen ? 'bg-muted' : ''
+              }`}
+              title="Notifications"
+            >
+              <Bell size={20} className={unreadCount > 0 ? 'text-primary' : ''} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-in zoom-in duration-200">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <MovionNotificationPanel
+              isOpen={isNotifOpen}
+              onClose={() => setIsNotifOpen(false)}
+              triggerRef={bellBtnRef}
+            />
+          </div>
           <div ref={profileMenuRef} className="relative">
             <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="w-10 h-10 rounded-full overflow-hidden border border-border">
               {channelLoading ? (
@@ -193,6 +269,60 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
           </div>
         </div>
       </header>
+
+      {/* Mobile Full-Screen Search */}
+      {showMobileSearch && (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col md:hidden">
+          <div className="flex items-center gap-2 px-3 h-14 border-b border-border bg-card">
+            <button
+              onClick={() => setShowMobileSearch(false)}
+              className="p-2 hover:bg-muted rounded-full transition-all active:scale-90 flex-shrink-0"
+            >
+              <ArrowLeft size={22} />
+            </button>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (mobileLocalSearch.trim()) {
+                  addToSearchHistory(mobileLocalSearch);
+                  setSearchQuery(mobileLocalSearch);
+                  setLocalSearch(mobileLocalSearch);
+                  setShowMobileSearch(false);
+                  if (!location.pathname.endsWith('/movion') && location.pathname !== '/movion') {
+                    navigate('/movion');
+                  }
+                }
+              }}
+              className="flex flex-1 items-center"
+            >
+              <div ref={mobileSearchContainerRef} className="relative flex flex-1 items-center bg-background border border-border rounded-full overflow-visible focus-within:border-primary h-10">
+                <input
+                  ref={mobileSearchInputRef}
+                  type="text"
+                  value={mobileLocalSearch}
+                  onChange={(e) => { setMobileLocalSearch(e.target.value); setIsMobileSearchFocused(true); }}
+                  onFocus={() => setIsMobileSearchFocused(true)}
+                  onKeyDown={(e) => { if (e.key === 'Escape') setShowMobileSearch(false); }}
+                  placeholder="Search videos, channels..."
+                  className="w-full bg-transparent px-4 py-2 outline-none text-foreground text-[15px] placeholder:text-muted-foreground"
+                  autoComplete="off"
+                  autoFocus
+                />
+                <button type="submit" className="bg-muted px-4 h-full border-l border-border hover:bg-muted/80 flex-shrink-0 rounded-r-full">
+                  <Search size={18} className="text-muted-foreground" />
+                </button>
+                <MovionSearchOverlay
+                  query={mobileLocalSearch}
+                  isVisible={isMobileSearchFocused && mobileLocalSearch.trim().length > 0}
+                  onClose={() => { setIsMobileSearchFocused(false); setShowMobileSearch(false); }}
+                  onQueryChange={(q) => { setMobileLocalSearch(q); setSearchQuery(q); setLocalSearch(q); setShowMobileSearch(false); if (!location.pathname.endsWith('/movion') && location.pathname !== '/movion') { navigate('/movion'); } }}
+                  containerRef={mobileSearchContainerRef}
+                />
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}

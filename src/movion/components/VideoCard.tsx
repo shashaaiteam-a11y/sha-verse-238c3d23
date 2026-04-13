@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Play, CheckCircle2, Clock, ListPlus, MoreVertical } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MovionVideo } from '../types';
 import { useMovionStore } from '../store';
 import { useIsInWatchLater, useToggleWatchLater } from '@/hooks/useWatchLater';
@@ -10,6 +11,7 @@ import { useHiddenVideos } from '@/hooks/useHiddenVideos';
 import { useUndo } from '../contexts/UndoContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { VideoCardMenu } from './VideoCardMenu';
+import { ShareDialog } from '@/components/ShareDialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -39,6 +41,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
   const toggleSave = useToggleSave();
   
   const [isHovered, setIsHovered] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
@@ -98,9 +101,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
   };
 
   const handleShare = () => {
-    const url = window.location.origin + `${basePath}/watch/${video.id}`;
-    navigator.clipboard.writeText(url);
-    toast.success('Link copied to clipboard');
+    setShareOpen(true);
   };
 
   const handleDelete = () => {
@@ -174,7 +175,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
 
   if (layout === 'list' || layout === 'list-large') {
     const isLarge = layout === 'list-large';
-    return (
+    return (<>
       <div className={cn(
         "flex gap-3 md:gap-4 mb-2 group relative hover:bg-muted p-2 rounded-2xl transition-all",
         isLarge ? 'items-start' : 'items-center'
@@ -191,7 +192,12 @@ export const VideoCard: React.FC<VideoCardProps> = ({
           </div>
           <div className="flex flex-col gap-1">
             <div className={cn("flex items-center gap-1.5", isLarge && 'mt-1 order-last')}>
-              {isLarge && <img src={video.channelAvatar} className="w-6 h-6 rounded-full hidden sm:block object-cover border border-border" alt="" />}
+              {isLarge && (
+                <Avatar className="w-6 h-6 hidden sm:flex border border-border text-[10px]">
+                  <AvatarImage src={video.channelAvatar} className="object-cover" />
+                  <AvatarFallback className="text-[10px] font-semibold bg-primary text-primary-foreground">{video.channelName?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
+                </Avatar>
+              )}
               <Link to={`${basePath}/channel/${video.channelId}`} className="text-xs md:text-[13px] text-muted-foreground hover:text-foreground flex items-center gap-1 font-medium">
                 {video.channelName} <CheckCircle2 size={12} className="text-muted-foreground" />
               </Link>
@@ -203,10 +209,30 @@ export const VideoCard: React.FC<VideoCardProps> = ({
           </div>
         </div>
       </div>
-    );
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        postId={video.id}
+        postType="video"
+        postContent={video.title}
+        postImage={video.thumbnail}
+      />
+    </>);
   }
 
+  const shareDialogEl = (
+    <ShareDialog
+      open={shareOpen}
+      onOpenChange={setShareOpen}
+      postId={video.id}
+      postType="video"
+      postContent={video.title}
+      postImage={video.thumbnail}
+    />
+  );
+
   return (
+    <>
     <div 
       className="flex flex-col gap-3.5 group cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-400 bg-background"
       onMouseEnter={() => setIsHovered(true)}
@@ -216,7 +242,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({
       {renderThumbnail()}
       <div className="flex gap-3 px-0.5 bg-background">
         <Link to={`${basePath}/channel/${video.channelId}`} className="shrink-0 mt-0.5" onClick={(e) => e.stopPropagation()}>
-          <img src={video.channelAvatar} className="w-9 h-9 rounded-full object-cover border border-border" alt="" />
+          <Avatar className="w-9 h-9 border border-border">
+            <AvatarImage src={video.channelAvatar} className="object-cover" />
+            <AvatarFallback className="text-sm font-semibold bg-primary text-primary-foreground">{video.channelName?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
+          </Avatar>
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start gap-1 relative">
@@ -259,6 +288,8 @@ export const VideoCard: React.FC<VideoCardProps> = ({
         </div>
       </div>
     </div>
+    {shareDialogEl}
+    </>
   );
 };
 

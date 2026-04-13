@@ -1,10 +1,11 @@
 // Movion Studio - Creator Dashboard & Analytics (Live with Supabase)
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Video, BarChart3, DollarSign, MessageSquare,
   Settings, Users, Eye, ThumbsUp, Clock,
-  ArrowUp, MoreVertical, Edit, Trash2, Share2, Play, Loader2, Upload, PieChart
+  ArrowUp, MoreVertical, Edit, Trash2, Share2, Play, Loader2, Upload, PieChart,
+  ChevronDown, ChevronUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,8 @@ import {
 import { useMyChannel, useChannelVideos } from "@/hooks/useChannels";
 import { useCreatorStats } from "@/hooks/useCreatorDashboard";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { MONETIZATION_GOALS } from "../constants";
 import { toast } from "sonner";
 import { VideoEditDialog } from "@/components/movion/VideoEditDialog";
@@ -268,47 +271,15 @@ const MovionStudio = () => {
             {/* Monetization Progress */}
             <Card>
               <CardHeader>
-                <CardTitle>Monetization Progress</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Monetization</span>
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">Coming Soon</span>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Watch hours (estimated)
-                    </span>
-                    <span className="text-sm font-medium">
-                      {watchHours.toLocaleString()} / {MONETIZATION_GOALS.WATCH_TIME_HOURS.toLocaleString()}
-                    </span>
-                  </div>
-                  <Progress value={Math.min(watchHoursProgress, 100)} />
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Subscribers
-                    </span>
-                    <span className="text-sm font-medium">
-                      {(channel.subscribers_count || 0).toLocaleString()} / {MONETIZATION_GOALS.SUBSCRIBERS.toLocaleString()}
-                    </span>
-                  </div>
-                  <Progress value={Math.min(subscribersProgress, 100)} />
-                </div>
-                
-                {watchHoursProgress >= 100 && subscribersProgress >= 100 ? (
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <p className="text-green-500 font-medium">
-                      🎉 Congratulations! You're eligible for monetization
-                    </p>
-                    <Button className="mt-3" size="sm">Apply now</Button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Complete both goals to enable monetization on your channel
-                  </p>
-                )}
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Monetization feature is coming soon. Keep creating great content and growing your channel!
+                </p>
               </CardContent>
             </Card>
             
@@ -365,9 +336,6 @@ const MovionStudio = () => {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setEditVideo(video)}>
                               <Edit className="w-4 h-4 mr-2" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setAnalyticsVideo(video)}>
-                              <PieChart className="w-4 h-4 mr-2" /> Analytics
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleShare(video)}>
                               <Share2 className="w-4 h-4 mr-2" /> Share
@@ -474,9 +442,6 @@ const MovionStudio = () => {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => setEditVideo(video)}>
                                     <Edit className="w-4 h-4 mr-2" /> Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => setAnalyticsVideo(video)}>
-                                    <PieChart className="w-4 h-4 mr-2" /> Analytics
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     className="text-destructive"
@@ -634,63 +599,6 @@ const MovionStudio = () => {
               </CardContent>
             </Card>
 
-            {/* Geographic Analytics (Simulated) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Geographic Analytics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Top Countries */}
-                  <div>
-                    <h4 className="font-medium mb-3 text-sm">Top Countries</h4>
-                    <div className="space-y-2">
-                      {[
-                        { country: 'India', views: Math.round(totalViews * 0.35), subs: Math.round((channel.subscribers_count || 0) * 0.32) },
-                        { country: 'United States', views: Math.round(totalViews * 0.25), subs: Math.round((channel.subscribers_count || 0) * 0.28) },
-                        { country: 'Pakistan', views: Math.round(totalViews * 0.15), subs: Math.round((channel.subscribers_count || 0) * 0.15) },
-                        { country: 'Bangladesh', views: Math.round(totalViews * 0.10), subs: Math.round((channel.subscribers_count || 0) * 0.10) },
-                        { country: 'United Kingdom', views: Math.round(totalViews * 0.08), subs: Math.round((channel.subscribers_count || 0) * 0.08) },
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-                          <span className="font-medium text-sm">{item.country}</span>
-                          <div className="flex gap-4 text-xs text-muted-foreground">
-                            <span>{formatCount(item.views)} views</span>
-                            <span>{formatCount(item.subs)} subs</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Top States/Regions */}
-                  <div>
-                    <h4 className="font-medium mb-3 text-sm">Top Regions</h4>
-                    <div className="space-y-2">
-                      {[
-                        { state: 'Maharashtra, India', views: Math.round(totalViews * 0.12), subs: Math.round((channel.subscribers_count || 0) * 0.10) },
-                        { state: 'California, US', views: Math.round(totalViews * 0.08), subs: Math.round((channel.subscribers_count || 0) * 0.09) },
-                        { state: 'Delhi, India', views: Math.round(totalViews * 0.07), subs: Math.round((channel.subscribers_count || 0) * 0.08) },
-                        { state: 'Punjab, Pakistan', views: Math.round(totalViews * 0.06), subs: Math.round((channel.subscribers_count || 0) * 0.06) },
-                        { state: 'Texas, US', views: Math.round(totalViews * 0.05), subs: Math.round((channel.subscribers_count || 0) * 0.05) },
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-                          <span className="font-medium text-sm">{item.state}</span>
-                          <div className="flex gap-4 text-xs text-muted-foreground">
-                            <span>{formatCount(item.views)} views</span>
-                            <span>{formatCount(item.subs)} subs</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Watch Time Stats */}
             <Card>
               <CardHeader>
@@ -719,117 +627,44 @@ const MovionStudio = () => {
           </div>
         )}
         
-        {/* Monetization Tab - YouTube-like */}
+        {/* Monetization Tab - Coming Soon */}
         {activeTab === "monetization" && (
           <div className="space-y-6">
             <h1 className="text-2xl font-bold">Monetization</h1>
             
-            {/* Eligibility Card */}
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-primary" />
-                  Eligibility Requirements
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Watch Hours */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="flex items-center gap-2 text-sm">
-                      <Clock className="w-4 h-4" />
-                      {MONETIZATION_GOALS.WATCH_TIME_HOURS.toLocaleString()} watch hours (past 12 months)
-                    </span>
-                    <span className={`text-sm font-medium ${watchHoursProgress >= 100 ? "text-green-500" : "text-muted-foreground"}`}>
-                      {watchHoursProgress >= 100 ? "✓ Complete" : `${watchHours.toLocaleString()} / ${MONETIZATION_GOALS.WATCH_TIME_HOURS.toLocaleString()}`}
-                    </span>
-                  </div>
-                  <Progress value={Math.min(watchHoursProgress, 100)} className="h-3" />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {Math.max(0, MONETIZATION_GOALS.WATCH_TIME_HOURS - watchHours).toLocaleString()} hours remaining
-                  </p>
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <DollarSign className="w-10 h-10 text-primary" />
                 </div>
-                
-                {/* Subscribers */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="flex items-center gap-2 text-sm">
-                      <Users className="w-4 h-4" />
-                      {MONETIZATION_GOALS.SUBSCRIBERS.toLocaleString()} subscribers
-                    </span>
-                    <span className={`text-sm font-medium ${subscribersProgress >= 100 ? "text-green-500" : "text-muted-foreground"}`}>
-                      {subscribersProgress >= 100 ? "✓ Complete" : `${(channel.subscribers_count || 0).toLocaleString()} / ${MONETIZATION_GOALS.SUBSCRIBERS.toLocaleString()}`}
-                    </span>
+                <h2 className="text-2xl font-bold mb-2">Coming Soon</h2>
+                <p className="text-muted-foreground max-w-md mb-6">
+                  Monetization is on its way! We're working hard to bring this feature to Movion. Stay tuned and keep creating amazing content.
+                </p>
+
+                <div className="w-full max-w-md space-y-4 text-left bg-muted/50 rounded-xl p-6">
+                  <h3 className="font-semibold text-sm text-center mb-4">Eligibility Requirements (Preview)</h3>
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">7,500 watch hours (in last 12 months)</span>
                   </div>
-                  <Progress value={Math.min(subscribersProgress, 100)} className="h-3" />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {Math.max(0, MONETIZATION_GOALS.SUBSCRIBERS - (channel.subscribers_count || 0)).toLocaleString()} subscribers remaining
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <Users className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">2,500 subscribers (in last 12 months)</span>
+                  </div>
                 </div>
 
-                {/* Status */}
-                {watchHoursProgress >= 100 && subscribersProgress >= 100 ? (
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <p className="text-green-500 font-medium flex items-center gap-2">
-                      🎉 Congratulations! You're eligible for monetization
-                    </p>
-                    <Button className="mt-3" size="sm">Apply for Partner Program</Button>
-                  </div>
-                ) : (
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground">
-                      Complete both requirements to enable monetization on your channel. Keep creating great content!
-                    </p>
-                  </div>
-                )}
+                <p className="text-xs text-muted-foreground mt-6">
+                  We'll notify you when monetization becomes available.
+                </p>
               </CardContent>
             </Card>
-
-            {/* Monetization Summary (if eligible) */}
-            {(watchHoursProgress >= 100 && subscribersProgress >= 100) && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground">Estimated Earnings</p>
-                    <p className="text-2xl font-bold mt-1">$0.00</p>
-                    <p className="text-xs text-muted-foreground mt-1">This month</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground">Ad Revenue</p>
-                    <p className="text-2xl font-bold mt-1">$0.00</p>
-                    <p className="text-xs text-muted-foreground mt-1">From video ads</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground">Memberships</p>
-                    <p className="text-2xl font-bold mt-1">$0.00</p>
-                    <p className="text-xs text-muted-foreground mt-1">Channel memberships</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground">Super Chats</p>
-                    <p className="text-2xl font-bold mt-1">$0.00</p>
-                    <p className="text-xs text-muted-foreground mt-1">From live streams</p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </div>
         )}
         
         {/* Comments Tab */}
         {activeTab === "comments" && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold">Comments</h1>
-            <div className="text-center py-12 text-muted-foreground">
-              <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p>No comments to review</p>
-            </div>
-          </div>
+          <CommentsTab channelVideos={channelVideos} />
         )}
       </div>
 
@@ -858,6 +693,167 @@ const MovionStudio = () => {
         channel={channel}
         videos={channelVideos}
       />
+    </div>
+  );
+};
+
+// Comments Tab Component
+const CommentsTab = ({ channelVideos }: { channelVideos: any[] }) => {
+  const [expandedVideos, setExpandedVideos] = useState<Record<string, boolean>>({});
+  const videoIds = useMemo(() => channelVideos.map((v: any) => v.id), [channelVideos]);
+
+  const toggleVideo = (videoId: string) => {
+    setExpandedVideos(prev => ({ ...prev, [videoId]: !prev[videoId] }));
+  };
+
+  const { data: allComments, isLoading: commentsLoading } = useQuery({
+    queryKey: ['studio-all-comments', videoIds],
+    queryFn: async () => {
+      if (videoIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
+        .in('video_id', videoIds)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: videoIds.length > 0,
+  });
+
+  const commentsByVideo = useMemo(() => {
+    if (!allComments) return {};
+    const grouped: Record<string, any[]> = {};
+    for (const comment of allComments) {
+      const vid = comment.video_id;
+      if (!grouped[vid]) grouped[vid] = [];
+      grouped[vid].push(comment);
+    }
+    return grouped;
+  }, [allComments]);
+
+  const videoMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const v of channelVideos) {
+      map[v.id] = v;
+    }
+    return map;
+  }, [channelVideos]);
+
+  const videosWithComments = useMemo(() => {
+    return channelVideos.filter((v: any) => commentsByVideo[v.id]?.length > 0);
+  }, [channelVideos, commentsByVideo]);
+
+  const totalComments = allComments?.length || 0;
+
+  if (commentsLoading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Comments</h1>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (totalComments === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Comments</h1>
+        <div className="text-center py-12 text-muted-foreground">
+          <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <p>No comments on your videos yet</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Comments</h1>
+        <span className="text-sm text-muted-foreground">
+          {totalComments} comment{totalComments !== 1 ? 's' : ''} total
+        </span>
+      </div>
+
+      {videosWithComments.map((video: any) => {
+        const videoComments = commentsByVideo[video.id] || [];
+        const isExpanded = expandedVideos[video.id] ?? false;
+        return (
+          <Card key={video.id}>
+            <CardHeader
+              className="pb-3 cursor-pointer select-none hover:bg-muted/30 transition-colors rounded-t-lg"
+              onClick={() => toggleVideo(video.id)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative w-20 h-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                  {video.thumbnail_url ? (
+                    <img
+                      src={video.thumbnail_url}
+                      alt={video.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Play className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-sm font-medium truncate">{video.title}</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {videoComments.length} comment{videoComments.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="flex-shrink-0 text-muted-foreground">
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5" />
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            {isExpanded && (
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                {videoComments.map((comment: any) => (
+                  <div key={comment.id} className="flex gap-3 p-3 rounded-lg bg-muted/50">
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarImage src={comment.profiles?.avatar_url} />
+                      <AvatarFallback className="text-xs">
+                        {(comment.profiles?.display_name || comment.profiles?.username || '?')[0]?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">
+                          {comment.profiles?.display_name || comment.profiles?.username || 'User'}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground/80 mt-1 break-words">{comment.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 };

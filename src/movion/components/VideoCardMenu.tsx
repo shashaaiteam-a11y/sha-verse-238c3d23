@@ -1,5 +1,5 @@
-// VideoCard Menu Component - With proper outside click handling
-import React, { useEffect, useRef } from 'react';
+// VideoCard Menu Component - With proper outside click handling and auto-positioning
+import React, { useEffect, useRef, useState } from 'react';
 import { Clock, X, Share2, Trash2, Download, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +33,19 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
   position = 'right',
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [openUpward, setOpenUpward] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    // If menu bottom goes beyond viewport (accounting for footer ~64px), flip upward
+    if (rect.bottom > viewportHeight - 64) {
+      setOpenUpward(true);
+    } else {
+      setOpenUpward(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -79,8 +92,9 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
     <div
       ref={menuRef}
       className={cn(
-        "absolute top-full mt-1 w-56 bg-popover border border-border rounded-xl shadow-lg z-50 py-2",
-        "animate-in fade-in slide-in-from-top-2 duration-200",
+        "absolute w-56 bg-popover border border-border rounded-xl shadow-lg z-50 py-2",
+        "animate-in fade-in duration-200",
+        openUpward ? "bottom-full mb-1 slide-in-from-bottom-2" : "top-full mt-1 slide-in-from-top-2",
         position === 'right' ? 'right-0' : 'left-0'
       )}
       onClick={(e) => e.stopPropagation()}
@@ -91,14 +105,6 @@ export const VideoCardMenu: React.FC<VideoCardMenuProps> = ({
       >
         <Clock size={18} className={isSavedInWatchLater ? 'text-primary' : ''} />
         {isSavedInWatchLater ? 'Remove from Watch Later' : 'Save to Watch Later'}
-      </button>
-      
-      <button
-        onClick={handleAction(onSave)}
-        className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-3 transition-colors text-popover-foreground"
-      >
-        <Bookmark size={18} className={isSaved ? 'fill-current text-primary' : ''} />
-        {isSaved ? 'Remove from Saved' : 'Save'}
       </button>
       
       <button

@@ -82,7 +82,7 @@ export const transformToMovionVideo = (video: any): MovionVideo => {
     duration: formatDuration(video.duration),
     channelId: video.channel_id,
     channelName: video.channels?.name || 'Unknown Channel',
-    channelAvatar: video.channels?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${video.channel_id}`,
+    channelAvatar: video.channels?.avatar_url || '',
     category: video.category || 'Other',
     tags: video.tags || [],
     analytics: {

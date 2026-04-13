@@ -1,5 +1,5 @@
 // Movion Channel Page - Live with Supabase
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Search, Grid3X3, ListVideo, Users, Play, Loader2 } from "lucide-react";
 import { useChannel, useChannelVideos } from "@/hooks/useChannels";
@@ -19,7 +19,7 @@ const formatDuration = (seconds?: number) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-const transformVideo = (video: any): MovionVideo => ({
+const transformVideo = (video: any, channelData?: any): MovionVideo => ({
   id: video.id,
   title: video.title || 'Untitled',
   description: video.description || '',
@@ -32,8 +32,8 @@ const transformVideo = (video: any): MovionVideo => ({
   timestamp: video.created_at ? new Date(video.created_at).toLocaleDateString() : 'Recently',
   duration: formatDuration(video.duration),
   channelId: video.channel_id,
-  channelName: video.channels?.name || 'Unknown Channel',
-  channelAvatar: video.channels?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${video.channel_id}`,
+  channelName: channelData?.name || video.channels?.name || 'Unknown Channel',
+  channelAvatar: channelData?.avatar_url || video.channels?.avatar_url || '',
   category: video.category || 'Other',
   tags: video.tags || [],
 });
@@ -47,10 +47,39 @@ const MovionChannel = () => {
   
   const [activeTab, setActiveTab] = useState("videos");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortMode, setSortMode] = useState<"latest" | "popular" | "oldest">("latest");
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const channelVideos = (videos || []).map(transformVideo);
+  const rawVideos = videos || [];
+  const channelVideos = rawVideos.map(v => transformVideo(v, channel));
   const longVideos = channelVideos.filter(v => v.type === VideoType.LONG);
   const shortVideos = channelVideos.filter(v => v.type === VideoType.SHORT);
+
+  // Build a map from video id to raw created_at for accurate sorting
+  const createdAtMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    rawVideos.forEach((v: any) => { if (v.id && v.created_at) map[v.id] = v.created_at; });
+    return map;
+  }, [rawVideos]);
+
+  const sortVideos = (list: MovionVideo[]) => {
+    switch (sortMode) {
+      case "popular":
+        return [...list].sort((a, b) => b.views - a.views);
+      case "oldest":
+        return [...list].sort((a, b) => 
+          new Date(createdAtMap[a.id] || 0).getTime() - new Date(createdAtMap[b.id] || 0).getTime()
+        );
+      case "latest":
+      default:
+        return [...list].sort((a, b) => 
+          new Date(createdAtMap[b.id] || 0).getTime() - new Date(createdAtMap[a.id] || 0).getTime()
+        );
+    }
+  };
+
+  const sortedLongVideos = useMemo(() => sortVideos(longVideos), [longVideos, sortMode, createdAtMap]);
+  const sortedShortVideos = useMemo(() => sortVideos(shortVideos), [shortVideos, sortMode, createdAtMap]);
   
   if (channelLoading) {
     return (
@@ -151,9 +180,6 @@ const MovionChannel = () => {
             </TabsList>
             
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <Search className="w-5 h-5" />
-              </Button>
               <Button 
                 variant="ghost" 
                 size="icon"
@@ -169,11 +195,29 @@ const MovionChannel = () => {
           {/* Videos Tab */}
           <TabsContent value="videos" className="mt-6">
             <div className="flex items-center gap-2 mb-4">
-              <Button variant="secondary" size="sm" className="rounded-full">
+              <Button 
+                variant={sortMode === "latest" ? "secondary" : "ghost"} 
+                size="sm" 
+                className="rounded-full"
+                onClick={() => setSortMode("latest")}
+              >
                 Latest
               </Button>
-              <Button variant="ghost" size="sm" className="rounded-full">
+              <Button 
+                variant={sortMode === "popular" ? "secondary" : "ghost"} 
+                size="sm" 
+                className="rounded-full"
+                onClick={() => setSortMode("popular")}
+              >
                 Popular
+              </Button>
+              <Button 
+                variant={sortMode === "oldest" ? "secondary" : "ghost"} 
+                size="sm" 
+                className="rounded-full"
+                onClick={() => setSortMode("oldest")}
+              >
+                Oldest
               </Button>
             </div>
             
@@ -191,8 +235,8 @@ const MovionChannel = () => {
                 ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                 : "space-y-4"
               }>
-                {longVideos.map((video) => (
-                  <VideoCard key={video.id} video={video} layout={viewMode === "list" ? "list" : "grid"} />
+                {sortedLongVideos.map((video) => (
+                  <VideoCard key={video.id} video={video} layout={viewMode === "list" ? "list" : "grid"} activeMenuId={activeMenuId} onMenuToggle={setActiveMenuId} />
                 ))}
               </div>
             )}
@@ -206,6 +250,32 @@ const MovionChannel = () => {
           
           {/* Shorts Tab */}
           <TabsContent value="shorts" className="mt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Button 
+                variant={sortMode === "latest" ? "secondary" : "ghost"} 
+                size="sm" 
+                className="rounded-full"
+                onClick={() => setSortMode("latest")}
+              >
+                Latest
+              </Button>
+              <Button 
+                variant={sortMode === "popular" ? "secondary" : "ghost"} 
+                size="sm" 
+                className="rounded-full"
+                onClick={() => setSortMode("popular")}
+              >
+                Popular
+              </Button>
+              <Button 
+                variant={sortMode === "oldest" ? "secondary" : "ghost"} 
+                size="sm" 
+                className="rounded-full"
+                onClick={() => setSortMode("oldest")}
+              >
+                Oldest
+              </Button>
+            </div>
             {videosLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                 {[1, 2, 3, 4, 5, 6].map(i => (
@@ -214,7 +284,7 @@ const MovionChannel = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {shortVideos.map((video) => (
+                {sortedShortVideos.map((video) => (
                   <div 
                     key={video.id}
                     className="relative aspect-[9/16] rounded-xl overflow-hidden cursor-pointer group"

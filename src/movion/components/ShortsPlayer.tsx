@@ -176,26 +176,6 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
             <button onClick={onMuteToggle} className="p-2.5 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full text-white transition-all active:scale-90">
               {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
             </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-2.5 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full text-white transition-all active:scale-90">
-                  <MoreVertical size={24} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => { 
-                  onNotInterested?.();
-                  toast.info('Not interested noted — video hidden from feed');
-                }}>
-                  <EyeOff className="w-4 h-4 mr-2" />
-                  Not interested
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { toast.info('Reported'); }}>
-                  <Flag className="w-4 h-4 mr-2" />
-                  Report
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 

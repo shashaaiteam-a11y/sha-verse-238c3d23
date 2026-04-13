@@ -28,6 +28,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { SubscribeButton } from "@/movion/components/SubscribeButton";
+import { ShareDialog } from "@/components/ShareDialog";
 
 const MovionWatch = () => {
   const { videoId } = useParams();
@@ -61,7 +62,18 @@ const MovionWatch = () => {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [isCommentsOpen, setIsCommentsOpen] = useState(true);
+  const [shareOpen, setShareOpen] = useState(false);
   
+  // Reload and play video when videoId changes
+  useEffect(() => {
+    if (videoRef.current && video) {
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
+      setProgress(0);
+      setIsPlaying(true);
+    }
+  }, [video?.id]);
+
   // Add to history and increment views on mount
   useEffect(() => {
     if (video && user) {
@@ -165,9 +177,7 @@ const MovionWatch = () => {
   };
 
   const handleShare = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url);
-    toast.success("Link copied to clipboard");
+    setShareOpen(true);
   };
 
   const handleDownload = () => {
@@ -208,7 +218,15 @@ const MovionWatch = () => {
               poster={video.thumbnail_url}
               className="w-full h-full object-contain"
               autoPlay
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={() => {
+                if (videoRef.current) {
+                  if (videoRef.current.paused) {
+                    videoRef.current.play().catch(() => {});
+                  } else {
+                    videoRef.current.pause();
+                  }
+                }
+              }}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
             />
@@ -305,15 +323,6 @@ const MovionWatch = () => {
                 <Button variant="secondary" className="rounded-full gap-2" onClick={handleShare}>
                   <Share2 className="w-5 h-5" />
                   Share
-                </Button>
-                
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="rounded-full"
-                  onClick={handleSave}
-                >
-                  <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-current text-primary' : ''}`} />
                 </Button>
                 
                 {/* Three Dots Menu with all actions */}
@@ -488,6 +497,15 @@ const MovionWatch = () => {
           ))}
         </div>
       </div>
+
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        postId={video.id}
+        postType="video"
+        postContent={video.title}
+        postImage={video.thumbnail_url}
+      />
     </div>
   );
 };
