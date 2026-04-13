@@ -1,26 +1,18 @@
-// Movion Library Page - YouTube-style Library with History, Watch Later, Liked, Playlists
+// Movion Library Page - YouTube-style Library with History, Watch Later, Liked
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
-  History, Clock, ThumbsUp, ListVideo, Play, Trash2, Loader2, Plus, Lock, Globe, MoreVertical
+  History, Clock, ThumbsUp, Play, Trash2, Loader2
 } from "lucide-react";
 import { useWatchHistory, useClearHistory } from "@/hooks/useWatchHistory";
 import { useWatchLater, useToggleWatchLater, useClearWatchLater } from "@/hooks/useWatchLater";
 import { useLikedVideos } from "@/hooks/useLikedVideos";
-import { usePlaylists, useCreatePlaylist, useDeletePlaylist, usePlaylistVideos, useRemoveFromPlaylist } from "@/hooks/usePlaylists";
 import { useMovionRealtime } from "@/hooks/useMovionRealtime";
 import { useAuth } from "@/contexts/AuthContext";
-import { VideoCard } from "../components";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VideoType, MovionVideo } from "../types";
-import { toast } from "sonner";
 
 const formatDuration = (seconds?: number) => {
   if (!seconds) return '0:00';
@@ -91,12 +83,9 @@ const MovionLibrary = () => {
   const { watchHistory, isLoading: historyLoading } = useWatchHistory();
   const { watchLater, isLoading: watchLaterLoading } = useWatchLater();
   const { likedVideos, isLoading: likedLoading } = useLikedVideos();
-  const { playlists, isLoading: playlistsLoading } = usePlaylists();
   const clearHistory = useClearHistory();
   const clearWatchLater = useClearWatchLater();
   const toggleWatchLater = useToggleWatchLater();
-  const createPlaylist = useCreatePlaylist();
-  const deletePlaylist = useDeletePlaylist();
 
   // Realtime
   useMovionRealtime();
@@ -104,32 +93,10 @@ const MovionLibrary = () => {
   const initialTab = searchParams.get('tab') || 'history';
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  // Playlist creation dialog
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
-  const [newPlaylistPublic, setNewPlaylistPublic] = useState(false);
-
-  // Expanded playlist
-  const [expandedPlaylist, setExpandedPlaylist] = useState<string | null>(null);
-
   // Transform data
   const historyVideos = (watchHistory || []).map(transformVideo).filter(Boolean) as MovionVideo[];
   const watchLaterVideos = (watchLater || []).map(transformVideo).filter(Boolean) as MovionVideo[];
   const likedVideosList = (likedVideos || []).map(transformVideo).filter(Boolean) as MovionVideo[];
-
-  const handleCreatePlaylist = () => {
-    if (!newPlaylistTitle.trim()) return;
-    createPlaylist.mutate(
-      { title: newPlaylistTitle.trim(), isPublic: newPlaylistPublic },
-      {
-        onSuccess: () => {
-          setNewPlaylistTitle('');
-          setNewPlaylistPublic(false);
-          setShowCreateDialog(false);
-        },
-      }
-    );
-  };
 
   if (!user) {
     return (
@@ -137,7 +104,7 @@ const MovionLibrary = () => {
         <History className="w-24 h-24 text-muted-foreground mb-6" />
         <h2 className="text-2xl font-bold mb-2">Sign in to view your library</h2>
         <p className="text-muted-foreground text-center max-w-md mb-6">
-          Your watch history, saved videos, and playlists will appear here
+          Your watch history and saved videos will appear here
         </p>
         <Button onClick={() => navigate("/auth")}>Sign in</Button>
       </div>
@@ -163,10 +130,6 @@ const MovionLibrary = () => {
               <ThumbsUp className="w-3.5 h-3.5 md:w-4 md:h-4" />
               Liked
             </TabsTrigger>
-            <TabsTrigger value="playlists" className="gap-1.5 text-xs md:text-sm">
-              <ListVideo className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              Playlists
-            </TabsTrigger>
           </TabsList>
           
           {/* ====== HISTORY TAB ====== */}
@@ -186,7 +149,7 @@ const MovionLibrary = () => {
             </div>
             
             {historyLoading ? (
-              <LoadingSkeleton type="list" />
+              <LoadingSkeleton />
             ) : historyVideos.length > 0 ? (
               <div className="space-y-3 md:space-y-4">
                 {historyVideos.map((video) => (
@@ -224,7 +187,7 @@ const MovionLibrary = () => {
             </div>
             
             {watchLaterLoading ? (
-              <LoadingSkeleton type="list" />
+              <LoadingSkeleton />
             ) : watchLaterVideos.length > 0 ? (
               <div className="space-y-3 md:space-y-4">
                 {watchLaterVideos.map((video) => (
@@ -259,7 +222,7 @@ const MovionLibrary = () => {
             </h2>
             
             {likedLoading ? (
-              <LoadingSkeleton type="list" />
+              <LoadingSkeleton />
             ) : likedVideosList.length > 0 ? (
               <div className="space-y-3 md:space-y-4">
                 {likedVideosList.map((video) => (
@@ -274,180 +237,26 @@ const MovionLibrary = () => {
               <EmptyState icon={ThumbsUp} title="No liked videos" subtitle="Videos you like will appear here" />
             )}
           </TabsContent>
-          
-          {/* ====== PLAYLISTS TAB ====== */}
-          <TabsContent value="playlists">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg md:text-xl font-semibold">Playlists</h2>
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="gap-1.5">
-                    <Plus className="w-4 h-4" />
-                    New playlist
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create new playlist</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-2">
-                    <Input 
-                      placeholder="Playlist title" 
-                      value={newPlaylistTitle}
-                      onChange={(e) => setNewPlaylistTitle(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCreatePlaylist()}
-                    />
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="playlist-public" className="flex items-center gap-2">
-                        {newPlaylistPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                        {newPlaylistPublic ? 'Public' : 'Private'}
-                      </Label>
-                      <Switch 
-                        id="playlist-public"
-                        checked={newPlaylistPublic}
-                        onCheckedChange={setNewPlaylistPublic}
-                      />
-                    </div>
-                    <Button 
-                      className="w-full" 
-                      onClick={handleCreatePlaylist}
-                      disabled={!newPlaylistTitle.trim() || createPlaylist.isPending}
-                    >
-                      {createPlaylist.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                      Create
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            
-            {playlistsLoading ? (
-              <LoadingSkeleton type="grid" />
-            ) : (playlists || []).length > 0 ? (
-              <div className="space-y-3">
-                {(playlists || []).map((playlist: any) => (
-                  <PlaylistCard 
-                    key={playlist.id}
-                    playlist={playlist}
-                    isExpanded={expandedPlaylist === playlist.id}
-                    onToggle={() => setExpandedPlaylist(expandedPlaylist === playlist.id ? null : playlist.id)}
-                    onDelete={() => deletePlaylist.mutate(playlist.id)}
-                    onPlayVideo={(videoId: string) => navigate(`/movion/watch/${videoId}`)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState icon={ListVideo} title="No playlists created" subtitle="Create a playlist to organize your videos" />
-            )}
-          </TabsContent>
         </Tabs>
       </div>
     </div>
   );
 };
 
-// Playlist card with expandable video list
-const PlaylistCard = ({ playlist, isExpanded, onToggle, onDelete, onPlayVideo }: {
-  playlist: any;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onDelete: () => void;
-  onPlayVideo: (videoId: string) => void;
-}) => {
-  const { videos, isLoading } = usePlaylistVideos(isExpanded ? playlist.id : undefined);
-  const removeFromPlaylist = useRemoveFromPlaylist();
-
-  const playlistVideos = (videos || []).map(transformVideo).filter(Boolean) as MovionVideo[];
-
-  return (
-    <div className="border border-border rounded-lg overflow-hidden">
-      <div 
-        className="flex items-center gap-3 p-3 md:p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={onToggle}
-      >
-        <div className="w-12 h-12 md:w-16 md:h-16 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-          <ListVideo className="w-6 h-6 text-muted-foreground" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-sm md:text-base truncate">{playlist.title}</h3>
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            {playlist.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-            {playlist.video_count || 0} videos
-          </p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="flex-shrink-0">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
-              <Trash2 className="w-4 h-4 mr-2" /> Delete playlist
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {isExpanded && (
-        <div className="border-t border-border p-3 md:p-4 space-y-3 bg-muted/20">
-          {isLoading ? (
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading videos...
-            </div>
-          ) : playlistVideos.length > 0 ? (
-            playlistVideos.map((video) => (
-              <VideoRowItem
-                key={video.id}
-                video={video}
-                onPlay={() => onPlayVideo(video.id)}
-                actions={
-                  <Button 
-                    variant="ghost" size="icon" className="flex-shrink-0 self-start"
-                    onClick={() => removeFromPlaylist.mutate({ playlistId: playlist.id, videoId: video.id })}
-                  >
-                    <Trash2 className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                }
-              />
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">No videos in this playlist</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
 // Loading skeleton
-const LoadingSkeleton = ({ type }: { type: 'list' | 'grid' }) => {
-  if (type === 'grid') {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="space-y-3">
-            <Skeleton className="aspect-video rounded-xl" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-4">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="flex gap-4">
-          <Skeleton className="w-40 md:w-56 aspect-video rounded-lg" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-          </div>
+const LoadingSkeleton = () => (
+  <div className="space-y-4">
+    {[1, 2, 3].map(i => (
+      <div key={i} className="flex gap-4">
+        <Skeleton className="w-40 md:w-56 aspect-video rounded-lg" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
         </div>
-      ))}
-    </div>
-  );
-};
+      </div>
+    ))}
+  </div>
+);
 
 // Empty state
 const EmptyState = ({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle: string }) => (
