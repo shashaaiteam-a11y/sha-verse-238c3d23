@@ -14,7 +14,7 @@ export const useMotions = (filter?: MotionFilter) => {
         .from('videos')
         .select(`
           *,
-          channels:channel_id (
+          channels:channel_id!inner (
             id,
             name,
             avatar_url,
@@ -23,7 +23,8 @@ export const useMotions = (filter?: MotionFilter) => {
             description,
             channel_type
           )
-        `);
+        `)
+        .eq('channels.channel_type', 'video');
 
       // Apply filters
       if (filter?.category && filter.category !== 'All') {
@@ -66,7 +67,7 @@ export const useTrendingMotions = () => {
         .from('videos')
         .select(`
           *,
-          channels:channel_id (
+          channels:channel_id!inner (
             id,
             name,
             avatar_url,
@@ -75,6 +76,7 @@ export const useTrendingMotions = () => {
             channel_type
           )
         `)
+        .eq('channels.channel_type', 'video')
         .order('views_count', { ascending: false })
         .limit(20);
       
@@ -95,7 +97,7 @@ export const useQuickMotions = () => {
         .from('videos')
         .select(`
           *,
-          channels:channel_id (
+          channels:channel_id!inner (
             id,
             name,
             avatar_url,
@@ -104,6 +106,7 @@ export const useQuickMotions = () => {
             channel_type
           )
         `)
+        .eq('channels.channel_type', 'video')
         .eq('is_short', true)
         .order('created_at', { ascending: false })
         .limit(30);

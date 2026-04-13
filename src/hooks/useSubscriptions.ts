@@ -17,15 +17,17 @@ export const useSubscriptions = () => {
         .from('subscriptions')
         .select(`
           *,
-          channels:channel_id (
+          channels:channel_id!inner (
             id,
             name,
             avatar_url,
             subscribers_count,
-            description
+            description,
+            channel_type
           )
         `)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('channels.channel_type', 'video');
 
       if (error) throw error;
       return data;
@@ -70,15 +72,17 @@ export const useSubscriptions = () => {
         .from('videos')
         .select(`
           *,
-          channels:channel_id (
+          channels:channel_id!inner (
             id,
             name,
             avatar_url,
             user_id,
-            subscribers_count
+            subscribers_count,
+            channel_type
           )
         `)
         .in('channel_id', channelIds)
+        .eq('channels.channel_type', 'video')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

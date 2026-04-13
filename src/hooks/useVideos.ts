@@ -21,14 +21,16 @@ export const useVideos = () => {
         .from('videos')
         .select(`
           *,
-          channels:channel_id (
+          channels:channel_id!inner (
             id,
             name,
             avatar_url,
             user_id,
-            subscribers_count
+            subscribers_count,
+            channel_type
           )
         `)
+        .eq('channels.channel_type', 'video')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -46,14 +48,16 @@ export const useVideos = () => {
         .from('videos')
         .select(`
           *,
-          channels:channel_id (
+          channels:channel_id!inner (
             id,
             name,
             avatar_url,
             user_id,
-            subscribers_count
+            subscribers_count,
+            channel_type
           )
         `)
+        .eq('channels.channel_type', 'video')
         .order('trending_score', { ascending: false })
         .limit(20);
       
