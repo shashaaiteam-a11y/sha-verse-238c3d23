@@ -28,6 +28,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { SubscribeButton } from "@/movion/components/SubscribeButton";
+import CommentItem from "@/movion/components/CommentItem";
 
 const MovionWatch = () => {
   const { videoId } = useParams();
