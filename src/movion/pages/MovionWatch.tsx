@@ -29,6 +29,7 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { SubscribeButton } from "@/movion/components/SubscribeButton";
 import { ShareDialog } from "@/components/ShareDialog";
+import CommentItem from "@/movion/components/CommentItem";
 
 const MovionWatch = () => {
   const { videoId } = useParams();
@@ -431,31 +432,12 @@ const MovionWatch = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {(comments || []).map((comment: any) => (
-                        <div key={comment.id} className="flex gap-3">
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src={comment.profiles?.avatar_url} />
-                            <AvatarFallback>{comment.profiles?.display_name?.[0] || 'U'}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">@{comment.profiles?.username || 'user'}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                              </span>
-                            </div>
-                            <p className="text-sm mt-1">{comment.content}</p>
-                            <div className="flex items-center gap-4 mt-2">
-                              <button className="flex items-center gap-1 text-sm">
-                                <ThumbsUp className="w-4 h-4" />
-                              </button>
-                              <button>
-                                <ThumbsDown className="w-4 h-4" />
-                              </button>
-                              <button className="text-sm font-medium">Reply</button>
-                            </div>
-                          </div>
-                        </div>
+                      {(comments || []).filter((c: any) => !c.parent_comment_id).map((comment: any) => (
+                        <CommentItem
+                          key={comment.id}
+                          comment={comment}
+                          videoId={videoId!}
+                        />
                       ))}
                     </div>
                   )}
