@@ -149,8 +149,9 @@ export const useReactions = (targetId: string, targetType: TargetType = 'post') 
 
     const filterColumn = targetType === 'post' ? 'post_id' : targetType === 'group_post' ? 'group_post_id' : targetType === 'video' ? 'video_id' : targetType === 'book' ? 'book_id' : 'comment_id';
 
+    const channelId = `reactions-${targetType}-${targetId}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel(`reactions-${targetId}`)
+      .channel(channelId)
       .on(
         'postgres_changes',
         {

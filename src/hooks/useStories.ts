@@ -176,8 +176,9 @@ export const useStories = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    const channelId = `stories-realtime-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel(`stories-realtime-${user.id}`)
+      .channel(channelId)
       // New story posted by anyone
       .on('postgres_changes', {
         event: 'INSERT',

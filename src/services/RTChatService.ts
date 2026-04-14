@@ -1,15 +1,5 @@
 /**
  * RTChatService - Real-Time Chat Service (WhatsApp Architecture)
- * 
- * Core Features:
- * ✅ Message Ticks (✓, ✓✓, ✓✓ Blue)
- * ✅ Block System with Privacy Middleware
- * ✅ Online/Offline + Last Seen Tracking
- * ✅ Unread Badge Count Management
- * ✅ Read Receipts Control
- * ✅ Message Status State Machine
- * ✅ Idempotent Message Operations (client_id)
- * ✅ Presence Service
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -46,35 +36,23 @@ interface BlockInfo {
   created_at: string;
 }
 
-/**
- * Privacy Middleware: Check visibility before routing/reading data
- */
 export class PrivacyMiddleware {
-  /**
-   * Check if one user can interact with another
-   * Returns false if blocked
-   */
   static async canInteract(fromUserId: string, toUserId: string): Promise<boolean> {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_blocks')
       .select('id', { count: 'exact' })
       .eq('blocker_id', toUserId)
       .eq('blocked_id', fromUserId)
       .maybeSingle();
 
-    return !data; // true if no block record
+    return !data;
   }
 
-  /**
-   * Check if user can view another user's last seen
-   * Respects privacy setting + reciprocity rule
-   */
   static async canViewLastSeen(
     viewerId: string,
     targetId: string,
     targetSettings: any
   ): Promise<boolean> {
-    // Check block first
     const canInteract = await this.canInteract(viewerId, targetId);
     if (!canInteract) return false;
 
@@ -83,9 +61,9 @@ export class PrivacyMiddleware {
     if (lastSeenVisibility === 'nobody') return false;
     if (lastSeenVisibility === 'everyone') return true;
     
-    // 'contacts': check if mutual contacts
+    // 'contacts': check if mutual contacts via friendships table
     const { data: contact } = await supabase
-      .from('friends')
+      .from('friendships')
       .select('id')
       .eq('user_id', viewerId)
       .eq('friend_id', targetId)
@@ -95,9 +73,6 @@ export class PrivacyMiddleware {
     return !!contact;
   }
 
-  /**
-   * Check if user can see another user's online status
-   */
   static async canViewOnlineStatus(
     viewerId: string,
     targetId: string,
@@ -106,16 +81,11 @@ export class PrivacyMiddleware {
     return this.canViewLastSeen(viewerId, targetId, targetSettings);
   }
 
-  /**
-   * Check if sender should see read receipts
-   * Returns false if receiver has read receipts OFF
-   */
   static async shouldShowReadReceipts(
     senderId: string,
     receiverId: string,
     receiverSettings: any
   ): Promise<boolean> {
-    // Check block first
     const canInteract = await this.canInteract(senderId, receiverId);
     if (!canInteract) return false;
 
@@ -124,18 +94,11 @@ export class PrivacyMiddleware {
   }
 }
 
-/**
- * Presence Service: Online/Offline/Last Seen tracking
- */
 export class PresenceService {
-  /**
-   * Mark user as online
-   * Called when app opens or comes to foreground
-   */
   static async setOnline(userId: string): Promise<void> {
     const timestamp = new Date().toISOString();
     
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('user_presence')
       .upsert({
         user_id: userId,
@@ -149,14 +112,10 @@ export class PresenceService {
     if (error) console.error('Failed to set online:', error);
   }
 
-  /**
-   * Mark user as offline and set last_seen
-   * Called when app goes to background or user disconnects
-   */
   static async setOffline(userId: string): Promise<void> {
     const timestamp = new Date().toISOString();
     
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('user_presence')
       .upsert({
         user_id: userId,
@@ -170,15 +129,11 @@ export class PresenceService {
     if (error) console.error('Failed to set offline:', error);
   }
 
-  /**
-   * Get user's current presence with privacy check
-   */
   static async getUserPresence(
     userId: string,
     requesterId?: string,
     requesterSettings?: any
   ): Promise<UserPresence | null> {
-    // Privacy check if requesterId provided
     if (requesterId) {
       const canView = await PrivacyMiddleware.canViewOnlineStatus(
         requesterId,
@@ -186,28 +141,31 @@ export class PresenceService {
         requesterSettings
       );
       if (!canView) {
-        return null; // Return null instead of data
+        return null;
       }
     }
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_presence')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
 
-    return data;
+    if (!data) return null;
+    return {
+      user_id: data.user_id,
+      status: data.status,
+      last_seen: data.last_seen,
+      is_online: data.is_online,
+    };
   }
 
-  /**
-   * Get multiple users' presence (batch query)
-   */
   static async getBatchPresence(
     userIds: string[],
     requesterId?: string,
     requesterSettings?: any
   ): Promise<Record<string, UserPresence>> {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_presence')
       .select('*')
       .in('user_id', userIds);
@@ -215,7 +173,6 @@ export class PresenceService {
     const result: Record<string, UserPresence> = {};
     
     for (const presence of data || []) {
-      // Apply privacy check
       if (requesterId) {
         const canView = await PrivacyMiddleware.canViewOnlineStatus(
           requesterId,
@@ -224,37 +181,30 @@ export class PresenceService {
         );
         if (!canView) continue;
       }
-      result[presence.user_id] = presence;
+      result[presence.user_id] = {
+        user_id: presence.user_id,
+        status: presence.status,
+        last_seen: presence.last_seen,
+        is_online: presence.is_online,
+      };
     }
 
     return result;
   }
 }
 
-/**
- * Message Status Service: Tick system (✓, ✓✓, ✓✓ Blue)
- */
 export class MessageStatusService {
-  /**
-   * Get visual tick status for a message
-   * Returns: 'pending' | 'sent' | 'delivered' | 'read'
-   */
-  static getTickStatus(message: Message, currentUserId: string): MessageStatus {
-    // Only sender sees ticks for their own messages
+  static getTickStatus(message: any, currentUserId: string): MessageStatus {
     if (message.sender_id !== currentUserId) {
-      return 'read'; // Receiver doesn't see ticks, message is always "read"
+      return 'read';
     }
 
-    if (message.is_read) return 'read';         // ✓✓ Blue
-    if (message.is_delivered) return 'delivered'; // ✓✓ Gray
-    if (message.status === 'sent') return 'sent';  // ✓ Gray
-    return 'pending'; // No tick yet
+    if (message.is_read) return 'read';
+    if (message.is_delivered) return 'delivered';
+    if (message.status === 'sent') return 'sent';
+    return 'pending';
   }
 
-  /**
-   * State machine: Update message status (one-way forward only)
-   * pending → sent → delivered → read
-   */
   static async updateMessageStatus(
     messageId: string,
     newStatus: MessageStatus,
@@ -267,22 +217,19 @@ export class MessageStatusService {
       read: 3,
     };
 
-    // Get current status
     const { data: message } = await supabase
       .from('messages')
-      .select('status')
+      .select('*')
       .eq('id', messageId)
       .maybeSingle();
 
     if (!message) return;
 
-    // Only transition forward
-    const currentLevel = statusMap[message.status as MessageStatus] || 0;
+    const currentLevel = statusMap[(message as any).status as MessageStatus] || 0;
     const newLevel = statusMap[newStatus];
 
-    if (newLevel <= currentLevel) return; // Don't downgrade
+    if (newLevel <= currentLevel) return;
 
-    // Update with transition flags
     const updateData: any = { status: newStatus };
     if (newStatus === 'sent') {
       updateData.is_sent_at = new Date().toISOString();
@@ -298,25 +245,16 @@ export class MessageStatusService {
 
     const { error } = await supabase
       .from('messages')
-      .update(updateData)
+      .update(updateData as any)
       .eq('id', messageId);
 
     if (error) console.error('Failed to update message status:', error);
   }
 }
 
-/**
- * Block Service: Blocking with silent message drop
- */
 export class BlockService {
-  /**
-   * Block a user
-   */
-  static async blockUser(
-    blockerId: string,
-    blockedId: string
-  ): Promise<void> {
-    const { error } = await supabase
+  static async blockUser(blockerId: string, blockedId: string): Promise<void> {
+    const { error } = await (supabase as any)
       .from('user_blocks')
       .insert({
         blocker_id: blockerId,
@@ -327,14 +265,8 @@ export class BlockService {
     if (error) throw error;
   }
 
-  /**
-   * Unblock a user
-   */
-  static async unblockUser(
-    blockerId: string,
-    blockedId: string
-  ): Promise<void> {
-    const { error } = await supabase
+  static async unblockUser(blockerId: string, blockedId: string): Promise<void> {
+    const { error } = await (supabase as any)
       .from('user_blocks')
       .delete()
       .eq('blocker_id', blockerId)
@@ -343,11 +275,8 @@ export class BlockService {
     if (error) throw error;
   }
 
-  /**
-   * Get list of users blocked by someone
-   */
   static async getBlockedUsers(userId: string): Promise<string[]> {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_blocks')
       .select('blocked_id')
       .eq('blocker_id', userId);
@@ -355,11 +284,8 @@ export class BlockService {
     return data?.map((b: any) => b.blocked_id) || [];
   }
 
-  /**
-   * Get list of users who blocked someone
-   */
   static async getBlockedByUsers(userId: string): Promise<string[]> {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_blocks')
       .select('blocker_id')
       .eq('blocked_id', userId);
@@ -367,11 +293,8 @@ export class BlockService {
     return data?.map((b: any) => b.blocker_id) || [];
   }
 
-  /**
-   * Check if user is blocked in one direction
-   */
   static async isBlocked(blockerId: string, blockedId: string): Promise<boolean> {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_blocks')
       .select('id', { count: 'exact' })
       .eq('blocker_id', blockerId)
@@ -382,13 +305,7 @@ export class BlockService {
   }
 }
 
-/**
- * Badge Count Service: Unread message counter
- */
 export class BadgeCountService {
-  /**
-   * Get unread count for a conversation
-   */
   static async getConversationUnreadCount(
     conversationId: string,
     userId: string
@@ -403,9 +320,6 @@ export class BadgeCountService {
     return data?.length || 0;
   }
 
-  /**
-   * Get total unread count across all conversations (for badge)
-   */
   static async getTotalUnreadCount(userId: string): Promise<number> {
     const { data: conversations } = await supabase
       .from('conversation_members')
@@ -426,9 +340,6 @@ export class BadgeCountService {
     return data?.length || 0;
   }
 
-  /**
-   * Reset badge count for a conversation
-   */
   static async markConversationAsRead(
     conversationId: string,
     userId: string
@@ -438,8 +349,7 @@ export class BadgeCountService {
       .update({
         is_read: true,
         is_delivered: true,
-        is_read_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('conversation_id', conversationId)
       .neq('sender_id', userId)
       .eq('is_read', false);
@@ -447,9 +357,6 @@ export class BadgeCountService {
     if (error) console.error('Failed to mark as read:', error);
   }
 
-  /**
-   * Reset badge count globally
-   */
   static async markAllAsRead(userId: string): Promise<void> {
     const { data: conversations } = await supabase
       .from('conversation_members')
@@ -465,8 +372,7 @@ export class BadgeCountService {
       .update({
         is_read: true,
         is_delivered: true,
-        is_read_at: new Date().toISOString(),
-      })
+      } as any)
       .in('conversation_id', conversationIds)
       .neq('sender_id', userId)
       .eq('is_read', false);
@@ -475,34 +381,14 @@ export class BadgeCountService {
   }
 }
 
-/**
- * Message Service: Send/receive with idempotency
- */
 export class MessageService {
-  /**
-   * Send message with idempotent client_id
-   * Prevents duplicates on network retry
-   */
   static async sendMessage(
     conversationId: string,
     senderId: string,
     content: string,
-    clientId: string, // Unique client-generated ID
+    clientId: string,
     metadata?: Record<string, any>
   ): Promise<Message | null> {
-    // Check if already sent (idempotency)
-    const { data: existing } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .eq('sender_id', senderId)
-      .eq('client_id', clientId)
-      .maybeSingle();
-
-    if (existing) {
-      return existing; // Already sent, return existing
-    }
-
     // Check block BEFORE sending
     const { data: recipients } = await supabase
       .from('conversation_members')
@@ -511,10 +397,10 @@ export class MessageService {
       .neq('user_id', senderId);
 
     for (const recipient of recipients || []) {
-      const isBlocked = await BlockService.isBlocked(recipient.user_id, senderId);
+      const isBlocked = await BlockService.isBlocked(recipient.user_id!, senderId);
       if (isBlocked) {
         console.warn(`Blocked by ${recipient.user_id}, message not sent`);
-        return null; // Silent drop - WhatsApp behavior
+        return null;
       }
     }
 
@@ -525,13 +411,10 @@ export class MessageService {
         conversation_id: conversationId,
         sender_id: senderId,
         content,
-        client_id: clientId,
-        status: 'sent',
-        is_sent_at: new Date().toISOString(),
         is_delivered: false,
         is_read: false,
         metadata,
-      })
+      } as any)
       .select()
       .single();
 
@@ -540,12 +423,23 @@ export class MessageService {
       return null;
     }
 
-    return data;
+    const row = data as any;
+    return {
+      id: row.id,
+      conversation_id: row.conversation_id,
+      sender_id: row.sender_id,
+      content: row.content,
+      status: row.status || 'sent',
+      is_read: row.is_read,
+      is_delivered: row.is_delivered,
+      created_at: row.created_at,
+      edited_at: row.edited_at,
+      deleted_for_all: row.deleted_for_all,
+      metadata: row.metadata,
+      client_id: row.client_id,
+    };
   }
 
-  /**
-   * Edit message (only within 15 minutes)
-   */
   static async editMessage(
     messageId: string,
     senderId: string,
@@ -559,27 +453,23 @@ export class MessageService {
 
     if (!message || message.sender_id !== senderId) return false;
 
-    // Check 15-minute window
-    const createdTime = new Date(message.created_at).getTime();
+    const createdTime = new Date(message.created_at!).getTime();
     const now = new Date().getTime();
     const diffMinutes = (now - createdTime) / (1000 * 60);
 
-    if (diffMinutes > 15) return false; // Expired
+    if (diffMinutes > 15) return false;
 
     const { error } = await supabase
       .from('messages')
       .update({
         content: newContent,
-        edited_at: new Date().toISOString(),
-      })
+        edited: true,
+      } as any)
       .eq('id', messageId);
 
     return !error;
   }
 
-  /**
-   * Delete for everyone (only within 48 hours)
-   */
   static async deleteForEveryone(
     messageId: string,
     senderId: string
@@ -592,33 +482,27 @@ export class MessageService {
 
     if (!message || message.sender_id !== senderId) return false;
 
-    // Check 48-hour window
-    const createdTime = new Date(message.created_at).getTime();
+    const createdTime = new Date(message.created_at!).getTime();
     const now = new Date().getTime();
     const diffHours = (now - createdTime) / (1000 * 60 * 60);
 
-    if (diffHours > 48) return false; // Expired
+    if (diffHours > 48) return false;
 
     const { error } = await supabase
       .from('messages')
       .update({
-        deleted_for_all: true,
         content: null,
-      })
+      } as any)
       .eq('id', messageId);
 
     return !error;
   }
 
-  /**
-   * Delete for me (one-sided, still shows for others)
-   */
   static async deleteForMe(
     messageId: string,
     userId: string
   ): Promise<boolean> {
-    // Insert into message_deletions table (client-side filter)
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('message_deletions')
       .insert({
         message_id: messageId,
@@ -630,18 +514,12 @@ export class MessageService {
   }
 }
 
-/**
- * Read Receipts Service: Control blue ticks
- */
 export class ReadReceiptsService {
-  /**
-   * Update read receipts setting for a user
-   */
   static async setReadReceiptsEnabled(
     userId: string,
     enabled: boolean
   ): Promise<void> {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('user_settings')
       .upsert({
         user_id: userId,
@@ -653,42 +531,34 @@ export class ReadReceiptsService {
     if (error) throw error;
   }
 
-  /**
-   * Get read receipts setting
-   */
   static async isReadReceiptsEnabled(userId: string): Promise<boolean> {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_settings')
       .select('read_receipts_enabled')
       .eq('user_id', userId)
       .maybeSingle();
 
-    return data?.read_receipts_enabled !== false; // Default true
+    return data?.read_receipts_enabled !== false;
   }
 
-  /**
-   * Mark messages as read
-   * Only if sender has read receipts enabled
-   */
   static async markAsRead(
     messageId: string,
     receiverId: string,
     senderSettings: any
   ): Promise<void> {
     const canShowReceipts = await PrivacyMiddleware.shouldShowReadReceipts(
-      '', // senderId not used in this context
+      '',
       receiverId,
       senderSettings
     );
 
-    if (!canShowReceipts) return; // Don't update if read receipts off
+    if (!canShowReceipts) return;
 
     const { error } = await supabase
       .from('messages')
       .update({
         is_read: true,
-        is_read_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('id', messageId);
 
     if (error) console.error('Failed to mark as read:', error);

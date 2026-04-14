@@ -31,8 +31,9 @@ export const useProfile = (userId?: string) => {
   useEffect(() => {
     if (!targetUserId) return;
 
+    const channelId = `profile-${targetUserId}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel(`profile-${targetUserId}`)
+      .channel(channelId)
       .on(
         'postgres_changes',
         {

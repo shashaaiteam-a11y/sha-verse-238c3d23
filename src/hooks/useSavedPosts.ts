@@ -123,8 +123,9 @@ export const useSavedPosts = () => {
   useEffect(() => {
     if (!user) return;
 
+    const channelId = `saved-posts-changes-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel('saved-posts-changes')
+      .channel(channelId)
       .on(
         'postgres_changes',
         {

@@ -38,7 +38,6 @@ export const TickIndicator = ({ status, className, showText = false }: TickIndic
       )}
       {showText && (
         <span className="text-xs ml-1 text-gray-500">
-          {status === 'pending' && 'Sending...'}
           {status === 'sent' && 'Sent'}
           {status === 'delivered' && 'Delivered'}
           {status === 'read' && 'Read'}
