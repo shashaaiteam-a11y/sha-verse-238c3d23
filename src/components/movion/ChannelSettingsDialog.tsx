@@ -334,8 +334,8 @@ export const ChannelSettingsDialog = ({
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="videos" className="mt-4 flex-1 min-h-0">
-            <ScrollArea className="h-full max-h-[calc(85vh-160px)]">
+          <TabsContent value="videos" className="mt-4 flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full max-h-[calc(80vh-140px)]">
               <div className="pr-3">
               {videos.length > 0 ? (
                 <div className="space-y-3">
