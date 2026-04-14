@@ -108,7 +108,7 @@ export const useFriends = (page: number = 0) => {
     if (!user) return;
 
     const channel = supabase
-      .channel('friendships-changes')
+      .channel(`friendships-changes-${user.id}`)
       .on(
         'postgres_changes',
         {
