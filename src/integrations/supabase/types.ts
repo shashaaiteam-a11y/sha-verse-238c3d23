@@ -1918,6 +1918,27 @@ export type Database = {
           },
         ]
       }
+      message_deletions: {
+        Row: {
+          deleted_at: string | null
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          deleted_at?: string | null
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          deleted_at?: string | null
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string | null
@@ -3615,6 +3636,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_seen_visibility: string | null
+          read_receipts_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_seen_visibility?: string | null
+          read_receipts_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_seen_visibility?: string | null
+          read_receipts_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       video_analytics: {
         Row: {
