@@ -233,8 +233,8 @@ export const ChannelSettingsDialog = ({
             <TabsTrigger value="videos" className="text-sm">Videos</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile" className="mt-4 flex-1 min-h-0">
-            <ScrollArea className="h-full max-h-[calc(85vh-160px)]">
+          <TabsContent value="profile" className="mt-4 flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full max-h-[calc(80vh-140px)]">
               <div className="space-y-4 pr-3">
             {/* Avatar */}
             <div>
