@@ -1,7 +1,7 @@
 /**
  * usePresenceEnhanced - Online/Offline/Last Seen with privacy middleware
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -14,23 +14,18 @@ interface UserPresence {
   last_seen: string;
 }
 
-/**
- * Track current user's presence (online/offline)
- */
 export const usePresenceTracker = () => {
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user?.id) return;
 
-    // Set online when component mounts
     const setOnline = async () => {
       await RTChatService.presence.setOnline(user.id);
     };
 
     setOnline();
 
-    // Listen for visibility changes (app background/foreground)
     const handleVisibilityChange = async () => {
       if (document.hidden) {
         await RTChatService.presence.setOffline(user.id);
@@ -41,7 +36,6 @@ export const usePresenceTracker = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Set offline on unmount
     const handleBeforeUnload = async () => {
       await RTChatService.presence.setOffline(user.id);
     };
@@ -55,9 +49,6 @@ export const usePresenceTracker = () => {
   }, [user?.id]);
 };
 
-/**
- * Get another user's presence with privacy checks
- */
 export const useUserPresence = (targetUserId?: string) => {
   const { user } = useAuth();
   const [isOnline, setIsOnline] = useState(false);
@@ -68,7 +59,7 @@ export const useUserPresence = (targetUserId?: string) => {
     queryKey: ['user-settings', targetUserId],
     queryFn: async () => {
       if (!targetUserId) return null;
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('user_settings')
         .select('*')
         .eq('user_id', targetUserId)
@@ -82,7 +73,6 @@ export const useUserPresence = (targetUserId?: string) => {
     if (!user?.id || !targetUserId) return;
 
     const subscribePresence = async () => {
-      // Get initial presence
       const presence = await RTChatService.presence.getUserPresence(
         targetUserId,
         user.id,
@@ -97,11 +87,9 @@ export const useUserPresence = (targetUserId?: string) => {
 
     subscribePresence();
 
-    // Subscribe to real-time updates
     const channel = supabase
       .channel(`presence-${targetUserId}`)
       .on('presence', { event: 'sync' }, async () => {
-        // Re-check with privacy middleware
         const presence = await RTChatService.presence.getUserPresence(
           targetUserId,
           user.id,
@@ -123,9 +111,6 @@ export const useUserPresence = (targetUserId?: string) => {
   return { isOnline, lastSeen };
 };
 
-/**
- * Format last seen time (like WhatsApp: "2 minutes ago", "Yesterday", etc.)
- */
 export const formatLastSeen = (date: Date | null): string => {
   if (!date) return 'offline';
 
@@ -142,7 +127,6 @@ export const formatLastSeen = (date: Date | null): string => {
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days}d ago`;
 
-  // Format as date: "Jan 15, 2:30 PM"
   const formatter = new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
@@ -153,9 +137,6 @@ export const formatLastSeen = (date: Date | null): string => {
   return formatter.format(date);
 };
 
-/**
- * Get user presence for chat header
- */
 export const useChatPartnerPresence = (partnerId?: string) => {
   const { isOnline, lastSeen } = useUserPresence(partnerId);
 

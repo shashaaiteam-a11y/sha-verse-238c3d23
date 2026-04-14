@@ -1,13 +1,11 @@
 /**
  * useMessagesRealtime - Enhanced messages hook with real-time ticks & privacy
- * Integrates with RTChatService for WhatsApp-like behavior
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { RTChatService } from '@/services/RTChatService';
-import { v4 as uuidv4 } from 'uuid';
 
 export const useMessagesRealtime = (conversationId: string | null) => {
   const { user } = useAuth();
@@ -71,7 +69,7 @@ export const useMessagesRealtime = (conversationId: string | null) => {
       
       // Filter out deleted-for-me messages
       if (user?.id) {
-        const { data: deletions } = await supabase
+        const { data: deletions } = await (supabase as any)
           .from('message_deletions')
           .select('message_id')
           .eq('user_id', user.id);
@@ -98,7 +96,7 @@ export const useMessagesRealtime = (conversationId: string | null) => {
     }) => {
       if (!user || !conversationId) throw new Error('Not authenticated');
 
-      const clientId = uuidv4(); // Generate unique client ID for idempotency
+      const clientId = crypto.randomUUID();
       
       const metadata = mediaUrl && mediaType ? { mediaUrl, mediaType } : undefined;
 
@@ -137,7 +135,6 @@ export const useMessagesRealtime = (conversationId: string | null) => {
       queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
     };
 
-    // Mark as read after a short delay (user sees message first)
     const timer = setTimeout(markAsRead, 500);
     return () => clearTimeout(timer);
   }, [conversationId, user?.id, readReceiptsEnabled, queryClient]);
@@ -147,7 +144,7 @@ export const useMessagesRealtime = (conversationId: string | null) => {
     if (!conversationId) return;
 
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(`messages-rt-${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -157,7 +154,6 @@ export const useMessagesRealtime = (conversationId: string | null) => {
           filter: `conversation_id=eq.${conversationId}`
         },
         (payload) => {
-          // Skip if message is from current user (already in optimistic UI)
           if (payload.new?.sender_id !== user?.id) {
             queryClient.invalidateQueries({
               queryKey: ['messages-realtime', conversationId]
@@ -173,8 +169,7 @@ export const useMessagesRealtime = (conversationId: string | null) => {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`
         },
-        (payload) => {
-          // Update for tick changes (read/delivered)
+        () => {
           queryClient.invalidateQueries({
             queryKey: ['messages-realtime', conversationId]
           });
@@ -195,7 +190,7 @@ export const useMessagesRealtime = (conversationId: string | null) => {
       return RTChatService.badge.getConversationUnreadCount(conversationId, user.id);
     },
     enabled: !!conversationId && !!user?.id,
-    refetchInterval: 5000, // Poll every 5s for safety
+    refetchInterval: 5000,
   });
 
   // Clear chat (one-sided, WhatsApp style)
