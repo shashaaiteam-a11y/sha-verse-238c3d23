@@ -346,8 +346,9 @@ export const useGroups = () => {
   // Realtime subscription
   useEffect(() => {
     if (!user?.id) return;
+    const channelId = `groups-realtime-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel(`groups-realtime-${user.id}`)
+      .channel(channelId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `user_id=eq.${user.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
         queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
