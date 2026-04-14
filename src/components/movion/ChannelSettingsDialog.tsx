@@ -219,7 +219,7 @@ export const ChannelSettingsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-2xl max-h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-4 pt-4 pr-12 sm:px-6 sm:pt-6 sm:pr-12 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
@@ -227,14 +227,14 @@ export const ChannelSettingsDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0 px-4 pb-4 sm:px-6 sm:pb-6">
+        <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0 px-4 pb-4 sm:px-6 sm:pb-6 overflow-hidden">
           <TabsList className="w-full flex-shrink-0 grid grid-cols-2">
             <TabsTrigger value="profile" className="text-sm">Profile</TabsTrigger>
             <TabsTrigger value="videos" className="text-sm">Videos</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile" className="mt-4 flex-1 min-h-0">
-            <ScrollArea className="h-full max-h-[calc(85vh-160px)]">
+          <TabsContent value="profile" className="mt-4 flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full max-h-[calc(80vh-140px)]">
               <div className="space-y-4 pr-3">
             {/* Avatar */}
             <div>
@@ -334,8 +334,8 @@ export const ChannelSettingsDialog = ({
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="videos" className="mt-4 flex-1 min-h-0">
-            <ScrollArea className="h-full max-h-[calc(85vh-160px)]">
+          <TabsContent value="videos" className="mt-4 flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full max-h-[calc(80vh-140px)]">
               <div className="pr-3">
               {videos.length > 0 ? (
                 <div className="space-y-3">
