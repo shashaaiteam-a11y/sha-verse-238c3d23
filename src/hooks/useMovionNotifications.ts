@@ -165,7 +165,7 @@ export const useMovionNotifications = () => {
       if (channelIds.size === 0) return;
 
       channelRef.current = supabase
-        .channel(`movion-notif-realtime-${user.id}`)
+        .channel(`movion-notif-realtime-${user.id}-${Math.random().toString(36).slice(2, 8)}`)
         .on(
           'postgres_changes',
           {
