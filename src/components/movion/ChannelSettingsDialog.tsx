@@ -227,7 +227,7 @@ export const ChannelSettingsDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0 px-4 pb-4 sm:px-6 sm:pb-6">
+        <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0 px-4 pb-4 sm:px-6 sm:pb-6 overflow-hidden">
           <TabsList className="w-full flex-shrink-0 grid grid-cols-2">
             <TabsTrigger value="profile" className="text-sm">Profile</TabsTrigger>
             <TabsTrigger value="videos" className="text-sm">Videos</TabsTrigger>
