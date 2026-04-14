@@ -107,8 +107,9 @@ export const useFriends = (page: number = 0) => {
   useEffect(() => {
     if (!user) return;
 
+    const channelId = `friendships-changes-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel(`friendships-changes-${user.id}`)
+      .channel(channelId)
       .on(
         'postgres_changes',
         {
