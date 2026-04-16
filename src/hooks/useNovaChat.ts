@@ -25,6 +25,23 @@ export interface Conversation {
   updated_at: string;
 }
 
+const NOVACHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/novachat`;
+
+const IMAGE_KEYWORDS = [
+  "generate image", "generate a image", "generate an image",
+  "create image", "create a image", "create an image",
+  "draw", "draw a", "draw an",
+  "make image", "make a image", "make an image",
+  "image banao", "image bana do", "tasveer banao", "photo banao", "picture banao",
+  "generate photo", "create photo", "make photo",
+  "paint", "sketch", "illustrate",
+];
+
+function isImageRequest(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  return IMAGE_KEYWORDS.some((kw) => lower.startsWith(kw) || lower.includes(kw));
+}
+
 export const useNovaChat = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -117,12 +134,10 @@ export const useNovaChat = () => {
   // Delete conversation
   const deleteConversation = useMutation({
     mutationFn: async (conversationId: string) => {
-      // Try to delete messages first (may fail if cascade is set up - that's ok)
       await supabase
         .from('ai_messages')
         .delete()
         .eq('conversation_id', conversationId);
-
       const { error } = await supabase
         .from('ai_conversations')
         .delete()
@@ -130,9 +145,7 @@ export const useNovaChat = () => {
       if (error) throw error;
     },
     onMutate: (conversationId) => {
-      // Snapshot for rollback
       const previousConversations = queryClient.getQueryData<Conversation[]>(['ai-conversations', user?.id]);
-      // Optimistically remove from UI immediately
       queryClient.setQueryData<Conversation[]>(['ai-conversations', user?.id], (old) => {
         return (old ?? []).filter((conv) => conv.id !== conversationId);
       });
@@ -147,7 +160,6 @@ export const useNovaChat = () => {
       queryClient.invalidateQueries({ queryKey: ['ai-conversations', user?.id] });
     },
     onError: (err, _conversationId, context: any) => {
-      // Rollback on error
       if (context?.previousConversations) {
         queryClient.setQueryData(['ai-conversations', user?.id], context.previousConversations);
       }
@@ -211,7 +223,14 @@ export const useNovaChat = () => {
     }
   }, []);
 
-  // Stream chat
+  // Get auth token for edge function calls
+  const getAuthToken = async (): Promise<string> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Not authenticated');
+    return session.access_token;
+  };
+
+  // Send message (streaming text or image generation)
   const sendMessage = useCallback(async (input: string, isRegenerate: boolean = false, attachments?: Attachment[]) => {
     if (!user || (!input.trim() && (!attachments || attachments.length === 0))) return;
 
@@ -264,111 +283,110 @@ export const useNovaChat = () => {
     abortControllerRef.current = new AbortController();
 
     try {
-      const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!GEMINI_API_KEY) {
-        throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your .env file.');
-      }
+      const token = await getAuthToken();
+      
+      // Build messages for the API (text only, no attachments in API messages for now)
+      const apiMessages = newMessages.map(m => ({
+        role: m.role,
+        content: m.content
+      }));
 
-      // Convert messages to Gemini format (role: user/model, parts with optional inlineData)
-      const geminiContents = newMessages.map(m => {
-        const parts: any[] = [];
-        // Add image attachments as inlineData
-        if (m.attachments && m.attachments.length > 0) {
-          for (const att of m.attachments) {
-            parts.push({ inlineData: { mimeType: att.mimeType, data: att.data } });
-          }
-        }
-        parts.push({ text: m.content || ' ' });
-        return {
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts
-        };
+      const isImgReq = isImageRequest(input);
+
+      const response = await fetch(NOVACHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          messages: apiMessages,
+          mode: isImgReq ? 'image' : 'chat',
+        }),
+        signal: abortControllerRef.current.signal,
       });
 
-      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite-001', 'gemini-flash-latest'];
-      let response: Response | null = null;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Request failed with status ${response.status}`);
+      }
 
-      for (let attempt = 0; attempt < models.length; attempt++) {
-        const model = models[attempt];
-        response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              system_instruction: {
-                parts: [{
-                  text: `You are NovaChat, a helpful, harmless, and honest AI assistant. You provide clear, accurate, and helpful responses to user queries.
-
-Key behaviors:
-- Be conversational and friendly
-- Provide detailed explanations when needed
-- Use markdown formatting for code, lists, and emphasis
-- If you don't know something, say so honestly
-- Help with coding, writing, analysis, math, and general questions`
-                }]
-              },
-              contents: geminiContents,
-              generationConfig: {
-                temperature: 0.9,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 8192,
-              }
-            }),
-            signal: abortControllerRef.current.signal
-          }
-        );
-
-        if ((response.status === 429 || response.status === 404) && attempt < models.length - 1) {
-          // wait 2s then try next model
-          await new Promise(r => setTimeout(r, 2000));
-          continue;
+      if (isImgReq) {
+        // Image generation - non-streaming response
+        const result = await response.json();
+        const imageData = result.data;
+        
+        // Extract image and text from the response
+        const imageUrl = imageData?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        const textContent = imageData?.choices?.[0]?.message?.content || '';
+        
+        if (imageUrl) {
+          assistantContent = `${textContent}\n\n![Generated Image](${imageUrl})`;
+        } else {
+          assistantContent = textContent || 'Sorry, image generation failed. Please try again. 😔';
         }
-        break;
-      }
+        
+        setMessages([...newMessages, { role: 'assistant', content: assistantContent }]);
+      } else {
+        // Streaming text response
+        if (!response.body) throw new Error('No response body');
 
-      if (!response!.ok) {
-        const errorData = await response!.json().catch(() => ({}));
-        if (response!.status === 429) throw new Error('Gemini API rate limit exceeded. Free tier allows 15 requests/minute. Please wait 1 minute and try again.');
-        if (response!.status === 404) throw new Error('Gemini model not available. Please try again.');
-        if (response!.status === 400) throw new Error(errorData.error?.message || 'Invalid request');
-        throw new Error(errorData.error?.message || `Request failed with status ${response!.status}`);
-      }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let streamDone = false;
 
-      if (!response!.body) throw new Error('No response body');
+        while (!streamDone) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-      const reader = response!.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+          buffer += decoder.decode(value, { stream: true });
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+          let newlineIndex: number;
+          while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+            let line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
 
-        buffer += decoder.decode(value, { stream: true });
+            if (line.endsWith('\r')) line = line.slice(0, -1);
+            if (line.startsWith(':') || line.trim() === '') continue;
+            if (!line.startsWith('data: ')) continue;
 
-        let newlineIndex: number;
-        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
-
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
-          if (!line.startsWith('data: ')) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') break;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              assistantContent += text;
-              setMessages([...newMessages, { role: 'assistant', content: assistantContent }]);
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === '[DONE]') {
+              streamDone = true;
+              break;
             }
-          } catch {
-            // skip malformed chunk
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+              if (content) {
+                assistantContent += content;
+                setMessages([...newMessages, { role: 'assistant', content: assistantContent }]);
+              }
+            } catch {
+              // skip malformed chunk
+            }
+          }
+        }
+
+        // Final flush
+        if (buffer.trim()) {
+          for (let raw of buffer.split('\n')) {
+            if (!raw) continue;
+            if (raw.endsWith('\r')) raw = raw.slice(0, -1);
+            if (raw.startsWith(':') || raw.trim() === '') continue;
+            if (!raw.startsWith('data: ')) continue;
+            const jsonStr = raw.slice(6).trim();
+            if (jsonStr === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+              if (content) {
+                assistantContent += content;
+                setMessages([...newMessages, { role: 'assistant', content: assistantContent }]);
+              }
+            } catch { /* ignore */ }
           }
         }
       }
