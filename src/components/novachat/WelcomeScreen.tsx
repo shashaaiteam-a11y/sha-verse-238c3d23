@@ -52,7 +52,7 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
   ];
 
   const quickPrompts = [
-    { icon: Globe, text: "Universe ke baare me batao 🌌", color: "bg-blue-500/10 text-blue-500" },
+    { icon: Globe, text: "Tell me about the universe 🌌", color: "bg-blue-500/10 text-blue-500" },
     { icon: ImageIcon, text: "Generate image of a galaxy", color: "bg-pink-500/10 text-pink-500" },
     { icon: Zap, text: "Give me productivity tips 🚀", color: "bg-yellow-500/10 text-yellow-500" },
     { icon: Code, text: "Debug my code snippet 💻", color: "bg-green-500/10 text-green-500" }
@@ -79,10 +79,10 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
       
       {/* Title */}
       <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-center">
-        Kaise madad karun aaj? 🌟
+        How can I help you today? 🌟
       </h1>
       <p className="text-muted-foreground mb-10 text-center max-w-md">
-        Main NovaChat hoon — tumhara AI dost! 🤖 Coding, writing, analysis, image generation, ya kuch bhi pooch lo ✨
+        I'm NovaChat — your AI assistant! 🤖 Ask me anything about coding, writing, analysis, image generation, or anything else ✨
       </p>
 
       {/* Quick Prompts */}
@@ -127,7 +127,7 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
       {/* Footer */}
       <div className="mt-10 flex flex-col items-center gap-1.5 pb-4">
         <p className="text-xs text-muted-foreground text-center">
-          NovaChat galti kar sakta hai. Important info double-check karein 🔍
+          NovaChat can make mistakes. Please double-check important info 🔍
         </p>
         <p className="text-xs text-center font-semibold text-primary/80">
           🚀 Powered by Lovable AI — Text + Image Generation!
