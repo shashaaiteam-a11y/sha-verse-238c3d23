@@ -197,14 +197,47 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
       {/* Typing Bar */}
       <div className="p-3">
         <div className="flex items-center gap-2">
-          {/* Emoji Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full text-muted-foreground hover:text-foreground flex-shrink-0 h-10 w-10"
-          >
-            <Smile className="w-6 h-6" />
-          </Button>
+          {/* Emoji Button + Picker (WhatsApp-style) */}
+          <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`rounded-full flex-shrink-0 h-10 w-10 transition-colors ${
+                  showEmojiPicker 
+                    ? 'text-primary bg-primary/10' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                aria-label="Open emoji picker"
+              >
+                <Smile className="w-6 h-6" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent 
+              side="top" 
+              align="start" 
+              sideOffset={8}
+              className="p-0 border-0 bg-transparent shadow-xl w-auto"
+              onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+              <Suspense fallback={
+                <div className="w-[320px] h-[400px] bg-card rounded-lg flex items-center justify-center border border-border">
+                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              }>
+                <EmojiPicker
+                  onEmojiClick={handleEmojiSelect}
+                  theme={(resolvedTheme === 'dark' ? EmojiTheme.DARK : EmojiTheme.LIGHT)}
+                  width={320}
+                  height={400}
+                  searchPlaceholder="Search emoji"
+                  previewConfig={{ showPreview: false }}
+                  skinTonesDisabled={false}
+                  lazyLoadEmojis
+                />
+              </Suspense>
+            </PopoverContent>
+          </Popover>
 
           {/* Attachment Button with Popover */}
           <Popover open={showAttachMenu} onOpenChange={setShowAttachMenu}>
@@ -278,6 +311,7 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
 
           {/* Message Input */}
           <Input
+            ref={inputRef}
             value={message}
             onChange={(e) => {
               const nextMessage = e.target.value;
@@ -290,6 +324,7 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
               }
             }}
             onKeyDown={handleKeyDown}
+            onFocus={() => setShowEmojiPicker(false)}
             onBlur={() => onStopTyping?.()}
             placeholder="Type a message"
             className="flex-1 bg-secondary border-0 rounded-full px-4 h-11"
