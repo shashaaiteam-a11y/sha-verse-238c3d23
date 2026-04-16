@@ -1,6 +1,7 @@
+import { Button } from '@/components/ui/button';
 import { 
   Code, FileText, Lightbulb, 
-  PenTool, Calculator, Globe, Zap, ImageIcon 
+  PenTool, Calculator, Globe, Zap 
 } from 'lucide-react';
 
 interface WelcomeScreenProps {
@@ -11,7 +12,7 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
   const categories = [
     {
       icon: Code,
-      title: 'Code 💻',
+      title: 'Code',
       color: 'text-blue-500',
       suggestions: [
         'Write a Python function to sort a list',
@@ -21,7 +22,7 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
     },
     {
       icon: FileText,
-      title: 'Write ✍️',
+      title: 'Write',
       color: 'text-purple-500',
       suggestions: [
         'Write a professional email template',
@@ -31,7 +32,7 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
     },
     {
       icon: Lightbulb,
-      title: 'Ideas 💡',
+      title: 'Ideas',
       color: 'text-yellow-500',
       suggestions: [
         'Brainstorm startup ideas for AI',
@@ -40,22 +41,22 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
       ]
     },
     {
-      icon: ImageIcon,
-      title: 'Images 🎨',
-      color: 'text-pink-500',
+      icon: Calculator,
+      title: 'Analyze',
+      color: 'text-green-500',
       suggestions: [
-        'Generate an image of a sunset over mountains',
-        'Draw a futuristic city at night',
-        'Create an image of a cute robot reading a book'
+        'Explain this math problem step by step',
+        'Analyze the pros and cons of...',
+        'Compare different approaches to...'
       ]
     }
   ];
 
   const quickPrompts = [
-    { icon: Globe, text: "Tell me about the universe 🌌", color: "bg-blue-500/10 text-blue-500" },
-    { icon: ImageIcon, text: "Generate image of a galaxy", color: "bg-pink-500/10 text-pink-500" },
-    { icon: Zap, text: "Give me productivity tips 🚀", color: "bg-yellow-500/10 text-yellow-500" },
-    { icon: Code, text: "Debug my code snippet 💻", color: "bg-green-500/10 text-green-500" }
+    { icon: Globe, text: "Explain quantum computing simply", color: "bg-blue-500/10 text-blue-500" },
+    { icon: PenTool, text: "Write a poem about technology", color: "bg-purple-500/10 text-purple-500" },
+    { icon: Zap, text: "Give me productivity tips", color: "bg-yellow-500/10 text-yellow-500" },
+    { icon: Code, text: "Debug my code snippet", color: "bg-green-500/10 text-green-500" }
   ];
 
   return (
@@ -79,10 +80,10 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
       
       {/* Title */}
       <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-center">
-        How can I help you today? 🌟
+        How can I help you today?
       </h1>
       <p className="text-muted-foreground mb-10 text-center max-w-md">
-        I'm NovaChat — your AI assistant! 🤖 Ask me anything about coding, writing, analysis, image generation, or anything else ✨
+        I'm NovaChat, powered by advanced AI. Ask me anything about coding, writing, analysis, or just have a conversation.
       </p>
 
       {/* Quick Prompts */}
@@ -127,10 +128,10 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
       {/* Footer */}
       <div className="mt-10 flex flex-col items-center gap-1.5 pb-4">
         <p className="text-xs text-muted-foreground text-center">
-          NovaChat can make mistakes. Please double-check important info 🔍
+          NovaChat can make mistakes. Consider checking important information.
         </p>
         <p className="text-xs text-center font-semibold text-primary/80">
-          🚀 Powered by Lovable AI — Text + Image Generation!
+          🚀 Coming Soon: Sha-Verse's NovaChat will arrive with even more powerful features!
         </p>
       </div>
     </div>

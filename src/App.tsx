@@ -11,7 +11,6 @@ import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import { SwipeWrapper } from "./components/SwipeWrapper";
-import NovaChat from "./pages/NovaChat";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("./pages/Home"));
@@ -20,6 +19,7 @@ const VideoWatch = lazy(() => import("./pages/VideoWatch"));
 const ChannelPage = lazy(() => import("./pages/ChannelPage"));
 const CreatorStudio = lazy(() => import("./pages/CreatorStudio"));
 const MovionLibrary = lazy(() => import("./pages/MovionLibrary"));
+const NovaChat = lazy(() => import("./pages/NovaChat"));
 const Bookshelf = lazy(() => import("./pages/Bookshelf"));
 const BookDetail = lazy(() => import("./pages/BookDetail"));
 const EditBook = lazy(() => import("./pages/EditBook"));
