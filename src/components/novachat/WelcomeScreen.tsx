@@ -101,6 +101,11 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
         ))}
       </div>
 
+      {/* Ad: Sponsored Suggestion */}
+      <div className="w-full max-w-2xl mb-10">
+        <SponsoredSuggestion onClick={() => onSuggestionClick('Tell me about productivity tools')} />
+      </div>
+
       {/* Category Suggestions */}
       <div className="w-full max-w-3xl">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
