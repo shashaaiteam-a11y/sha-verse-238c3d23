@@ -1,57 +1,64 @@
 
 
-## YouTube-Level Internal System Enhancements for Movion
+## Plan: Upgrade NovaChat to ChatGPT-level AI Assistant
 
-### Current State Analysis
-The Movion module already has solid foundations:
-- Shorts swipe with `snap-y snap-mandatory` + IntersectionObserver (70% threshold) 
-- Single active player (only `isActive` video plays, others pause)
-- Home feed algorithm with freshness, engagement, category match
-- Pulse algorithm with retention, replays, engagement speed
-- Subscription feed with notification level priority
-- Library system (History, Watch Later, Liked, Playlists)
+### Problem
+NovaChat currently calls the Gemini API directly from the frontend using `VITE_GEMINI_API_KEY`. It needs to be upgraded to:
+1. Use Lovable AI Gateway (proper backend architecture, no exposed API keys)
+2. Have a friendly, emoji-rich personality that explains everything about the universe
+3. Support image generation through simple prompts
+4. Maintain streaming responses with typing effect
 
-### Gaps Found (What's Missing vs YouTube)
+### Changes
 
-**1. Shorts Pre-fetching**: Currently loads ±1 video. YouTube pre-fetches next 2-3 for smoother experience.
+#### 1. Create Edge Function: `supabase/functions/novachat/index.ts`
+- Backend function that proxies requests to Lovable AI Gateway
+- Uses `LOVABLE_API_KEY` (already available)
+- Supports two modes:
+  - **Chat mode**: Streams text responses via SSE using `google/gemini-3-flash-preview`
+  - **Image mode**: Generates images using `google/gemini-3.1-flash-image-preview` when user asks for image generation
+- Rich system prompt: friendly, emoji-heavy, explains everything in the universe, Hinglish-friendly tone
+- Handles 429/402 errors properly
 
-**2. Shorts Swipe-Away Tracking**: No tracking of "swiped away quickly" vs "watched fully" — this is the most important Shorts metric per YouTube's own docs.
+#### 2. Update `src/hooks/useNovaChat.ts`
+- Remove direct Gemini API calls and `VITE_GEMINI_API_KEY` usage
+- Route all requests through the new edge function (`/functions/v1/novachat`)
+- Add image generation detection: if user prompt starts with "generate image", "draw", "create image", etc., call the edge function in image mode
+- Parse image responses (base64) and display inline in chat
+- Keep existing streaming SSE parsing for text responses
+- Keep all existing conversation/message management unchanged
 
-**3. Pulse Algorithm Missing Freshness**: Home feed has freshness boost (3-day decay) but Shorts/Pulse algorithm has none — new Shorts should get priority.
+#### 3. Update `src/components/novachat/ChatMessage.tsx`
+- Add support for rendering generated images in assistant messages (detect base64 image data or image URLs in content)
+- Keep all existing markdown rendering unchanged
 
-**4. Creator Diversity in Feed**: No logic to prevent same channel appearing back-to-back in feeds.
+#### 4. Update System Prompt (in edge function)
+```
+You are NovaChat 🌟 — a friendly, knowledgeable AI assistant who knows everything about the universe!
 
-**5. "Not Interested" Feedback**: Button exists in ShortsPlayer but doesn't affect algorithm (just shows a toast).
+Key behaviors:
+- Use emojis naturally throughout responses 🎯✨🔥
+- Explain things in a friendly, conversational style — like a smart dost (friend)
+- Support Hinglish naturally when users write in it
+- Give detailed explanations with proper formatting
+- Use markdown: headers, lists, code blocks, tables, bold, etc.
+- If someone asks to generate/draw/create an image, help them
+- Be enthusiastic and helpful about EVERY topic
+```
 
-**6. Session-Based Interest Tracking**: No tracking of what categories user watches in current session to adjust feed dynamically.
+#### 5. Update `src/components/novachat/WelcomeScreen.tsx`
+- Add image generation suggestion cards (e.g., "Generate a sunset over mountains 🌄")
+- Update description to mention image generation capability
 
-### Implementation Plan
+### What stays unchanged
+- All other modules (Home, Movion, Bookshelf, Groups, Profile, Messenger)
+- Conversation sidebar, history, delete, rename functionality
+- Database tables (ai_conversations, ai_messages)
+- All UI components outside NovaChat
 
-**File: `src/movion/pages/MovionShorts.tsx`**
-- Change pre-fetch window from `±1` to `±3` (next 3 + previous 1)
-- Track swipe-away behavior: if user spends <2 seconds on a short before swiping, record negative signal
-
-**File: `src/hooks/useMovionAlgorithms.ts`**
-- **Pulse Algorithm**: Add freshness boost (48hr decay window) — new Shorts ranked higher
-- **Pulse Algorithm**: Add swipe-away penalty using localStorage-based session data
-- **Home Feed + Pulse**: Add creator diversity logic — if same channel appears consecutively, swap positions
-- **Home Feed**: Add session interest tracking — boost categories watched in current session
-
-**File: `src/movion/components/ShortsPlayer.tsx`**
-- "Not Interested" button: store video ID in localStorage hidden list and emit event to algorithm
-- Track watch duration per short for swipe-away metric
-
-**File: `src/hooks/useHiddenVideos.ts`** (existing)
-- Ensure Shorts "Not Interested" uses same hidden videos system
-
-### What Won't Change
-- No other modules (Home feed, Bookshelf, Groups, Profile, NovaChat)
-- No global UI components
-- No database schema changes (all tracking via localStorage for session data)
-
-### Technical Details
-- Pre-fetch: `Math.abs(idx - activeIndex) <= 3` with direction bias (next 3 > prev 1)
-- Freshness in Pulse: `Math.max(1 - (hoursOld / 48), 0) * 0.2`
-- Creator diversity: post-sort pass that swaps consecutive same-channel videos
-- Swipe-away: track `{videoId, watchSeconds}` in session, penalize <2s views in scoring
+### Technical Notes
+- `LOVABLE_API_KEY` is already configured as a secret
+- Edge function will handle both streaming text and image generation
+- Images will be stored as base64 data URLs in message content
+- No database schema changes needed
 
