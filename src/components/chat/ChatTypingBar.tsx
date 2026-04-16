@@ -32,14 +32,41 @@ interface ChatTypingBarProps {
 
 export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping }: ChatTypingBarProps) => {
   const { user } = useAuth();
+  const { resolvedTheme } = useTheme();
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // WhatsApp-style: insert emoji at current cursor position
+  const handleEmojiSelect = (emojiData: { emoji: string }) => {
+    const input = inputRef.current;
+    const emoji = emojiData.emoji;
+
+    if (input) {
+      const start = input.selectionStart ?? message.length;
+      const end = input.selectionEnd ?? message.length;
+      const newMessage = message.slice(0, start) + emoji + message.slice(end);
+      setMessage(newMessage);
+
+      // Restore focus + cursor position after emoji
+      requestAnimationFrame(() => {
+        input.focus();
+        const newPos = start + emoji.length;
+        input.setSelectionRange(newPos, newPos);
+      });
+    } else {
+      setMessage((prev) => prev + emoji);
+    }
+
+    if (onTyping) onTyping();
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'file' | 'image' | 'video') => {
     const file = e.target.files?.[0];
