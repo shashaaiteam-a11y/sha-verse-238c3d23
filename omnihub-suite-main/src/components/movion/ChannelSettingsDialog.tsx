@@ -206,7 +206,7 @@ export const ChannelSettingsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
@@ -318,78 +318,75 @@ export const ChannelSettingsDialog = ({
           </TabsContent>
 
           <TabsContent value="videos" className="mt-4">
-            <ScrollArea className="max-h-[calc(80vh-160px)] pr-2">
+            <ScrollArea className="h-[400px] pr-4">
               {videos.length > 0 ? (
                 <div className="space-y-3">
                   {videos.map((video) => (
                     <div
                       key={video.id}
-                      className="flex flex-col sm:flex-row gap-2 sm:gap-3 p-3 rounded-lg border border-border bg-muted/30"
+                      className="flex gap-3 p-3 rounded-lg border border-border bg-muted/30"
                     >
-                      {/* Top row: Thumbnail + Info + Actions */}
-                      <div className="flex gap-3 w-full min-w-0">
-                        {/* Thumbnail */}
-                        <div className="w-20 h-14 sm:w-24 sm:h-16 rounded bg-muted overflow-hidden flex-shrink-0">
-                          {video.thumbnail_url ? (
-                            <img
-                              src={video.thumbnail_url}
-                              alt={video.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                              No thumb
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          {editingVideo === video.id ? (
-                            <div className="space-y-2">
-                              <Input
-                                value={videoTitle}
-                                onChange={(e) => setVideoTitle(e.target.value)}
-                                placeholder="Video title"
-                                className="h-8 text-sm"
-                              />
-                              <Textarea
-                                value={videoDescription}
-                                onChange={(e) => setVideoDescription(e.target.value)}
-                                placeholder="Description"
-                                className="resize-none text-sm"
-                                rows={2}
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSaveVideo(video.id)}
-                                >
-                                  Save
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setEditingVideo(null)}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <p className="font-medium text-sm truncate">{video.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {video.views_count || 0} views
-                              </p>
-                            </>
-                          )}
-                        </div>
+                      {/* Thumbnail */}
+                      <div className="w-24 h-16 rounded bg-muted overflow-hidden flex-shrink-0">
+                        {video.thumbnail_url ? (
+                          <img
+                            src={video.thumbnail_url}
+                            alt={video.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                            No thumb
+                          </div>
+                        )}
                       </div>
 
-                      {/* Actions - bottom on mobile, inline on desktop */}
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        {editingVideo === video.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={videoTitle}
+                              onChange={(e) => setVideoTitle(e.target.value)}
+                              placeholder="Video title"
+                              className="h-8 text-sm"
+                            />
+                            <Textarea
+                              value={videoDescription}
+                              onChange={(e) => setVideoDescription(e.target.value)}
+                              placeholder="Description"
+                              className="resize-none text-sm"
+                              rows={2}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveVideo(video.id)}
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingVideo(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="font-medium text-sm truncate">{video.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {video.views_count || 0} views
+                            </p>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Actions */}
                       {editingVideo !== video.id && (
-                        <div className="flex items-center gap-1 sm:flex-shrink-0 justify-end sm:justify-start">
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
