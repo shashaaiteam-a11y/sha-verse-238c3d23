@@ -17,11 +17,7 @@ import {
 
 // Lazy-load emoji picker (heavy bundle) — only when user opens it
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
-const EmojiTheme = {
-  DARK: 'dark' as const,
-  LIGHT: 'light' as const,
-  AUTO: 'auto' as const,
-};
+import { Theme as EmojiTheme } from 'emoji-picker-react';
 
 interface ChatTypingBarProps {
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: string) => void;
