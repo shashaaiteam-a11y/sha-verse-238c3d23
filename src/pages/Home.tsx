@@ -15,6 +15,8 @@ import { CreatePostCard } from '@/components/CreatePostCard';
 import NotificationBell from '@/components/NotificationBell';
 import FacebookStoriesBar from '@/components/stories/FacebookStoriesBar';
 import AppMenu from '@/components/AppMenu';
+import { NativeAdCard, BannerAd } from '@/components/ads';
+import { AD_FREQUENCY } from '@/lib/ads/adConfig';
 
 const Home = () => {
   const { feedItems, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
@@ -117,6 +119,11 @@ const Home = () => {
             <FriendSuggestions />
           </div>
 
+          {/* Ad: 320x100 banner after friend suggestions */}
+          <div className="mb-3 sm:mb-4 flex justify-center">
+            <BannerAd placement="home_banner" />
+          </div>
+
           {/* Create Post */}
           <div className="mb-3 sm:mb-4">
             <CreatePostCard />
@@ -130,16 +137,23 @@ const Home = () => {
               </div>
             ) : feedItems && feedItems.length > 0 ? (
               <>
-                {feedItems.map((item) => (
-                  <FeedCard
-                    key={`${item.type}-${item.id}`}
-                    item={item}
-                    onShare={() => {
-                      if (item.type === 'post' || item.type === 'group_post') {
-                        sharePost.mutate({ postId: item.id });
-                      }
-                    }}
-                  />
+                {feedItems.map((item, idx) => (
+                  <div key={`${item.type}-${item.id}`}>
+                    <FeedCard
+                      item={item}
+                      onShare={() => {
+                        if (item.type === 'post' || item.type === 'group_post') {
+                          sharePost.mutate({ postId: item.id });
+                        }
+                      }}
+                    />
+                    {/* Ad: native card every N posts */}
+                    {(idx + 1) % AD_FREQUENCY.HOME_FEED_EVERY_N_POSTS === 0 && (
+                      <div className="mt-3 sm:mt-4">
+                        <NativeAdCard placement="home_feed" />
+                      </div>
+                    )}
+                  </div>
                 ))}
                 
                 {/* Load More Trigger */}

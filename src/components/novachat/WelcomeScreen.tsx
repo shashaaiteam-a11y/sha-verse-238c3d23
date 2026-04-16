@@ -3,6 +3,7 @@ import {
   Code, FileText, Lightbulb, 
   PenTool, Calculator, Globe, Zap 
 } from 'lucide-react';
+import { SponsoredSuggestion } from '@/components/ads';
 
 interface WelcomeScreenProps {
   onSuggestionClick: (suggestion: string) => void;
@@ -98,6 +99,11 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
             <span className="text-xs text-center text-foreground line-clamp-2">{prompt.text}</span>
           </button>
         ))}
+      </div>
+
+      {/* Ad: Sponsored Suggestion */}
+      <div className="w-full max-w-2xl mb-10">
+        <SponsoredSuggestion onClick={() => onSuggestionClick('Tell me about productivity tools')} />
       </div>
 
       {/* Category Suggestions */}

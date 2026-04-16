@@ -6,6 +6,7 @@ import { useStories, StoryGroup } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
 import CreateStoryDialog from "./CreateStoryDialog";
 import FacebookStoryViewer from "./FacebookStoryViewer";
+import { SponsoredStory } from "@/components/ads";
 import { cn } from "@/lib/utils";
 
 const FacebookStoriesBar = () => {
@@ -100,6 +101,12 @@ const FacebookStoriesBar = () => {
                 </button>
               )}
               <span className="text-xs text-muted-foreground">Your Story</span>
+            </div>
+
+            {/* Ad: Sponsored Story at slot 2 (right after "Your Story") */}
+            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <SponsoredStory />
+              <span className="text-xs text-muted-foreground">Sponsored</span>
             </div>
 
             {/* Friends' Stories */}

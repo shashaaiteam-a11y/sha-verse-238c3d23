@@ -16,21 +16,33 @@ export type Database = {
     Tables: {
       ad_impressions: {
         Row: {
+          ad_category: string | null
+          ad_unit_id: string | null
           created_at: string | null
           id: string
+          placement: string | null
           revenue: number | null
+          user_id: string | null
           video_id: string | null
         }
         Insert: {
+          ad_category?: string | null
+          ad_unit_id?: string | null
           created_at?: string | null
           id?: string
+          placement?: string | null
           revenue?: number | null
+          user_id?: string | null
           video_id?: string | null
         }
         Update: {
+          ad_category?: string | null
+          ad_unit_id?: string | null
           created_at?: string | null
           id?: string
+          placement?: string | null
           revenue?: number | null
+          user_id?: string | null
           video_id?: string | null
         }
         Relationships: [
@@ -2992,6 +3004,39 @@ export type Database = {
           },
         ]
       }
+      rewarded_ad_unlocks: {
+        Row: {
+          consumed_count: number
+          created_at: string
+          expires_at: string | null
+          id: string
+          resource_id: string | null
+          reward_type: string
+          reward_value: number
+          user_id: string
+        }
+        Insert: {
+          consumed_count?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          resource_id?: string | null
+          reward_type: string
+          reward_value?: number
+          user_id: string
+        }
+        Update: {
+          consumed_count?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          resource_id?: string | null
+          reward_type?: string
+          reward_value?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_books: {
         Row: {
           book_id: string
@@ -3428,6 +3473,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_ad_preferences: {
+        Row: {
+          blocked_category: string | null
+          blocked_until: string
+          created_at: string
+          hidden_ad_id: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          blocked_category?: string | null
+          blocked_until?: string
+          created_at?: string
+          hidden_ad_id?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          blocked_category?: string | null
+          blocked_until?: string
+          created_at?: string
+          hidden_ad_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_blocks: {
         Row: {
