@@ -3,6 +3,7 @@ import {
   Code, FileText, Lightbulb, 
   PenTool, Calculator, Globe, Zap 
 } from 'lucide-react';
+import { SponsoredSuggestion } from '@/components/ads';
 
 interface WelcomeScreenProps {
   onSuggestionClick: (suggestion: string) => void;
