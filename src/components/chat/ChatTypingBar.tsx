@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -8,11 +8,16 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+
+// Lazy-load emoji picker (heavy bundle) — only when user opens it
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
+import { Theme as EmojiTheme } from 'emoji-picker-react';
 
 interface ChatTypingBarProps {
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: string) => void;
@@ -23,14 +28,41 @@ interface ChatTypingBarProps {
 
 export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping }: ChatTypingBarProps) => {
   const { user } = useAuth();
+  const { resolvedTheme } = useTheme();
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // WhatsApp-style: insert emoji at current cursor position
+  const handleEmojiSelect = (emojiData: { emoji: string }) => {
+    const input = inputRef.current;
+    const emoji = emojiData.emoji;
+
+    if (input) {
+      const start = input.selectionStart ?? message.length;
+      const end = input.selectionEnd ?? message.length;
+      const newMessage = message.slice(0, start) + emoji + message.slice(end);
+      setMessage(newMessage);
+
+      // Restore focus + cursor position after emoji
+      requestAnimationFrame(() => {
+        input.focus();
+        const newPos = start + emoji.length;
+        input.setSelectionRange(newPos, newPos);
+      });
+    } else {
+      setMessage((prev) => prev + emoji);
+    }
+
+    if (onTyping) onTyping();
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'file' | 'image' | 'video') => {
     const file = e.target.files?.[0];
@@ -161,14 +193,47 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
       {/* Typing Bar */}
       <div className="p-3">
         <div className="flex items-center gap-2">
-          {/* Emoji Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full text-muted-foreground hover:text-foreground flex-shrink-0 h-10 w-10"
-          >
-            <Smile className="w-6 h-6" />
-          </Button>
+          {/* Emoji Button + Picker (WhatsApp-style) */}
+          <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`rounded-full flex-shrink-0 h-10 w-10 transition-colors ${
+                  showEmojiPicker 
+                    ? 'text-primary bg-primary/10' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                aria-label="Open emoji picker"
+              >
+                <Smile className="w-6 h-6" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent 
+              side="top" 
+              align="start" 
+              sideOffset={8}
+              className="p-0 border-0 bg-transparent shadow-xl w-auto"
+              onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+              <Suspense fallback={
+                <div className="w-[320px] h-[400px] bg-card rounded-lg flex items-center justify-center border border-border">
+                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              }>
+                <EmojiPicker
+                  onEmojiClick={handleEmojiSelect}
+                  theme={(resolvedTheme === 'dark' ? EmojiTheme.DARK : EmojiTheme.LIGHT)}
+                  width={320}
+                  height={400}
+                  searchPlaceholder="Search emoji"
+                  previewConfig={{ showPreview: false }}
+                  skinTonesDisabled={false}
+                  lazyLoadEmojis
+                />
+              </Suspense>
+            </PopoverContent>
+          </Popover>
 
           {/* Attachment Button with Popover */}
           <Popover open={showAttachMenu} onOpenChange={setShowAttachMenu}>
@@ -242,6 +307,7 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
 
           {/* Message Input */}
           <Input
+            ref={inputRef}
             value={message}
             onChange={(e) => {
               const nextMessage = e.target.value;
@@ -254,6 +320,7 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
               }
             }}
             onKeyDown={handleKeyDown}
+            onFocus={() => setShowEmojiPicker(false)}
             onBlur={() => onStopTyping?.()}
             placeholder="Type a message"
             className="flex-1 bg-secondary border-0 rounded-full px-4 h-11"
