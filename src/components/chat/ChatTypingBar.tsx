@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -8,11 +8,20 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+
+// Lazy-load emoji picker (heavy bundle) — only when user opens it
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
+const EmojiTheme = {
+  DARK: 'dark' as const,
+  LIGHT: 'light' as const,
+  AUTO: 'auto' as const,
+};
 
 interface ChatTypingBarProps {
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: string) => void;
