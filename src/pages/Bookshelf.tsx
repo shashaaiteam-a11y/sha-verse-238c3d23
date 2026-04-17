@@ -18,6 +18,7 @@ import CreateAuthorChannelDialog from "@/components/bookshelf/CreateAuthorChanne
 import BookCard from "@/components/bookshelf/BookCard";
 import { formatDistanceToNow } from "date-fns";
 import { BOOK_CATEGORIES } from "@/lib/constants/bookshelf";
+import { NativeAdCard } from "@/components/ads";
 
 const Bookshelf = () => {
   const navigate = useNavigate();
@@ -318,9 +319,20 @@ const Bookshelf = () => {
                 Recently Added
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-                {books.map((book) => (
-                  <BookCard key={book.id} book={book} />
-                ))}
+                {books.flatMap((book, idx) => {
+                  const node = <BookCard key={book.id} book={book} />;
+                  if ((idx + 1) % 5 === 0) {
+                    return [
+                      node,
+                      <NativeAdCard
+                        key={`ad-${book.id}`}
+                        placement="bookshelf_grid"
+                        compact
+                      />,
+                    ];
+                  }
+                  return [node];
+                })}
               </div>
 
               {isLoading && (

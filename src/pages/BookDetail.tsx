@@ -476,6 +476,11 @@ const BookDetail = () => {
                 )}
               </Button>
             </div>
+
+            {/* Sponsored banner under action buttons */}
+            <div className="mt-4">
+              <BannerAd placement="bookshelf_detail_banner" />
+            </div>
           </div>
         </div>
 
