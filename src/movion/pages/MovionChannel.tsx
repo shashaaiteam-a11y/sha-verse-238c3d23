@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VideoType, MovionVideo } from "../types";
+import { BannerAd } from "@/components/ads";
 
 const formatDuration = (seconds?: number) => {
   if (!seconds) return '0:00';
@@ -145,6 +146,9 @@ const MovionChannel = () => {
             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
               {channel.description || 'No description'}
             </p>
+            <div className="mt-3">
+              <BannerAd placement="channel_banner" />
+            </div>
           </div>
           
           <div className="flex items-center gap-2">

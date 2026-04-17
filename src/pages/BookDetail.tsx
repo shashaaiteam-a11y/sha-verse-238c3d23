@@ -27,6 +27,7 @@ import BookRatingDialog from "@/components/bookshelf/BookRatingDialog";
 import BookDeletionDialog from "@/components/bookshelf/BookDeletionDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
+import { BannerAd } from "@/components/ads";
 
 // BookDetail page component
 const BookDetail = () => {
@@ -475,6 +476,11 @@ const BookDetail = () => {
                   </>
                 )}
               </Button>
+            </div>
+
+            {/* Sponsored banner under action buttons */}
+            <div className="mt-4">
+              <BannerAd placement="bookshelf_detail_banner" />
             </div>
           </div>
         </div>

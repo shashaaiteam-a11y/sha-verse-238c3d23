@@ -45,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { NativeAdCard } from '@/components/ads';
 
 const Profile = () => {
   const { userId } = useParams<{ userId?: string }>();
@@ -656,16 +657,28 @@ const Profile = () => {
                   ) : posts && posts.length > 0 ? (
                     <>
                       <div className="space-y-4">
-                        {posts.map((post: any) => (
-                          <ProfilePostCard
-                            key={post.id}
-                            post={post}
-                            isOwnProfile={isOwnProfile}
-                            onShare={(postId) => sharePost.mutate({ postId })}
-                            onDelete={handleDeletePost}
-                            onPin={(postId) => togglePinPost.mutate(postId)}
-                          />
-                        ))}
+                        {posts.flatMap((post: any, idx: number) => {
+                          const card = (
+                            <ProfilePostCard
+                              key={post.id}
+                              post={post}
+                              isOwnProfile={isOwnProfile}
+                              onShare={(postId) => sharePost.mutate({ postId })}
+                              onDelete={handleDeletePost}
+                              onPin={(postId) => togglePinPost.mutate(postId)}
+                            />
+                          );
+                          if ((idx + 1) % 5 === 0) {
+                            return [
+                              card,
+                              <NativeAdCard
+                                key={`ad-${post.id}`}
+                                placement="profile_posts"
+                              />,
+                            ];
+                          }
+                          return [card];
+                        })}
                       </div>
                       {/* Pagination Controls */}
                       <div className="flex justify-center gap-2 mt-6">
