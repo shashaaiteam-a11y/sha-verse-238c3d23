@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VideoType, MovionVideo } from "../types";
+import { BannerAd } from "@/components/ads";
 
 const formatDuration = (seconds?: number) => {
   if (!seconds) return '0:00';

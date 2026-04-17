@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { SubscribeButton } from "@/movion/components/SubscribeButton";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentItem from "@/movion/components/CommentItem";
+import { VideoPreRollAd, VideoMidRollAd } from "@/components/ads";
 
 const MovionWatch = () => {
   const { videoId } = useParams();

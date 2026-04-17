@@ -8,6 +8,7 @@ import { useHiddenVideos } from '@/hooks/useHiddenVideos';
 import { recordSwipeAway } from '@/hooks/useMovionAlgorithms';
 import { ShortsPlayer } from '../components';
 import { Loader2 } from 'lucide-react';
+import { ShortsScrollAd } from '@/components/ads';
 
 const MovionShorts: React.FC = () => {
   const { videoId } = useParams();

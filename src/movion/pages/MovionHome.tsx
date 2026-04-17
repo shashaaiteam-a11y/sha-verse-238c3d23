@@ -11,6 +11,7 @@ import { VideoCard, ShortsCard } from '../components';
 import { VIDEO_CATEGORIES } from '../constants';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NativeAdCard } from '@/components/ads';
 
 const MovionHome: React.FC = () => {
   const { videos, isLoading: videosLoading } = useVideos();
@@ -112,14 +113,27 @@ const MovionHome: React.FC = () => {
         {!isLoading && (
           <section>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-4 gap-y-8">
-              {prioritizedVideos.map((video) => (
-                <VideoCard 
-                  key={video.id} 
-                  video={video}
-                  activeMenuId={activeMenuId}
-                  onMenuToggle={setActiveMenuId}
-                />
-              ))}
+              {prioritizedVideos.flatMap((video, idx) => {
+                const node = (
+                  <VideoCard 
+                    key={video.id} 
+                    video={video}
+                    activeMenuId={activeMenuId}
+                    onMenuToggle={setActiveMenuId}
+                  />
+                );
+                // Inject native ad every 6 videos
+                if ((idx + 1) % 6 === 0) {
+                  return [
+                    node,
+                    <NativeAdCard
+                      key={`ad-${video.id}`}
+                      placement="movion_grid"
+                    />,
+                  ];
+                }
+                return [node];
+              })}
             </div>
 
             {prioritizedVideos.length === 0 && (
