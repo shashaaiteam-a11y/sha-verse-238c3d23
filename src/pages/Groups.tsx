@@ -36,6 +36,7 @@ import {
 const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, members_count, posts_count, created_at, creator_id, group_posts(count)`;
 
 import { GROUP_CATEGORIES } from "@/lib/constants/groupCategories";
+import { SponsoredGroupCard, BannerAd } from "@/components/ads";
 
 const CATEGORIES = GROUP_CATEGORIES;
 
@@ -339,10 +340,10 @@ const Groups = () => {
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-        {suggestedGroups.map((group: any) => {
+        {suggestedGroups.flatMap((group: any, idx: number) => {
           const isJoined = joinedGroupIds.has(group.id);
           const isPending = pendingRequestGroupIds.has(group.id);
-          return (
+          const card = (
             <Card
               key={group.id}
               className="p-3 sm:p-4 text-center cursor-pointer hover:shadow-md transition-all"
@@ -384,6 +385,12 @@ const Groups = () => {
               </Button>
             </Card>
           );
+
+          // Inject sponsored group card every 5 items
+          if ((idx + 1) % 5 === 0) {
+            return [card, <SponsoredGroupCard key={`ad-${group.id}`} />];
+          }
+          return [card];
         })}
       </div>
     );

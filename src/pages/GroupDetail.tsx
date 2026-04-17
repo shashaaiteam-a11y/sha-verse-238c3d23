@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NativeAdCard } from "@/components/ads";
 
 // Component for group post reactions - Now uses full emoji chart
 const GroupPostReactions = ({ postId }: { postId: string }) => {
