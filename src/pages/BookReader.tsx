@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { StickyBannerAd } from "@/components/ads";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 
@@ -611,6 +612,8 @@ const BookReader = () => {
         )}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Sponsored sticky banner above pagination */}
+        <StickyBannerAd placement="bookshelf_reader_sticky" />
         <div className="px-4 py-3">
           {/* Progress Bar */}
           <div className="mb-3">
