@@ -543,7 +543,8 @@ const GroupDetail = () => {
               <div className="w-6 h-6 sm:w-8 sm:h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
             </div>
           ) : posts && posts.length > 0 ? (
-            posts.map((post: any) => (
+            posts.flatMap((post: any, postIdx: number) => {
+              const card = (
               <Card key={post.id} className="p-3 sm:p-4 shadow-md">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2 sm:gap-3">
@@ -702,7 +703,17 @@ const GroupDetail = () => {
 
                 <PostComments postId={post.id} type="group_post" commentsCount={post.comments_count || 0} />
               </Card>
-            ))
+              );
+
+              // Inject native ad every 5 posts
+              if ((postIdx + 1) % 5 === 0) {
+                return [
+                  card,
+                  <NativeAdCard key={`ad-${post.id}`} placement="group_feed" />,
+                ];
+              }
+              return [card];
+            })
           ) : (
             <Card className="p-6 sm:p-8 text-center">
               <p className="text-sm sm:text-base text-muted-foreground">No posts yet. Be the first to post!</p>

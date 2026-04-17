@@ -514,6 +514,11 @@ const Groups = () => {
           </div>
         </div>
 
+        {/* Discovery banner after categories */}
+        <div className="mb-4 sm:mb-6 flex justify-center">
+          <BannerAd placement="group_discovery_banner" />
+        </div>
+
         {/* Category Results Panel */}
         {selectedCategory && (
           <div className="mb-6">
