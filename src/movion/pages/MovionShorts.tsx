@@ -120,12 +120,12 @@ const MovionShorts: React.FC = () => {
       className="fixed top-14 bottom-16 left-0 right-0 lg:static lg:h-[calc(100vh-56px)] overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-black z-40" 
       ref={containerRef}
     >
-      {shortsVideos.map((video, idx) => {
+      {shortsVideos.flatMap((video, idx) => {
         // Pre-fetch: next 3 + previous 1 for smooth swiping
         const diff = idx - activeIndex;
         const shouldLoadMedia = diff >= -1 && diff <= 3;
-        
-        return (
+
+        const player = (
           <ShortsPlayer 
             key={video.id} 
             video={video} 
@@ -136,6 +136,21 @@ const MovionShorts: React.FC = () => {
             onNotInterested={() => hideVideo(video.id)}
           />
         );
+
+        // Inject scroll ad every 6 shorts
+        if ((idx + 1) % 6 === 0) {
+          return [
+            player,
+            <div
+              key={`ad-${video.id}`}
+              data-short-item
+              className="h-full w-full snap-start"
+            >
+              <ShortsScrollAd isActive={false} />
+            </div>,
+          ];
+        }
+        return [player];
       })}
     </div>
   );

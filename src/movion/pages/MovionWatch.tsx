@@ -65,6 +65,9 @@ const MovionWatch = () => {
   const [commentText, setCommentText] = useState("");
   const [isCommentsOpen, setIsCommentsOpen] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
+  const [preRollDone, setPreRollDone] = useState(false);
+  const [midRollShown, setMidRollShown] = useState(false);
+  const [showMidRoll, setShowMidRoll] = useState(false);
   
   // Reload and play video when videoId changes
   useEffect(() => {
@@ -73,8 +76,22 @@ const MovionWatch = () => {
       videoRef.current.play().catch(() => {});
       setProgress(0);
       setIsPlaying(true);
+      setPreRollDone(false);
+      setMidRollShown(false);
+      setShowMidRoll(false);
     }
   }, [video?.id]);
+
+  // Trigger mid-roll at 50% for videos 3+ minutes
+  useEffect(() => {
+    if (!video || midRollShown) return;
+    const dur = video.duration ?? 0;
+    if (dur >= 180 && progress >= 50) {
+      setMidRollShown(true);
+      setShowMidRoll(true);
+      videoRef.current?.pause();
+    }
+  }, [progress, video, midRollShown]);
 
   // Add to history and increment views on mount
   useEffect(() => {
@@ -232,7 +249,22 @@ const MovionWatch = () => {
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
             />
-            
+
+            {/* Pre-roll Ad Overlay */}
+            {!preRollDone && (
+              <VideoPreRollAd onComplete={() => setPreRollDone(true)} />
+            )}
+
+            {/* Mid-roll Ad Overlay */}
+            {showMidRoll && (
+              <VideoMidRollAd
+                onComplete={() => {
+                  setShowMidRoll(false);
+                  videoRef.current?.play().catch(() => {});
+                }}
+              />
+            )}
+
             {/* Video Controls Overlay */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
               {/* Progress Bar */}
