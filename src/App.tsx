@@ -30,13 +30,13 @@ const EditAuthorChannel = lazy(() => import("./modules/bookshelf/pages/EditAutho
 const Groups = lazy(() => import("./pages/Groups"));
 const GroupDetail = lazy(() => import("./pages/GroupDetail"));
 const GroupAdmin = lazy(() => import("./pages/GroupAdmin"));
-const Profile = lazy(() => import("./pages/Profile"));
-const Friends = lazy(() => import("./pages/Friends"));
+const Profile = lazy(() => import("./modules/profile/pages/Profile"));
+const Friends = lazy(() => import("./modules/profile/pages/Friends"));
 const Auth = lazy(() => import("./pages/Auth"));
 const SavedPosts = lazy(() => import("./pages/SavedPosts"));
 const Messages = lazy(() => import("./modules/chats/pages/Messages"));
 const Notifications = lazy(() => import("./pages/Notifications"));
-const Settings = lazy(() => import("./pages/Settings"));
+const Settings = lazy(() => import("./modules/profile/pages/Settings"));
 const HelpSupport = lazy(() => import("./pages/HelpSupport"));
 const PrivacyCenter = lazy(() => import("./pages/PrivacyCenter"));
 const NotFound = lazy(() => import("./pages/NotFound"));
