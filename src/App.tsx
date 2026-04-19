@@ -15,11 +15,11 @@ import { AdProvider } from "./contexts/AdContext";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("./pages/Home"));
-const Movion = lazy(() => import("./pages/Movion"));
-const VideoWatch = lazy(() => import("./pages/VideoWatch"));
-const ChannelPage = lazy(() => import("./pages/ChannelPage"));
-const CreatorStudio = lazy(() => import("./pages/CreatorStudio"));
-const MovionLibrary = lazy(() => import("./pages/MovionLibrary"));
+const Movion = lazy(() => import("./modules/movion/pages/Movion"));
+const VideoWatch = lazy(() => import("./modules/movion/pages/VideoWatch"));
+const ChannelPage = lazy(() => import("./modules/movion/pages/ChannelPage"));
+const CreatorStudio = lazy(() => import("./modules/movion/pages/CreatorStudio"));
+const MovionLibrary = lazy(() => import("./modules/movion/pages/MovionLibrary"));
 const NovaChat = lazy(() => import("./pages/NovaChat"));
 const Bookshelf = lazy(() => import("./modules/bookshelf/pages/Bookshelf"));
 const BookDetail = lazy(() => import("./modules/bookshelf/pages/BookDetail"));
@@ -42,7 +42,7 @@ const PrivacyCenter = lazy(() => import("./pages/PrivacyCenter"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/Offline"));
 const AdminSeed = lazy(() => import("./pages/AdminSeed"));
-const MovionAdmin = lazy(() => import("./pages/MovionAdmin"));
+const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
