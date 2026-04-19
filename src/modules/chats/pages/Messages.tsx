@@ -3,7 +3,7 @@
  * Self-contained route entry for the /messages screen.
  */
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { MessengerChat } from '../components/MessengerChat';
+import { MessengerChat } from '@/modules/chats/components/MessengerChat';
 
 const Messages = () => {
   const navigate = useNavigate();
