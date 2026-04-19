@@ -40,38 +40,43 @@ export const ChatLayout = ({
   }, [messages]);
 
   return (
-    <div className={cn("flex flex-col h-full overflow-hidden", className)}>
+    <div className={cn("flex flex-col h-full overflow-hidden bg-background", className)}>
       {/* Fixed Header */}
-      <div className="flex-shrink-0 z-10">
+      <div className="flex-shrink-0 z-10 bg-background">
         {header}
       </div>
 
       {/* Scrollable Messages Area */}
-      <div className="flex-1 min-h-0 overflow-hidden relative">
+      <div className="flex-1 min-h-0 overflow-hidden relative bg-background">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full bg-background">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : messages ? (
-          <ScrollArea ref={scrollRef} className="h-full">
-            <div className="p-4">
-              {messages}
+        ) : (
+          <ScrollArea 
+            ref={scrollRef} 
+            className="h-full w-full bg-background"
+          >
+            <div className="p-4 min-h-full bg-background">
+              {messages ? (
+                <>{messages}</>
+              ) : (
+                <div className="flex items-center justify-center min-h-[300px]">
+                  {emptyState || (
+                    <div className="text-center text-muted-foreground">
+                      <p>No messages yet</p>
+                      <p className="text-sm mt-1">Start a conversation</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </ScrollArea>
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            {emptyState || (
-              <div className="text-center">
-                <p className="text-muted-foreground">No messages yet</p>
-                <p className="text-sm text-muted-foreground mt-1">Start a conversation</p>
-              </div>
-            )}
-          </div>
         )}
       </div>
 
       {/* Fixed Input Bar at Bottom */}
-      <div className="flex-shrink-0 z-10">
+      <div className="flex-shrink-0 z-10 bg-background">
         {inputBar}
       </div>
     </div>

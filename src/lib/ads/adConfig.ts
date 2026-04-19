@@ -51,15 +51,15 @@ export const AD_FREQUENCY = {
   HIDE_BLOCK_HOURS: 24,
   NEW_USER_REDUCTION_HOURS: 48,
   NEW_USER_FREQUENCY_MULTIPLIER: 0.5,
-  // Slot intervals
+  // Slot intervals (UI-optimized)
   HOME_FEED_EVERY_N_POSTS: 5,
   MOVION_GRID_EVERY_N_VIDEOS: 6,
   SHORTS_EVERY_N: 6,
-  BOOKSHELF_GRID_EVERY_N: 5,
-  GROUP_LIST_EVERY_N: 5,
+  BOOKSHELF_GRID_EVERY_N: 4,      // Every 4 books (2 rows in 2-col grid)
+  GROUP_LIST_POSITION: 3,         // 3rd position specifically
   GROUP_FEED_EVERY_N_POSTS: 5,
-  PROFILE_POSTS_EVERY_N: 5,
-  READER_PAGES_PER_AD: 10,
+  PROFILE_POSTS_EVERY_N: 4,       // Every 4 posts
+  READER_PAGES_PER_AD: 20,
 } as const;
 
 export const REWARDED_AD_REWARDS = {

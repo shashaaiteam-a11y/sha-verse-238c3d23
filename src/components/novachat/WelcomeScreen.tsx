@@ -101,11 +101,6 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
         ))}
       </div>
 
-      {/* Ad: Sponsored Suggestion */}
-      <div className="w-full max-w-2xl mb-10">
-        <SponsoredSuggestion onClick={() => onSuggestionClick('Tell me about productivity tools')} />
-      </div>
-
       {/* Category Suggestions */}
       <div className="w-full max-w-3xl">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -128,6 +123,11 @@ const WelcomeScreen = ({ onSuggestionClick }: WelcomeScreenProps) => {
               </div>
             </div>
           ))}
+          
+          {/* Ad: Sponsored Suggestion - Last slot */}
+          <div className="rounded-xl border border-border p-4 hover:border-primary/30 transition-colors">
+            <SponsoredSuggestion onClick={() => onSuggestionClick('Tell me about productivity tools')} />
+          </div>
         </div>
       </div>
 

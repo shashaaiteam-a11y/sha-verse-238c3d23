@@ -68,7 +68,7 @@ export const ChatHeader = ({
 
   if (!otherUser) {
     return (
-      <div className="flex items-center justify-between p-4 border-b bg-white">
+      <div className="flex items-center justify-between p-4 border-b bg-background">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -77,7 +77,7 @@ export const ChatHeader = ({
   }
 
   return (
-    <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-40">
+    <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-40">
       {/* Left: Avatar + Info */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <Button variant="ghost" size="sm" onClick={onBack} className="flex-shrink-0">
@@ -88,7 +88,7 @@ export const ChatHeader = ({
           <Avatar className="h-10 w-10">
             {otherUser.avatar_url && <AvatarImage src={otherUser.avatar_url} />}
             <AvatarFallback className="bg-gradient-primary text-white">
-              {otherUser.display_name[0]}
+              {otherUser.display_name?.[0] || 'U'}
             </AvatarFallback>
           </Avatar>
           <OnlineBadge isOnline={isOnline} />
@@ -96,7 +96,7 @@ export const ChatHeader = ({
 
         {/* User info */}
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-sm truncate">{otherUser.display_name}</h2>
+          <h2 className="font-semibold text-sm truncate text-foreground">{otherUser.display_name || 'Unknown User'}</h2>
           <PresenceStatus
             isOnline={isOnline}
             lastSeen={lastSeen}
@@ -116,7 +116,7 @@ export const ChatHeader = ({
 
           {/* Muted indicator */}
           {isMuted && (
-            <div className="flex items-center gap-1 mt-0.5 text-amber-600">
+            <div className="flex items-center gap-1 mt-0.5 text-amber-500">
               <BellOff className="w-3 h-3" />
               <span className="text-xs font-medium">Muted</span>
             </div>

@@ -386,8 +386,8 @@ const Groups = () => {
             </Card>
           );
 
-          // Inject sponsored group card every 5 items
-          if ((idx + 1) % 5 === 0) {
+          // Inject sponsored group card at position 3
+          if (idx === 2) {
             return [card, <SponsoredGroupCard key={`ad-${group.id}`} />];
           }
           return [card];

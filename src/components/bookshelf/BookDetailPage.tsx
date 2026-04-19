@@ -31,6 +31,8 @@ import PDFViewer from "./PDFViewer";
 import BookRatingDialog from "./BookRatingDialog";
 import BookDeletionDialog from "./BookDeletionDialog";
 import CommentSection from "./CommentSection";
+import { BannerAd, RewardedAdButton, StickyBannerAd } from "@/components/ads";
+import { useRewardedAd } from "@/hooks/useRewardedAd";
 
 const BookDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +40,23 @@ const BookDetailPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [isReading, setIsReading] = useState(false);
+  const [isPremiumUnlocked, setIsPremiumUnlocked] = useState(false);
+
+  // Rewarded ad for premium book unlock (15-30 min access)
+  const { watchAd, isWatching } = useRewardedAd({
+    rewardType: 'bookshelf_premium',
+    placement: 'bookshelf_rewarded',
+  });
+
+  const handlePremiumUnlock = async () => {
+    const success = await watchAd();
+    if (success) {
+      setIsPremiumUnlocked(true);
+      // Auto-lock after 30 minutes
+      setTimeout(() => setIsPremiumUnlocked(false), 30 * 60 * 1000);
+    }
+  };
+
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
   const [pdfOutline, setPdfOutline] = useState<any[]>([]);
@@ -286,23 +305,37 @@ const BookDetailPage = () => {
                     </div>
 
                     <div className="flex gap-3 pt-2">
-                      <Button
-                        size="lg"
-                        className="flex-1"
-                        onClick={() => setIsReading(!isReading)}
-                      >
-                        {isReading ? (
-                          <>
-                            <Pause className="w-5 h-5 mr-2" />
-                            Pause Reading
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-5 h-5 mr-2" />
-                            Start Reading
-                          </>
-                        )}
-                      </Button>
+                      {(book as any).is_premium && !isPremiumUnlocked ? (
+                        <RewardedAdButton
+                          rewardType="bookshelf_premium"
+                          placement="bookshelf_rewarded"
+                          resourceId={book.id}
+                          rewardLabel="30 min premium access"
+                          onRewardGranted={handlePremiumUnlock}
+                          variant="default"
+                          size="lg"
+                          fullWidth
+                          className="flex-1"
+                        />
+                      ) : (
+                        <Button
+                          size="lg"
+                          className="flex-1"
+                          onClick={() => setIsReading(!isReading)}
+                        >
+                          {isReading ? (
+                            <>
+                              <Pause className="w-5 h-5 mr-2" />
+                              Pause Reading
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-5 h-5 mr-2" />
+                              Start Reading
+                            </>
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="lg"
@@ -316,6 +349,11 @@ const BookDetailPage = () => {
                 </div>
               </div>
             </Card>
+
+            {/* Ad: Banner below book actions */}
+            <div className="flex justify-center">
+              <BannerAd placement="bookshelf_detail_banner" />
+            </div>
 
             {/* Description */}
             {book.description && (
@@ -336,6 +374,14 @@ const BookDetailPage = () => {
                     Page {currentPage} of {totalPages || '?'}
                   </div>
                 </div>
+
+                {/* Inline Ad: Every 20 pages */}
+                {currentPage > 0 && currentPage % 20 === 0 && (
+                  <div className="mb-4 flex justify-center">
+                    <BannerAd placement="bookshelf_reader_inline" />
+                  </div>
+                )}
+
                 <PDFViewer
                   url={book.book_url}
                   currentPage={currentPage}
@@ -344,6 +390,11 @@ const BookDetailPage = () => {
                   onOutlineExtracted={setPdfOutline}
                   className="min-h-[70vh]"
                 />
+
+                {/* Sticky Banner above pagination */}
+                <div className="mt-4">
+                  <StickyBannerAd placement="bookshelf_reader_sticky" />
+                </div>
               </Card>
             )}
 

@@ -261,9 +261,19 @@ const Bookshelf = () => {
 
               {viewMode === "grid" ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-                  {trendingBooks.slice(0, 12).map((book) => (
-                    <BookCard key={book.id} book={book} />
-                  ))}
+                  {trendingBooks.slice(0, 12).flatMap((book, idx) => {
+                    const card = <BookCard key={book.id} book={book} />;
+                    // Inject native ad every 4 books (2 rows in 2-col grid)
+                    if ((idx + 1) % 4 === 0) {
+                      return [
+                        card,
+                        <div key={`ad-${book.id}`} className="col-span-2 sm:col-span-1">
+                          <NativeAdCard placement="bookshelf_grid" compact />
+                        </div>
+                      ];
+                    }
+                    return [card];
+                  })}
                 </div>
               ) : (
                 <div className="space-y-3">

@@ -12,7 +12,7 @@ import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBlockment } from '@/hooks/useBlockment';
 import { useChatPartnerPresence, usePresenceTracker } from '@/hooks/usePresenceEnhanced';
-import { useTotalUnreadBadge, useConversationUnreadBadge } from '@/hooks/useBadgeCount';
+import { useTotalUnreadBadge, useConversationUnreadBadge, useMarkAllConversationsRead } from '@/hooks/useBadgeCount';
 import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -54,7 +54,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   const conversationId = selectedConversation?.id || null;
   const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
-  const otherUser = selectedConversation?.otherMembers?.[0];
+  const otherUser = selectedConversation?.otherMembers?.[0] || null;
 
   // Real-time messages with ticks
   const {
@@ -80,6 +80,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   // Badge count  
   const totalUnread = useTotalUnreadBadge();
   const conversationUnread = useConversationUnreadBadge(conversationId);
+  const markAllAsRead = useMarkAllConversationsRead();
 
   // Typing indicator
   const { typingText, isAnyoneTyping, handleUserTyping, stopTyping } = useTypingIndicator(
@@ -169,10 +170,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     enabled: !!user,
   });
 
-  // Filter messages
+  // Filter messages - ensure always an array
   const filteredMessages = isSearching && messageSearchQuery.trim()
-    ? messages?.filter((m: any) => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
-    : messages;
+    ? (messages || []).filter((m: any) => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
+    : (messages || []);
 
   // Initialize conversation from URL parameter
   useEffect(() => {
@@ -240,7 +241,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex">
+    <div className="fixed inset-0 z-50 flex bg-background">
       {/* Sidebar - Conversations List */}
       <div className={cn(
         "w-full sm:w-[340px] border-r border-border flex flex-col bg-card",
@@ -274,8 +275,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={() => {
-                    // Mark all as read
-                    toast.success('All chats marked as read');
+                    markAllAsRead.mutate();
                   }}>
                     <Send className="w-4 h-4 mr-3" />
                     Mark all as read
@@ -350,18 +350,23 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
       {/* Chat Area */}
       <div className={cn(
-        "flex-1 h-full overflow-hidden bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9IiNmMGYyZjUiLz4KPHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0icmdiYSgwLDAsMCwwLjAzKSIvPgo8L3N2Zz4=')] dark:bg-[#0b141a]",
+        "flex-1 h-full overflow-hidden bg-background",
         !selectedConversation && "hidden sm:flex"
       )}>
         {selectedConversation ? (
           <ChatLayout
             header={
               <ChatHeader
-                otherUser={otherUser}
-                isOnline={isOnline}
-                lastSeen={lastSeen}
-                isBlocked={isBlocked}
-                isBlockedBy={isBlockedBy}
+                otherUser={otherUser ? {
+                  id: otherUser.id || '',
+                  display_name: otherUser.display_name || 'Unknown User',
+                  username: otherUser.username || '',
+                  avatar_url: otherUser.avatar_url
+                } : null}
+                isOnline={isOnline || false}
+                lastSeen={lastSeen || null}
+                isBlocked={isBlocked || false}
+                isBlockedBy={isBlockedBy || false}
                 isMuted={isMuted || false}
                 onBack={() => setSelectedConversation(null)}
                 onCall={() => {
@@ -383,23 +388,19 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               />
             }
             messages={
-              filteredMessages && filteredMessages.length > 0 ? (
+              filteredMessages.length > 0 ? (
                 <div className="space-y-2">
                   {filteredMessages.map((message: any, idx: number) => {
+                    if (!message || message.deleted_for_all) return null;
                     const isOwn = message.sender_id === user?.id;
                     const showDateLabel = !isSearching && (idx === 0 || 
-                      getMessageDateLabel(new Date(filteredMessages[idx - 1].created_at)) !== 
+                      getMessageDateLabel(new Date(filteredMessages[idx - 1]?.created_at)) !== 
                       getMessageDateLabel(new Date(message.created_at)));
                     const metadata = message.metadata as { mediaUrl?: string; mediaType?: string } | null;
                     const tickStatus = getMessageTicks(message);
 
-                    // Skip rendering if deleted for all
-                    if (message.deleted_for_all) {
-                      return null;
-                    }
-
                     return (
-                      <div key={message.id}>
+                      <div key={message.id || idx}>
                         {showDateLabel && (
                           <div className="flex justify-center my-4">
                             <span className="px-3 py-1 bg-card rounded-full text-xs text-muted-foreground shadow-sm">
@@ -414,10 +415,9 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           <div className={cn(
                             "max-w-[75%] px-3 py-2 rounded-lg shadow-sm",
                             isOwn 
-                              ? "bg-emerald-100 dark:bg-emerald-900/50 rounded-tr-none" 
-                              : "bg-card rounded-tl-none"
+                              ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-100 rounded-tr-none" 
+                              : "bg-card text-card-foreground rounded-tl-none"
                           )}>
-                            {/* Media Content */}
                             {metadata?.mediaUrl && (
                               <div className="mb-2">
                                 {metadata.mediaType === 'image' && (
@@ -440,7 +440,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                     href={metadata.mediaUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg hover:bg-secondary"
+                                    className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg hover:bg-secondary text-foreground"
                                   >
                                     <FileText className="w-8 h-8 text-primary" />
                                     <span className="text-sm underline">Download File</span>
@@ -467,18 +467,18 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                     );
                   })}
                 </div>
-              ) : null
+              ) : undefined
             }
             inputBar={
               isBlocked ? (
                 <div className="p-4 border-t border-border bg-card">
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground py-2">
+                  <div className="flex items-center justify-center gap-2 py-2 text-muted-foreground">
                     <ShieldX className="w-5 h-5 text-destructive" />
                     {isBlockedBy ? (
-                      <span className="text-sm text-red-600">You are blocked by this user</span>
+                      <span className="text-sm text-red-500">You are blocked by this user</span>
                     ) : (
                       <div className="flex items-center gap-3">
-                        <span className="text-sm">You blocked this contact</span>
+                        <span className="text-sm text-foreground">You blocked this contact</span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -505,23 +505,23 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
             }
             isLoading={messagesLoading}
             emptyState={
-              <div className="text-center">
+              <div className="text-center text-muted-foreground">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Send className="w-10 h-10 text-primary" />
                 </div>
-                <p className="text-muted-foreground">No messages yet</p>
-                <p className="text-sm text-muted-foreground mt-1">Say hello!</p>
+                <p>No messages yet</p>
+                <p className="text-sm mt-1">Say hello!</p>
               </div>
             }
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center bg-background">
             <div className="text-center">
               <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Send className="w-12 h-12 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Sha-Verse Messenger</h3>
-              <p className="text-muted-foreground max-w-sm">
+              <h3 className="text-xl font-semibold mb-2 text-foreground">Sha-Verse Messenger</h3>
+              <p className="max-w-sm text-muted-foreground">
                 Send and receive messages with your friends. Select a conversation to start chatting.
               </p>
             </div>
@@ -570,6 +570,10 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
   onClick: () => void;
 }) => {
   const { isOnline } = useChatPartnerPresence(otherUser?.id);
+
+  if (!otherUser) {
+    return null;
+  }
 
   return (
     <button
@@ -625,7 +629,7 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
             </p>
           </div>
           {unreadCount > 0 && !isBlocked && (
-            <span className="bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0">
+            <span className="bg-blue-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0 shadow-sm">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}

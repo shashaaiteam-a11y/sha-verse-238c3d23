@@ -15,14 +15,29 @@ interface BannerAdProps {
   className?: string;
   /** When true, the banner can be closed by the user (still recorded as impression). */
   dismissible?: boolean;
+  /** @deprecated Testing only - forces ad to show bypassing frequency control */
+  _forceShow?: boolean;
 }
 
-const BannerAd = ({ placement, className, dismissible = true }: BannerAdProps) => {
+const BannerAd = ({ placement, className, dismissible = true, _forceShow = true }: BannerAdProps) => {
   const { user } = useAuth();
   const { registerImpression } = useAds();
   const { category } = useAdTargeting();
-  const { shouldRender, adUnitId } = useAdFrequency(placement, category);
+  // 🧪 TEST MODE: _forceShow=true bypasses frequency control for testing
+  const { shouldRender, adUnitId } = useAdFrequency(placement, category, _forceShow);
   const [closed, setClosed] = useState(false);
+
+  // Debug logging
+  useEffect(() => {
+    console.log(`[BannerAd ${placement}]`, {
+      shouldRender,
+      adUnitId,
+      _forceShow,
+      hasUser: !!user,
+      category,
+      closed
+    });
+  }, [shouldRender, adUnitId, placement, user, category, closed]);
 
   useEffect(() => {
     if (!shouldRender || closed) return;
