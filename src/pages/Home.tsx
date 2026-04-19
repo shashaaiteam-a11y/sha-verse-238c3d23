@@ -17,6 +17,7 @@ import FacebookStoriesBar from '@/components/stories/FacebookStoriesBar';
 import AppMenu from '@/components/AppMenu';
 import { NativeAdCard, BannerAd } from '@/components/ads';
 import { AD_FREQUENCY } from '@/lib/ads/adConfig';
+import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
 
 const Home = () => {
   const { feedItems, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
@@ -26,6 +27,7 @@ const Home = () => {
   const queryClient = useQueryClient();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const totalUnreadMessages = useTotalUnreadBadge();
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
@@ -77,9 +79,15 @@ const Home = () => {
               variant="ghost" 
               size="icon" 
               onClick={() => navigate('/messages')}
-              className="h-9 w-9 rounded-full"
+              className="relative h-9 w-9 rounded-full"
+              aria-label={totalUnreadMessages > 0 ? `Messages, ${totalUnreadMessages} unread` : 'Messages'}
             >
               <MessageCircle className="w-5 h-5" />
+              {totalUnreadMessages > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center border-2 border-background animate-in fade-in zoom-in duration-200">
+                  {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
+                </span>
+              )}
             </Button>
             <Button 
               variant="ghost" 
