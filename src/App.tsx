@@ -20,7 +20,7 @@ const VideoWatch = lazy(() => import("./modules/movion/pages/VideoWatch"));
 const ChannelPage = lazy(() => import("./modules/movion/pages/ChannelPage"));
 const CreatorStudio = lazy(() => import("./modules/movion/pages/CreatorStudio"));
 const MovionLibrary = lazy(() => import("./modules/movion/pages/MovionLibrary"));
-const NovaChat = lazy(() => import("./pages/NovaChat"));
+const NovaChat = lazy(() => import("./modules/novachat/pages/NovaChat"));
 const Bookshelf = lazy(() => import("./modules/bookshelf/pages/Bookshelf"));
 const BookDetail = lazy(() => import("./modules/bookshelf/pages/BookDetail"));
 const EditBook = lazy(() => import("./modules/bookshelf/pages/EditBook"));
