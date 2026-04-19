@@ -80,6 +80,16 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   // Badge count  
   const totalUnread = useTotalUnreadBadge();
   const conversationUnread = useConversationUnreadBadge(conversationId);
+  const markConversationRead = useMarkConversationRead();
+  const markAllRead = useMarkAllConversationsRead();
+
+  // WhatsApp behavior: opening a chat instantly resets its unread count
+  useEffect(() => {
+    if (conversationId && user?.id) {
+      markConversationRead.mutate(conversationId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, user?.id]);
 
   // Typing indicator
   const { typingText, isAnyoneTyping, handleUserTyping, stopTyping } = useTypingIndicator(
@@ -273,10 +283,15 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => {
-                    // Mark all as read
-                    toast.success('All chats marked as read');
-                  }}>
+                  <DropdownMenuItem
+                    disabled={totalUnread === 0 || markAllRead.isPending}
+                    onClick={() => {
+                      markAllRead.mutate(undefined, {
+                        onSuccess: () => toast.success('All chats marked as read'),
+                        onError: () => toast.error('Failed to mark all as read'),
+                      });
+                    }}
+                  >
                     <Send className="w-4 h-4 mr-3" />
                     Mark all as read
                   </DropdownMenuItem>
