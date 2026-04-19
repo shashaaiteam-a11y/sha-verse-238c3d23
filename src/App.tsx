@@ -34,7 +34,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Friends = lazy(() => import("./pages/Friends"));
 const Auth = lazy(() => import("./pages/Auth"));
 const SavedPosts = lazy(() => import("./pages/SavedPosts"));
-const Messages = lazy(() => import("./pages/Messages"));
+const Messages = lazy(() => import("./modules/chats/pages/Messages"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Settings = lazy(() => import("./pages/Settings"));
 const HelpSupport = lazy(() => import("./pages/HelpSupport"));
