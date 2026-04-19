@@ -1,1 +1,1 @@
-export { default } from '@/pages/__legacy/BookDetail';
+export { default } from '@/pages/BookDetail';

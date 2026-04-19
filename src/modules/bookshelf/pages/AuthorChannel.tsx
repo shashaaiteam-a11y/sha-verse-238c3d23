@@ -1,1 +1,1 @@
-export { default } from '@/pages/__legacy/AuthorChannel';
+export { default } from '@/pages/AuthorChannel';

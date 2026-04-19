@@ -1,1 +1,1 @@
-export { default } from '@/pages/__legacy/EditBook';
+export { default } from '@/pages/EditBook';

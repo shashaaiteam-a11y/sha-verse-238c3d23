@@ -1,0 +1,12 @@
+export { default as BookCard } from '@/components/bookshelf/BookCard';
+export { default as BookDetailPage } from '@/components/bookshelf/BookDetailPage';
+export { default as EPUBViewer } from '@/components/bookshelf/EPUBViewer';
+export { default as PDFViewer } from '@/components/bookshelf/PDFViewer';
+export { default as UploadBookDialog } from '@/components/bookshelf/UploadBookDialog';
+export { default as EnhancedUploadBookDialog } from '@/components/bookshelf/EnhancedUploadBookDialog';
+export { default as CreateAuthorChannelDialog } from '@/components/bookshelf/CreateAuthorChannelDialog';
+export { default as BookRatingDialog } from '@/components/bookshelf/BookRatingDialog';
+export { default as BookDeletionDialog } from '@/components/bookshelf/BookDeletionDialog';
+export { default as CommentSection } from '@/components/bookshelf/CommentSection';
+export { default as Comment } from '@/components/bookshelf/Comment';
+export { default as AnalyticsDashboard } from '@/components/bookshelf/AnalyticsDashboard';
