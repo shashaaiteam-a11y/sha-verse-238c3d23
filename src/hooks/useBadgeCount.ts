@@ -21,7 +21,8 @@ export const useTotalUnreadBadge = () => {
       return RTChatService.badge.getTotalUnreadCount(user.id);
     },
     enabled: !!user?.id,
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: 15000, // Lightweight safety net; realtime is primary
+    staleTime: 2000,
   });
 
   // Real-time subscription to new messages

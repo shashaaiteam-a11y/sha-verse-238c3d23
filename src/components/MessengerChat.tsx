@@ -12,7 +12,7 @@ import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBlockment } from '@/hooks/useBlockment';
 import { useChatPartnerPresence, usePresenceTracker } from '@/hooks/usePresenceEnhanced';
-import { useTotalUnreadBadge, useConversationUnreadBadge } from '@/hooks/useBadgeCount';
+import { useTotalUnreadBadge, useConversationUnreadBadge, useMarkConversationRead, useMarkAllConversationsRead } from '@/hooks/useBadgeCount';
 import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
