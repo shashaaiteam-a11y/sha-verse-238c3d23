@@ -14,7 +14,7 @@ import { SwipeWrapper } from "./components/SwipeWrapper";
 import { AdProvider } from "./contexts/AdContext";
 
 // Lazy load pages for better performance
-const Home = lazy(() => import("./pages/Home"));
+const Home = lazy(() => import("./modules/home/pages/Home"));
 const Movion = lazy(() => import("./modules/movion/pages/Movion"));
 const VideoWatch = lazy(() => import("./modules/movion/pages/VideoWatch"));
 const ChannelPage = lazy(() => import("./modules/movion/pages/ChannelPage"));
@@ -33,9 +33,9 @@ const GroupAdmin = lazy(() => import("./modules/groups/pages/GroupAdmin"));
 const Profile = lazy(() => import("./modules/profile/pages/Profile"));
 const Friends = lazy(() => import("./modules/profile/pages/Friends"));
 const Auth = lazy(() => import("./pages/Auth"));
-const SavedPosts = lazy(() => import("./pages/SavedPosts"));
+const SavedPosts = lazy(() => import("./modules/home/pages/SavedPosts"));
 const Messages = lazy(() => import("./modules/chats/pages/Messages"));
-const Notifications = lazy(() => import("./pages/Notifications"));
+const Notifications = lazy(() => import("./modules/home/pages/Notifications"));
 const Settings = lazy(() => import("./modules/profile/pages/Settings"));
 const HelpSupport = lazy(() => import("./pages/HelpSupport"));
 const PrivacyCenter = lazy(() => import("./pages/PrivacyCenter"));
