@@ -154,8 +154,11 @@ const ChatInput = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message NovaChat..."
-            className="flex-1 min-h-[44px] sm:min-h-[52px] max-h-[150px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 sm:py-3.5 px-0 text-sm sm:text-base"
+            placeholder={disabled ? "Message limit reached — watch an ad to continue" : "Message NovaChat..."}
+            className={cn(
+              "flex-1 min-h-[44px] sm:min-h-[52px] max-h-[150px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 sm:py-3.5 px-0 text-sm sm:text-base",
+              disabled && "text-muted-foreground cursor-not-allowed"
+            )}
             rows={1}
             disabled={disabled || isStreaming}
           />

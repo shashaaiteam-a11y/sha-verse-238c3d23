@@ -4,10 +4,10 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import {
+import { 
   ArrowLeft, Users, Send, MessageCircle, Lock, Globe, Share2,
   Bookmark, MoreHorizontal, Settings, ImagePlus, Film, FileText,
-  Paperclip, X, Download, Pin, Pin as PinIcon, Trash2, Pencil,
+  Paperclip, X, Download, Pin, Pin as PinIcon, Trash2, Pencil, Rocket,
 } from 'lucide-react';
 import { useGroupPosts } from '@/hooks/useGroupPosts';
 import { useGroups } from '@/hooks/useGroups';
@@ -29,7 +29,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NativeAdCard } from "@/components/ads";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { NativeAdCard, RewardedAdButton } from "@/components/ads";
+import { useRewardedAd } from "@/hooks/useRewardedAd";
 
 // Component for group post reactions - Now uses full emoji chart
 const GroupPostReactions = ({ postId }: { postId: string }) => {
@@ -131,6 +138,24 @@ const GroupDetail = () => {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [boostPostId, setBoostPostId] = useState<string | null>(null);
+  const [boostedPosts, setBoostedPosts] = useState<Set<string>>(new Set());
+
+  // Rewarded ad for boosting post
+  const { watchAd: watchBoostAd, isWatching: isWatchingBoost } = useRewardedAd({
+    rewardType: 'group_post_boost',
+    placement: 'group_post_boost',
+  });
+
+  const handleBoostPost = async () => {
+    if (!boostPostId) return;
+    const success = await watchBoostAd();
+    if (success) {
+      setBoostedPosts(prev => new Set(prev).add(boostPostId));
+      setBoostPostId(null);
+      toast({ title: '🚀 Post boosted!', description: 'Your post will be highlighted for 24 hours.', variant: 'default' });
+    }
+  };
 
   const isMember = (myGroups as any[])?.some((m: any) => m.groups?.id === groupId);
   const memberRole = (myGroups as any[])?.find((m: any) => m.groups?.id === groupId)?.role;
@@ -536,6 +561,11 @@ const GroupDetail = () => {
           </div>
         </Card>
 
+        {/* Ad: Between post box and first member post */}
+        <div className="mb-3 sm:mb-4">
+          <NativeAdCard placement="group_feed" />
+        </div>
+
         {/* Posts */}
         <div className="space-y-3 sm:space-y-4">
           {isLoading ? (
@@ -593,6 +623,15 @@ const GroupDetail = () => {
                         <Bookmark className={`w-4 h-4 mr-2 ${isPostSaved(post.id, 'group_post') ? 'fill-current' : ''}`} />
                         {isPostSaved(post.id, 'group_post') ? 'Unsave' : 'Save'}
                       </DropdownMenuItem>
+                      {post.user_id === user?.id && !boostedPosts.has(post.id) && (
+                        <DropdownMenuItem
+                          onClick={() => setBoostPostId(post.id)}
+                          className="gap-2 text-primary"
+                        >
+                          <Rocket className="w-4 h-4 mr-2" />
+                          Boost Post (Ad)
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -732,6 +771,32 @@ const GroupDetail = () => {
           postImage={shareDialogPost.image}
         />
       )}
+
+      {/* Boost Post Dialog */}
+      <Dialog open={!!boostPostId} onOpenChange={(open) => !open && setBoostPostId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Rocket className="w-5 h-5 text-primary" />
+              Boost Your Post
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Watch a short ad to boost your post visibility for <strong>24 hours</strong>!
+            </p>
+            <div className="flex justify-center">
+              <RewardedAdButton
+                rewardType="group_post_boost"
+                placement="group_post_boost"
+                rewardLabel="24hr Boost"
+                onRewardGranted={handleBoostPost}
+                fullWidth
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Lightbox */}
       {lightboxImage && (

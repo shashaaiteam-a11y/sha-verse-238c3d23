@@ -21,6 +21,8 @@ interface NativeAdCardProps {
   placement: AdPlacement;
   className?: string;
   compact?: boolean;
+  /** @deprecated Testing only - forces ad to show bypassing frequency control */
+  _forceShow?: boolean;
 }
 
 const SAMPLE_ADS_BY_CATEGORY: Record<string, { title: string; brand: string; cta: string; desc: string }[]> = {
@@ -48,16 +50,33 @@ const SAMPLE_ADS_BY_CATEGORY: Record<string, { title: string; brand: string; cta
   ],
 };
 
-const NativeAdCard = ({ placement, className, compact }: NativeAdCardProps) => {
+// 🧪 SIMPLE TEST AD - Always renders for debugging
+const TEST_SAMPLE = { title: "Test Ad - LearnHub", brand: "LearnHub", cta: "Start Free", desc: "Test ad description" };
+
+const NativeAdCard = ({ placement, className, compact, _forceShow = true }: NativeAdCardProps) => {
   const { user } = useAuth();
-  const { hideAd, registerImpression } = useAds();
+  const adsContext = useAds();
   const { category } = useAdTargeting();
-  const { shouldRender, adUnitId } = useAdFrequency(placement, category);
+  // 🧪 TEST MODE: _forceShow=true bypasses frequency control for testing
+  const { shouldRender, adUnitId } = useAdFrequency(placement, category, _forceShow);
   const [dismissed, setDismissed] = useState(false);
+
+  // Debug logging
+  useEffect(() => {
+    console.log(`[NativeAdCard ${placement}]`, {
+      shouldRender,
+      adUnitId,
+      _forceShow,
+      hasUser: !!user,
+      adsContextExists: !!adsContext,
+      category,
+      dismissed
+    });
+  }, [shouldRender, adUnitId, placement, user, adsContext, category, dismissed]);
 
   // Pick a sample ad
   const pool = SAMPLE_ADS_BY_CATEGORY[category] ?? SAMPLE_ADS_BY_CATEGORY.general;
-  const sample = pool[Math.floor(Math.random() * pool.length)];
+  const sample = pool[Math.floor(Math.random() * pool.length)] || TEST_SAMPLE;
 
   useEffect(() => {
     if (!shouldRender || dismissed) return;
@@ -66,7 +85,13 @@ const NativeAdCard = ({ placement, className, compact }: NativeAdCardProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!shouldRender || dismissed) return null;
+  // 🧪 TEST MODE: Force render if _forceShow is true
+  const effectiveShouldRender = _forceShow ? true : shouldRender;
+  
+  if (!effectiveShouldRender || dismissed) {
+    console.log(`[NativeAdCard ${placement}] Returning NULL - effectiveShouldRender:`, effectiveShouldRender, "dismissed:", dismissed);
+    return null;
+  }
 
   return (
     <Card

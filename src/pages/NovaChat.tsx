@@ -9,6 +9,8 @@ import ChatMessage from '@/components/novachat/ChatMessage';
 import ChatSidebar from '@/components/novachat/ChatSidebar';
 import WelcomeScreen from '@/components/novachat/WelcomeScreen';
 import ChatInput from '@/components/novachat/ChatInput';
+import { RewardedAdButton, BannerAd } from '@/components/ads';
+import { useRewardedAd } from '@/hooks/useRewardedAd';
 
 const NovaChat = () => {
   const { user } = useAuth();
@@ -29,8 +31,15 @@ const NovaChat = () => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [messageLimit, setMessageLimit] = useState(10); // Free tier: 10 messages
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Rewarded ad for +10 messages
+  const { watchAd, isWatching } = useRewardedAd({
+    rewardType: 'novachat_messages',
+    placement: 'novachat_rewarded',
+  });
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -39,9 +48,18 @@ const NovaChat = () => {
 
   const handleSend = () => {
     if ((!input.trim() && attachments.length === 0) || isStreaming) return;
+    if (messageLimit <= 0) return; // Block if limit reached
     sendMessage(input, false, attachments);
     setInput('');
     setAttachments([]);
+    setMessageLimit(prev => Math.max(0, prev - 1)); // Decrement limit
+  };
+
+  const handleReward = async () => {
+    const success = await watchAd();
+    if (success) {
+      setMessageLimit(prev => prev + 10); // Add 10 messages
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -169,6 +187,38 @@ const NovaChat = () => {
           )}
         </ScrollArea>
 
+        {/* Banner Ad above input */}
+        <div className="px-4 py-2 border-y border-border bg-muted/30">
+          <div className="max-w-3xl mx-auto flex justify-center">
+            <BannerAd placement="novachat_banner" />
+          </div>
+        </div>
+
+        {/* Message Limit Warning & Rewarded Ad */}
+        {messageLimit <= 3 && messageLimit > 0 && (
+          <div className="px-4 py-2 bg-yellow-500/10 border-y border-yellow-500/20">
+            <p className="text-xs text-yellow-600 text-center">
+              {messageLimit} free message{messageLimit !== 1 ? 's' : ''} remaining. Watch an ad to unlock 10 more!
+            </p>
+          </div>
+        )}
+        {messageLimit <= 0 && (
+          <div className="px-4 py-3 bg-muted border-y border-border">
+            <div className="flex items-center justify-between max-w-3xl mx-auto">
+              <p className="text-sm text-muted-foreground">
+                Message limit reached. Watch an ad to continue chatting.
+              </p>
+              <RewardedAdButton
+                rewardType="novachat_messages"
+                placement="novachat_rewarded"
+                rewardLabel="+10 Messages"
+                onRewardGranted={handleReward}
+                size="sm"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Input Area */}
         <ChatInput
           value={input}
@@ -176,6 +226,7 @@ const NovaChat = () => {
           onSend={handleSend}
           onStop={stopGeneration}
           isStreaming={isStreaming}
+          disabled={messageLimit <= 0}
           attachments={attachments}
           onAttachmentsChange={setAttachments}
           onNewChat={newChat}

@@ -34,7 +34,7 @@ export const PresenceStatus = ({
 
   if (isOnline) {
     return (
-      <div className={cn(`flex items-center gap-1 ${textSize} text-green-500 font-medium`, className)}>
+      <div className={cn(`flex items-center gap-1 ${textSize} font-medium text-green-500`, className)}>
         <div className={cn(dotSize, 'rounded-full bg-green-500 animate-pulse')} />
         <span>Online</span>
       </div>
@@ -91,7 +91,7 @@ export const OnlineBadge = ({
   return (
     <div
       className={cn(
-        'absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white',
+        'absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background',
         isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400',
         className
       )}

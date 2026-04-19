@@ -668,7 +668,8 @@ const Profile = () => {
                               onPin={(postId) => togglePinPost.mutate(postId)}
                             />
                           );
-                          if ((idx + 1) % 5 === 0) {
+                          // Inject native ad every 4 posts
+                          if ((idx + 1) % 4 === 0) {
                             return [
                               card,
                               <NativeAdCard

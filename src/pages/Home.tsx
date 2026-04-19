@@ -16,6 +16,7 @@ import NotificationBell from '@/components/NotificationBell';
 import FacebookStoriesBar from '@/components/stories/FacebookStoriesBar';
 import AppMenu from '@/components/AppMenu';
 import { NativeAdCard, BannerAd } from '@/components/ads';
+import { TestAdSimple } from '@/components/ads/TestAdSimple';
 import { AD_FREQUENCY } from '@/lib/ads/adConfig';
 import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
 
@@ -135,6 +136,23 @@ const Home = () => {
           {/* Create Post */}
           <div className="mb-3 sm:mb-4">
             <CreatePostCard />
+          </div>
+
+          {/* 🧪 HARD-CODED TEST ELEMENT */}
+          <div className="mb-3 sm:mb-4 p-4 bg-red-500 text-white text-center font-bold rounded-lg">
+            🧪 TEST: If you see this, the spot works! Ad should be below.
+          </div>
+
+          {/* 🧪 ULTRA SIMPLE TEST AD */}
+          <div className="mb-3 sm:mb-4">
+            <p className="text-xs text-green-600 mb-1 font-bold">Ultra simple ad below (no hooks):</p>
+            <TestAdSimple placement="home_test" />
+          </div>
+
+          {/* Ad: Native card after Create Post */}
+          <div className="mb-3 sm:mb-4 border-2 border-yellow-400 p-2">
+            <p className="text-xs text-yellow-600 mb-1">NativeAdCard below (with hooks):</p>
+            <NativeAdCard placement="home_feed_after_create" />
           </div>
 
           {/* Unified Feed */}

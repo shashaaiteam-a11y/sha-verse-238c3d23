@@ -8,13 +8,32 @@ import type { AdPlacement, AdCategory } from "@/lib/ads/adTypes";
  *  - daily cap hit
  *  - same ad unit shown within last 2hr
  *  - category is hidden by user (24hr block)
+ * 
+ * For testing: Set forceShowAds = true to bypass all frequency checks
  */
-export function useAdFrequency(placement: AdPlacement, category: AdCategory = "general") {
+export function useAdFrequency(placement: AdPlacement, category: AdCategory = "general", forceShowAds = false) {
   const { canShowAd, isAdInCooldown, isCategoryBlocked } = useAds();
   const adUnitId = getAdUnitForPlacement(placement);
 
-  const shouldRender =
-    canShowAd() && !isAdInCooldown(adUnitId) && !isCategoryBlocked(category);
+  // 🧪 TEST MODE: Bypass frequency control when forceShowAds is true
+  if (forceShowAds) {
+    console.log(`[useAdFrequency ${placement}] TEST MODE - bypassing all checks, forcing render`);
+    return { shouldRender: true, adUnitId };
+  }
+
+  const canShow = canShowAd();
+  const inCooldown = isAdInCooldown(adUnitId);
+  const catBlocked = isCategoryBlocked(category);
+  const shouldRender = canShow && !inCooldown && !catBlocked;
+
+  console.log(`[useAdFrequency ${placement}]`, {
+    canShow,
+    inCooldown,
+    catBlocked,
+    shouldRender,
+    adUnitId,
+    category
+  });
 
   return { shouldRender, adUnitId };
 }

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { 
   ThumbsUp, ThumbsDown, Share2, Download, MoreVertical, 
   Bookmark, Play, Pause, Volume2, VolumeX, Maximize, Settings, Loader2,
-  ChevronDown, ChevronUp, MessageCircle
+  ChevronDown, ChevronUp, MessageCircle, Sparkles
 } from "lucide-react";
 import { useVideo, useVideos } from "@/hooks/useVideos";
 import { useVideoLike } from "@/hooks/useVideoLikes";
@@ -16,6 +16,7 @@ import { useIsInWatchLater, useToggleWatchLater } from "@/hooks/useWatchLater";
 import { useIsSaved, useToggleSave } from "@/hooks/useVideoSave";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,7 +31,8 @@ import { toast } from "sonner";
 import { SubscribeButton } from "@/movion/components/SubscribeButton";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentItem from "@/movion/components/CommentItem";
-import { VideoPreRollAd, VideoMidRollAd } from "@/components/ads";
+import { VideoPreRollAd, VideoMidRollAd, RewardedAdButton } from "@/components/ads";
+import { useRewardedAd } from "@/hooks/useRewardedAd";
 
 const MovionWatch = () => {
   const { videoId } = useParams();
@@ -68,6 +70,24 @@ const MovionWatch = () => {
   const [preRollDone, setPreRollDone] = useState(false);
   const [midRollShown, setMidRollShown] = useState(false);
   const [showMidRoll, setShowMidRoll] = useState(false);
+  const [adFreeUntil, setAdFreeUntil] = useState<Date | null>(null);
+
+  // Rewarded ad for 1 hour ad-free watching
+  const { watchAd: watchAdFreeAd, isWatching: isWatchingAdFree } = useRewardedAd({
+    rewardType: 'movion_ad_free',
+    placement: 'movion_rewarded',
+  });
+
+  const handleAdFreeReward = async () => {
+    const success = await watchAdFreeAd();
+    if (success) {
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      setAdFreeUntil(expiresAt);
+      toast.success("🎉 Ad-free for 1 hour! Enjoy uninterrupted watching.");
+    }
+  };
+
+  const isAdFree = adFreeUntil && adFreeUntil > new Date();
   
   // Reload and play video when videoId changes
   useEffect(() => {
@@ -250,13 +270,13 @@ const MovionWatch = () => {
               onPause={() => setIsPlaying(false)}
             />
 
-            {/* Pre-roll Ad Overlay */}
-            {!preRollDone && (
+            {/* Pre-roll Ad Overlay - Skip if ad-free */}
+            {!preRollDone && !isAdFree && (
               <VideoPreRollAd onComplete={() => setPreRollDone(true)} />
             )}
 
-            {/* Mid-roll Ad Overlay */}
-            {showMidRoll && (
+            {/* Mid-roll Ad Overlay - Skip if ad-free */}
+            {showMidRoll && !isAdFree && (
               <VideoMidRollAd
                 onComplete={() => {
                   setShowMidRoll(false);
@@ -382,6 +402,24 @@ const MovionWatch = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+
+              {/* Ad-free reward button */}
+              {!isAdFree && (
+                <RewardedAdButton
+                  rewardType="movion_ad_free"
+                  placement="movion_rewarded"
+                  rewardLabel="1 hr ad-free"
+                  onRewardGranted={handleAdFreeReward}
+                  size="sm"
+                  variant="outline"
+                />
+              )}
+              {isAdFree && (
+                <Badge variant="secondary" className="gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Ad-free until {adFreeUntil?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Badge>
+              )}
             </div>
             
             {/* Description */}
