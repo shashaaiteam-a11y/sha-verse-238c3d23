@@ -24,6 +24,8 @@ import { RewardedAdButton, BannerAd } from '@/components/ads';
 
 import { useRewardedAd } from '@/hooks/useRewardedAd';
 
+import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
+
 
 
 const NovaChat = () => {
