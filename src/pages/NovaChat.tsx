@@ -24,6 +24,8 @@ import { RewardedAdButton, BannerAd } from '@/components/ads';
 
 import { useRewardedAd } from '@/hooks/useRewardedAd';
 
+import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
+
 
 
 const NovaChat = () => {
@@ -320,29 +322,49 @@ const NovaChat = () => {
 
             <div className="pb-4">
 
-              {messages.map((message, index) => (
+              {messages.map((message, index) => {
 
-                <ChatMessage
+                // Strategy: inline ad every 5 messages (skip if it's the very last & still streaming)
+                const showInlineEvery5 =
+                  (index + 1) % 5 === 0 &&
+                  index !== messages.length - 1;
 
-                  key={index}
+                // Strategy: after long AI response (>500 chars) — high CTR spot
+                const isLongAiResponse =
+                  message.role === 'assistant' &&
+                  !isStreaming &&
+                  message.content.length > 500 &&
+                  index === messages.length - 1;
 
-                  role={message.role}
+                return (
+                  <div key={index}>
+                    <ChatMessage
+                      role={message.role}
+                      content={message.content}
+                      attachments={message.attachments}
+                      isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
+                      onRegenerate={message.role === 'assistant' ? () => handleRegenerate(index) : undefined}
+                      onEdit={message.role === 'user' ? handleEditMessage : undefined}
+                      showActions={!isStreaming || index !== messages.length - 1}
+                    />
 
-                  content={message.content}
+                    {showInlineEvery5 && (
+                      <NovaChatInlineAd
+                        variant="inline"
+                        contextText={message.content}
+                      />
+                    )}
 
-                  attachments={message.attachments}
+                    {isLongAiResponse && (
+                      <NovaChatInlineAd
+                        variant="after_response"
+                        contextText={message.content}
+                      />
+                    )}
+                  </div>
+                );
 
-                  isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
-
-                  onRegenerate={message.role === 'assistant' ? () => handleRegenerate(index) : undefined}
-
-                  onEdit={message.role === 'user' ? handleEditMessage : undefined}
-
-                  showActions={!isStreaming || index !== messages.length - 1}
-
-                />
-
-              ))}
+              })}
 
               
 
