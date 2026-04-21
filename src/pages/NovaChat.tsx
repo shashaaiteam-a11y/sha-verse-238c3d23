@@ -322,49 +322,54 @@ const NovaChat = () => {
 
             <div className="pb-4">
 
-              {messages.map((message, index) => {
+              {(() => {
+                let lastAdAt = -999;
+                return messages.map((message, index) => {
+                  // Inline ad every 6 messages (5–7 strategy), skip if streaming or too close to previous ad
+                  const showInline =
+                    (index + 1) % 6 === 0 &&
+                    index !== messages.length - 1 &&
+                    index - lastAdAt >= 5;
 
-                // Strategy: inline ad every 5 messages (skip if it's the very last & still streaming)
-                const showInlineEvery5 =
-                  (index + 1) % 5 === 0 &&
-                  index !== messages.length - 1;
+                  // After long AI response (>500 chars) — high CTR spot, only when not streaming
+                  const isLongAiResponse =
+                    message.role === 'assistant' &&
+                    !isStreaming &&
+                    message.content.length > 500 &&
+                    index === messages.length - 1 &&
+                    index - lastAdAt >= 3;
 
-                // Strategy: after long AI response (>500 chars) — high CTR spot
-                const isLongAiResponse =
-                  message.role === 'assistant' &&
-                  !isStreaming &&
-                  message.content.length > 500 &&
-                  index === messages.length - 1;
+                  if (showInline || isLongAiResponse) lastAdAt = index;
 
-                return (
-                  <div key={index}>
-                    <ChatMessage
-                      role={message.role}
-                      content={message.content}
-                      attachments={message.attachments}
-                      isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
-                      onRegenerate={message.role === 'assistant' ? () => handleRegenerate(index) : undefined}
-                      onEdit={message.role === 'user' ? handleEditMessage : undefined}
-                      showActions={!isStreaming || index !== messages.length - 1}
-                    />
-
-                    {showInlineEvery5 && (
-                      <NovaChatInlineAd
-                        variant="inline"
-                        contextText={message.content}
+                  return (
+                    <div key={index}>
+                      <ChatMessage
+                        role={message.role}
+                        content={message.content}
+                        attachments={message.attachments}
+                        isStreaming={isStreaming && index === messages.length - 1 && message.role === 'assistant'}
+                        onRegenerate={message.role === 'assistant' ? () => handleRegenerate(index) : undefined}
+                        onEdit={message.role === 'user' ? handleEditMessage : undefined}
+                        showActions={!isStreaming || index !== messages.length - 1}
                       />
-                    )}
 
-                    {isLongAiResponse && (
-                      <NovaChatInlineAd
-                        variant="after_response"
-                        contextText={message.content}
-                      />
-                    )}
-                  </div>
-                );
+                      {showInline && (
+                        <NovaChatInlineAd
+                          variant="inline"
+                          contextText={message.content}
+                        />
+                      )}
 
-              })}
+                      {isLongAiResponse && (
+                        <NovaChatInlineAd
+                          variant="after_response"
+                          contextText={message.content}
+                        />
+                      )}
+                    </div>
+                  );
+                });
+              })()}
 
               
 
