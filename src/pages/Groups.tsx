@@ -452,17 +452,17 @@ const Groups = () => {
 
 
 
+    const validMemberships = (groupsToRender as any[]).filter((m: any) => m.groups);
+
     return (
 
       <div className="space-y-3 sm:space-y-4">
 
-        {groupsToRender.map((membership: any) => {
+        {validMemberships.flatMap((membership: any, idx: number) => {
 
           const group = membership.groups;
 
-          if (!group) return null;
-
-          return (
+          const card = (
 
             <Card
 
@@ -621,6 +621,12 @@ const Groups = () => {
             </Card>
 
           );
+
+          // Inject native ad after every 3rd group (and not as the very last item)
+          if ((idx + 1) % 3 === 0 && idx !== validMemberships.length - 1) {
+            return [card, <GroupNativeAd key={`ad-mygrp-${membership.id}`} variant="list" />];
+          }
+          return [card];
 
         })}
 
