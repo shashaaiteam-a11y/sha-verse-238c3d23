@@ -296,8 +296,9 @@ const Groups = () => {
 
       <div className="space-y-3">
 
-        {(categoryGroups as any[]).map((group: any) => (
+        {(categoryGroups as any[]).flatMap((group: any, idx: number) => {
 
+          const card = (
           <Card
 
             key={group.id}
@@ -359,8 +360,15 @@ const Groups = () => {
             </div>
 
           </Card>
+          );
 
-        ))}
+          // Native ad after every 3rd group card
+          if ((idx + 1) % 3 === 0) {
+            return [card, <GroupNativeAd key={`ad-cat-${group.id}`} variant="list" />];
+          }
+          return [card];
+
+        })}
 
       </div>
 
