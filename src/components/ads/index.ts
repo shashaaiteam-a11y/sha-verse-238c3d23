@@ -5,6 +5,7 @@ export { default as StickyBannerAd } from "./StickyBannerAd";
 export { default as RewardedAdButton } from "./RewardedAdButton";
 export { default as SponsoredStory } from "./SponsoredStory";
 export { default as SponsoredGroupCard } from "./SponsoredGroupCard";
+export { default as GroupNativeAd } from "./GroupNativeAd";
 export { default as SponsoredSuggestion } from "./SponsoredSuggestion";
 export { default as VideoPreRollAd } from "./VideoPreRollAd";
 export { default as VideoMidRollAd } from "./VideoMidRollAd";
