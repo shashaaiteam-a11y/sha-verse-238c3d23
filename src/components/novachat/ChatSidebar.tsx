@@ -227,6 +227,11 @@ const ChatSidebar = ({
                           </>
                         )}
                       </div>
+                      {/* Native ad after every 4th conversation in this group */}
+                      {(convIdx + 1) % 4 === 0 && convIdx !== convs.length - 1 && (
+                        <NovaChatSidebarAd />
+                      )}
+                      </div>
                     ))}
                   </div>
                 </div>
