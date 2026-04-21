@@ -788,11 +788,11 @@ const Groups = () => {
 
 
 
-          // Inject sponsored group card at position 3
+          // Inject native group ad after every 3rd card (3-4 spacing strategy)
 
-          if (idx === 2) {
+          if ((idx + 1) % 3 === 0 && idx !== suggestedGroups.length - 1) {
 
-            return [card, <SponsoredGroupCard key={`ad-${group.id}`} />];
+            return [card, <GroupNativeAd key={`ad-disc-${group.id}`} variant="discover" />];
 
           }
 
