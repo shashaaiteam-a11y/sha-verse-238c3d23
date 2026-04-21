@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Conversation } from '@/hooks/useNovaChat';
 import { formatDistanceToNow } from 'date-fns';
+import NovaChatSidebarAd from './NovaChatSidebarAd';
 
 interface ChatSidebarProps {
   conversations: Conversation[] | undefined;
@@ -147,9 +148,9 @@ const ChatSidebar = ({
                     {group}
                   </h3>
                   <div className="space-y-0.5">
-                    {convs.map((conv) => (
+                    {convs.map((conv, convIdx) => (
+                      <div key={conv.id}>
                       <div
-                        key={conv.id}
                         className={cn(
                           "group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
                           currentConversationId === conv.id 
