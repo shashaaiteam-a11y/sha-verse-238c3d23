@@ -74,7 +74,7 @@ const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, 
 
 import { GROUP_CATEGORIES } from "@/lib/constants/groupCategories";
 
-import { SponsoredGroupCard, BannerAd } from "@/components/ads";
+import { SponsoredGroupCard, BannerAd, GroupNativeAd } from "@/components/ads";
 
 
 
@@ -296,8 +296,9 @@ const Groups = () => {
 
       <div className="space-y-3">
 
-        {(categoryGroups as any[]).map((group: any) => (
+        {(categoryGroups as any[]).flatMap((group: any, idx: number) => {
 
+          const card = (
           <Card
 
             key={group.id}
@@ -359,8 +360,15 @@ const Groups = () => {
             </div>
 
           </Card>
+          );
 
-        ))}
+          // Native ad after every 3rd group card
+          if ((idx + 1) % 3 === 0) {
+            return [card, <GroupNativeAd key={`ad-cat-${group.id}`} variant="list" />];
+          }
+          return [card];
+
+        })}
 
       </div>
 
@@ -444,17 +452,17 @@ const Groups = () => {
 
 
 
+    const validMemberships = (groupsToRender as any[]).filter((m: any) => m.groups);
+
     return (
 
       <div className="space-y-3 sm:space-y-4">
 
-        {groupsToRender.map((membership: any) => {
+        {validMemberships.flatMap((membership: any, idx: number) => {
 
           const group = membership.groups;
 
-          if (!group) return null;
-
-          return (
+          const card = (
 
             <Card
 
@@ -613,6 +621,12 @@ const Groups = () => {
             </Card>
 
           );
+
+          // Inject native ad after every 3rd group (and not as the very last item)
+          if ((idx + 1) % 3 === 0 && idx !== validMemberships.length - 1) {
+            return [card, <GroupNativeAd key={`ad-mygrp-${membership.id}`} variant="list" />];
+          }
+          return [card];
 
         })}
 
@@ -774,11 +788,11 @@ const Groups = () => {
 
 
 
-          // Inject sponsored group card at position 3
+          // Inject native group ad after every 3rd card (3-4 spacing strategy)
 
-          if (idx === 2) {
+          if ((idx + 1) % 3 === 0 && idx !== suggestedGroups.length - 1) {
 
-            return [card, <SponsoredGroupCard key={`ad-${group.id}`} />];
+            return [card, <GroupNativeAd key={`ad-disc-${group.id}`} variant="discover" />];
 
           }
 

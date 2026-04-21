@@ -744,8 +744,8 @@ const GroupDetail = () => {
               </Card>
               );
 
-              // Inject native ad every 5 posts
-              if ((postIdx + 1) % 5 === 0) {
+              // Inject native ad every 4 posts (3-4 strategy, less aggressive than 5)
+              if ((postIdx + 1) % 4 === 0 && postIdx !== posts.length - 1) {
                 return [
                   card,
                   <NativeAdCard key={`ad-${post.id}`} placement="group_feed" />,
