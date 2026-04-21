@@ -23,9 +23,9 @@ import { useIsSaved, useToggleSaved } from "@/hooks/useSavedVideos";
 import { useVideoQualities, useTranscodingJob } from "@/hooks/useVideoQualities";
 import { usePlaylists, useAddToPlaylist, useCreatePlaylist } from "@/hooks/usePlaylists";
 import { useAuth } from "@/contexts/AuthContext";
-import { VideoCard } from "@/components/movion/VideoCard";
-import { HLSVideoPlayer } from "@/components/movion/HLSVideoPlayer";
-import { TranscodingStatus } from "@/components/movion/TranscodingStatus";
+import { VideoCard } from '@/components/movion/VideoCard';
+import { VideoPlayerWithAds } from '@/components/movion/VideoPlayerWithAds';
+import { TranscodingStatus } from '@/components/movion/TranscodingStatus';
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -177,14 +177,14 @@ const VideoWatch = () => {
       <div className="lg:flex lg:gap-6 lg:px-6 lg:py-4">
         {/* Main Content */}
         <div className="lg:flex-1">
-          {/* Video Player */}
+          {/* Video Player with Ads */}
           {video.video_url ? (
-            <HLSVideoPlayer
+            <VideoPlayerWithAds
               videoUrl={video.video_url}
               hlsUrl={video.hls_url}
               qualities={qualities}
               poster={video.thumbnail_url || undefined}
-              autoPlay
+              duration={video.duration || 0}
               onTimeUpdate={handleTimeUpdate}
             />
           ) : video.thumbnail_url ? (

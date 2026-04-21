@@ -25,16 +25,38 @@ export async function recordAdImpression(
   }
 }
 
+/**
+ * Records an ad click for analytics.
+ * Silent failure — ads should never break the UI.
+ * Note: ad_clicks table needs to be created in database for full functionality.
+ */
+export async function recordAdClick(
+  userId: string | undefined,
+  placement: AdPlacement,
+  adUnitId: string,
+  category?: AdCategory
+): Promise<void> {
+  if (!userId) return;
+  // 🚀 Click tracking placeholder - implement when ad_clicks table is ready
+  // For now, log to console in test mode
+  if (typeof window !== "undefined") {
+    // eslint-disable-next-line no-console
+    console.log("[Ad Click]", { userId: userId.slice(0, 8) + "...", placement, adUnitId, category });
+  }
+}
+
 export function getAdUnitForPlacement(placement: AdPlacement): string {
   switch (placement) {
     case "home_banner":
     case "channel_banner":
     case "group_discovery_banner":
     case "bookshelf_detail_banner":
+    case "novachat_banner":
       return AD_IDS.banner;
     case "bookshelf_reader_sticky":
       return AD_IDS.stickyBanner;
     case "home_feed":
+    case "home_feed_after_create":
     case "movion_grid":
     case "bookshelf_grid":
     case "bookshelf_reader_inline":
@@ -54,6 +76,7 @@ export function getAdUnitForPlacement(placement: AdPlacement): string {
     case "shorts_scroll":
       return AD_IDS.shorts;
     case "novachat_rewarded":
+    case "movion_rewarded":
     case "bookshelf_rewarded":
     case "group_post_boost":
       return AD_IDS.rewarded;

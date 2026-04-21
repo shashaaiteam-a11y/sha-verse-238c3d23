@@ -43,6 +43,10 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/Offline"));
 const AdminSeed = lazy(() => import("./pages/AdminSeed"));
 const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
+const Pages = lazy(() => import("./pages/Pages"));
+const PageDetail = lazy(() => import("./pages/PageDetail"));
+const PageAdmin = lazy(() => import("./pages/PageAdmin"));
+const Motion = lazy(() => import("./pages/Motion"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +69,20 @@ const PageLoader = () => (
   </div>
 );
 
+// 🚀 Route-level loader (smaller, inline)
+const RouteLoader = () => (
+  <div className="min-h-[50vh] flex items-center justify-center bg-background">
+    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+  </div>
+);
+
+// 🚀 Wrapper to add Suspense to each route
+const withSuspense = (Component: React.ComponentType) => (
+  <Suspense fallback={<RouteLoader />}>
+    <Component />
+  </Suspense>
+);
+
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
@@ -77,37 +95,40 @@ const App = () => (
               <AdProvider>
               <div className="min-h-screen bg-background safe-left safe-right">
                 <SwipeWrapper>
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/offline" element={<OfflinePage />} />
-                      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                      <Route path="/movion/*" element={<ProtectedRoute><Movion /></ProtectedRoute>} />
-                      <Route path="/video/:videoId" element={<ProtectedRoute><VideoWatch /></ProtectedRoute>} />
-                      <Route path="/channel/:channelId" element={<ProtectedRoute><ChannelPage /></ProtectedRoute>} />
-                      <Route path="/novachat" element={<ProtectedRoute><NovaChat /></ProtectedRoute>} />
-                      <Route path="/bookshelf" element={<ProtectedRoute><Bookshelf /></ProtectedRoute>} />
-                      <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute><EditBook /></ProtectedRoute>} />
-                      <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute><BookReader /></ProtectedRoute>} />
-                      <Route path="/bookshelf/book/:bookId" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />
-                      <Route path="/bookshelf/channel/:channelId" element={<ProtectedRoute><AuthorChannel /></ProtectedRoute>} />
-                      <Route path="/bookshelf/channel/:channelId/edit" element={<ProtectedRoute><EditAuthorChannel /></ProtectedRoute>} />
-                      <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
-                      <Route path="/groups/:groupId/admin" element={<ProtectedRoute><GroupAdmin /></ProtectedRoute>} />
-                      <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
-                      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                      <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                      <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
-                      <Route path="/saved" element={<ProtectedRoute><SavedPosts /></ProtectedRoute>} />
-                      <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-                      <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                      <Route path="/help" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
-                      <Route path="/privacy-center" element={<ProtectedRoute><PrivacyCenter /></ProtectedRoute>} />
-                      <Route path="/admin/seed" element={<ProtectedRoute><AdminSeed /></ProtectedRoute>} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
+                  <Routes>
+                    <Route path="/auth" element={withSuspense(Auth)} />
+                    <Route path="/offline" element={withSuspense(OfflinePage)} />
+                    <Route path="/" element={<ProtectedRoute>{withSuspense(Home)}</ProtectedRoute>} />
+                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(Movion)}</ProtectedRoute>} />
+                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(VideoWatch)}</ProtectedRoute>} />
+                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(ChannelPage)}</ProtectedRoute>} />
+                    <Route path="/novachat" element={<ProtectedRoute>{withSuspense(NovaChat)}</ProtectedRoute>} />
+                    <Route path="/bookshelf" element={<ProtectedRoute>{withSuspense(Bookshelf)}</ProtectedRoute>} />
+                    <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute>{withSuspense(EditBook)}</ProtectedRoute>} />
+                    <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute>{withSuspense(BookReader)}</ProtectedRoute>} />
+                    <Route path="/bookshelf/book/:bookId" element={<ProtectedRoute>{withSuspense(BookDetail)}</ProtectedRoute>} />
+                    <Route path="/bookshelf/channel/:channelId" element={<ProtectedRoute>{withSuspense(AuthorChannel)}</ProtectedRoute>} />
+                    <Route path="/bookshelf/channel/:channelId/edit" element={<ProtectedRoute>{withSuspense(EditAuthorChannel)}</ProtectedRoute>} />
+                    <Route path="/groups" element={<ProtectedRoute>{withSuspense(Groups)}</ProtectedRoute>} />
+                    <Route path="/groups/:groupId/admin" element={<ProtectedRoute>{withSuspense(GroupAdmin)}</ProtectedRoute>} />
+                    <Route path="/groups/:groupId" element={<ProtectedRoute>{withSuspense(GroupDetail)}</ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute>{withSuspense(Profile)}</ProtectedRoute>} />
+                    <Route path="/profile/:userId" element={<ProtectedRoute>{withSuspense(Profile)}</ProtectedRoute>} />
+                    <Route path="/friends" element={<ProtectedRoute>{withSuspense(Friends)}</ProtectedRoute>} />
+                    <Route path="/saved" element={<ProtectedRoute>{withSuspense(SavedPosts)}</ProtectedRoute>} />
+                    <Route path="/messages" element={<ProtectedRoute>{withSuspense(Messages)}</ProtectedRoute>} />
+                    <Route path="/notifications" element={<ProtectedRoute>{withSuspense(Notifications)}</ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute>{withSuspense(Settings)}</ProtectedRoute>} />
+                    <Route path="/help" element={<ProtectedRoute>{withSuspense(HelpSupport)}</ProtectedRoute>} />
+                    <Route path="/privacy-center" element={<ProtectedRoute>{withSuspense(PrivacyCenter)}</ProtectedRoute>} />
+                    <Route path="/admin/seed" element={<ProtectedRoute>{withSuspense(AdminSeed)}</ProtectedRoute>} />
+                    <Route path="/pages" element={<ProtectedRoute>{withSuspense(Pages)}</ProtectedRoute>} />
+                    <Route path="/pages/:pageId" element={<ProtectedRoute>{withSuspense(PageDetail)}</ProtectedRoute>} />
+                    <Route path="/pages/:pageId/admin" element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>} />
+                    <Route path="/motion" element={<ProtectedRoute>{withSuspense(Motion)}</ProtectedRoute>} />
+                    <Route path="/movion/admin" element={<ProtectedRoute>{withSuspense(MovionAdmin)}</ProtectedRoute>} />
+                    <Route path="*" element={withSuspense(NotFound)} />
+                  </Routes>
                 </SwipeWrapper>
                 <BottomNav />
               </div>

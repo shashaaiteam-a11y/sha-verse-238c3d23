@@ -82,8 +82,7 @@ export const useComments = (postId?: string, type: 'post' | 'group_post' | 'vide
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', postId] });
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
-      queryClient.invalidateQueries({ queryKey: ['group-posts'] });
+      // Removed broad ['posts'] and ['group-posts'] invalidation - comments_count auto-synced by DB trigger
     },
     onError: (error: any) => {
       toast({ title: 'Failed to post comment', description: error.message, variant: 'destructive' });
@@ -105,7 +104,7 @@ export const useComments = (postId?: string, type: 'post' | 'group_post' | 'vide
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', postId] });
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      // Removed broad ['posts'] invalidation - comments_count auto-synced by DB trigger
       toast({ title: 'Comment deleted' });
     },
     onError: (error: any) => {

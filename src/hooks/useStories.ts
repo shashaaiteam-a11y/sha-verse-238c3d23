@@ -172,9 +172,19 @@ export const useStories = () => {
     return new Date(b.latestStoryTime).getTime() - new Date(a.latestStoryTime).getTime();
   });
 
-  // Realtime: new stories, story views, story reactions - live updates like WhatsApp/Instagram
+  // 🚀 OPTIMIZATION: Debounced realtime to prevent storms from views/reactions
   useEffect(() => {
     if (!user?.id) return;
+
+    let timeoutId: NodeJS.Timeout | null = null;
+    const DEBOUNCE_MS = 2000;
+
+    const debouncedInvalidate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['stories', user.id] });
+      }, DEBOUNCE_MS);
+    };
 
     const channelId = `stories-realtime-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
@@ -185,7 +195,7 @@ export const useStories = () => {
         schema: 'public',
         table: 'stories',
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['stories', user.id] });
+        debouncedInvalidate();
       })
       // Story deleted
       .on('postgres_changes', {
@@ -193,28 +203,28 @@ export const useStories = () => {
         schema: 'public',
         table: 'stories',
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['stories', user.id] });
+        debouncedInvalidate();
       })
-      // Story viewed - update view count live
+      // Story viewed - update view count live (debounced to prevent storms)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'story_views',
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['stories', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['story-views'] });
+        debouncedInvalidate();
       })
-      // Story reactions live
+      // Story reactions live (debounced)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'story_reactions',
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['stories', user.id] });
+        debouncedInvalidate();
       })
       .subscribe();
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [user?.id, queryClient]);

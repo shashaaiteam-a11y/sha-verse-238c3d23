@@ -96,13 +96,20 @@ const PostReactions = ({ postId }: { postId: string }) => {
 
 // Visibility Icon Component
 const getVisibilityIcon = (visibility?: string) => {
+  const labels: Record<string, string> = {
+    public: 'Public - Anyone can see',
+    friends: 'Friends - Only friends can see',
+    private: 'Only Me - Only you can see'
+  };
+  const label = labels[visibility || 'public'];
+  
   switch (visibility) {
     case 'friends':
-      return <Users className="w-3 h-3" />;
+      return <span title={label}><Users className="w-3 h-3 text-blue-500" /></span>;
     case 'private':
-      return <Lock className="w-3 h-3" />;
+      return <span title={label}><Lock className="w-3 h-3 text-gray-500" /></span>;
     default:
-      return <Globe className="w-3 h-3" />;
+      return <span title={label}><Globe className="w-3 h-3 text-green-500" /></span>;
   }
 };
 

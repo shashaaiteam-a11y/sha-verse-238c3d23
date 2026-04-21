@@ -54,8 +54,7 @@ export const useVideoComments = (videoId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-      queryClient.invalidateQueries({ queryKey: ['shorts'] });
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      // 🚀 Removed broad ['shorts'] and ['videos'] invalidation - only specific video
       toast.success('Comment added!');
     },
   });
@@ -73,8 +72,7 @@ export const useVideoComments = (videoId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-      queryClient.invalidateQueries({ queryKey: ['shorts'] });
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      // 🚀 Removed broad ['shorts'] and ['videos'] invalidation - only specific video
       toast.success('Comment deleted');
     },
   });
@@ -93,8 +91,7 @@ export const useVideoComments = (videoId?: string) => {
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
         queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-        queryClient.invalidateQueries({ queryKey: ['shorts'] });
-        queryClient.invalidateQueries({ queryKey: ['videos'] });
+        // 🚀 Removed broad ['shorts'] and ['videos'] invalidation - only specific video
       })
       .on('postgres_changes', {
         event: 'DELETE',
@@ -104,8 +101,7 @@ export const useVideoComments = (videoId?: string) => {
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
         queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-        queryClient.invalidateQueries({ queryKey: ['shorts'] });
-        queryClient.invalidateQueries({ queryKey: ['videos'] });
+        // 🚀 Removed broad ['shorts'] and ['videos'] invalidation - only specific video
       })
       .subscribe();
 

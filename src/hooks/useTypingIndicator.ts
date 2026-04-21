@@ -66,11 +66,24 @@ export const useTypingIndicator = (
       .subscribe();
 
     return () => {
+      // 🚀 Send stop typing before unmounting (polite cleanup)
+      if (isTypingRef.current && user?.id) {
+        void channel.send({
+          type: 'broadcast',
+          event: 'typing',
+          payload: {
+            user_id: user.id,
+            display_name: 'User',
+            conversation_id: conversationId,
+            is_typing: false,
+          } as TypingEvent,
+        });
+      }
       clearTypingTimeout();
       setTypingUsers({});
       isTypingRef.current = false;
-      channelRef.current = null;
       supabase.removeChannel(channel);
+      channelRef.current = null;
     };
   }, [conversationId, disabled, user?.id, clearTypingTimeout]);
 

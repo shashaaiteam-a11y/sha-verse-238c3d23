@@ -48,7 +48,21 @@ export const useUnreadMessageCount = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Realtime: when new message arrives, update unread badge instantly
+    // 🚀 OPTIMIZATION: Debounced updates to prevent storm
+    let timeoutId: NodeJS.Timeout | null = null;
+    const DEBOUNCE_MS = 1500;
+
+    const debouncedUpdate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        // Update unread counts (immediate need)
+        queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
+        // Delay conversation list update (less critical)
+        queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+      }, DEBOUNCE_MS);
+    };
+
     const channel = supabase
       .channel(`unread-messages-${user.id}`)
       .on('postgres_changes', {
@@ -58,9 +72,7 @@ export const useUnreadMessageCount = () => {
       }, (payload) => {
         // Only count messages sent to me (not by me)
         if (payload.new.sender_id !== user.id) {
-          queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
-          queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
-          queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+          debouncedUpdate();
         }
       })
       .on('postgres_changes', {
@@ -68,13 +80,12 @@ export const useUnreadMessageCount = () => {
         schema: 'public',
         table: 'messages',
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+        debouncedUpdate();
       })
       .subscribe();
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [user?.id, queryClient]);
@@ -129,7 +140,7 @@ export const useMarkMessagesDelivered = () => {
 
     const invalidateDeliveryState = () => {
       queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      // 🚀 Removed broad ['messages'] invalidation - was reloading ALL messages
       queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
       queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
     };

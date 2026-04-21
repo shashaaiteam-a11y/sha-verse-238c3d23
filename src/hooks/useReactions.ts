@@ -138,8 +138,7 @@ export const useReactions = (targetId: string, targetType: TargetType = 'post') 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-reaction', targetId, targetType] });
       queryClient.invalidateQueries({ queryKey: ['reaction-counts', targetId, targetType] });
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
-      queryClient.invalidateQueries({ queryKey: ['group-posts'] });
+      // 🚀 Removed broad ['posts'] and ['group-posts'] invalidation - targeted ones sufficient
     },
   });
 

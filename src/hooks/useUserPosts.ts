@@ -68,36 +68,72 @@ export const useUserPosts = (userId?: string, page: number = 0) => {
 
   // Realtime subscription for friendship changes affecting post visibility
   useEffect(() => {
-    if (!userId || !user || user.id === userId) return;
+    if (!userId || !user) return;
 
-    const channel = supabase
-      .channel(`user-posts-${userId}-changes`)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'friendships',
-        filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
-      }, (payload) => {
-        if (payload.new.status === 'accepted') {
+    const isOwnProfile = user.id === userId;
+    const channelName = isOwnProfile ? `own-posts-${userId}` : `user-posts-${userId}`;
+    const channel = supabase.channel(channelName);
+
+    if (!isOwnProfile) {
+      // When viewing OTHER profiles: listen for friendship changes (affects which posts are visible)
+      channel
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'friendships',
+          filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
+        }, (payload) => {
+          if (payload.new.status === 'accepted') {
+            queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
+          }
+        })
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'friendships',
+          filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
+        }, (payload) => {
+          if (payload.new.status === 'accepted' || payload.old.status === 'accepted') {
+            queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
+          }
+        })
+        .on('postgres_changes', { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'friendships',
+          filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
+        }, () => {
           queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
-        }
-      })
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'friendships',
-        filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
+        });
+    }
+
+    // Listen for post visibility changes (realtime privacy updates) - applies to both own and others' profiles
+    channel
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'posts',
+        filter: `user_id=eq.${userId}`
       }, (payload) => {
-        if (payload.new.status === 'accepted' || payload.old.status === 'accepted') {
-          queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
-        }
+        // When any post field changes (especially visibility), refresh posts
+        queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
       })
-      .on('postgres_changes', { 
-        event: 'DELETE', 
-        schema: 'public', 
-        table: 'friendships',
-        filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'posts',
+        filter: `user_id=eq.${userId}`
       }, () => {
+        // New post added, refresh the list
+        queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'posts',
+        filter: `user_id=eq.${userId}`
+      }, () => {
+        // Post deleted, refresh the list
         queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
       })
       .subscribe();

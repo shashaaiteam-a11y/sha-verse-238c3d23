@@ -55,7 +55,7 @@ const TEST_SAMPLE = { title: "Test Ad - LearnHub", brand: "LearnHub", cta: "Star
 
 const NativeAdCard = ({ placement, className, compact, _forceShow = true }: NativeAdCardProps) => {
   const { user } = useAuth();
-  const adsContext = useAds();
+  const { registerImpression, hideAd } = useAds();
   const { category } = useAdTargeting();
   // 🧪 TEST MODE: _forceShow=true bypasses frequency control for testing
   const { shouldRender, adUnitId } = useAdFrequency(placement, category, _forceShow);
@@ -68,11 +68,10 @@ const NativeAdCard = ({ placement, className, compact, _forceShow = true }: Nati
       adUnitId,
       _forceShow,
       hasUser: !!user,
-      adsContextExists: !!adsContext,
       category,
       dismissed
     });
-  }, [shouldRender, adUnitId, placement, user, adsContext, category, dismissed]);
+  }, [shouldRender, adUnitId, placement, user, category, dismissed]);
 
   // Pick a sample ad
   const pool = SAMPLE_ADS_BY_CATEGORY[category] ?? SAMPLE_ADS_BY_CATEGORY.general;

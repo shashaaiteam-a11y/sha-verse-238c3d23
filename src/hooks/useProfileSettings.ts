@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { useEffect } from 'react';
 
 export const useProfileSettings = () => {
   const { user } = useAuth();
@@ -75,6 +76,56 @@ export const useProfileSettings = () => {
     },
     enabled: !!user,
   });
+
+  // Realtime subscriptions for all settings tabs
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase.channel(`profile-settings-${user.id}`);
+
+    // Subscribe to user_blocks changes (Blocking tab)
+    channel
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_blocks',
+        filter: `blocker_id=eq.${user.id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['blocked-users', user.id] });
+      })
+      // Subscribe to user_sessions changes (Security tab)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_sessions',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['user-sessions', user.id] });
+      })
+      // Subscribe to profile_activities changes (Activity Log tab)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profile_activities',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['profile-activities', user.id] });
+      })
+      // Subscribe to profiles changes (Privacy tab - privacy settings)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${user.id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   // Block user mutation with enhanced functionality
   const blockUser = useMutation({

@@ -62,7 +62,10 @@ export const usePresence = (channelName: string = 'global-presence') => {
       });
 
     return () => {
-      supabase.removeChannel(presenceChannel);
+      // 🚀 Proper cleanup: untrack before removing channel
+      presenceChannel.untrack().then(() => {
+        supabase.removeChannel(presenceChannel);
+      });
     };
   }, [user?.id, channelName]);
 

@@ -28,40 +28,60 @@ export const useConversations = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
+      if (!data || data.length === 0) return [];
 
-      // Get the other member's profile for each conversation
-      const conversationsWithMembers = await Promise.all(
-        (data || []).map(async (cm: any) => {
-          const { data: members } = await supabase
-            .from('conversation_members')
-            .select(`
-              user_id,
-              profiles:user_id (
-                id,
-                display_name,
-                username,
-                avatar_url
-              )
-            `)
-            .eq('conversation_id', cm.conversation_id)
-            .neq('user_id', user.id);
+      const conversationIds = data.map((cm: any) => cm.conversation_id);
 
-          // Get last message
-          const { data: lastMessage } = await supabase
-            .from('messages')
-            .select('content, created_at, sender_id, is_read, is_delivered')
-            .eq('conversation_id', cm.conversation_id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      // 🚀 OPTIMIZATION: Fetch ALL members and last messages in parallel (2 queries total instead of 2N)
+      const [{ data: allMembers }, { data: allLastMessages }] = await Promise.all([
+        // Get all members for all conversations in ONE query
+        supabase
+          .from('conversation_members')
+          .select(`
+            conversation_id,
+            user_id,
+            profiles:user_id (
+              id,
+              display_name,
+              username,
+              avatar_url
+            )
+          `)
+          .in('conversation_id', conversationIds)
+          .neq('user_id', user.id),
+        
+        // Get last messages for all conversations using a single RPC or query
+        // Using a supabase function or fetching recent messages for all convos
+        supabase
+          .from('messages')
+          .select('id, conversation_id, content, created_at, sender_id, is_read, is_delivered')
+          .in('conversation_id', conversationIds)
+          .order('created_at', { ascending: false })
+      ]);
 
-          return {
-            ...cm.conversations,
-            otherMembers: members?.map((m: any) => m.profiles) || [],
-            lastMessage
-          };
-        })
-      );
+      // Create a map for efficient lookup
+      const membersByConversation: Record<string, any[]> = {};
+      allMembers?.forEach((m: any) => {
+        if (!membersByConversation[m.conversation_id]) {
+          membersByConversation[m.conversation_id] = [];
+        }
+        membersByConversation[m.conversation_id].push(m.profiles);
+      });
+
+      // Get only the latest message per conversation
+      const lastMessageByConversation: Record<string, any> = {};
+      allLastMessages?.forEach((msg: any) => {
+        if (!lastMessageByConversation[msg.conversation_id]) {
+          lastMessageByConversation[msg.conversation_id] = msg;
+        }
+      });
+
+      // Combine data
+      const conversationsWithMembers = data.map((cm: any) => ({
+        ...cm.conversations,
+        otherMembers: membersByConversation[cm.conversation_id] || [],
+        lastMessage: lastMessageByConversation[cm.conversation_id] || null
+      }));
 
       return conversationsWithMembers;
     },
@@ -101,9 +121,23 @@ export const useConversations = () => {
     }
   });
 
-  // Realtime subscription for conversations
+  // 🚀 OPTIMIZATION: Use debounced updates for conversations
   useEffect(() => {
     if (!user) return;
+
+    let timeoutId: NodeJS.Timeout | null = null;
+    const DEBOUNCE_MS = 2000;
+
+    const debouncedUpdate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        // Only update unread counts immediately - conversations list less critical
+        queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['unread-count', user.id] });
+        // Delay conversation list update to reduce load
+        queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+      }, DEBOUNCE_MS);
+    };
 
     const channel = supabase
       .channel('conversations-updates')
@@ -115,13 +149,13 @@ export const useConversations = () => {
           table: 'messages'
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
-          queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
+          debouncedUpdate();
         }
       )
       .subscribe();
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [user?.id, queryClient]);

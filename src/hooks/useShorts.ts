@@ -52,8 +52,19 @@ export const useShorts = () => {
     },
   });
 
-  // Realtime: naye shorts aate hi instantly feed me dikhe
+  // 🚀 OPTIMIZATION: Debounced realtime to prevent video update storms
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    const DEBOUNCE_MS = 3000;
+
+    const debouncedInvalidate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['shorts'] });
+        queryClient.invalidateQueries({ queryKey: ['long-videos'] });
+      }, DEBOUNCE_MS);
+    };
+
     const channel = supabase
       .channel('shorts-realtime')
       .on('postgres_changes', {
@@ -61,20 +72,19 @@ export const useShorts = () => {
         schema: 'public',
         table: 'videos',
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['shorts'] });
-        queryClient.invalidateQueries({ queryKey: ['long-videos'] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'videos',
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['shorts'] });
-        queryClient.invalidateQueries({ queryKey: ['long-videos'] });
+        debouncedInvalidate();
       })
       .subscribe();
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);

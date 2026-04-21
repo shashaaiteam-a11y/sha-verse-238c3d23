@@ -31,8 +31,9 @@ export const useVideos = () => {
           )
         `)
         .eq('channels.channel_type', 'video')
-        .order('created_at', { ascending: false });
-      
+        .order('created_at', { ascending: false })
+        .limit(50); // 🚀 Added pagination limit
+
       if (error) throw error;
       return data;
     },
@@ -73,8 +74,9 @@ export const useVideos = () => {
         .from('video_views')
         .insert({ video_id: videoId });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
+    onSuccess: (_, videoId) => {
+      // 🚀 Targeted invalidation: only the specific video, not all videos
+      queryClient.invalidateQueries({ queryKey: ['video', videoId] });
     },
   });
 

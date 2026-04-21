@@ -23,7 +23,9 @@ import {
   Lock,
   Flag,
   Check,
-  X
+  X,
+  ChevronRight,
+  Eye
 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { PostComments } from '@/components/PostComments';
@@ -47,15 +49,22 @@ interface ProfilePostCardProps {
 }
 
 const getVisibilityIcon = (visibility: string) => {
+  const labels: Record<string, string> = {
+    public: 'Public - Anyone can see',
+    friends: 'Friends - Only friends can see',
+    private: 'Only Me - Only you can see'
+  };
+  const label = labels[visibility] || labels.public;
+  
   switch (visibility) {
     case 'public':
-      return <Globe className="w-3 h-3" />;
+      return <span title={label}><Globe className="w-3 h-3 text-green-500" /></span>;
     case 'friends':
-      return <Users className="w-3 h-3" />;
-    case 'only_me':
-      return <Lock className="w-3 h-3" />;
+      return <span title={label}><Users className="w-3 h-3 text-blue-500" /></span>;
+    case 'private':
+      return <span title={label}><Lock className="w-3 h-3 text-gray-500" /></span>;
     default:
-      return <Globe className="w-3 h-3" />;
+      return <span title={label}><Globe className="w-3 h-3 text-green-500" /></span>;
   }
 };
 
@@ -77,6 +86,7 @@ export const ProfilePostCard = ({
   const [editContent, setEditContent] = useState(post.content);
   const [editVisibility, setEditVisibility] = useState(post.visibility || 'public');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPrivacySubmenu, setShowPrivacySubmenu] = useState(false);
   
   const isSaved = isPostSaved(post.id, 'post');
   const totalReactions = Object.values(reactionCounts || {}).reduce((a: any, b: any) => a + b, 0);
@@ -95,10 +105,42 @@ export const ProfilePostCard = ({
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['profile-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['user-posts'] });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleQuickPrivacyChange = async (newVisibility: 'public' | 'friends' | 'private') => {
+    if (newVisibility === post.visibility) {
+      setShowPrivacySubmenu(false);
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ visibility: newVisibility, edited_at: new Date().toISOString() })
+        .eq('id', post.id);
+      if (error) throw error;
+      
+      const visibilityLabels = { public: 'Public', friends: 'Friends', private: 'Only Me' };
+      toast({ 
+        title: 'Privacy updated', 
+        description: `Post is now ${visibilityLabels[newVisibility]}` 
+      });
+      
+      // Invalidate queries to refresh posts for all viewers in realtime
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['profile-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['user-posts', post.user_id] });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+      setShowPrivacySubmenu(false);
     }
   };
 
@@ -161,6 +203,14 @@ export const ProfilePostCard = ({
               {isOwnPost && (
                 <>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => setShowPrivacySubmenu(true)}
+                    disabled={isSubmitting}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    <span>Edit Privacy</span>
+                    <ChevronRight className="w-4 h-4 ml-auto" />
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setIsEditing(true); setEditContent(post.content); setEditVisibility(post.visibility || 'public'); }}>
                     <Pencil className="w-4 h-4 mr-2" />
                     Edit post
@@ -318,6 +368,72 @@ export const ProfilePostCard = ({
         postContent={post.content}
         postImage={post.image_url}
       />
+
+      {/* Privacy Submenu Dialog */}
+      {showPrivacySubmenu && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPrivacySubmenu(false)}>
+          <div className="bg-card rounded-lg shadow-lg p-4 w-72" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm">Who can see this post?</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowPrivacySubmenu(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleQuickPrivacyChange('public')}
+                disabled={isSubmitting}
+                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
+                  post.visibility === 'public' ? 'bg-primary/10 border border-primary' : 'hover:bg-secondary'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Public</p>
+                  <p className="text-xs text-muted-foreground">Anyone can see</p>
+                </div>
+                {post.visibility === 'public' && <Check className="w-4 h-4 text-primary" />}
+              </button>
+              
+              <button
+                onClick={() => handleQuickPrivacyChange('friends')}
+                disabled={isSubmitting}
+                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
+                  post.visibility === 'friends' ? 'bg-primary/10 border border-primary' : 'hover:bg-secondary'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Friends</p>
+                  <p className="text-xs text-muted-foreground">Only friends can see</p>
+                </div>
+                {post.visibility === 'friends' && <Check className="w-4 h-4 text-primary" />}
+              </button>
+              
+              <button
+                onClick={() => handleQuickPrivacyChange('private')}
+                disabled={isSubmitting}
+                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
+                  post.visibility === 'private' ? 'bg-primary/10 border border-primary' : 'hover:bg-secondary'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-gray-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Only Me</p>
+                  <p className="text-xs text-muted-foreground">Only you can see</p>
+                </div>
+                {post.visibility === 'private' && <Check className="w-4 h-4 text-primary" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };

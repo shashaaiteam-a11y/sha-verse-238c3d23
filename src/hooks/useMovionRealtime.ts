@@ -14,6 +14,17 @@ export const useMovionRealtime = () => {
   useEffect(() => {
     if (!user) return;
 
+    // 🚀 OPTIMIZATION: Debounced invalidations to prevent storms
+    let timeoutId: NodeJS.Timeout | null = null;
+    const DEBOUNCE_MS = 2000;
+
+    const debouncedInvalidate = (keys: string[][]) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        keys.forEach(key => queryClient.invalidateQueries({ queryKey: key }));
+      }, DEBOUNCE_MS);
+    };
+
     // Create a single channel for all MOVION realtime subscriptions
     const channel = supabase
       .channel(`movion-realtime-${user.id}`)
@@ -27,7 +38,7 @@ export const useMovionRealtime = () => {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['watch-history', user.id] });
+          debouncedInvalidate([['watch-history', user.id]]);
         }
       )
       // Watch Later changes
@@ -40,8 +51,7 @@ export const useMovionRealtime = () => {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['watch-later', user.id] });
-          queryClient.invalidateQueries({ queryKey: ['is-watch-later'] });
+          debouncedInvalidate([['watch-later', user.id], ['is-watch-later']]);
         }
       )
       // Saved Videos changes
@@ -54,8 +64,7 @@ export const useMovionRealtime = () => {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['saved-videos', user.id] });
-          queryClient.invalidateQueries({ queryKey: ['is-saved'] });
+          debouncedInvalidate([['saved-videos', user.id], ['is-saved']]);
         }
       )
       // Playlists changes

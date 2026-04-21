@@ -108,7 +108,7 @@ export const useMessages = (conversationId: string | null) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chat-clear', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] }); // 🚀 Narrowed from broad ['conversations']
     }
   });
 

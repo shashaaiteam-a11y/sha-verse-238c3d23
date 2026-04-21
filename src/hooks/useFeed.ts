@@ -74,56 +74,59 @@ export const useFeed = () => {
     queryFn: async ({ pageParam = 0 }) => {
       if (!user) return { items: [], nextCursor: null };
 
-      // Get user's friends
-      const { data: friendships } = await supabase
-        .from('friendships')
-        .select('friend_id, user_id')
-        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-        .eq('status', 'accepted');
+      // 🚀 OPTIMIZATION: Run all metadata queries in parallel
+      const [
+        { data: friendships },
+        { data: groupMemberships },
+        { data: createdGroups },
+        { data: subscriptions },
+        { data: ownChannels },
+        { data: pageFollows }
+      ] = await Promise.all([
+        // Get user's friends
+        supabase
+          .from('friendships')
+          .select('friend_id, user_id')
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+          .eq('status', 'accepted'),
+        // Get user's joined groups
+        supabase
+          .from('group_members')
+          .select('group_id')
+          .eq('user_id', user.id),
+        // Get groups created by user
+        supabase
+          .from('groups')
+          .select('id')
+          .eq('creator_id', user.id),
+        // Get user's subscribed channels
+        supabase
+          .from('subscriptions')
+          .select('channel_id')
+          .eq('user_id', user.id),
+        // Get user's own channels
+        supabase
+          .from('channels')
+          .select('id')
+          .eq('user_id', user.id),
+        // Get pages user follows
+        supabase
+          .from('page_followers')
+          .select('page_id')
+          .eq('user_id', user.id)
+      ]);
 
       const friendIds = friendships?.map(f => 
         f.user_id === user.id ? f.friend_id : f.user_id
       ) || [];
 
-      // Get user's joined groups
-      const { data: groupMemberships } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user.id);
-
       const joinedGroupIds = groupMemberships?.map(g => g.group_id) || [];
-
-      // Get groups created by user
-      const { data: createdGroups } = await supabase
-        .from('groups')
-        .select('id')
-        .eq('creator_id', user.id);
-
       const createdGroupIds = createdGroups?.map(g => g.id) || [];
       const allGroupIds = [...new Set([...joinedGroupIds, ...createdGroupIds])];
 
-      // Get user's subscribed channels
-      const { data: subscriptions } = await supabase
-        .from('subscriptions')
-        .select('channel_id')
-        .eq('user_id', user.id);
-
       const subscribedChannelIds = subscriptions?.map(s => s.channel_id) || [];
-
-      // Get user's own channels
-      const { data: ownChannels } = await supabase
-        .from('channels')
-        .select('id')
-        .eq('user_id', user.id);
-
       const ownChannelIds = ownChannels?.map(c => c.id) || [];
       const allRelevantChannelIds = [...new Set([...subscribedChannelIds, ...ownChannelIds])];
-
-      // Get pages user follows
-      const { data: pageFollows } = await supabase
-        .from('page_followers')
-        .select('page_id')
-        .eq('user_id', user.id);
 
       const followedPageIds = pageFollows?.map(p => p.page_id) || [];
 
@@ -408,51 +411,57 @@ export const useFeed = () => {
   // Flatten all pages into single array
   const feedItems = data?.pages.flatMap(page => page.items) || [];
 
-  // Realtime subscription for all feed updates
+  // 🚀 OPTIMIZATION: Debounced realtime invalidation to prevent storm
   useEffect(() => {
     if (!user) return;
 
+    let timeoutId: NodeJS.Timeout | null = null;
+    const DEBOUNCE_MS = 3000; // Wait 3 seconds, then reload once
+
+    const debouncedInvalidate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+      }, DEBOUNCE_MS);
+    };
+
     const channel = supabase
       .channel('unified-feed-changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
-        // When a new post is created, invalidate feed to re-fetch with proper visibility filtering
-        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        debouncedInvalidate();
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
-        // When a post is updated (including visibility changes), invalidate feed
-        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, () => {
+        debouncedInvalidate();
       })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, (payload) => {
-        // When a post is deleted, invalidate feed
-        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, () => {
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_posts' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'page_posts' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friendships' }, (payload) => {
-        // When friendship status changes, invalidate feed to re-calculate visibility
         if (payload.new.status === 'accepted') {
-          queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+          debouncedInvalidate();
         }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'friendships' }, (payload) => {
-        // When friendship status changes, invalidate feed
         if (payload.new.status === 'accepted' || payload.old.status === 'accepted') {
-          queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+          debouncedInvalidate();
         }
       })
       .subscribe();
 
     return () => {
+      if (timeoutId) clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [user, queryClient]);

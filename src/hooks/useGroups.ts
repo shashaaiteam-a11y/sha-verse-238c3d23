@@ -343,39 +343,49 @@ export const useGroups = () => {
     },
   });
 
-  // Realtime subscription
+  // 🚀 OPTIMIZATION: Debounced realtime to prevent group update storms
   useEffect(() => {
     if (!user?.id) return;
+
+    let timeoutId: NodeJS.Timeout | null = null;
+    const DEBOUNCE_MS = 2500;
+
+    const debouncedInvalidate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
+      }, DEBOUNCE_MS);
+    };
+
     const channelId = `groups-realtime-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
       .channel(channelId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `user_id=eq.${user.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+        debouncedInvalidate();
       })
-      // Admin approved or rejected our join request — update pending list + suggestions immediately
+      // Admin approved or rejected our join request
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'group_join_requests', filter: `user_id=eq.${user.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
-        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'groups' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'groups' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_posts' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+        debouncedInvalidate();
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'group_posts' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
+        debouncedInvalidate();
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      supabase.removeChannel(channel);
+    };
   }, [user?.id, queryClient]);
 
   return {

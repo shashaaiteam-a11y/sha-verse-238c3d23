@@ -31,7 +31,8 @@ export const useShares = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, __, context) => {
+      // 🚀 Broad invalidation - would need postId passed to hook for targeted invalidation
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       queryClient.invalidateQueries({ queryKey: ['user-posts'] });
       toast({

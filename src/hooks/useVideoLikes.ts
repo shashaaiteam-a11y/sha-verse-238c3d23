@@ -145,8 +145,7 @@ export const useVideoLike = (videoId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['video-like', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video-dislike', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
-      queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      // 🚀 Removed broad ['videos'] and ['shorts'] invalidation - only specific video
     },
   });
 
@@ -187,8 +186,7 @@ export const useVideoLike = (videoId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['video-like', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video-dislike', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
-      queryClient.invalidateQueries({ queryKey: ['shorts'] });
+      // 🚀 Removed broad ['videos'] and ['shorts'] invalidation - only specific video
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['video-dislike', videoId] });
@@ -229,8 +227,7 @@ export const useVideoLike = (videoId?: string) => {
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['video-like', videoId] });
         queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-        queryClient.invalidateQueries({ queryKey: ['videos'] });
-        queryClient.invalidateQueries({ queryKey: ['shorts'] });
+        // 🚀 Removed broad ['videos'] and ['shorts'] invalidation - only specific video
       })
       .on('postgres_changes', {
         event: '*',
@@ -240,8 +237,7 @@ export const useVideoLike = (videoId?: string) => {
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['video-dislike', videoId] });
         queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-        queryClient.invalidateQueries({ queryKey: ['videos'] });
-        queryClient.invalidateQueries({ queryKey: ['shorts'] });
+        // 🚀 Removed broad ['videos'] and ['shorts'] invalidation - only specific video
       })
       .subscribe();
 
