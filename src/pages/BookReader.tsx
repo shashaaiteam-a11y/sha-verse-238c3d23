@@ -23,7 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { StickyBannerAd } from "@/components/ads";
+import { StickyBannerAd, BookReaderInlineAd } from "@/components/ads";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 
