@@ -554,6 +554,11 @@ const BookDetail = () => {
           )}
         </Card>
 
+        {/* 📚 Native Ad — sits between description and book info, high-CTR spot */}
+        <div className="mb-6">
+          <NativeAdCard placement="bookshelf_detail_banner" />
+        </div>
+
         {/* Book Info */}
         <Card className="p-4 mb-6">
           <h2 className="font-semibold mb-3">Book Information</h2>
