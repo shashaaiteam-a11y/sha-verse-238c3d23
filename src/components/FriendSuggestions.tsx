@@ -1,13 +1,18 @@
+import { Fragment } from 'react';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { UserPlus, Users } from 'lucide-react';
 import { useFriendSuggestions } from '@/hooks/useFriendSuggestions';
 import { useNavigate } from 'react-router-dom';
+import { SponsoredPersonCard } from '@/components/ads';
+import { useDiscoveryAds } from '@/hooks/useDiscoveryAds';
 
 export const FriendSuggestions = () => {
   const { suggestions, isLoading, sendRequest } = useFriendSuggestions();
   const navigate = useNavigate();
+  const visibleSuggestions = suggestions?.slice(0, 6) || [];
+  const { adPositions } = useDiscoveryAds(visibleSuggestions.length, 'pymk');
 
   if (isLoading) {
     return (
