@@ -1,64 +1,106 @@
 import { useEffect, useState } from "react";
+import { MoreHorizontal, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import TestAdBadge from "./TestAdBadge";
 import { useAds } from "@/contexts/AdContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdFrequency } from "@/hooks/useAdFrequency";
 import { useAdTargeting } from "@/hooks/useAdTargeting";
-import { recordAdImpression } from "@/lib/ads/adAnalytics";
+import { recordAdImpression, recordAdClick } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
 
 interface SponsoredStoryProps {
   className?: string;
+  brandName?: string;
+  brandInitial?: string;
+  onClick?: () => void;
 }
 
 /**
- * Story-bar sized sponsored ad (5 sec, skippable visual).
- * Drop-in for FacebookStoriesBar at slot 1 or 2.
+ * Pixel-perfect match of a real story tile in the rail:
+ *  - 64x64 avatar with blue ring (matches unviewed story)
+ *  - caption row below = brand name (truncated)
+ *  - small "Sponsored" badge top-right
+ *  - 3-dot hide menu
  */
-const SponsoredStory = ({ className }: SponsoredStoryProps) => {
+const SponsoredStory = ({
+  className,
+  brandName = "Sponsored",
+  brandInitial = "S",
+  onClick,
+}: SponsoredStoryProps) => {
   const { user } = useAuth();
-  const { registerImpression } = useAds();
+  const { registerImpression, hideAd } = useAds();
   const { category } = useAdTargeting();
   const { shouldRender, adUnitId } = useAdFrequency("home_story", category);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    if (!shouldRender) return;
+    if (!shouldRender || hidden) return;
     recordAdImpression(user?.id, "home_story", adUnitId, category);
     registerImpression(adUnitId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!shouldRender) return null;
+  if (!shouldRender || hidden) return null;
+
+  const handleClick = () => {
+    recordAdClick(user?.id, "home_story", adUnitId, category);
+    onClick?.();
+  };
+
+  const handleHide = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHidden(true);
+    await hideAd("general", adUnitId);
+  };
 
   return (
-    <button
-      className={cn(
-        "relative flex-shrink-0 w-[100px] sm:w-[110px] h-[160px] sm:h-[170px]",
-        "rounded-xl overflow-hidden border border-border bg-card",
-        "group cursor-pointer",
-        className
-      )}
-      aria-label="Sponsored story"
-    >
-      {/* Gradient bg as placeholder visual */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/10 to-accent/20" />
-
-      {/* Top badge */}
-      <div className="absolute top-2 left-2 z-10">
-        <TestAdBadge variant="small" />
+    <div className={cn("flex flex-col items-center gap-1 flex-shrink-0 relative", className)}>
+      {/* 3-dot hide menu - top right of avatar */}
+      <div className="absolute top-0 right-0 z-20">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="h-5 w-5 rounded-full bg-background/90 shadow-sm flex items-center justify-center"
+              aria-label="Ad options"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-3 w-3 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="z-50">
+            <DropdownMenuItem onClick={handleHide}>
+              <X className="h-3.5 w-3.5 mr-2" />
+              Hide this ad
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Brand circle */}
-      <div className="absolute top-9 left-2 z-10 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold ring-2 ring-card">
-        S
-      </div>
+      <button
+        onClick={handleClick}
+        className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-blue-500 via-blue-600 to-blue-700 relative"
+        aria-label="Sponsored story"
+      >
+        <div className="w-full h-full rounded-full border-2 border-background bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-lg">
+          {brandInitial}
+        </div>
+        {/* Sponsored badge - bottom-left over avatar */}
+        <div className="absolute -bottom-0.5 -left-0.5 z-10">
+          <TestAdBadge variant="small" />
+        </div>
+      </button>
 
-      {/* Bottom label */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 p-2 bg-gradient-to-t from-black/70 to-transparent">
-        <p className="text-[10px] text-white/80 mb-0.5">Sponsored</p>
-        <p className="text-xs font-semibold text-white truncate">Featured Brand</p>
-      </div>
-    </button>
+      <span className="text-xs text-muted-foreground truncate max-w-[64px]">
+        {brandName}
+      </span>
+    </div>
   );
 };
 
