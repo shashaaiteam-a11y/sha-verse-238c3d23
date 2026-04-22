@@ -1,162 +1,136 @@
+Stories & PYMK ME AB JESE ME BATA RAHA HUN SAME WESE HI ADS SHOW HONE CHAHIYE
 
+ADS STRATERGY FOR Stories & PYMK  
+  
+  
+  
+Stories & PYMK — Smart Ad Integration Plan
 
-# 🧱 Module Isolation Plan — 7 Independent Modules
+## What's wrong right now (from screenshot)
 
-## 🔍 Current State Analysis
+- **Stories bar**: `SponsoredStory` is rendered TWICE (once raw at line 72, once wrapped at line 110). The label "Sponsored" floats outside the rail and breaks the layout — looks like a bug, not a story tile.
+- **PYMK**: Zero ad integration. Pure friend cards.
 
-### What's already isolated ✅
-- **Movion** is the only properly isolated module. It lives in `src/movion/` with its own `pages/`, `components/`, `hooks/`, `contexts/`, `algorithms.ts`, `constants.ts`, `store.tsx`, `types.ts`.
-- **Ads** are isolated under `src/components/ads/` and `src/lib/ads/`.
+## Goal
 
-### What's NOT isolated ❌
-All other modules (Home, NovaChat, Bookshelf, Groups, Profile, Chats) share:
-- Pages mixed in flat `src/pages/` folder
-- Components scattered across flat `src/components/` (PostCard, FeedCard, MessengerChat, FriendSuggestions, etc.)
-- Hooks all dumped in flat `src/hooks/` (useFeed, useReactions, useShares, useFriends, useStories, useMessages, etc.)
-- Many components are **shared** across modules:
-  - `PostCard`, `PostComments`, `EmojiReactionPicker`, `ShareDialog`, `useReactions`, `useSavedPosts`, `useShares` → used by Home, Profile, Groups, SavedPosts simultaneously
-  - `useFriends` → used by Home, Profile, UserSearchDialog
-  - `useStories` → used by Home and Profile
-
-This means changing one module easily breaks another — exactly the problem you want solved.
+Add Facebook/WhatsApp-style native ads that look exactly like a story tile and a person card — no banners, no popups, no interstitials.
 
 ---
 
-## 🎯 Goal
+## 1. Stories Bar — "Sponsored Story" tile
 
-Convert each module into a **self-contained folder** following the Movion pattern, with its own pages, components, hooks, types, and constants. Shared "library-grade" primitives (UI kit, ShareDialog, EmojiReactionPicker) stay in a clearly marked shared layer that modules **consume but never modify**.
+**Placement (final rule):**
+
+- Slot order: `[Your Story] → [Friend 1] → [Friend 2] → 📢 Sponsored Story → [Friend 3] → [Friend 4] → [Friend 5] → 📢 Sponsored Story → ...`
+- First sponsored slot appears **after position 3** (clean first impression).
+- Repeat **every 5 story tiles**.
+- If user has 0 friend stories → show **only 1** sponsored tile after "Your Story".
+- Hard cap: **max 2 sponsored stories** in the visible rail.
+
+**Visual (pixel match to real story tile):**
+
+- Same width/height as friend story tiles (64×64 avatar inside 16:9-ish rounded container, same as current story rings).
+- Top-right small "Sponsored" badge (not floating outside).
+- Brand logo as the avatar circle with blue ring (matches unviewed story ring).
+- Caption row below = brand name, truncated, same font as friend names.
+- 3-dot menu (long-press / hover) → "Hide this ad" → triggers 24h category block via existing `hideAd()` in `AdContext`.
+
+**Behavior:**
+
+- Tap → opens full-screen ad viewer (reuses `FacebookStoryViewer` shell, 5s auto-skip, "Skip" button after 2s, swipe-down to dismiss).
+- Auto-records impression once per mount via existing `recordAdImpression`.
+- Click → `recordAdClick`.
+- Respects existing frequency cap, cooldown, and category block from `useAdFrequency`.
 
 ---
 
-## 🗂️ Target Folder Structure
+## 2. People You May Know — "Sponsored Suggestion" card
+
+**Placement (final rule):**
+
+- Inject **1 sponsored person card at position 3** (after 2 real suggestions).
+- If suggestions < 3 → no ad (avoid awkward solo ad).
+- If suggestions ≥ 6 → also inject a second one at position 6.
+- Hard cap: **max 2** sponsored cards.
+
+**Visual (pixel match to real PYMK card):**
+
+- Identical width (`w-32`), avatar size (`h-16 w-16`), same font, same Add button position.
+- Brand logo replaces user avatar (square-rounded for brand differentiation).
+- "Sponsored" small badge replaces "X mutual friends" line.
+- CTA button text changes from "Add" → "Visit" / "Learn More" (icon: `ExternalLink` instead of `UserPlus`).
+- 3-dot top-right "Hide this ad".
+
+**Behavior:**
+
+- Tap card or button → tracks click + opens advertiser URL (placeholder for now since test mode).
+- Hide → 24h block via `useAds().hideAd("community")`.
+- Test badge visible in dev (test mode active).
+
+---
+
+## 3. AI placement logic (lightweight, real-time)
+
+A new tiny hook `useDiscoveryAds(itemCount, slotType)` that returns positions where ads should be injected. Logic:
 
 ```text
-src/
-├── modules/
-│   ├── home/
-│   │   ├── pages/        (Home.tsx, SavedPosts.tsx, Notifications.tsx)
-│   │   ├── components/   (FeedCard, CreatePostCard, FriendSuggestions, AppMenu, NotificationBell, UserSearchDialog, PostCard, PostComments, FacebookStoriesBar, StoryViewer)
-│   │   ├── hooks/        (useFeed, useFriends, useStories, useFriendSuggestions, usePosts, useUserSearch, useNotifications, useSavedPosts, useShares, usePollVotes)
-│   │   └── types.ts
-│   │
-│   ├── novachat/
-│   │   ├── pages/        (NovaChat.tsx)
-│   │   ├── components/   (ChatMessage, ChatSidebar, WelcomeScreen, ChatInput, SponsoredSuggestion-slot)
-│   │   └── hooks/        (useNovaChat)
-│   │
-│   ├── bookshelf/
-│   │   ├── pages/        (Bookshelf, BookDetail, BookReader, EditBook, AuthorChannel, EditAuthorChannel)
-│   │   ├── components/   (BookCard, BookDetailPage, EPUBViewer, PDFViewer, UploadBookDialog, EnhancedUploadBookDialog, CreateAuthorChannelDialog, BookRatingDialog, BookDeletionDialog, CommentSection, AnalyticsDashboard)
-│   │   ├── hooks/        (useBooks, useBookFeeds, useBookComments, useBookInteractions, useChannels, useChannelApproval, useReaderBookmarks, useCopyrightSystem)
-│   │   └── constants.ts  (already exists at src/lib/constants/bookshelf — move here)
-│   │
-│   ├── groups/
-│   │   ├── pages/        (Groups, GroupDetail, GroupAdmin)
-│   │   ├── components/   (CreateGroupDialog + group-specific UI)
-│   │   └── hooks/        (useGroups, useGroupAdmin, useGroupChat, useGroupJoinRequests, useGroupMembers, useGroupPosts, useGroupReports)
-│   │
-│   ├── profile/
-│   │   ├── pages/        (Profile.tsx, Friends.tsx, Settings.tsx, EditProfileDialog…)
-│   │   ├── components/   (ProfileIntroCard, ProfileMoreMenu, ProfilePostCard, ProfileSettingsDialog, FeaturedPhotos, FriendsPreview, SocialLinksSection, ProfileImageUpload)
-│   │   └── hooks/        (useProfile, useProfileSettings, useUserPosts, useUserPhotos, useUserVideos, useMutualFriends, useUserInterests)
-│   │
-│   ├── chats/
-│   │   ├── pages/        (Messages.tsx)
-│   │   ├── components/   (MessengerChat, ChatLayout, ChatHeader, ChatHeaderMenu, ChatTypingBar, TickIndicator, TypingIndicator, PresenceStatus, VideoCallDialog, ChatDialog, ChatUserSearchDialog, MessagesDrawer)
-│   │   └── hooks/        (useMessages, useMessagesRealtime, useConversations, useReadReceipts, useTypingIndicator, useMessagingPermissions, useBlockment, useBadgeCount, usePresence, usePresenceEnhanced)
-│   │
-│   └── movion/           (already isolated — leave as-is, just move under /modules for symmetry)
-│
-└── shared/               (read-only by all modules)
-    ├── ui/               (existing src/components/ui/* — shadcn primitives, untouched)
-    ├── components/       (ShareDialog, EmojiReactionPicker, ReactionPicker, HashtagText, ImageUpload, LocationPicker, BottomNav, ProtectedRoute, SwipeWrapper, NavLink)
-    ├── hooks/            (useReactions, use-mobile, use-toast, usePullToRefresh, useSwipeNavigation)
-    ├── contexts/         (AuthContext, MobileContext, AdContext)
-    ├── lib/              (utils, ads/*)
-    ├── integrations/     (supabase/*)
-    └── services/
+- New user (<48h)              → fewer ads (every 6 + cap 1)
+- Active user (>48h)           → standard (every 5, cap 2)
+- Same ad in cooldown (2h)     → skip slot
+- Category blocked (24h)       → skip slot
+- Daily cap hit                → return []
+- Fast horizontal scroll       → defer next ad by 1 slot
 ```
 
----
-
-## 🛡️ Isolation Rules (Enforced going forward)
-
-1. **Module → Module imports are FORBIDDEN.** A file in `modules/home/` may NEVER import from `modules/profile/`, `modules/chats/`, etc.
-2. **Module → Shared imports are ALLOWED** (`@/shared/...`).
-3. **Shared → Module imports are FORBIDDEN.** Shared code must not know any module exists.
-4. Each module owns its hooks and components even if logic looks similar — duplication is acceptable to preserve isolation.
-5. `App.tsx` is the ONLY file that imports pages from multiple modules (for routing). It does not contain feature logic.
+Reuses the existing engine: `AdContext`, `useAdFrequency`, `useAdTargeting`, `recordAdImpression`, `recordAdClick`. **No new tables, no new edge functions.**
 
 ---
 
-## 🔁 Handling Shared Components Currently Used by Multiple Modules
+## 4. Files to change / create
 
-Some components today are imported by Home, Profile, Groups, SavedPosts simultaneously. Strategy:
+**Create:**
 
-| Component | Decision |
-|---|---|
-| `PostCard`, `PostComments`, `FeedCard`, `CreatePostCard` | **Owned by Home module.** Profile and Groups get their **own copies** (`ProfilePostCard` already exists; create `GroupPostCard`). SavedPosts moves into Home module. |
-| `EmojiReactionPicker`, `ShareDialog`, `HashtagText` | **Move to `shared/components/`** — they are pure presentational primitives with no module-specific logic. |
-| `useReactions` | **Move to `shared/hooks/`** — generic reaction toggle works across posts/videos/books. |
-| `useShares`, `useSavedPosts`, `usePollVotes` | **Owned by Home module.** Other modules call their own equivalents or skip. |
-| `useFriends` | **Owned by Home module.** Profile gets its own thin `useProfileFriends` wrapper. |
-| `useStories` | **Owned by Home module.** Profile's story-create flow gets its own minimal `useCreateStory`. |
-| `MessengerChat` | **Owned by Chats module.** No other module imports it (Home only routes to `/messages`). |
-| `useBadgeCount` | **Owned by Chats module.** Home reads the unread total via a tiny shared selector hook `useUnreadCount` in `shared/hooks/` that queries the same data without coupling to Chats internals. |
+- `src/hooks/useDiscoveryAds.ts` — slot-position calculator for horizontal rails.
+- `src/components/ads/SponsoredPersonCard.tsx` — PYMK-shaped native ad card.
 
----
+**Modify:**
 
-## 🛠️ Implementation Steps (when approved)
+- `src/components/ads/SponsoredStory.tsx` — make it pixel-match a real story tile (avatar + caption layout) and add hide-menu.
+- `src/components/stories/FacebookStoriesBar.tsx` — remove the duplicate `<SponsoredStory />` at line 72, switch to position-based injection inside the friends `.map()`.
+- `src/components/FriendSuggestions.tsx` — inject `SponsoredPersonCard` at calculated positions inside the suggestions `.map()`.
+- `src/components/ads/index.ts` — export new card.
 
-**Phase 1 — Shared layer setup**
-1. Create `src/shared/` with subfolders.
-2. Move pure primitives: `ShareDialog`, `EmojiReactionPicker`, `ReactionPicker`, `HashtagText`, `ImageUpload`, `LocationPicker`, `BottomNav`, `ProtectedRoute`, `SwipeWrapper`, `NavLink` → `src/shared/components/`.
-3. Move `useReactions`, `use-mobile`, `use-toast`, `usePullToRefresh`, `useSwipeNavigation` → `src/shared/hooks/`.
-4. Add re-export shims at OLD paths (`src/components/ShareDialog.tsx` → `export * from '@/shared/components/ShareDialog'`) so nothing breaks during migration.
+**Untouched (strict isolation):**
 
-**Phase 2 — Create module folders**
-5. Create `src/modules/{home,novachat,bookshelf,groups,profile,chats,movion}/` with `pages/`, `components/`, `hooks/`, `types.ts`.
-6. Move each module's pages, components, hooks into its folder.
-7. Update internal imports inside each module to use relative paths or `@/modules/<name>/...`.
-8. Add re-export shims at OLD paths so `App.tsx` lazy imports keep working until Phase 3.
-
-**Phase 3 — Decouple shared cross-module components**
-9. Duplicate `PostCard` logic into `modules/groups/components/GroupPostCard.tsx` (using existing GroupDetail render code).
-10. Duplicate friend/story hooks where Profile uses them — own copies.
-11. Create `shared/hooks/useUnreadCount.ts` for Home header badge (reads `conversations` table directly, no Chats import).
-12. Remove cross-module imports one by one; verify each module still works.
-
-**Phase 4 — Cleanup**
-13. Update `App.tsx` lazy imports to point at new `@/modules/<name>/pages/...` paths.
-14. Update `vite.config.ts` aliases if needed (`@/modules`, `@/shared`).
-15. Delete the re-export shims.
-16. Add an ESLint rule (`no-restricted-imports`) blocking module → module imports.
-
-**Phase 5 — Memory**
-17. Update `mem://constraints/module-isolation-mandate` with the new folder structure and import rules.
-18. Add `mem://architecture/module-folder-structure` documenting the 7 modules + shared layer.
+- No changes to `useStories`, `useFriendSuggestions`, feed logic, other modules, or any UI outside these two components.
+- No DB migrations.
+- Test ads stay ON (`USE_TEST_ADS = true`).
 
 ---
 
-## ⚠️ What This Plan Does NOT Change
+## 5. What the user will see
 
-- ❌ No UI changes anywhere — pixels stay identical.
-- ❌ No feature logic changes — only file locations and import paths.
-- ❌ No database / RLS / Supabase changes.
-- ❌ No changes to ads system, realtime channels, auth, or routing behavior.
-- ❌ Movion module stays where it is (already isolated); only optionally moved under `/modules/` for symmetry.
+```text
+┌─ Stories ─────────────────────────────── + Create Story ┐
+│ [Your] [Mike] [Sara] [📢Brand] [John] [Lisa] [Ali] ...  │
+└─────────────────────────────────────────────────────────┘
 
----
+┌─ People You May Know ───────────────────────────────────┐
+│ [Carol]  [Raj]  [📢 Sponsored]  [Emma]  [Tom]  [Sam]    │
+│  Add      Add      Visit         Add     Add    Add     │
+└─────────────────────────────────────────────────────────┘
+```
 
-## ❓ One Decision Needed Before I Start
+Sponsored tiles look native, sit naturally in the row, and respect daily cap + cooldown + hide-block.   
+  
+  
+  
+  
+isko completely acche se analyze karke implement karo:  
+  
+  
+YE SABHI CHEEZEN REALTIME ME WORK KARNI CHAHIYE
 
-This is a **large structural refactor touching ~100+ files** across moves + import rewrites. It will be done carefully but is non-trivial. Two approaches:
+isko acche se analyze karke kaam karo
 
-**Option A — Full refactor in one go (recommended)**
-All 5 phases executed sequentially in one implementation pass. Bigger single change but leaves you with clean isolation immediately.
-
-**Option B — Module-by-module (safer, slower)**
-Do one module at a time over multiple turns: Chats first → Profile → Bookshelf → Groups → NovaChat → Home last (Home is biggest). After each module you verify nothing broke.
-
-I recommend **Option B** because it minimizes risk of breakage and lets you verify each module in the preview before moving to the next. Please confirm Option A or B and I'll proceed.
-
+note: yaad rahe ye sab bina kisi dusre features aur module chede bina ya dusre features aur module me changes kiye bina, aur bina kisi dusre features ya module ke ui ko chede bina kaArna
