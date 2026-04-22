@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { Fragment, useState, useRef } from "react";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -113,9 +113,8 @@ const FacebookStoriesBar = () => {
 
             {/* Friends' Stories with position-based ad injection */}
             {friendStories.map((group, idx) => (
-              <>
+              <Fragment key={group.user.id}>
                 <div
-                  key={group.user.id}
                   className="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
                   onClick={() => handleStoryClick(group)}
                 >
@@ -141,7 +140,7 @@ const FacebookStoriesBar = () => {
                 {adPositions.has(idx) && (
                   <SponsoredStory key={`ad-${idx}`} />
                 )}
-              </>
+              </Fragment>
             ))}
 
             {/* Loading placeholders */}
