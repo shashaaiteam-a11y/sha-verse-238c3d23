@@ -659,21 +659,15 @@ const Bookshelf = () => {
 
                   const node = <BookCard key={book.id} book={book} />;
 
-                  if ((idx + 1) % 5 === 0) {
+                  // 📚 Native book-shaped ad every 6 items (per strategy: 5–6 items)
+
+                  if ((idx + 1) % 6 === 0) {
 
                     return [
 
                       node,
 
-                      <NativeAdCard
-
-                        key={`ad-${book.id}`}
-
-                        placement="bookshelf_grid"
-
-                        compact
-
-                      />,
+                      <SponsoredBookCard key={`ad-${book.id}`} />,
 
                     ];
 
