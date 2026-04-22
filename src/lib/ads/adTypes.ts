@@ -3,6 +3,7 @@ export type AdPlacement =
   | "home_feed_after_create"
   | "home_story"
   | "home_banner"
+  | "home_pymk"
   | "movion_grid"
   | "movion_pre_roll"
   | "movion_mid_roll"
