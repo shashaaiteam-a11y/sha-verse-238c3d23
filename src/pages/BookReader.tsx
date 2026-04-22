@@ -142,6 +142,38 @@ const BookReader = () => {
     }
   }, [bookId]);
 
+  // 📖 Re-mount the inline ad whenever the user lands on a "trigger" page,
+  // so a fresh creative is fetched each time.
+  useEffect(() => {
+    setAdKey((k) => k + 1);
+    // Reset dismissal when user moves to a new trigger page
+    if (adDismissedFor !== null && adDismissedFor !== currentPage) {
+      setAdDismissedFor(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  // 📖 Compute whether the current page is an ad-eligible page.
+  // Rules (from strategy):
+  //   - First 2 pages → NO ADS
+  //   - Last page → NO ADS
+  //   - Every 4 pages thereafter → INLINE AD
+  //   - Every ~10% milestone → CHAPTER-END style (HIGH-MONEY spot)
+  const isInlineAdPage =
+    totalPages > 6 &&
+    currentPage > 2 &&
+    currentPage < totalPages &&
+    (currentPage - 2) % 4 === 0;
+
+  const isChapterEndAdPage =
+    totalPages > 12 &&
+    currentPage > 4 &&
+    currentPage < totalPages &&
+    Math.abs((currentPage / totalPages) * 10 - Math.round((currentPage / totalPages) * 10)) < 0.05 &&
+    Math.round((currentPage / totalPages) * 10) % 2 === 0; // every ~20%
+
+  const showReaderAd = (isInlineAdPage || isChapterEndAdPage) && adDismissedFor !== currentPage;
+
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
