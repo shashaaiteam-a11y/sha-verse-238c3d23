@@ -2,6 +2,21 @@ import { useEffect, useRef, useCallback } from 'react';
 
 import { Button } from "@/components/ui/button";
 
+/** Tiny wrapper: notifies the smart engine when an ad mounts (for session cap). */
+const SmartAdSlot = ({
+  onMount,
+  children,
+}: {
+  onMount: () => void;
+  children: React.ReactNode;
+}) => {
+  useEffect(() => {
+    onMount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <>{children}</>;
+};
+
 import { Card } from "@/components/ui/card";
 
 import { MessageCircle, UserPlus, Bookmark, Loader2 } from "lucide-react";
@@ -328,11 +343,15 @@ const Home = () => {
 
                     {shouldShowAd(idx) && (
 
-                      <div className="mt-3 sm:mt-4">
+                      <SmartAdSlot onMount={registerAdShown}>
 
-                        <NativeAdCard placement="home_feed" />
+                        <div className="mt-3 sm:mt-4">
 
-                      </div>
+                          <NativeAdCard placement="home_feed" />
+
+                        </div>
+
+                      </SmartAdSlot>
 
                     )}
 
