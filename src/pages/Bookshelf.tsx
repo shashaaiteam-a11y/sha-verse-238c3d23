@@ -38,7 +38,7 @@ import { formatDistanceToNow } from "date-fns";
 
 import { BOOK_CATEGORIES } from "@/lib/constants/bookshelf";
 
-import { NativeAdCard } from "@/components/ads";
+import { NativeAdCard, SponsoredBookCard } from "@/components/ads";
 
 
 
