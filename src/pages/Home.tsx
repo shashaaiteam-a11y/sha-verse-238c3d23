@@ -404,6 +404,13 @@ const Home = () => {
 
       </PullToRefresh>
 
+      {/* 📢 Sticky bottom banner — continuous low-profile earning slot */}
+      <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-30 pointer-events-auto">
+        <div className="max-w-2xl mx-auto">
+          <StickyBannerAd placement="home_banner" />
+        </div>
+      </div>
+
     </div>
 
   );
