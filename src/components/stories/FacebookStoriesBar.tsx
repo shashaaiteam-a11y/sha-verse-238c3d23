@@ -71,9 +71,6 @@ const FacebookStoriesBar = () => {
             className="flex gap-3 overflow-x-auto scrollbar-hide px-8"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {/* 📢 Sponsored Story slot — appears as second tile (after Create Story) */}
-            <SponsoredStory />
-
             {/* Create Story / Your Story */}
             <div className="flex flex-col items-center gap-1 flex-shrink-0">
               {hasOwnStory ? (
@@ -109,16 +106,14 @@ const FacebookStoriesBar = () => {
               <span className="text-xs text-muted-foreground">Your Story</span>
             </div>
 
-            {/* Ad: Sponsored Story at slot 2 (right after "Your Story") */}
-            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            {/* If no friend stories at all, show single sponsored tile right after Your Story */}
+            {friendStories.length === 0 && !isLoading && adPositions.has(0) && (
               <SponsoredStory />
-              <span className="text-xs text-muted-foreground">Sponsored</span>
-            </div>
+            )}
 
-            {/* Friends' Stories */}
-            {storyGroups
-              .filter((g) => g.user.id !== user?.id)
-              .map((group) => (
+            {/* Friends' Stories with position-based ad injection */}
+            {friendStories.map((group, idx) => (
+              <>
                 <div
                   key={group.user.id}
                   className="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
@@ -143,7 +138,11 @@ const FacebookStoriesBar = () => {
                     {group.user.display_name.split(" ")[0]}
                   </span>
                 </div>
-              ))}
+                {adPositions.has(idx) && (
+                  <SponsoredStory key={`ad-${idx}`} />
+                )}
+              </>
+            ))}
 
             {/* Loading placeholders */}
             {isLoading && (
