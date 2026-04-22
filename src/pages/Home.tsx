@@ -2,6 +2,21 @@ import { useEffect, useRef, useCallback } from 'react';
 
 import { Button } from "@/components/ui/button";
 
+/** Tiny wrapper: notifies the smart engine when an ad mounts (for session cap). */
+const SmartAdSlot = ({
+  onMount,
+  children,
+}: {
+  onMount: () => void;
+  children: React.ReactNode;
+}) => {
+  useEffect(() => {
+    onMount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <>{children}</>;
+};
+
 import { Card } from "@/components/ui/card";
 
 import { MessageCircle, UserPlus, Bookmark, Loader2 } from "lucide-react";
@@ -32,9 +47,9 @@ import FacebookStoriesBar from '@/components/stories/FacebookStoriesBar';
 
 import AppMenu from '@/components/AppMenu';
 
-import { NativeAdCard, BannerAd } from '@/components/ads';
+import { NativeAdCard, BannerAd, StickyBannerAd } from '@/components/ads';
 
-import { AD_FREQUENCY } from '@/lib/ads/adConfig';
+import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 
 import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
 
@@ -58,6 +73,8 @@ const Home = () => {
 
   const totalUnreadMessages = useTotalUnreadBadge();
 
+  // 🤖 AI Smart Ad Engine — realtime scroll-speed + dynamic frequency
+  const { shouldShowAd, registerAdShown } = useSmartFeedAds();
 
 
   const handleRefresh = async () => {
@@ -322,13 +339,29 @@ const Home = () => {
 
                     />
 
-                    {/* Ad: native card every N posts */}
+                    {/* 🤖 Smart Ad: native card injected by AI engine (skip first 3, dynamic freq) */}
 
-                    {(idx + 1) % AD_FREQUENCY.HOME_FEED_EVERY_N_POSTS === 0 && (
+                    {shouldShowAd(idx) && (
 
-                      <div className="mt-3 sm:mt-4">
+                      <SmartAdSlot onMount={registerAdShown}>
 
-                        <NativeAdCard placement="home_feed" />
+                        <div className="mt-3 sm:mt-4">
+
+                          <NativeAdCard placement="home_feed" />
+
+                        </div>
+
+                      </SmartAdSlot>
+
+                    )}
+
+                    {/* 📢 Inline banner — sparingly every ~9 posts after first impression */}
+
+                    {idx >= 5 && (idx + 1) % 9 === 0 && (
+
+                      <div className="mt-3 sm:mt-4 flex justify-center">
+
+                        <BannerAd placement="home_banner" />
 
                       </div>
 
@@ -389,6 +422,13 @@ const Home = () => {
         </div>
 
       </PullToRefresh>
+
+      {/* 📢 Sticky bottom banner — continuous low-profile earning slot */}
+      <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-30 pointer-events-auto">
+        <div className="max-w-2xl mx-auto">
+          <StickyBannerAd placement="home_banner" />
+        </div>
+      </div>
 
     </div>
 
