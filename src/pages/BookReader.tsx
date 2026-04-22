@@ -23,7 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { StickyBannerAd } from "@/components/ads";
+import { StickyBannerAd, BookReaderInlineAd } from "@/components/ads";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 
@@ -65,6 +65,10 @@ const BookReader = () => {
   const [epubToc, setEpubToc] = useState<TocItem[]>([]);
   const [scale, setScale] = useState(1.5);
   const [epubCfi, setEpubCfi] = useState<string | undefined>();
+
+  // 📖 Inline reader-ad state — every 4 pages, skip first 2 + last
+  const [adKey, setAdKey] = useState(0);
+  const [adDismissedFor, setAdDismissedFor] = useState<number | null>(null);
 
   const { data: book, isLoading } = useQuery({
     queryKey: ["book", bookId],
@@ -137,6 +141,38 @@ const BookReader = () => {
       void (supabase as any).rpc("increment_book_views", { book_id: bookId });
     }
   }, [bookId]);
+
+  // 📖 Re-mount the inline ad whenever the user lands on a "trigger" page,
+  // so a fresh creative is fetched each time.
+  useEffect(() => {
+    setAdKey((k) => k + 1);
+    // Reset dismissal when user moves to a new trigger page
+    if (adDismissedFor !== null && adDismissedFor !== currentPage) {
+      setAdDismissedFor(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  // 📖 Compute whether the current page is an ad-eligible page.
+  // Rules (from strategy):
+  //   - First 2 pages → NO ADS
+  //   - Last page → NO ADS
+  //   - Every 4 pages thereafter → INLINE AD
+  //   - Every ~10% milestone → CHAPTER-END style (HIGH-MONEY spot)
+  const isInlineAdPage =
+    totalPages > 6 &&
+    currentPage > 2 &&
+    currentPage < totalPages &&
+    (currentPage - 2) % 4 === 0;
+
+  const isChapterEndAdPage =
+    totalPages > 12 &&
+    currentPage > 4 &&
+    currentPage < totalPages &&
+    Math.abs((currentPage / totalPages) * 10 - Math.round((currentPage / totalPages) * 10)) < 0.05 &&
+    Math.round((currentPage / totalPages) * 10) % 2 === 0; // every ~20%
+
+  const showReaderAd = (isInlineAdPage || isChapterEndAdPage) && adDismissedFor !== currentPage;
 
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -549,8 +585,39 @@ const BookReader = () => {
         </div>
       )}
 
+      {/* 📖 Inline Reader Ad — appears at the top of the reading area on
+          ad-eligible pages (every 4 pages, skipping first 2 + last). It sits
+          above the viewer so it never breaks paragraph flow inside the document. */}
+      {showReaderAd && (
+        <div
+          className={cn(
+            "fixed left-0 right-0 z-40 pointer-events-none transition-transform duration-300",
+            showControls ? "top-14" : "top-0"
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="pointer-events-auto">
+            <BookReaderInlineAd
+              key={`reader-ad-${adKey}`}
+              variant={isChapterEndAdPage ? "chapter_end" : "inline"}
+              theme={theme}
+              onDismiss={() => setAdDismissedFor(currentPage)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <main className="absolute inset-0 flex items-center justify-center pt-14 pb-16 overflow-auto">
+      <main
+        className={cn(
+          "absolute inset-0 flex items-center justify-center pb-16 overflow-auto transition-[padding] duration-300",
+          showReaderAd
+            ? isChapterEndAdPage
+              ? "pt-[19rem] sm:pt-[17rem]"
+              : "pt-[14rem] sm:pt-[13rem]"
+            : "pt-14"
+        )}
+      >
         <div className="w-full h-full flex items-center justify-center">
           {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (

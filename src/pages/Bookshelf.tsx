@@ -38,7 +38,7 @@ import { formatDistanceToNow } from "date-fns";
 
 import { BOOK_CATEGORIES } from "@/lib/constants/bookshelf";
 
-import { NativeAdCard } from "@/components/ads";
+import { NativeAdCard, SponsoredBookCard } from "@/components/ads";
 
 
 
@@ -528,19 +528,14 @@ const Bookshelf = () => {
 
                     const card = <BookCard key={book.id} book={book} />;
 
-                    // Inject native ad every 4 books (2 rows in 2-col grid)
-
-                    if ((idx + 1) % 4 === 0) {
+                    // 📚 Inject Sponsored Book (book-shaped native ad) every 6 books
+                    if ((idx + 1) % 6 === 0) {
 
                       return [
 
                         card,
 
-                        <div key={`ad-${book.id}`} className="col-span-2 sm:col-span-1">
-
-                          <NativeAdCard placement="bookshelf_grid" compact />
-
-                        </div>
+                        <SponsoredBookCard key={`sponsored-${book.id}`} />
 
                       ];
 
@@ -644,7 +639,18 @@ const Bookshelf = () => {
 
             </section>
 
-
+            {/* 🔥 Sponsored Books Strip — high-CPM advertiser section */}
+            <section>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                Sponsored Books
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                {[0, 1, 2, 3].map((i) => (
+                  <SponsoredBookCard key={`strip-${i}`} />
+                ))}
+              </div>
+            </section>
 
             {/* All Books Section */}
 
@@ -664,21 +670,15 @@ const Bookshelf = () => {
 
                   const node = <BookCard key={book.id} book={book} />;
 
-                  if ((idx + 1) % 5 === 0) {
+                  // 📚 Native book-shaped ad every 6 items (per strategy: 5–6 items)
+
+                  if ((idx + 1) % 6 === 0) {
 
                     return [
 
                       node,
 
-                      <NativeAdCard
-
-                        key={`ad-${book.id}`}
-
-                        placement="bookshelf_grid"
-
-                        compact
-
-                      />,
+                      <SponsoredBookCard key={`ad-${book.id}`} />,
 
                     ];
 

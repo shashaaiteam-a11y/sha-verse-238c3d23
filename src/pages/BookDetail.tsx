@@ -27,7 +27,7 @@ import BookRatingDialog from "@/components/bookshelf/BookRatingDialog";
 import BookDeletionDialog from "@/components/bookshelf/BookDeletionDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
-import { BannerAd } from "@/components/ads";
+import { BannerAd, NativeAdCard } from "@/components/ads";
 
 // BookDetail page component
 const BookDetail = () => {
@@ -553,6 +553,11 @@ const BookDetail = () => {
             </p>
           )}
         </Card>
+
+        {/* 📚 Native Ad — sits between description and book info, high-CTR spot */}
+        <div className="mb-6">
+          <NativeAdCard placement="bookshelf_detail_banner" />
+        </div>
 
         {/* Book Info */}
         <Card className="p-4 mb-6">

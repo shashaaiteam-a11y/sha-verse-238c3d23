@@ -12,3 +12,5 @@ export { default as VideoMidRollAd } from "./VideoMidRollAd";
 export { default as ShortsScrollAd } from "./ShortsScrollAd";
 export { default as TestAdBadge } from "./TestAdBadge";
 export { TestAdSimple } from "./TestAdSimple";
+export { default as BookReaderInlineAd } from "./BookReaderInlineAd";
+export { default as SponsoredBookCard } from "./SponsoredBookCard";
