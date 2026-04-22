@@ -639,7 +639,18 @@ const Bookshelf = () => {
 
             </section>
 
-
+            {/* 🔥 Sponsored Books Strip — high-CPM advertiser section */}
+            <section>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                Sponsored Books
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                {[0, 1, 2, 3].map((i) => (
+                  <SponsoredBookCard key={`strip-${i}`} />
+                ))}
+              </div>
+            </section>
 
             {/* All Books Section */}
 
