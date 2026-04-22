@@ -585,8 +585,39 @@ const BookReader = () => {
         </div>
       )}
 
+      {/* 📖 Inline Reader Ad — appears at the top of the reading area on
+          ad-eligible pages (every 4 pages, skipping first 2 + last). It sits
+          above the viewer so it never breaks paragraph flow inside the document. */}
+      {showReaderAd && (
+        <div
+          className={cn(
+            "fixed left-0 right-0 z-40 pointer-events-none transition-transform duration-300",
+            showControls ? "top-14" : "top-0"
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="pointer-events-auto">
+            <BookReaderInlineAd
+              key={`reader-ad-${adKey}`}
+              variant={isChapterEndAdPage ? "chapter_end" : "inline"}
+              theme={theme}
+              onDismiss={() => setAdDismissedFor(currentPage)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <main className="absolute inset-0 flex items-center justify-center pt-14 pb-16 overflow-auto">
+      <main
+        className={cn(
+          "absolute inset-0 flex items-center justify-center pb-16 overflow-auto transition-[padding] duration-300",
+          showReaderAd
+            ? isChapterEndAdPage
+              ? "pt-[19rem] sm:pt-[17rem]"
+              : "pt-[14rem] sm:pt-[13rem]"
+            : "pt-14"
+        )}
+      >
         <div className="w-full h-full flex items-center justify-center">
           {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (
