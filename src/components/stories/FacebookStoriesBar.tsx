@@ -68,6 +68,9 @@ const FacebookStoriesBar = () => {
             className="flex gap-3 overflow-x-auto scrollbar-hide px-8"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
+            {/* 📢 Sponsored Story slot — appears as second tile (after Create Story) */}
+            <SponsoredStory />
+
             {/* Create Story / Your Story */}
             <div className="flex flex-col items-center gap-1 flex-shrink-0">
               {hasOwnStory ? (
