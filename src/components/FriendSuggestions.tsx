@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { UserPlus, Users } from 'lucide-react';
 import { useFriendSuggestions } from '@/hooks/useFriendSuggestions';
 import { useNavigate } from 'react-router-dom';
+import { SponsoredPYMKCard } from '@/components/ads';
 
 export const FriendSuggestions = () => {
   const { suggestions, isLoading, sendRequest } = useFriendSuggestions();
