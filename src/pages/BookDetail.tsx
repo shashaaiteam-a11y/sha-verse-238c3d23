@@ -27,7 +27,7 @@ import BookRatingDialog from "@/components/bookshelf/BookRatingDialog";
 import BookDeletionDialog from "@/components/bookshelf/BookDeletionDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
-import { BannerAd } from "@/components/ads";
+import { BannerAd, NativeAdCard } from "@/components/ads";
 
 // BookDetail page component
 const BookDetail = () => {
