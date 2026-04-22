@@ -32,9 +32,9 @@ import FacebookStoriesBar from '@/components/stories/FacebookStoriesBar';
 
 import AppMenu from '@/components/AppMenu';
 
-import { NativeAdCard, BannerAd } from '@/components/ads';
+import { NativeAdCard, BannerAd, StickyBannerAd } from '@/components/ads';
 
-import { AD_FREQUENCY } from '@/lib/ads/adConfig';
+import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 
 import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
 
