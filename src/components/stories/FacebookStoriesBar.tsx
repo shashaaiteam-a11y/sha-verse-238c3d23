@@ -7,11 +7,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import CreateStoryDialog from "./CreateStoryDialog";
 import FacebookStoryViewer from "./FacebookStoryViewer";
 import { SponsoredStory } from "@/components/ads";
+import { useDiscoveryAds } from "@/hooks/useDiscoveryAds";
 import { cn } from "@/lib/utils";
 
 const FacebookStoriesBar = () => {
   const { user } = useAuth();
   const { storyGroups, isLoading } = useStories();
+  const friendStories = storyGroups.filter((g) => g.user.id !== user?.id);
+  const { adPositions } = useDiscoveryAds(friendStories.length, "story");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [viewingStoryGroup, setViewingStoryGroup] = useState<StoryGroup | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
