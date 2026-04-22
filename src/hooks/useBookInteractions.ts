@@ -281,7 +281,7 @@ export const useBookInteractions = (bookId?: string) => {
     if (!bookId) return;
 
     const channel = supabase
-      .channel(`book-ratings-${bookId}`)
+      .channel(`book-ratings-${bookId}-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'book_ratings', filter: `book_id=eq.${bookId}` },

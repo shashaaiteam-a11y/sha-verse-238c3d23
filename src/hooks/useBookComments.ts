@@ -220,7 +220,7 @@ export const useBookComments = (bookId?: string) => {
     if (!bookId) return;
 
     const channel = supabase
-      .channel(`book-comments-${bookId}`)
+      .channel(`book-comments-${bookId}-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         'postgres_changes',
         {
