@@ -65,8 +65,6 @@ export function getAdUnitForPlacement(placement: AdPlacement): string {
       return AD_IDS.native;
     case "home_story":
       return AD_IDS.sponsoredStory;
-    case "home_pymk":
-      return AD_IDS.sponsoredSuggestion;
     case "group_list":
       return AD_IDS.sponsoredGroup;
     case "novachat_suggestion":

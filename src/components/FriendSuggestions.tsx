@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { UserPlus, Users } from 'lucide-react';
 import { useFriendSuggestions } from '@/hooks/useFriendSuggestions';
 import { useNavigate } from 'react-router-dom';
-import { SponsoredPYMKCard } from '@/components/ads';
 
 export const FriendSuggestions = () => {
   const { suggestions, isLoading, sendRequest } = useFriendSuggestions();
@@ -41,51 +40,43 @@ export const FriendSuggestions = () => {
         People You May Know
       </h3>
       <div className="flex gap-3 overflow-x-auto pb-2">
-        {suggestions.slice(0, 6).flatMap((suggestion: any, idx: number) => {
-          const card = (
-            <div
-              key={suggestion.id}
-              className="flex-shrink-0 w-32 text-center"
+        {suggestions.slice(0, 6).map((suggestion: any) => (
+          <div
+            key={suggestion.id}
+            className="flex-shrink-0 w-32 text-center"
+          >
+            <Avatar 
+              className="h-16 w-16 mx-auto mb-2 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+              onClick={() => navigate(`/profile/${suggestion.id}`)}
             >
-              <Avatar 
-                className="h-16 w-16 mx-auto mb-2 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                onClick={() => navigate(`/profile/${suggestion.id}`)}
-              >
-                {suggestion.avatar_url && <AvatarImage src={suggestion.avatar_url} />}
-                <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                  {suggestion.display_name?.[0] || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <p 
-                className="text-sm font-medium truncate cursor-pointer hover:text-primary"
-                onClick={() => navigate(`/profile/${suggestion.id}`)}
-              >
-                {suggestion.display_name}
+              {suggestion.avatar_url && <AvatarImage src={suggestion.avatar_url} />}
+              <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                {suggestion.display_name?.[0] || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <p 
+              className="text-sm font-medium truncate cursor-pointer hover:text-primary"
+              onClick={() => navigate(`/profile/${suggestion.id}`)}
+            >
+              {suggestion.display_name}
+            </p>
+            {suggestion.mutualCount > 0 && (
+              <p className="text-xs text-muted-foreground mb-2">
+                {suggestion.mutualCount} mutual friends
               </p>
-              {suggestion.mutualCount > 0 && (
-                <p className="text-xs text-muted-foreground mb-2">
-                  {suggestion.mutualCount} mutual friends
-                </p>
-              )}
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full mt-1"
-                onClick={() => sendRequest.mutate(suggestion.id)}
-                disabled={sendRequest.isPending}
-              >
-                <UserPlus className="w-3 h-3 mr-1" />
-                Add
-              </Button>
-            </div>
-          );
-
-          // Rule: skip first 2 cards, then 1 sponsored every 3 users
-          const showAd = idx >= 2 && (idx - 1) % 3 === 0;
-          return showAd
-            ? [card, <SponsoredPYMKCard key={`sp-${suggestion.id}`} />]
-            : [card];
-        })}
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full mt-1"
+              onClick={() => sendRequest.mutate(suggestion.id)}
+              disabled={sendRequest.isPending}
+            >
+              <UserPlus className="w-3 h-3 mr-1" />
+              Add
+            </Button>
+          </div>
+        ))}
       </div>
     </Card>
   );

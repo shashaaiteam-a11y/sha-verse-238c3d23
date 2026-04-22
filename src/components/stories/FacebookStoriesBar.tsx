@@ -37,8 +37,6 @@ const FacebookStoriesBar = () => {
     setViewingStoryGroup(group);
   };
 
-  const friendStories = storyGroups.filter((g) => g.user.id !== user?.id);
-
   return (
     <>
       <div className="relative bg-card rounded-xl border p-4 mb-4">
@@ -70,9 +68,13 @@ const FacebookStoriesBar = () => {
             className="flex gap-3 overflow-x-auto scrollbar-hide px-8"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {/* Create Story / Your Story (always first — no ad here) */}
+            {/* 📢 Sponsored Story slot — appears as second tile (after Create Story) */}
+            <SponsoredStory />
+
+            {/* Create Story / Your Story */}
             <div className="flex flex-col items-center gap-1 flex-shrink-0">
               {hasOwnStory ? (
+                // Show own story with create option
                 <div className="relative">
                   <button
                     onClick={() => ownStoryGroup && handleStoryClick(ownStoryGroup)}
@@ -93,6 +95,7 @@ const FacebookStoriesBar = () => {
                   </button>
                 </div>
               ) : (
+                // Show create story button
                 <button
                   onClick={() => setShowCreateDialog(true)}
                   className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center border-2 border-dashed border-primary/50 hover:border-primary transition-colors"
@@ -103,9 +106,16 @@ const FacebookStoriesBar = () => {
               <span className="text-xs text-muted-foreground">Your Story</span>
             </div>
 
-            {/* Friends' Stories — Rule: 1st story = NO AD; then 1 sponsored every 4 stories */}
-            {friendStories.flatMap((group, idx) => {
-              const node = (
+            {/* Ad: Sponsored Story at slot 2 (right after "Your Story") */}
+            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <SponsoredStory />
+              <span className="text-xs text-muted-foreground">Sponsored</span>
+            </div>
+
+            {/* Friends' Stories */}
+            {storyGroups
+              .filter((g) => g.user.id !== user?.id)
+              .map((group) => (
                 <div
                   key={group.user.id}
                   className="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
@@ -130,22 +140,7 @@ const FacebookStoriesBar = () => {
                     {group.user.display_name.split(" ")[0]}
                   </span>
                 </div>
-              );
-
-              // Skip first story, then 1 sponsored every 4 stories
-              const showAd = idx > 0 && (idx + 1) % 4 === 0;
-              if (!showAd) return [node];
-              return [
-                node,
-                <div
-                  key={`sp-${group.user.id}`}
-                  className="flex flex-col items-center gap-1 flex-shrink-0"
-                >
-                  <SponsoredStory className="!w-16 !h-16 rounded-full" />
-                  <span className="text-xs text-muted-foreground">Sponsored</span>
-                </div>,
-              ];
-            })}
+              ))}
 
             {/* Loading placeholders */}
             {isLoading && (
