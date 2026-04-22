@@ -206,7 +206,7 @@ export const useBooks = (options: {
   // Real-time subscription for books table to invalidate lists and keep feeds live
   useEffect(() => {
     const channel = supabase
-      .channel('books-realtime')
+      .channel(`books-realtime-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'books' },
