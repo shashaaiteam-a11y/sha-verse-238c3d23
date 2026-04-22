@@ -58,6 +58,8 @@ const Home = () => {
 
   const totalUnreadMessages = useTotalUnreadBadge();
 
+  // 🤖 AI Smart Ad Engine — realtime scroll-speed + dynamic frequency
+  const { shouldShowAd, registerAdShown } = useSmartFeedAds();
 
 
   const handleRefresh = async () => {
@@ -322,13 +324,25 @@ const Home = () => {
 
                     />
 
-                    {/* Ad: native card every N posts */}
+                    {/* 🤖 Smart Ad: native card injected by AI engine (skip first 3, dynamic freq) */}
 
-                    {(idx + 1) % AD_FREQUENCY.HOME_FEED_EVERY_N_POSTS === 0 && (
+                    {shouldShowAd(idx) && (
 
                       <div className="mt-3 sm:mt-4">
 
                         <NativeAdCard placement="home_feed" />
+
+                      </div>
+
+                    )}
+
+                    {/* 📢 Inline banner — sparingly every ~9 posts after first impression */}
+
+                    {idx >= 5 && (idx + 1) % 9 === 0 && (
+
+                      <div className="mt-3 sm:mt-4 flex justify-center">
+
+                        <BannerAd placement="home_banner" />
 
                       </div>
 
