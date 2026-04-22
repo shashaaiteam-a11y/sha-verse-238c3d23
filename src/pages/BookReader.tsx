@@ -66,6 +66,10 @@ const BookReader = () => {
   const [scale, setScale] = useState(1.5);
   const [epubCfi, setEpubCfi] = useState<string | undefined>();
 
+  // 📖 Inline reader-ad state — every 4 pages, skip first 2 + last
+  const [adKey, setAdKey] = useState(0);
+  const [adDismissedFor, setAdDismissedFor] = useState<number | null>(null);
+
   const { data: book, isLoading } = useQuery({
     queryKey: ["book", bookId],
     queryFn: async () => {
