@@ -451,7 +451,7 @@ const FacebookStoryViewer = ({
               ref={videoRef}
               key={currentStory.id}
               src={currentStory.media_url}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-black"
               autoPlay
               playsInline
               muted={true} // Start muted to ensure autoplay works on all browsers
@@ -465,7 +465,7 @@ const FacebookStoryViewer = ({
               key={currentStory.id}
               src={currentStory.media_url}
               alt=""
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-black"
               onLoad={handleImageLoaded}
               onError={handleMediaError}
             />
