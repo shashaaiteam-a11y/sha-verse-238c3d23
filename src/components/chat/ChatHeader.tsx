@@ -24,8 +24,10 @@ import {
   Ban,
   Trash2,
   AlertCircle,
+  Lock,
 } from 'lucide-react';
 import { PresenceStatus, OnlineBadge } from './PresenceStatus';
+import { ChatPrivacyDialog } from './ChatPrivacyDialog';
 import { cn } from '@/lib/utils';
 
 interface ChatHeaderProps {
