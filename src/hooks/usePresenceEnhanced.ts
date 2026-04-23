@@ -172,7 +172,10 @@ export const useUserPresence = (targetUserId?: string) => {
     return () => {
       isActive = false;
       window.clearInterval(pollId);
-      supabase.removeChannel(channel);
+      supabase.removeChannel(presenceChannel);
+      supabase.removeChannel(targetSettingsChannel);
+      supabase.removeChannel(viewerSettingsChannel);
+      supabase.removeChannel(blocksChannel);
     };
   }, [user?.id, targetUserId]);
 
