@@ -106,10 +106,7 @@ const FacebookStoriesBar = () => {
               <span className="text-xs text-muted-foreground">Your Story</span>
             </div>
 
-            {/* If no friend stories at all, show single sponsored tile right after Your Story */}
-            {friendStories.length === 0 && !isLoading && adPositions.has(0) && (
-              <SponsoredStory />
-            )}
+            {/* Sponsored tile is only injected inside the friends list (after 5-6 real stories) */}
 
             {/* Friends' Stories with position-based ad injection */}
             {friendStories.map((group, idx) => (
