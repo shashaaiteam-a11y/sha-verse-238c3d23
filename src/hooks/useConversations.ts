@@ -139,8 +139,9 @@ export const useConversations = () => {
       }, DEBOUNCE_MS);
     };
 
+    const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel('conversations-updates')
+      .channel(`conversations-updates-${user.id}-${suffix}`)
       .on(
         'postgres_changes',
         {
@@ -149,6 +150,9 @@ export const useConversations = () => {
           table: 'messages'
         },
         () => {
+          // Unread counters must update instantly, conversation list debounced
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
           debouncedUpdate();
         }
       )

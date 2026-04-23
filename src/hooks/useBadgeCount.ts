@@ -25,12 +25,13 @@ export const useTotalUnreadBadge = () => {
     staleTime: 2000,
   });
 
-  // Real-time subscription to new messages
+  // Real-time subscription to new messages (Chats only)
   useEffect(() => {
     if (!user?.id) return;
 
+    const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`unread-badge-${user.id}`)
+      .channel(`unread-badge-${user.id}-${suffix}`)
       .on(
         'postgres_changes',
         {
@@ -39,9 +40,9 @@ export const useTotalUnreadBadge = () => {
           table: 'messages',
         },
         (payload) => {
-          // Only increment if message is NOT from current user
           if (payload.new?.sender_id !== user.id) {
             queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
+            queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
           }
         }
       )
@@ -51,10 +52,10 @@ export const useTotalUnreadBadge = () => {
           event: 'UPDATE',
           schema: 'public',
           table: 'messages',
-          filter: 'is_read=eq.true',
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
         }
       )
       .subscribe();
@@ -115,7 +116,7 @@ export const useConversationUnreadBadge = (conversationId?: string) => {
 };
 
 /**
- * Mark conversation as fully read
+ * Mark conversation as fully read (WhatsApp-style instant reset)
  */
 export const useMarkConversationRead = () => {
   const { user } = useAuth();
@@ -125,11 +126,50 @@ export const useMarkConversationRead = () => {
     mutationFn: async (conversationId: string) => {
       if (!user?.id) throw new Error('Not authenticated');
       await RTChatService.badge.markConversationAsRead(conversationId, user.id);
+      return conversationId;
     },
-    onSuccess: (_, conversationId) => {
+    // Optimistic update so the green badge disappears the instant a chat is opened
+    onMutate: async (conversationId) => {
+      if (!user?.id) return;
+      await queryClient.cancelQueries({ queryKey: ['unread-counts-all', user.id] });
+      const prevAll = queryClient.getQueryData<Record<string, number>>(
+        ['unread-counts-all', user.id]
+      );
+
+      // Zero this chat's badge immediately + drop total by that delta
+      queryClient.setQueriesData<Record<string, number>>(
+        { queryKey: ['unread-counts-all', user.id] },
+        (old) => {
+          if (!old) return old;
+          const next = { ...old };
+          delete next[conversationId];
+          return next;
+        }
+      );
+      queryClient.setQueryData(['conversation-unread-badge', conversationId, user.id], 0);
+
+      const droppedBy = prevAll?.[conversationId] || 0;
+      if (droppedBy > 0) {
+        queryClient.setQueryData<number>(['unread-badge', user.id], (old = 0) =>
+          Math.max(0, (old || 0) - droppedBy)
+        );
+      }
+
+      return { prevAll };
+    },
+    onError: (_err, _conversationId, context) => {
+      // Roll back on failure
+      if (context?.prevAll && user?.id) {
+        queryClient.setQueryData(['unread-counts-all', user.id], context.prevAll);
+      }
+      queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
+    },
+    onSuccess: (conversationId) => {
       queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages-realtime', conversationId] });
     }
   });
 };
@@ -146,10 +186,26 @@ export const useMarkAllConversationsRead = () => {
       if (!user?.id) throw new Error('Not authenticated');
       await RTChatService.badge.markAllAsRead(user.id);
     },
+    onMutate: async () => {
+      if (!user?.id) return;
+      await queryClient.cancelQueries({ queryKey: ['unread-counts-all', user.id] });
+      const prevAll = queryClient.getQueryData(['unread-counts-all', user.id]);
+      queryClient.setQueryData(['unread-counts-all', user.id], {});
+      queryClient.setQueryData(['unread-badge', user.id], 0);
+      return { prevAll };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prevAll && user?.id) {
+        queryClient.setQueryData(['unread-counts-all', user.id], context.prevAll);
+      }
+      queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge'] });
       queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages-realtime'] });
     }
   });
 };
