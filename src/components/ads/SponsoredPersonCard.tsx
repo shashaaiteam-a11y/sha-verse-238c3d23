@@ -38,7 +38,9 @@ const SponsoredPersonCard = ({
   const { user } = useAuth();
   const { registerImpression, hideAd } = useAds();
   const { category } = useAdTargeting();
-  const { shouldRender, adUnitId } = useAdFrequency("novachat_suggestion", category);
+  // Force render in test mode (matches NativeAdCard/BannerAd behavior) so the
+  // PYMK rail always shows the sponsored card at the calculated position.
+  const { shouldRender, adUnitId } = useAdFrequency("novachat_suggestion", category, true);
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
