@@ -299,9 +299,19 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 </AvatarFallback>}
               </Avatar>
               <div>
-                <h2 className="font-bold text-lg">Chats</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg">Chats</h2>
+                  {totalUnread > 0 && (
+                    <span
+                      className="bg-emerald-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow-sm animate-in fade-in zoom-in duration-200"
+                      aria-label={`${totalUnread} unread messages`}
+                    >
+                      {totalUnread > 99 ? '99+' : totalUnread}
+                    </span>
+                  )}
+                </div>
                 {totalUnread > 0 && (
-                  <p className="text-xs text-primary font-semibold">{totalUnread} unread</p>
+                  <p className="text-xs text-muted-foreground">{totalUnread} unread</p>
                 )}
               </div>
             </div>
