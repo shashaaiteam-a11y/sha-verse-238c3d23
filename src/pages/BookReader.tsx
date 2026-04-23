@@ -607,18 +607,25 @@ const BookReader = () => {
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Main Content — edge-to-edge, fills the screen between header & footer.
+          Uses CSS env to compute exact available height so the book truly
+          occupies all space (mobile / tablet / desktop). */}
       <main
         className={cn(
-          "absolute inset-0 flex items-center justify-center pb-16 overflow-auto transition-[padding] duration-300",
-          showReaderAd
-            ? isChapterEndAdPage
-              ? "pt-[19rem] sm:pt-[17rem]"
-              : "pt-[14rem] sm:pt-[13rem]"
-            : "pt-14"
+          "absolute inset-x-0 flex overflow-hidden transition-[top,bottom] duration-300",
+          // Top edge: under header (56px) when controls visible, else flush to 0
+          showControls
+            ? showReaderAd
+              ? isChapterEndAdPage
+                ? "top-[19rem] sm:top-[17rem]"
+                : "top-[14rem] sm:top-[13rem]"
+              : "top-14"
+            : "top-0",
+          // Bottom edge: above footer (~150px with sticky ad) when controls visible, else flush to 0
+          showControls ? "bottom-[150px] sm:bottom-[140px]" : "bottom-0"
         )}
       >
-        <div className="w-full h-full flex items-center justify-center">
+        <div className="flex-1 flex items-stretch justify-center w-full h-full overflow-auto">
           {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (
             <PDFViewer
@@ -630,12 +637,13 @@ const BookReader = () => {
               onOutlineExtracted={handleOutlineExtracted}
               isDarkMode={theme === "dark"}
               scale={scale}
+              className="w-full h-full"
             />
           )}
 
           {/* EPUB Viewer */}
           {fileType === "epub" && book.book_url && (
-            <div ref={epubRef}>
+            <div ref={epubRef} className="w-full h-full flex">
               <EPUBViewer
                 url={book.book_url}
                 initialCfi={epubCfi}
@@ -643,29 +651,32 @@ const BookReader = () => {
                 onTocExtracted={handleEpubTocExtracted}
                 theme={theme}
                 fontSize={fontSize}
+                className="w-full h-full"
               />
             </div>
           )}
 
           {/* No file fallback */}
           {(fileType === "unknown" || !book.book_url) && (
-            <Card className={cn(
-              "p-8 sm:p-12 min-h-[60vh]",
-              theme === "dark" ? "bg-zinc-800 border-zinc-700" : ""
-            )}>
-              <div className="prose max-w-none dark:prose-invert">
-                <h2 className="text-center mb-8">{book.title}</h2>
-                <div className="flex flex-col items-center justify-center gap-4 py-8">
-                  <Book className="w-16 h-16 text-muted-foreground" />
-                  <p className="text-center text-muted-foreground">
-                    {book.description || "This book doesn't have a readable file attached."}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Please upload a PDF or EPUB file to enable reading.
-                  </p>
+            <div className="w-full h-full flex items-center justify-center p-4">
+              <Card className={cn(
+                "p-8 sm:p-12 max-w-2xl w-full",
+                theme === "dark" ? "bg-zinc-800 border-zinc-700" : ""
+              )}>
+                <div className="prose max-w-none dark:prose-invert">
+                  <h2 className="text-center mb-8">{book.title}</h2>
+                  <div className="flex flex-col items-center justify-center gap-4 py-8">
+                    <Book className="w-16 h-16 text-muted-foreground" />
+                    <p className="text-center text-muted-foreground">
+                      {book.description || "This book doesn't have a readable file attached."}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Please upload a PDF or EPUB file to enable reading.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           )}
         </div>
       </main>
