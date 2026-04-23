@@ -54,17 +54,18 @@ export function useDiscoveryAds(itemCount: number, slotType: SlotType): Discover
     const category = slotType === "pymk" ? "community" : "general";
     if (isCategoryBlocked(category as any)) return empty;
 
-    // Per-slot rules
-    const everyN = slotType === "story" ? 5 : 3;
-    const maxAds = isNewUser ? 1 : 2;
+    // Per-slot rules — softened for social discovery surfaces
+    // Stories: 1 ad after 5-6 real stories (none for new users)
+    // PYMK:    1 ad after 5 real cards (skip entirely if list is short)
+    const everyN = 6;
+    const maxAds = isNewUser ? 0 : 1;
+    if (maxAds === 0) return empty;
 
-    // PYMK: skip if fewer than 3 real suggestions
-    if (slotType === "pymk" && itemCount < 3) return empty;
+    // PYMK: skip if fewer than 5 real suggestions (avoid "ad shelf" feel)
+    if (slotType === "pymk" && itemCount < 5) return empty;
 
-    // Stories: if 0 friend stories, allow exactly 1 sponsored tile
-    if (slotType === "story" && itemCount === 0) {
-      return { adPositions: new Set([0]), enabled: true };
-    }
+    // Stories: skip sponsored tile entirely when there are no friend stories
+    if (slotType === "story" && itemCount === 0) return empty;
 
     const positions = new Set<number>();
     let injected = 0;
