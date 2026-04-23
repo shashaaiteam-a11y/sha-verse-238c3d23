@@ -124,27 +124,38 @@ export const useMessagesRealtime = (conversationId: string | null) => {
     }
   });
 
-  // Auto-mark messages as read when conversation is opened
+  // Auto-mark messages as read when conversation is opened (WhatsApp behavior).
+  // Uses secure RPC under the hood, so it works even without per-row UPDATE permission.
   useEffect(() => {
-    if (!conversationId || !user?.id || !readReceiptsEnabled) return;
+    if (!conversationId || !user?.id) return;
 
     const markAsRead = async () => {
-      await RTChatService.badge.markConversationAsRead(conversationId, user.id);
+      try {
+        await RTChatService.badge.markConversationAsRead(conversationId, user.id);
+      } catch (e) {
+        console.error('[useMessagesRealtime] auto mark-as-read failed:', e);
+      }
       queryClient.invalidateQueries({ queryKey: ['messages-realtime', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
       queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId] });
     };
 
-    const timer = setTimeout(markAsRead, 500);
+    // Run immediately on open + small follow-up to catch any messages that arrived
+    // during the same tick as the open.
+    markAsRead();
+    const timer = setTimeout(markAsRead, 600);
     return () => clearTimeout(timer);
-  }, [conversationId, user?.id, readReceiptsEnabled, queryClient]);
+  }, [conversationId, user?.id, queryClient]);
 
   // Real-time subscription for new messages
   useEffect(() => {
     if (!conversationId) return;
 
+    const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`messages-rt-${conversationId}`)
+      .channel(`messages-rt-${conversationId}-${suffix}`)
       .on(
         'postgres_changes',
         {

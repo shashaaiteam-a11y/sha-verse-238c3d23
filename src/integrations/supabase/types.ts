@@ -4239,6 +4239,13 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      get_conversation_unread_counts: {
+        Args: never
+        Returns: {
+          conversation_id: string
+          unread_count: number
+        }[]
+      }
       get_group_role: {
         Args: { _group_id: string; _user_id: string }
         Returns: string
@@ -4285,6 +4292,11 @@ export type Database = {
       is_user_blocked: {
         Args: { _blocked_id: string; _blocker_id: string }
         Returns: boolean
+      }
+      mark_all_conversations_read: { Args: never; Returns: number }
+      mark_conversation_as_read: {
+        Args: { _conversation_id: string }
+        Returns: number
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

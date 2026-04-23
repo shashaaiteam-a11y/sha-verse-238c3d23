@@ -342,42 +342,28 @@ export class BadgeCountService {
 
   static async markConversationAsRead(
     conversationId: string,
-    userId: string
+    _userId: string
   ): Promise<void> {
-    const { error } = await supabase
-      .from('messages')
-      .update({
-        is_read: true,
-        is_delivered: true,
-      } as any)
-      .eq('conversation_id', conversationId)
-      .neq('sender_id', userId)
-      .eq('is_read', false);
+    // Use SECURITY DEFINER RPC: messages.is_read can only be updated by sender
+    // under the row-level rules, so we bypass via a server-side function that
+    // verifies membership and marks incoming messages read for the caller.
+    const { error } = await (supabase as any).rpc('mark_conversation_as_read', {
+      _conversation_id: conversationId,
+    });
 
-    if (error) console.error('Failed to mark as read:', error);
+    if (error) {
+      console.error('[BadgeCountService] mark_conversation_as_read RPC failed:', error);
+      throw error;
+    }
   }
 
-  static async markAllAsRead(userId: string): Promise<void> {
-    const { data: conversations } = await supabase
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('user_id', userId);
+  static async markAllAsRead(_userId: string): Promise<void> {
+    const { error } = await (supabase as any).rpc('mark_all_conversations_read');
 
-    if (!conversations?.length) return;
-
-    const conversationIds = conversations.map((c: any) => c.conversation_id);
-
-    const { error } = await supabase
-      .from('messages')
-      .update({
-        is_read: true,
-        is_delivered: true,
-      } as any)
-      .in('conversation_id', conversationIds)
-      .neq('sender_id', userId)
-      .eq('is_read', false);
-
-    if (error) console.error('Failed to mark all as read:', error);
+    if (error) {
+      console.error('[BadgeCountService] mark_all_conversations_read RPC failed:', error);
+      throw error;
+    }
   }
 }
 
