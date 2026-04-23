@@ -48,14 +48,14 @@ export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps
   const [onlineStatus, setOnlineStatus] = useState<Visibility>('everyone');
   const [readReceipts, setReadReceipts] = useState(true);
 
-  // Load current settings
+  // Load current settings + subscribe to live changes (other tabs/devices)
   useEffect(() => {
     if (!open || !user?.id) return;
 
     let cancelled = false;
     setLoading(true);
 
-    (async () => {
+    const loadSettings = async () => {
       const { data } = await (supabase as any)
         .from('user_settings')
         .select('last_seen_visibility, online_status_visibility, read_receipts_enabled')
@@ -68,12 +68,33 @@ export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps
       setOnlineStatus((data?.online_status_visibility as Visibility) || 'everyone');
       setReadReceipts(data?.read_receipts_enabled !== false);
       setLoading(false);
-    })();
+    };
+
+    void loadSettings();
+
+    // Realtime: keep the open dialog in sync if changed elsewhere
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const channel = supabase
+      .channel(`chat-privacy-self-${user.id}-${suffix}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_settings',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          if (!saving) void loadSettings();
+        }
+      )
+      .subscribe();
 
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
-  }, [open, user?.id]);
+  }, [open, user?.id, saving]);
 
   const handleSave = async () => {
     if (!user?.id) return;

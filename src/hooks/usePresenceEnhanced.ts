@@ -97,12 +97,11 @@ export const useUserPresence = (targetUserId?: string) => {
 
     void syncPresence();
 
-    const channel = supabase
-      .channel(
-        `user-presence-${targetUserId}-${user.id}-${Math.random()
-          .toString(36)
-          .slice(2, 10)}`
-      )
+    const suffix = Math.random().toString(36).slice(2, 10);
+
+    // 1) Live updates when target's presence row changes (online/offline/last_seen)
+    const presenceChannel = supabase
+      .channel(`user-presence-${targetUserId}-${user.id}-${suffix}`)
       .on(
         'postgres_changes',
         {
@@ -111,6 +110,52 @@ export const useUserPresence = (targetUserId?: string) => {
           table: 'user_presence',
           filter: `user_id=eq.${targetUserId}`,
         },
+        () => {
+          void syncPresence();
+        }
+      )
+      .subscribe();
+
+    // 2) Live updates when TARGET changes their privacy (last_seen / online_status visibility)
+    const targetSettingsChannel = supabase
+      .channel(`user-settings-target-${targetUserId}-${user.id}-${suffix}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_settings',
+          filter: `user_id=eq.${targetUserId}`,
+        },
+        () => {
+          void syncPresence();
+        }
+      )
+      .subscribe();
+
+    // 3) Live updates when VIEWER changes their own privacy (Give-and-Take rule)
+    const viewerSettingsChannel = supabase
+      .channel(`user-settings-viewer-${user.id}-${targetUserId}-${suffix}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_settings',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          void syncPresence();
+        }
+      )
+      .subscribe();
+
+    // 4) Live updates when block status changes between the two users
+    const blocksChannel = supabase
+      .channel(`user-blocks-${user.id}-${targetUserId}-${suffix}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_blocks' },
         () => {
           void syncPresence();
         }
@@ -127,7 +172,10 @@ export const useUserPresence = (targetUserId?: string) => {
     return () => {
       isActive = false;
       window.clearInterval(pollId);
-      supabase.removeChannel(channel);
+      supabase.removeChannel(presenceChannel);
+      supabase.removeChannel(targetSettingsChannel);
+      supabase.removeChannel(viewerSettingsChannel);
+      supabase.removeChannel(blocksChannel);
     };
   }, [user?.id, targetUserId]);
 
