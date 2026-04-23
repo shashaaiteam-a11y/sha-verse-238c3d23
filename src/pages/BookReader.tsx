@@ -744,9 +744,12 @@ const BookReader = () => {
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Sponsored sticky banner above pagination */}
-        <StickyBannerAd placement="bookshelf_reader_sticky" />
-        <div className="px-4 py-3">
+        {/* Sponsored sticky banner above pagination — height-constrained
+            so footer stays a predictable ~96px mobile / ~80px desktop. */}
+        <div className="max-h-[50px] overflow-hidden">
+          <StickyBannerAd placement="bookshelf_reader_sticky" />
+        </div>
+        <div className="px-4 py-2 sm:py-1.5">
           {/* Progress Bar */}
           <div className="mb-3">
             <Slider
