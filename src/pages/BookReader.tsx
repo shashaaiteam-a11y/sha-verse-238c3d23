@@ -198,7 +198,41 @@ const BookReader = () => {
     setTotalPages(total);
   }, []);
 
-  const toggleControls = () => setShowControls(!showControls);
+  const toggleControls = () => setShowControls((prev) => !prev);
+
+  // Auto-hide controls after 3s of inactivity
+  useEffect(() => {
+    if (!showControls) return;
+    const timer = window.setTimeout(() => setShowControls(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [showControls, currentPage]);
+
+  // Keyboard navigation (desktop): ArrowLeft/Right to flip, Escape to toggle controls
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (fileType === "epub") epubPrev();
+        else setCurrentPage((p) => Math.max(1, p - 1));
+        setShowControls(true);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (fileType === "epub") epubNext();
+        else setCurrentPage((p) => (totalPages > 0 ? Math.min(totalPages, p + 1) : p + 1));
+        setShowControls(true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setShowControls((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileType, totalPages]);
 
   const handleBookmarkToggle = () => {
     if (isPageBookmarked(currentPage)) {
