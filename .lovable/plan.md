@@ -1,108 +1,137 @@
 
 
-# Book Reader: True Edge-to-Edge Immersive Layout
+# Book Reader: Remove Yellow Background + True Full-Screen Book Fill
 
-Goal: book content area MUST always fill the entire screen between a fixed 56px header and ~96px footer. No padding, no ad-pushed shrink, no white gaps. Tapping center toggles header/footer. Auto-hide after 3s of inactivity. Mobile/Tablet/Desktop fully responsive.
+## The two problems you're seeing
 
-## Scope
-- File touched: `src/pages/BookReader.tsx` only.
-- No changes to PDFViewer, EPUBViewer, ad components, or any other module.
-- No backend / RLS / hook changes.
+### 1. Yellow background everywhere
+File: `src/pages/BookReader.tsx` (line 46)
+
+```ts
+light: { bg: "bg-amber-50", text: "text-zinc-900", ... }
+```
+
+`bg-amber-50` is the cream/yellow tone you're seeing. The wrapper `<div>` paints it across the entire screen, and any space the PDF/EPUB doesn't cover shows that yellow.
+
+### 2. Book doesn't fully fill the screen
+- **PDFViewer**: the `<canvas>` uses `max-w-full max-h-full` with the parent `flex items-stretch justify-center`. The PDF page keeps its natural aspect ratio, so on a wide desktop viewport (1030×654 right now) the page is only as wide as its aspect allows → blank strips on left/right show the yellow background.
+- **EPUBViewer**: hard-coded `minHeight: 70vh; height: 70vh` (line 196 + 208) — so EPUB only fills 70% of the viewport height, leaving a yellow band at the bottom. It also uses cream `#fffbf0` body color.
+- The page wrapper currently has `flex items-stretch justify-center` which centers the viewer instead of letting it fill.
 
 ---
 
-## Layout Behavior (final)
+## Complete reader behavior — Mobile / Tablet / Desktop
 
 ```text
-┌──────────────────────────────────────────┐
-│ HEADER  h-14 (56px) — fixed, floats over │  ← translateY off when hidden
-├──────────────────────────────────────────┤
-│                                          │
-│        BOOK CONTENT (edge-to-edge)       │  ← absolute inset-0
-│   top:56px  /  bottom:96px (sm:80px)     │  ← when controls shown
-│   top:0     /  bottom:0                  │  ← immersive (controls hidden)
-│                                          │
-├──────────────────────────────────────────┤
-│ FOOTER  ~96px — progress + prev/next     │  ← translateY off when hidden
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│ HEADER (h-14, fixed, floats, auto-hide 3s) │  ← back · zoom · 🔖 · TOC · ⚙️
+├────────────────────────────────────────────┤
+│                                            │
+│   BOOK CONTENT (absolute inset-0)          │  ← fills 100vh edge-to-edge
+│   • Mobile: tap zones L/C/R                │     (controls hidden)
+│   • Tablet: same as mobile                 │     OR 100vh − 56 − 96
+│   • Desktop: ← → keyboard arrows           │     (controls visible)
+│                                            │
+├────────────────────────────────────────────┤
+│ FOOTER (~96px, fixed, floats)              │  ← banner ad + slider + prev/next
+└────────────────────────────────────────────┘
 ```
 
-Key rule: header & footer **float above** content (z-50, position fixed). The `<main>` content uses `absolute inset-0` with `top`/`bottom` offsets that change ONLY based on controls visibility — never based on whether an ad is present.
+| Screen | Header | Content | Footer | Navigation |
+|---|---|---|---|---|
+| Mobile (<768px) | 56px, hides on tap | Full-bleed, theme-matched bg | 96px | L tap = prev, C = toggle UI, R = next |
+| Tablet (768–1023px) | 56px, shows title | Full-bleed | 96px | Tap zones + slider |
+| Desktop (≥1024px) | 56px, full toolbar | Full-bleed | 80px | ← → keys, Esc to toggle |
 
 ---
 
-## Changes to `src/pages/BookReader.tsx`
+## Fixes (only `src/pages/BookReader.tsx`)
 
-### 1. Reposition the inline reader ad
-- Move `BookReaderInlineAd` to render as a small overlay docked to the **bottom edge of the content area** (just above the footer), not above the content. It will appear as a floating tile that can be dismissed.
-- The ad NEVER changes the content area's `top`/`bottom` offsets → reader stays fully edge-to-edge.
-- Make ad container narrower (max-w-md) and centered so it doesn't cover the whole reading area.
+### Fix 1 — Replace yellow theme background with neutral reader background
 
-### 2. Simplify `<main>` offsets
-Replace the current multi-state `top-[19rem]/top-[14rem]/top-14/top-0` chain with just two states:
+```ts
+const THEME_COLORS: Record<ReaderTheme, { bg: string; text: string; headerBg: string }> = {
+  light: { bg: "bg-white",       text: "text-zinc-900", headerBg: "bg-white/95" },
+  dark:  { bg: "bg-zinc-900",    text: "text-zinc-100", headerBg: "bg-zinc-800/95" },
+  sepia: { bg: "bg-[#f4ecd8]",   text: "text-[#5b4636]", headerBg: "bg-[#e8dcc8]/95" },
+};
+```
+
+Light = pure white (matches PDF page bg → no visible gap). Sepia stays cream (intentional). Dark stays dark.
+
+### Fix 2 — Make the content wrapper truly fill, not center
+
+In `<main>` change:
 
 ```tsx
-<main className={cn(
-  "absolute inset-x-0 overflow-hidden transition-[top,bottom] duration-300",
-  showControls ? "top-14" : "top-0",
-  showControls ? "bottom-24 sm:bottom-20" : "bottom-0"
-)}>
+<div className="relative w-full h-full flex items-stretch justify-center overflow-auto">
 ```
 
-Footer real height: `~96px` mobile (`bottom-24`), `~80px` desktop (`bottom-20`). Sticky banner ad inside the footer stays inside the footer's own bounds (no extra offset needed because the banner ad lives ABOVE the slider inside the footer element — so footer height already includes it).
+to:
 
-### 3. Auto-hide controls after 3s
-Add a `useEffect` that, whenever `showControls` becomes true, starts a 3000ms timer to auto-hide. Reset the timer on any user activity (tap header/footer or page navigation). Cancel timer when controls hidden manually.
+```tsx
+<div className="relative w-full h-full overflow-auto">
+```
 
-### 4. Tap zones for page navigation (mobile/tablet)
-Wrap the content area with three invisible tap zones:
-- Left 25% → previous page
-- Center 50% → toggle controls (existing behavior)
-- Right 25% → next page
+Then ensure each viewer wrapper uses `w-full h-full block` (PDF wrapper, EPUB wrapper, fallback wrapper). The PDF/EPUB viewer components already accept `className="w-full h-full"`; we just stop the flex-centering that was leaving margins.
 
-Use `pointer-events-none` overlays positioned absolutely so they don't interfere with PDF/EPUB scroll. Only on touch devices (`md:hidden`-style), since desktop uses keyboard arrows.
+### Fix 3 — PDF: use the theme background behind the canvas
 
-### 5. Keyboard navigation (desktop)
-Add a global `keydown` listener:
-- `ArrowLeft` → prev page
-- `ArrowRight` → next page
-- `Escape` → toggle controls
+Wrap `<PDFViewer>` so the area around the natural-aspect PDF page matches the reader theme (so even if the page is portrait on a wide screen, the side strips look intentional, not yellow):
 
-(PDFViewer already has its own arrow handler — to avoid double-jumps, keep BookReader's listener but check that focus is not in an input.)
+```tsx
+<div className={cn(
+  "w-full h-full flex items-center justify-center",
+  theme === "dark" ? "bg-zinc-900" : theme === "sepia" ? "bg-[#f4ecd8]" : "bg-white"
+)}>
+  <PDFViewer ... className="max-w-full max-h-full" />
+</div>
+```
 
-### 6. Footer height normalization
-Currently footer contains: StickyBannerAd + slider + nav buttons. Constrain its total height to a predictable value:
-- Wrap StickyBannerAd in a container with `max-h-[50px] overflow-hidden` so footer remains ~96px mobile / ~80px desktop.
-- Adjust `bottom-24 / bottom-20` offsets to match actual rendered footer height.
+This is purely a wrapper — **PDFViewer internals untouched** (per module-isolation rule).
 
-### 7. Remove ad-related layout shifts
-Delete the `showReaderAd ? "top-[14rem]..." : "top-14"` branches. The ad is now a floating overlay that doesn't displace content.
+### Fix 4 — EPUB: stop the 70vh limit by overriding via wrapper height
+
+EPUBViewer hard-codes `minHeight/height: 70vh` inline — we cannot edit that file (out of scope). Workaround: wrap it in a fixed-positioned container that gives it a parent with explicit pixel height equal to the available space, and add `[&>div]:!h-full [&>div]:!min-h-0` to neutralize the inline style via Tailwind arbitrary child selectors.
+
+```tsx
+<div
+  ref={epubRef}
+  className={cn(
+    "w-full h-full block [&>div]:!h-full [&>div]:!min-h-[unset]",
+    theme === "dark" ? "bg-zinc-900" : theme === "sepia" ? "bg-[#f4ecd8]" : "bg-white"
+  )}
+>
+  <EPUBViewer ... className="!h-full !min-h-0" />
+</div>
+```
+
+The `!important` Tailwind classes (`!h-full !min-h-0`) override the inline `style={{ minHeight: "70vh", height: "70vh" }}` because Tailwind's `!` produces `height: 100% !important` which beats inline non-important styles.
+
+### Fix 5 — Fallback "no file" card also fills
+
+Already wrapped in `w-full h-full flex items-center justify-center` — keep, but ensure outer bg is the theme bg so nothing yellow shows.
 
 ---
 
-## Responsive Notes
-- Mobile (<768px): full edge-to-edge, tap zones active, footer ~96px.
-- Tablet (768–1024px): same as mobile, tap zones still useful.
-- Desktop (≥1024px): keyboard arrows + tap-to-toggle. PDF/EPUB viewers already handle centering of pages within the wide canvas — no extra centered-column toggle needed (out of scope per "don't change other modules/components").
+## What stays the same (untouched)
 
-## Realtime Behavior
-- Reading progress save (already debounced 600ms via `useBookInteractions`) — untouched, continues to sync.
-- Bookmarks (Supabase realtime via `useReaderBookmarks`) — untouched.
-- No new realtime channels added.
+- PDFViewer.tsx, EPUBViewer.tsx internals
+- Ads (`StickyBannerAd`, `BookReaderInlineAd`)
+- Bookmarks, TOC, settings sheet, reading progress
+- Realtime sync via `useBookInteractions` and `useReaderBookmarks`
+- Auto-hide-3s, tap zones, keyboard arrows
+- All other modules
 
-## Out of Scope (explicitly NOT changing)
-- PDFViewer / EPUBViewer internals
-- Ad components (`BookReaderInlineAd`, `StickyBannerAd`)
-- Bookshelf list, channels, upload, comments
-- Any other module
+---
 
-## Acceptance Criteria
-1. With controls visible: book content fills exactly `100vh - 56px (header) - footer height`.
-2. With controls hidden: book content fills `100vh` edge-to-edge.
-3. Inline reader ad never shrinks the content area.
-4. Tap center toggles controls; auto-hides after 3s.
-5. Left/right tap zones flip pages on mobile.
-6. ArrowLeft/ArrowRight flip pages on desktop; Escape toggles controls.
-7. No horizontal scroll, no white gaps on any breakpoint.
-8. Reading progress + bookmarks continue to sync in realtime.
+## Acceptance criteria
+
+1. Light theme shows **white** (not yellow/amber) anywhere reader background is visible.
+2. PDF: page is centered, side gutters match white/dark/sepia theme — no yellow strip.
+3. EPUB: fills full height between header and footer — no 30% blank band.
+4. Tapping center hides controls → book occupies the entire viewport (100vh × 100vw).
+5. Mobile, tablet (1030px current viewport), and desktop all render edge-to-edge.
+6. Reading progress + bookmarks + ads continue to sync in realtime.
+7. No other module/component touched.
 
