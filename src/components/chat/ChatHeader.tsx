@@ -24,8 +24,10 @@ import {
   Ban,
   Trash2,
   AlertCircle,
+  Lock,
 } from 'lucide-react';
 import { PresenceStatus, OnlineBadge } from './PresenceStatus';
+import { ChatPrivacyDialog } from './ChatPrivacyDialog';
 import { cn } from '@/lib/utils';
 
 interface ChatHeaderProps {
@@ -65,6 +67,7 @@ export const ChatHeader = ({
   isLoading = false,
 }: ChatHeaderProps) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
 
   if (!otherUser) {
     return (
@@ -77,6 +80,7 @@ export const ChatHeader = ({
   }
 
   return (
+    <>
     <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-40">
       {/* Left: Avatar + Info */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -175,6 +179,19 @@ export const ChatHeader = ({
 
             <DropdownMenuSeparator />
 
+            {/* Privacy */}
+            <DropdownMenuItem
+              onClick={() => {
+                setShowPrivacyDialog(true);
+                setShowMoreMenu(false);
+              }}
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              <span>Privacy</span>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
             {/* Mute options */}
             <DropdownMenuItem
               onClick={() => {
@@ -238,5 +255,7 @@ export const ChatHeader = ({
         </DropdownMenu>
       </div>
     </div>
+    <ChatPrivacyDialog open={showPrivacyDialog} onOpenChange={setShowPrivacyDialog} />
+    </>
   );
 };

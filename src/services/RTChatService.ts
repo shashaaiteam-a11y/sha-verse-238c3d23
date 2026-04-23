@@ -131,32 +131,28 @@ export class PresenceService {
 
   static async getUserPresence(
     userId: string,
-    requesterId?: string,
-    requesterSettings?: any
+    _requesterId?: string,
+    _requesterSettings?: any
   ): Promise<UserPresence | null> {
-    if (requesterId) {
-      const canView = await PrivacyMiddleware.canViewOnlineStatus(
-        requesterId,
-        userId,
-        requesterSettings
-      );
-      if (!canView) {
-        return null;
-      }
+    // Privacy is enforced server-side via SECURITY DEFINER RPC
+    // (block check + last_seen_visibility + online_status_visibility + give-and-take rule)
+    const { data, error } = await (supabase as any).rpc('get_user_presence_safe', {
+      _target_user_id: userId,
+    });
+
+    if (error) {
+      console.error('[PresenceService] get_user_presence_safe failed:', error);
+      return null;
     }
 
-    const { data } = await (supabase as any)
-      .from('user_presence')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return null;
 
-    if (!data) return null;
     return {
-      user_id: data.user_id,
-      status: data.status,
-      last_seen: data.last_seen,
-      is_online: data.is_online,
+      user_id: row.user_id,
+      status: row.status ?? (row.is_online ? 'online' : 'offline'),
+      last_seen: row.last_seen,
+      is_online: !!row.is_online,
     };
   }
 
