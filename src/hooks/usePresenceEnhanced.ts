@@ -1,42 +1,67 @@
 /**
- * usePresenceEnhanced - Online/Offline/Last Seen with privacy middleware
+ * usePresenceEnhanced - WhatsApp-style Online / Offline / Last Seen
+ *
+ * - Heartbeat every 25s while the tab is visible (so the server knows we're alive
+ *   even if `beforeunload` never fires, e.g. on mobile tab switch / browser kill).
+ * - Marks offline on tab hide / unload.
+ * - Fetches OTHER users' presence through the SECURITY DEFINER RPC
+ *   `get_user_presence_safe`, which enforces:
+ *     1. block check (either side blocked => hidden)
+ *     2. last_seen_visibility (everyone / contacts / nobody)
+ *     3. online_status_visibility (everyone / contacts / nobody)
+ *     4. "Give and Take" rule (if viewer hides everything, they see nothing)
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
 import { RTChatService } from '@/services/RTChatService';
+
+const HEARTBEAT_MS = 25_000;
 
 export const usePresenceTracker = () => {
   const { user } = useAuth();
+  const heartbeatRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
 
-    const setOnline = async () => {
-      await RTChatService.presence.setOnline(user.id);
+    const setOnline = () => {
+      void RTChatService.presence.setOnline(user.id);
+    };
+    const setOffline = () => {
+      void RTChatService.presence.setOffline(user.id);
     };
 
+    // Initial mark + start heartbeat
     setOnline();
+    heartbeatRef.current = window.setInterval(() => {
+      if (!document.hidden) setOnline();
+    }, HEARTBEAT_MS);
 
-    const handleVisibilityChange = async () => {
+    const handleVisibilityChange = () => {
       if (document.hidden) {
-        await RTChatService.presence.setOffline(user.id);
+        setOffline();
       } else {
-        await RTChatService.presence.setOnline(user.id);
+        setOnline();
       }
     };
 
-    const handleBeforeUnload = async () => {
-      await RTChatService.presence.setOffline(user.id);
+    const handleBeforeUnload = () => {
+      // best effort — browser may not wait for promise
+      setOffline();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
 
     return () => {
+      if (heartbeatRef.current) window.clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+      setOffline();
     };
   }, [user?.id]);
 };
@@ -46,48 +71,38 @@ export const useUserPresence = (targetUserId?: string) => {
   const [isOnline, setIsOnline] = useState(false);
   const [lastSeen, setLastSeen] = useState<Date | null>(null);
 
-  const { data: userSettings } = useQuery({
-    queryKey: ['user-settings', targetUserId],
-    queryFn: async () => {
-      if (!targetUserId) return null;
-      const { data } = await (supabase as any)
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!targetUserId,
-  });
-
   useEffect(() => {
-    if (!user?.id || !targetUserId) return;
+    if (!user?.id || !targetUserId) {
+      setIsOnline(false);
+      setLastSeen(null);
+      return;
+    }
 
     let isActive = true;
 
     const syncPresence = async () => {
-      const presence = await RTChatService.presence.getUserPresence(
-        targetUserId,
-        user.id,
-        userSettings
-      );
-
+      // Server-side privacy enforcement — no need to pass settings from client
+      const presence = await RTChatService.presence.getUserPresence(targetUserId);
       if (!isActive) return;
 
       if (presence) {
-        setIsOnline(presence.is_online);
-        setLastSeen(new Date(presence.last_seen));
-        return;
+        setIsOnline(!!presence.is_online);
+        setLastSeen(presence.last_seen ? new Date(presence.last_seen) : null);
+      } else {
+        // Hidden by privacy / blocked / no row
+        setIsOnline(false);
+        setLastSeen(null);
       }
-
-      setIsOnline(false);
-      setLastSeen(null);
     };
 
     void syncPresence();
 
     const channel = supabase
-      .channel(`user-presence-${targetUserId}-${user.id}-${Math.random().toString(36).slice(2, 10)}`)
+      .channel(
+        `user-presence-${targetUserId}-${user.id}-${Math.random()
+          .toString(36)
+          .slice(2, 10)}`
+      )
       .on(
         'postgres_changes',
         {
@@ -102,11 +117,19 @@ export const useUserPresence = (targetUserId?: string) => {
       )
       .subscribe();
 
+    // Light polling fallback (every 30s) to cover the case where the target's
+    // tab dies without writing offline — the server-side last_seen will still
+    // be old, and we re-render the relative time string.
+    const pollId = window.setInterval(() => {
+      if (!document.hidden) void syncPresence();
+    }, 30_000);
+
     return () => {
       isActive = false;
+      window.clearInterval(pollId);
       supabase.removeChannel(channel);
     };
-  }, [user?.id, targetUserId, userSettings]);
+  }, [user?.id, targetUserId]);
 
   return { isOnline, lastSeen };
 };
