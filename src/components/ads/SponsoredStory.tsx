@@ -37,7 +37,9 @@ const SponsoredStory = ({
   const { user } = useAuth();
   const { registerImpression, hideAd } = useAds();
   const { category } = useAdTargeting();
-  const { shouldRender, adUnitId } = useAdFrequency("home_story", category);
+  // Force render in test mode (matches NativeAdCard/BannerAd behavior) so the
+  // discovery rail position injection always shows the sponsored tile.
+  const { shouldRender, adUnitId } = useAdFrequency("home_story", category, true);
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
