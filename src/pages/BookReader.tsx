@@ -751,7 +751,7 @@ const BookReader = () => {
         </div>
         <div className="px-4 py-2 sm:py-1.5">
           {/* Progress Bar */}
-          <div className="mb-3">
+          <div className="mb-2">
             <Slider
               value={[currentPage]}
               onValueChange={(v) => {
