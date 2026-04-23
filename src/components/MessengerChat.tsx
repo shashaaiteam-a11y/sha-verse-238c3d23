@@ -684,7 +684,10 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
             </p>
           </div>
           {unreadCount > 0 && !isBlocked && (
-            <span className="bg-blue-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0 shadow-sm">
+            <span
+              className="bg-emerald-500 dark:bg-emerald-400 text-white dark:text-emerald-950 text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0 shadow-sm animate-in fade-in zoom-in duration-200"
+              aria-label={`${unreadCount} unread`}
+            >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
