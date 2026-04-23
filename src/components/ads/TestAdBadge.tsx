@@ -12,7 +12,10 @@ interface TestAdBadgeProps {
  * In test mode, label says "Test Ad" for extra clarity.
  */
 const TestAdBadge = ({ variant = "default", label, className }: TestAdBadgeProps) => {
-  const text = label ?? (USE_TEST_ADS ? "Test Ad" : "Ad");
+  // Always show clean "Sponsored" label to users — no "Test Ad" wording in UI.
+  // USE_TEST_ADS only governs which ad unit IDs are loaded, not the label text.
+  void USE_TEST_ADS;
+  const text = label ?? "Sponsored";
 
   const sizeClasses =
     variant === "small"
