@@ -156,11 +156,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     }
   });
 
-  // Unread counts for all conversations
+  // Unread counts for all conversations (WhatsApp-style per-chat badge)
   const conversationIds = conversations?.map((c: any) => c.id).filter(Boolean) || [];
+  const conversationIdsKey = conversationIds.join(',');
 
   const { data: allUnreadCounts = {} } = useQuery({
-    queryKey: ['unread-counts-all', user?.id, conversationIds.join(',')],
+    queryKey: ['unread-counts-all', user?.id, conversationIdsKey],
     queryFn: async () => {
       if (!user || conversationIds.length === 0) return {};
       const { data } = await supabase
@@ -177,7 +178,36 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       return counts;
     },
     enabled: !!user,
+    refetchInterval: 15000,
+    staleTime: 2000,
   });
+
+  // Realtime: re-fetch per-chat counters the moment a message INSERT/UPDATE arrives
+  useEffect(() => {
+    if (!user?.id || conversationIds.length === 0) return;
+    const channel = supabase
+      .channel(`chat-list-unread-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: any) => {
+          if (payload.new?.sender_id !== user.id) {
+            queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, conversationIdsKey, queryClient]);
 
   // Filter messages - ensure always an array
   const filteredMessages = isSearching && messageSearchQuery.trim()
