@@ -619,47 +619,16 @@ const BookReader = () => {
         </div>
       )}
 
-      {/* 📖 Inline Reader Ad — appears at the top of the reading area on
-          ad-eligible pages (every 4 pages, skipping first 2 + last). It sits
-          above the viewer so it never breaks paragraph flow inside the document. */}
-      {showReaderAd && (
-        <div
-          className={cn(
-            "fixed left-0 right-0 z-40 pointer-events-none transition-transform duration-300",
-            showControls ? "top-14" : "top-0"
-          )}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="pointer-events-auto">
-            <BookReaderInlineAd
-              key={`reader-ad-${adKey}`}
-              variant={isChapterEndAdPage ? "chapter_end" : "inline"}
-              theme={theme}
-              onDismiss={() => setAdDismissedFor(currentPage)}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Main Content — edge-to-edge, fills the screen between header & footer.
-          Uses CSS env to compute exact available height so the book truly
-          occupies all space (mobile / tablet / desktop). */}
+      {/* Main Content — true edge-to-edge. Always fills 100vh minus
+          (header when shown) and (footer when shown). Ads NEVER displace it. */}
       <main
         className={cn(
-          "absolute inset-x-0 flex overflow-hidden transition-[top,bottom] duration-300",
-          // Top edge: under header (56px) when controls visible, else flush to 0
-          showControls
-            ? showReaderAd
-              ? isChapterEndAdPage
-                ? "top-[19rem] sm:top-[17rem]"
-                : "top-[14rem] sm:top-[13rem]"
-              : "top-14"
-            : "top-0",
-          // Bottom edge: above footer (~150px with sticky ad) when controls visible, else flush to 0
-          showControls ? "bottom-[150px] sm:bottom-[140px]" : "bottom-0"
+          "absolute inset-x-0 overflow-hidden transition-[top,bottom] duration-300",
+          showControls ? "top-14" : "top-0",
+          showControls ? "bottom-24 sm:bottom-20" : "bottom-0"
         )}
       >
-        <div className="flex-1 flex items-stretch justify-center w-full h-full overflow-auto">
+        <div className="relative w-full h-full flex items-stretch justify-center overflow-auto">
           {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (
             <PDFViewer
@@ -710,6 +679,57 @@ const BookReader = () => {
                   </div>
                 </div>
               </Card>
+            </div>
+          )}
+
+          {/* Tap zones for mobile/tablet — invisible, only visible on touch.
+              Left 25% prev, center 50% toggle controls, right 25% next.
+              Hidden on desktop (md+) where keyboard arrows are used. */}
+          <div className="absolute inset-0 z-30 md:hidden flex pointer-events-none">
+            <button
+              type="button"
+              aria-label="Previous page"
+              className="h-full w-1/4 pointer-events-auto bg-transparent"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (fileType === "epub") epubPrev();
+                else goToPage(currentPage - 1);
+              }}
+            />
+            <button
+              type="button"
+              aria-label="Toggle controls"
+              className="h-full w-2/4 pointer-events-auto bg-transparent"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleControls();
+              }}
+            />
+            <button
+              type="button"
+              aria-label="Next page"
+              className="h-full w-1/4 pointer-events-auto bg-transparent"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (fileType === "epub") epubNext();
+                else goToPage(currentPage + 1);
+              }}
+            />
+          </div>
+
+          {/* 📖 Floating inline reader ad — docked above footer area, never
+              shrinks the reading content. Dismissible per page. */}
+          {showReaderAd && (
+            <div
+              className="absolute bottom-2 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-2 pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <BookReaderInlineAd
+                key={`reader-ad-${adKey}`}
+                variant={isChapterEndAdPage ? "chapter_end" : "inline"}
+                theme={theme}
+                onDismiss={() => setAdDismissedFor(currentPage)}
+              />
             </div>
           )}
         </div>
