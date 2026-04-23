@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAds } from "@/contexts/AdContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { USE_TEST_ADS } from "@/lib/ads/adConfig";
 
 type SlotType = "story" | "pymk";
 
@@ -49,10 +50,13 @@ export function useDiscoveryAds(itemCount: number, slotType: SlotType): Discover
   return useMemo<DiscoveryAdsResult>(() => {
     const empty = { adPositions: new Set<number>(), enabled: false };
 
-    // Daily cap or category block → no ads
-    if (!canShowAd()) return empty;
-    const category = slotType === "pymk" ? "community" : "general";
-    if (isCategoryBlocked(category as any)) return empty;
+    // In test mode bypass daily-cap / category-block so the rails always
+    // demonstrate the sponsored slot. Real frequency control is in AdContext.
+    if (!USE_TEST_ADS) {
+      if (!canShowAd()) return empty;
+      const category = slotType === "pymk" ? "community" : "general";
+      if (isCategoryBlocked(category as any)) return empty;
+    }
 
     // Per-slot rules — softened for social discovery surfaces
     // Stories: 1 ad after 5-6 real stories (none for new users)
