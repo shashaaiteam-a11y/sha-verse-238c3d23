@@ -67,6 +67,7 @@ export const ChatHeader = ({
   isLoading = false,
 }: ChatHeaderProps) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
 
   if (!otherUser) {
     return (
