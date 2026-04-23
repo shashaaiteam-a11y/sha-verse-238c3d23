@@ -1,137 +1,166 @@
 
+Goal: make WhatsApp-style unread badge reset work correctly in the Chats module so that when a user opens a chat, that chat’s unread badge immediately becomes 0, the total unread count drops instantly, and new incoming messages keep updating badges in realtime. Keep Chats fully independent from NovaChat and Groups.
 
-# Book Reader: Remove Yellow Background + True Full-Screen Book Fill
+## Root cause
+Current reset logic is firing in the UI, but the database update is being blocked by security rules:
 
-## The two problems you're seeing
+- `messages_update_policy` only allows `auth.uid() = sender_id`
+- unread reset tries to update other users’ messages (`is_read = true`) when the recipient opens the chat
+- result: badge queries still see `is_read = false`, so counts never reset
 
-### 1. Yellow background everywhere
-File: `src/pages/BookReader.tsx` (line 46)
+There is also duplicated “mark as read” logic across multiple hooks/components, which makes the behavior inconsistent.
 
-```ts
-light: { bg: "bg-amber-50", text: "text-zinc-900", ... }
-```
+## What to build
 
-`bg-amber-50` is the cream/yellow tone you're seeing. The wrapper `<div>` paints it across the entire screen, and any space the PDF/EPUB doesn't cover shows that yellow.
+### 1. Add a secure backend unread-reset function
+Create a database function for Chats only that safely marks incoming messages in one conversation as read for the current user.
 
-### 2. Book doesn't fully fill the screen
-- **PDFViewer**: the `<canvas>` uses `max-w-full max-h-full` with the parent `flex items-stretch justify-center`. The PDF page keeps its natural aspect ratio, so on a wide desktop viewport (1030×654 right now) the page is only as wide as its aspect allows → blank strips on left/right show the yellow background.
-- **EPUBViewer**: hard-coded `minHeight: 70vh; height: 70vh` (line 196 + 208) — so EPUB only fills 70% of the viewport height, leaving a yellow band at the bottom. It also uses cream `#fffbf0` body color.
-- The page wrapper currently has `flex items-stretch justify-center` which centers the viewer instead of letting it fill.
+Behavior:
+- verify caller is a member of the conversation
+- update only messages in that conversation where `sender_id != auth.uid()`
+- set `is_read = true`
+- set `is_delivered = true`
+- set `conversation_members.last_read_at = now()` for that user/conversation
+- return how many messages were updated
 
----
+Why:
+- fixes the current RLS failure
+- gives one trusted reset path for all chat surfaces
+- keeps read receipts and unread badges aligned
 
-## Complete reader behavior — Mobile / Tablet / Desktop
+Also add a companion function for:
+- `mark_all_conversations_read()`
 
-```text
-┌────────────────────────────────────────────┐
-│ HEADER (h-14, fixed, floats, auto-hide 3s) │  ← back · zoom · 🔖 · TOC · ⚙️
-├────────────────────────────────────────────┤
-│                                            │
-│   BOOK CONTENT (absolute inset-0)          │  ← fills 100vh edge-to-edge
-│   • Mobile: tap zones L/C/R                │     (controls hidden)
-│   • Tablet: same as mobile                 │     OR 100vh − 56 − 96
-│   • Desktop: ← → keyboard arrows           │     (controls visible)
-│                                            │
-├────────────────────────────────────────────┤
-│ FOOTER (~96px, fixed, floats)              │  ← banner ad + slider + prev/next
-└────────────────────────────────────────────┘
-```
+This will support the existing “Mark all as read” action reliably.
 
-| Screen | Header | Content | Footer | Navigation |
-|---|---|---|---|---|
-| Mobile (<768px) | 56px, hides on tap | Full-bleed, theme-matched bg | 96px | L tap = prev, C = toggle UI, R = next |
-| Tablet (768–1023px) | 56px, shows title | Full-bleed | 96px | Tap zones + slider |
-| Desktop (≥1024px) | 56px, full toolbar | Full-bleed | 80px | ← → keys, Esc to toggle |
+### 2. Keep unread source-of-truth on conversation membership
+Do not add cross-module counters or touch NovaChat/Groups tables.
 
----
+Use:
+- `conversation_members.last_read_at` as the authoritative “user has seen up to here” cursor
+- `messages.is_read` for WhatsApp-like tick/read-receipt display
 
-## Fixes (only `src/pages/BookReader.tsx`)
+This gives the same user-facing behavior as an `unread_count` column, but avoids duplicate counter drift.
 
-### Fix 1 — Replace yellow theme background with neutral reader background
+## Files to update
 
-```ts
-const THEME_COLORS: Record<ReaderTheme, { bg: string; text: string; headerBg: string }> = {
-  light: { bg: "bg-white",       text: "text-zinc-900", headerBg: "bg-white/95" },
-  dark:  { bg: "bg-zinc-900",    text: "text-zinc-100", headerBg: "bg-zinc-800/95" },
-  sepia: { bg: "bg-[#f4ecd8]",   text: "text-[#5b4636]", headerBg: "bg-[#e8dcc8]/95" },
-};
-```
+### Database / backend
+Add migration for:
+- secure function `mark_conversation_as_read(_conversation_id uuid)`
+- secure function `mark_all_conversations_read()`
+- optional helper function `get_conversation_unread_counts()` if batching is needed
+- grant execute to authenticated users
 
-Light = pure white (matches PDF page bg → no visible gap). Sepia stays cream (intentional). Dark stays dark.
+No Groups or NovaChat schema changes.
 
-### Fix 2 — Make the content wrapper truly fill, not center
+### `src/services/RTChatService.ts`
+Replace direct client-side `.from('messages').update(...)` unread reset logic with RPC calls to the secure backend function.
 
-In `<main>` change:
+Update:
+- `BadgeCountService.markConversationAsRead(...)`
+- `BadgeCountService.markAllAsRead(...)`
 
-```tsx
-<div className="relative w-full h-full flex items-stretch justify-center overflow-auto">
-```
+Also improve error handling so unread reset failures are visible in logs and not silent.
 
-to:
+### `src/hooks/useBadgeCount.ts`
+Refactor badge hooks to align with the secure reset flow:
 
-```tsx
-<div className="relative w-full h-full overflow-auto">
-```
+- `useMarkConversationRead`
+  - call the new service method
+  - invalidate:
+    - `conversation-unread-badge`
+    - `unread-badge`
+    - `unread-counts-all`
+    - `conversations`
+    - current conversation messages if needed
 
-Then ensure each viewer wrapper uses `w-full h-full block` (PDF wrapper, EPUB wrapper, fallback wrapper). The PDF/EPUB viewer components already accept `className="w-full h-full"`; we just stop the flex-centering that was leaving margins.
+- `useMarkAllConversationsRead`
+  - call secure backend function
+  - invalidate all related badge/message/conversation queries
 
-### Fix 3 — PDF: use the theme background behind the canvas
+- realtime listeners
+  - keep Chats-only `messages` table listeners
+  - add unique channel suffixes to satisfy project realtime stability rule
 
-Wrap `<PDFViewer>` so the area around the natural-aspect PDF page matches the reader theme (so even if the page is portrait on a wide screen, the side strips look intentional, not yellow):
+### `src/hooks/useMessagesRealtime.ts`
+Centralize “open chat = mark read” behavior here.
 
-```tsx
-<div className={cn(
-  "w-full h-full flex items-center justify-center",
-  theme === "dark" ? "bg-zinc-900" : theme === "sepia" ? "bg-[#f4ecd8]" : "bg-white"
-)}>
-  <PDFViewer ... className="max-w-full max-h-full" />
-</div>
-```
+Changes:
+- keep one auto-read effect only
+- when a conversation opens:
+  - call secure `markConversationAsRead`
+  - update unread counters immediately
+  - refresh ticks/messages
+- remove dependency on direct message-table update permissions
 
-This is purely a wrapper — **PDFViewer internals untouched** (per module-isolation rule).
+Also update realtime channel ID to use a unique suffix.
 
-### Fix 4 — EPUB: stop the 70vh limit by overriding via wrapper height
+### `src/components/MessengerChat.tsx`
+Clean up duplicated reset behavior.
 
-EPUBViewer hard-codes `minHeight/height: 70vh` inline — we cannot edit that file (out of scope). Workaround: wrap it in a fixed-positioned container that gives it a parent with explicit pixel height equal to the available space, and add `[&>div]:!h-full [&>div]:!min-h-0` to neutralize the inline style via Tailwind arbitrary child selectors.
+Changes:
+- remove the extra local effect that also calls `markConversationRead.mutate(conversationId)` on open if it duplicates `useMessagesRealtime`
+- keep selection flow simple:
+  - click chat
+  - select conversation
+  - chat opens
+  - centralized hook resets unread instantly
+- ensure conversation list and total badge both invalidate immediately after open
 
-```tsx
-<div
-  ref={epubRef}
-  className={cn(
-    "w-full h-full block [&>div]:!h-full [&>div]:!min-h-[unset]",
-    theme === "dark" ? "bg-zinc-900" : theme === "sepia" ? "bg-[#f4ecd8]" : "bg-white"
-  )}
->
-  <EPUBViewer ... className="!h-full !min-h-0" />
-</div>
-```
+If needed:
+- keep optimistic local disappearance of the clicked chat’s green badge while backend confirms
 
-The `!important` Tailwind classes (`!h-full !min-h-0`) override the inline `style={{ minHeight: "70vh", height: "70vh" }}` because Tailwind's `!` produces `height: 100% !important` which beats inline non-important styles.
+### `src/hooks/useConversations.ts`
+Keep conversation list realtime, but align invalidation keys with the unread system.
 
-### Fix 5 — Fallback "no file" card also fills
+Changes:
+- invalidate `unread-counts-all` when new chat messages arrive
+- use unique suffix on realtime channel name
+- keep scope limited to Chats/messages only
 
-Already wrapped in `w-full h-full flex items-center justify-center` — keep, but ensure outer bg is the theme bg so nothing yellow shows.
+## Final behavior screen-by-screen
 
----
+### Screen 1: Chat List
+- each 1-to-1 chat shows its own green unread badge
+- total unread badge near “Chats” shows sum of all chat unread counts
+- new incoming message:
+  - chat badge increments instantly
+  - total badge increments instantly
+  - list reorders if last message changes
 
-## What stays the same (untouched)
+### Screen 2: Inside Chat
+- user taps a chat
+- secure backend reset runs immediately
+- that chat’s unread badge becomes 0
+- total unread sum decreases immediately
+- incoming messages from the other user after that point start counting again normally
+- read ticks update correctly
 
-- PDFViewer.tsx, EPUBViewer.tsx internals
-- Ads (`StickyBannerAd`, `BookReaderInlineAd`)
-- Bookmarks, TOC, settings sheet, reading progress
-- Realtime sync via `useBookInteractions` and `useReaderBookmarks`
-- Auto-hide-3s, tap zones, keyboard arrows
-- All other modules
+### Screen 3: Mark All as Read
+- existing menu action uses secure backend function
+- every chat badge resets to 0
+- total badge resets to 0
+- conversation list refreshes instantly
 
----
+## Realtime rules
+- Chats only
+- listen only to `messages`
+- no interaction with `group_messages`, Groups tables, or NovaChat tables
+- all new/updated message events trigger badge refresh
+- use unique realtime channel IDs with suffixes to avoid subscription collisions
+
+## Out of scope
+- NovaChat
+- Groups
+- Presence system error (`user_presence.is_online`) unless requested separately
+- visual redesign of unrelated chat UI
+- app icon OS badge integration outside the web app shell
 
 ## Acceptance criteria
-
-1. Light theme shows **white** (not yellow/amber) anywhere reader background is visible.
-2. PDF: page is centered, side gutters match white/dark/sepia theme — no yellow strip.
-3. EPUB: fills full height between header and footer — no 30% blank band.
-4. Tapping center hides controls → book occupies the entire viewport (100vh × 100vw).
-5. Mobile, tablet (1030px current viewport), and desktop all render edge-to-edge.
-6. Reading progress + bookmarks + ads continue to sync in realtime.
-7. No other module/component touched.
-
+1. Clicking an unread chat immediately removes that chat’s green badge.
+2. Total unread badge decreases immediately on chat open.
+3. New incoming messages increment both per-chat and total unread badges in realtime.
+4. “Mark all as read” resets everything to 0 instantly.
+5. Read receipts still work for direct chats.
+6. No changes affect NovaChat or Groups.
+7. No other modules’ UI or logic are touched.
