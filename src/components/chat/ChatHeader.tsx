@@ -80,6 +80,7 @@ export const ChatHeader = ({
   }
 
   return (
+    <>
     <div className="flex items-center justify-between p-4 border-b bg-background sticky top-0 z-40">
       {/* Left: Avatar + Info */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
