@@ -7,13 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { RTChatService } from '@/services/RTChatService';
 
-interface UserPresence {
-  user_id: string;
-  is_online: boolean;
-  status: 'online' | 'offline';
-  last_seen: string;
-}
-
 export const usePresenceTracker = () => {
   const { user } = useAuth();
 
@@ -34,12 +27,11 @@ export const usePresenceTracker = () => {
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
     const handleBeforeUnload = async () => {
       await RTChatService.presence.setOffline(user.id);
     };
 
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
@@ -54,7 +46,6 @@ export const useUserPresence = (targetUserId?: string) => {
   const [isOnline, setIsOnline] = useState(false);
   const [lastSeen, setLastSeen] = useState<Date | null>(null);
 
-  // Get user settings for privacy check
   const { data: userSettings } = useQuery({
     queryKey: ['user-settings', targetUserId],
     queryFn: async () => {
@@ -72,39 +63,47 @@ export const useUserPresence = (targetUserId?: string) => {
   useEffect(() => {
     if (!user?.id || !targetUserId) return;
 
-    const subscribePresence = async () => {
+    let isActive = true;
+
+    const syncPresence = async () => {
       const presence = await RTChatService.presence.getUserPresence(
         targetUserId,
         user.id,
         userSettings
       );
 
+      if (!isActive) return;
+
       if (presence) {
         setIsOnline(presence.is_online);
         setLastSeen(new Date(presence.last_seen));
+        return;
       }
+
+      setIsOnline(false);
+      setLastSeen(null);
     };
 
-    subscribePresence();
+    void syncPresence();
 
-    const channel = supabase.channel(`presence-${targetUserId}`);
-
-    channel.on('presence', { event: 'sync' }, async () => {
-      const presence = await RTChatService.presence.getUserPresence(
-        targetUserId,
-        user.id,
-        userSettings
-      );
-
-      if (presence) {
-        setIsOnline(presence.is_online);
-        setLastSeen(new Date(presence.last_seen));
-      }
-    });
-
-    channel.subscribe();
+    const channel = supabase
+      .channel(`user-presence-${targetUserId}-${user.id}-${Math.random().toString(36).slice(2, 10)}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_presence',
+          filter: `user_id=eq.${targetUserId}`,
+        },
+        () => {
+          void syncPresence();
+        }
+      )
+      .subscribe();
 
     return () => {
+      isActive = false;
       supabase.removeChannel(channel);
     };
   }, [user?.id, targetUserId, userSettings]);
