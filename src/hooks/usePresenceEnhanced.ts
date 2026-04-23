@@ -87,21 +87,22 @@ export const useUserPresence = (targetUserId?: string) => {
 
     subscribePresence();
 
-    const channel = supabase
-      .channel(`presence-${targetUserId}`)
-      .on('presence', { event: 'sync' }, async () => {
-        const presence = await RTChatService.presence.getUserPresence(
-          targetUserId,
-          user.id,
-          userSettings
-        );
+    const channel = supabase.channel(`presence-${targetUserId}`);
 
-        if (presence) {
-          setIsOnline(presence.is_online);
-          setLastSeen(new Date(presence.last_seen));
-        }
-      })
-      .subscribe();
+    channel.on('presence', { event: 'sync' }, async () => {
+      const presence = await RTChatService.presence.getUserPresence(
+        targetUserId,
+        user.id,
+        userSettings
+      );
+
+      if (presence) {
+        setIsOnline(presence.is_online);
+        setLastSeen(new Date(presence.last_seen));
+      }
+    });
+
+    channel.subscribe();
 
     return () => {
       supabase.removeChannel(channel);
