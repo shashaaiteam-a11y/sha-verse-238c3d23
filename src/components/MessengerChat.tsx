@@ -156,11 +156,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     }
   });
 
-  // Unread counts for all conversations
+  // Unread counts for all conversations (WhatsApp-style per-chat badge)
   const conversationIds = conversations?.map((c: any) => c.id).filter(Boolean) || [];
+  const conversationIdsKey = conversationIds.join(',');
 
   const { data: allUnreadCounts = {} } = useQuery({
-    queryKey: ['unread-counts-all', user?.id, conversationIds.join(',')],
+    queryKey: ['unread-counts-all', user?.id, conversationIdsKey],
     queryFn: async () => {
       if (!user || conversationIds.length === 0) return {};
       const { data } = await supabase
@@ -177,7 +178,36 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       return counts;
     },
     enabled: !!user,
+    refetchInterval: 15000,
+    staleTime: 2000,
   });
+
+  // Realtime: re-fetch per-chat counters the moment a message INSERT/UPDATE arrives
+  useEffect(() => {
+    if (!user?.id || conversationIds.length === 0) return;
+    const channel = supabase
+      .channel(`chat-list-unread-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: any) => {
+          if (payload.new?.sender_id !== user.id) {
+            queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, conversationIdsKey, queryClient]);
 
   // Filter messages - ensure always an array
   const filteredMessages = isSearching && messageSearchQuery.trim()
@@ -269,9 +299,19 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 </AvatarFallback>}
               </Avatar>
               <div>
-                <h2 className="font-bold text-lg">Chats</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg">Chats</h2>
+                  {totalUnread > 0 && (
+                    <span
+                      className="bg-emerald-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow-sm animate-in fade-in zoom-in duration-200"
+                      aria-label={`${totalUnread} unread messages`}
+                    >
+                      {totalUnread > 99 ? '99+' : totalUnread}
+                    </span>
+                  )}
+                </div>
                 {totalUnread > 0 && (
-                  <p className="text-xs text-primary font-semibold">{totalUnread} unread</p>
+                  <p className="text-xs text-muted-foreground">{totalUnread} unread</p>
                 )}
               </div>
             </div>
@@ -644,7 +684,10 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
             </p>
           </div>
           {unreadCount > 0 && !isBlocked && (
-            <span className="bg-blue-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0 shadow-sm">
+            <span
+              className="bg-emerald-500 dark:bg-emerald-400 text-white dark:text-emerald-950 text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0 shadow-sm animate-in fade-in zoom-in duration-200"
+              aria-label={`${unreadCount} unread`}
+            >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
