@@ -255,5 +255,7 @@ export const ChatHeader = ({
         </DropdownMenu>
       </div>
     </div>
+    <ChatPrivacyDialog open={showPrivacyDialog} onOpenChange={setShowPrivacyDialog} />
+    </>
   );
 };
