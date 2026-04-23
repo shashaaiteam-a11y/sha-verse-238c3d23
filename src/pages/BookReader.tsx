@@ -43,7 +43,7 @@ const getFileType = (url: string | null): "pdf" | "epub" | "unknown" => {
 };
 
 const THEME_COLORS: Record<ReaderTheme, { bg: string; text: string; headerBg: string }> = {
-  light: { bg: "bg-amber-50", text: "text-zinc-900", headerBg: "bg-white/95" },
+  light: { bg: "bg-white", text: "text-zinc-900", headerBg: "bg-white/95" },
   dark: { bg: "bg-zinc-900", text: "text-zinc-100", headerBg: "bg-zinc-800/95" },
   sepia: { bg: "bg-[#f4ecd8]", text: "text-[#5b4636]", headerBg: "bg-[#e8dcc8]/95" },
 };
@@ -628,25 +628,35 @@ const BookReader = () => {
           showControls ? "bottom-24 sm:bottom-20" : "bottom-0"
         )}
       >
-        <div className="relative w-full h-full flex items-stretch justify-center overflow-auto">
-          {/* PDF Viewer */}
+        <div className={cn("relative w-full h-full overflow-hidden", colors.bg)}>
+          {/* PDF Viewer — wrapper paints theme bg behind canvas so any
+              side gutters from natural aspect ratio match the reader theme. */}
           {fileType === "pdf" && book.book_url && (
-            <PDFViewer
-              key={`${book.id}-${book.book_url}`}
-              url={book.book_url}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-              onTotalPagesChange={handleTotalPagesChange}
-              onOutlineExtracted={handleOutlineExtracted}
-              isDarkMode={theme === "dark"}
-              scale={scale}
-              className="w-full h-full"
-            />
+            <div className={cn("w-full h-full flex items-center justify-center", colors.bg)}>
+              <PDFViewer
+                key={`${book.id}-${book.book_url}`}
+                url={book.book_url}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                onTotalPagesChange={handleTotalPagesChange}
+                onOutlineExtracted={handleOutlineExtracted}
+                isDarkMode={theme === "dark"}
+                scale={scale}
+                className="max-w-full max-h-full"
+              />
+            </div>
           )}
 
-          {/* EPUB Viewer */}
+          {/* EPUB Viewer — Tailwind arbitrary child selectors override the
+              hard-coded 70vh inline styles so EPUB fills the full viewport. */}
           {fileType === "epub" && book.book_url && (
-            <div ref={epubRef} className="w-full h-full flex">
+            <div
+              ref={epubRef}
+              className={cn(
+                "w-full h-full block [&>div]:!h-full [&>div]:!min-h-[unset] [&_iframe]:!h-full",
+                colors.bg
+              )}
+            >
               <EPUBViewer
                 url={book.book_url}
                 initialCfi={epubCfi}
@@ -654,7 +664,7 @@ const BookReader = () => {
                 onTocExtracted={handleEpubTocExtracted}
                 theme={theme}
                 fontSize={fontSize}
-                className="w-full h-full"
+                className="!h-full !min-h-0 w-full"
               />
             </div>
           )}
