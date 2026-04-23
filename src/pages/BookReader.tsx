@@ -198,7 +198,41 @@ const BookReader = () => {
     setTotalPages(total);
   }, []);
 
-  const toggleControls = () => setShowControls(!showControls);
+  const toggleControls = () => setShowControls((prev) => !prev);
+
+  // Auto-hide controls after 3s of inactivity
+  useEffect(() => {
+    if (!showControls) return;
+    const timer = window.setTimeout(() => setShowControls(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [showControls, currentPage]);
+
+  // Keyboard navigation (desktop): ArrowLeft/Right to flip, Escape to toggle controls
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (fileType === "epub") epubPrev();
+        else setCurrentPage((p) => Math.max(1, p - 1));
+        setShowControls(true);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (fileType === "epub") epubNext();
+        else setCurrentPage((p) => (totalPages > 0 ? Math.min(totalPages, p + 1) : p + 1));
+        setShowControls(true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setShowControls((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileType, totalPages]);
 
   const handleBookmarkToggle = () => {
     if (isPageBookmarked(currentPage)) {
@@ -585,47 +619,16 @@ const BookReader = () => {
         </div>
       )}
 
-      {/* 📖 Inline Reader Ad — appears at the top of the reading area on
-          ad-eligible pages (every 4 pages, skipping first 2 + last). It sits
-          above the viewer so it never breaks paragraph flow inside the document. */}
-      {showReaderAd && (
-        <div
-          className={cn(
-            "fixed left-0 right-0 z-40 pointer-events-none transition-transform duration-300",
-            showControls ? "top-14" : "top-0"
-          )}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="pointer-events-auto">
-            <BookReaderInlineAd
-              key={`reader-ad-${adKey}`}
-              variant={isChapterEndAdPage ? "chapter_end" : "inline"}
-              theme={theme}
-              onDismiss={() => setAdDismissedFor(currentPage)}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Main Content — edge-to-edge, fills the screen between header & footer.
-          Uses CSS env to compute exact available height so the book truly
-          occupies all space (mobile / tablet / desktop). */}
+      {/* Main Content — true edge-to-edge. Always fills 100vh minus
+          (header when shown) and (footer when shown). Ads NEVER displace it. */}
       <main
         className={cn(
-          "absolute inset-x-0 flex overflow-hidden transition-[top,bottom] duration-300",
-          // Top edge: under header (56px) when controls visible, else flush to 0
-          showControls
-            ? showReaderAd
-              ? isChapterEndAdPage
-                ? "top-[19rem] sm:top-[17rem]"
-                : "top-[14rem] sm:top-[13rem]"
-              : "top-14"
-            : "top-0",
-          // Bottom edge: above footer (~150px with sticky ad) when controls visible, else flush to 0
-          showControls ? "bottom-[150px] sm:bottom-[140px]" : "bottom-0"
+          "absolute inset-x-0 overflow-hidden transition-[top,bottom] duration-300",
+          showControls ? "top-14" : "top-0",
+          showControls ? "bottom-24 sm:bottom-20" : "bottom-0"
         )}
       >
-        <div className="flex-1 flex items-stretch justify-center w-full h-full overflow-auto">
+        <div className="relative w-full h-full flex items-stretch justify-center overflow-auto">
           {/* PDF Viewer */}
           {fileType === "pdf" && book.book_url && (
             <PDFViewer
@@ -678,6 +681,57 @@ const BookReader = () => {
               </Card>
             </div>
           )}
+
+          {/* Tap zones for mobile/tablet — invisible, only visible on touch.
+              Left 25% prev, center 50% toggle controls, right 25% next.
+              Hidden on desktop (md+) where keyboard arrows are used. */}
+          <div className="absolute inset-0 z-30 md:hidden flex pointer-events-none">
+            <button
+              type="button"
+              aria-label="Previous page"
+              className="h-full w-1/4 pointer-events-auto bg-transparent"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (fileType === "epub") epubPrev();
+                else goToPage(currentPage - 1);
+              }}
+            />
+            <button
+              type="button"
+              aria-label="Toggle controls"
+              className="h-full w-2/4 pointer-events-auto bg-transparent"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleControls();
+              }}
+            />
+            <button
+              type="button"
+              aria-label="Next page"
+              className="h-full w-1/4 pointer-events-auto bg-transparent"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (fileType === "epub") epubNext();
+                else goToPage(currentPage + 1);
+              }}
+            />
+          </div>
+
+          {/* 📖 Floating inline reader ad — docked above footer area, never
+              shrinks the reading content. Dismissible per page. */}
+          {showReaderAd && (
+            <div
+              className="absolute bottom-2 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-2 pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <BookReaderInlineAd
+                key={`reader-ad-${adKey}`}
+                variant={isChapterEndAdPage ? "chapter_end" : "inline"}
+                theme={theme}
+                onDismiss={() => setAdDismissedFor(currentPage)}
+              />
+            </div>
+          )}
         </div>
       </main>
 
@@ -690,11 +744,14 @@ const BookReader = () => {
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Sponsored sticky banner above pagination */}
-        <StickyBannerAd placement="bookshelf_reader_sticky" />
-        <div className="px-4 py-3">
+        {/* Sponsored sticky banner above pagination — height-constrained
+            so footer stays a predictable ~96px mobile / ~80px desktop. */}
+        <div className="max-h-[50px] overflow-hidden">
+          <StickyBannerAd placement="bookshelf_reader_sticky" />
+        </div>
+        <div className="px-4 py-2 sm:py-1.5">
           {/* Progress Bar */}
-          <div className="mb-3">
+          <div className="mb-2">
             <Slider
               value={[currentPage]}
               onValueChange={(v) => {
