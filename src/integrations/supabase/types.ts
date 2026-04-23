@@ -3639,18 +3639,21 @@ export type Database = {
       user_presence: {
         Row: {
           id: string
+          is_online: boolean
           last_seen: string | null
           status: string | null
           user_id: string
         }
         Insert: {
           id?: string
+          is_online?: boolean
           last_seen?: string | null
           status?: string | null
           user_id: string
         }
         Update: {
           id?: string
+          is_online?: boolean
           last_seen?: string | null
           status?: string | null
           user_id?: string
@@ -3714,6 +3717,7 @@ export type Database = {
           created_at: string | null
           id: string
           last_seen_visibility: string | null
+          online_status_visibility: string | null
           read_receipts_enabled: boolean | null
           updated_at: string | null
           user_id: string
@@ -3722,6 +3726,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_seen_visibility?: string | null
+          online_status_visibility?: string | null
           read_receipts_enabled?: boolean | null
           updated_at?: string | null
           user_id: string
@@ -3730,6 +3735,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_seen_visibility?: string | null
+          online_status_visibility?: string | null
           read_receipts_enabled?: boolean | null
           updated_at?: string | null
           user_id?: string
@@ -4250,6 +4256,15 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: string
       }
+      get_user_presence_safe: {
+        Args: { _target_user_id: string }
+        Returns: {
+          is_online: boolean
+          last_seen: string
+          status: string
+          user_id: string
+        }[]
+      }
       get_visible_profile_fields: {
         Args: { _profile_owner_id: string; _viewer_id: string }
         Returns: Json
@@ -4308,6 +4323,28 @@ export type Database = {
       unsubscribe_from_channel: {
         Args: { target_channel_id: string }
         Returns: undefined
+      }
+      upsert_my_chat_privacy: {
+        Args: {
+          _last_seen?: string
+          _online_status?: string
+          _read_receipts?: boolean
+        }
+        Returns: {
+          created_at: string | null
+          id: string
+          last_seen_visibility: string | null
+          online_status_visibility: string | null
+          read_receipts_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
