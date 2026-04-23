@@ -83,7 +83,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const markConversationRead = useMarkConversationRead();
   const markAllRead = useMarkAllConversationsRead();
 
-  // WhatsApp behavior: opening a chat instantly resets its unread count
+  // NOTE: Centralized "open chat = mark read" lives inside useMessagesRealtime.
+  // We keep an extra optimistic call here so the green badge in the LEFT list
+  // visually disappears the same frame the user taps a chat, even before the
+  // server round-trip resolves.
   useEffect(() => {
     if (conversationId && user?.id) {
       markConversationRead.mutate(conversationId);
@@ -185,14 +188,16 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   // Realtime: re-fetch per-chat counters the moment a message INSERT/UPDATE arrives
   useEffect(() => {
     if (!user?.id || conversationIds.length === 0) return;
+    const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`chat-list-unread-${user.id}`)
+      .channel(`chat-list-unread-${user.id}-${suffix}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload: any) => {
           if (payload.new?.sender_id !== user.id) {
             queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+            queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
           }
         }
       )
@@ -201,6 +206,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         { event: 'UPDATE', schema: 'public', table: 'messages' },
         () => {
           queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
         }
       )
       .subscribe();
