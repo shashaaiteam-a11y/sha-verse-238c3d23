@@ -773,7 +773,12 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
               />
             )}
             <p className="text-sm text-muted-foreground truncate">
-              {isBlocked ? '🚫 Blocked' : (convo.lastMessage?.content || 'No messages yet')}
+              {isBlocked
+                ? '🚫 Blocked'
+                : (() => {
+                    const text = convo.lastMessage?.content || 'No messages yet';
+                    return text.length > 16 ? `${text.slice(0, 16)}...` : text;
+                  })()}
             </p>
             {convo.lastMessage && (
               <span
