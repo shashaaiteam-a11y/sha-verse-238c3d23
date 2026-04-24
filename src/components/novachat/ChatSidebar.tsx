@@ -251,8 +251,61 @@ const ChatSidebar = ({
         </div>
       </ScrollArea>
 
-      {/* User Info */}
-      <div className="p-2 sm:p-3 border-t border-border flex-shrink-0">
+      {/* Footer: Usage + Upgrade + User */}
+      <div className="p-2 sm:p-3 border-t border-border flex-shrink-0 space-y-2">
+        {/* Usage indicator (free users only) */}
+        {usage && !usage.is_pro && (
+          <div className="px-2 py-1.5 rounded-lg bg-secondary/40 border border-border/40">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                Daily messages
+              </span>
+              <span className="text-[10px] sm:text-xs font-semibold tabular-nums">
+                {usage.used} / {usage.limit}
+              </span>
+            </div>
+            <div className="h-1 rounded-full bg-secondary overflow-hidden">
+              <div
+                className={cn(
+                  "h-full transition-all",
+                  usage.used >= usage.limit
+                    ? "bg-destructive"
+                    : "bg-gradient-to-r from-primary to-primary/60"
+                )}
+                style={{
+                  width: `${Math.min(100, (usage.used / Math.max(usage.limit, 1)) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Upgrade to Pro button */}
+        {onUpgradeClick && (
+          <Button
+            onClick={onUpgradeClick}
+            className={cn(
+              "w-full justify-start gap-2 h-9 sm:h-10 text-xs sm:text-sm",
+              usage?.is_pro
+                ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                : "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:opacity-90"
+            )}
+          >
+            {usage?.is_pro ? (
+              <>
+                <Crown className="w-4 h-4" />
+                Pro plan active
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Upgrade to Pro
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* User info */}
         <div className="flex items-center gap-2 sm:gap-3 px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer">
           <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
             <AvatarFallback className="bg-gradient-to-br from-primary to-primary-glow text-primary-foreground text-[10px] sm:text-xs">
@@ -261,7 +314,9 @@ const ChatSidebar = ({
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-xs sm:text-sm font-medium truncate">{user?.email}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Free plan</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              {usage?.is_pro ? 'Pro plan' : 'Free plan'}
+            </p>
           </div>
         </div>
       </div>
