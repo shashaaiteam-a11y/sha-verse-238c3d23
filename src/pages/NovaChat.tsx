@@ -38,11 +38,9 @@ const NovaChat = () => {
     newChat,
     deleteConversation,
     updateTitle,
-    toggleShare,
     stopGeneration
   } = useNovaChat();
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>('chat');
 
 
