@@ -29,6 +29,7 @@ import {
   User,
   Lock,
   Clock,
+  Search,
 } from 'lucide-react';
 import { PresenceStatus, OnlineBadge } from './PresenceStatus';
 import { ChatPrivacyDialog } from './ChatPrivacyDialog';
