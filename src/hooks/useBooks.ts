@@ -91,6 +91,35 @@ export const useBooks = (options: {
 
       let coverUrl = null;
       let bookUrl = null;
+      let fileHash: string | null = null;
+
+      // PHASE 1: Pre-flight anti-duplication check (file fingerprint + metadata)
+      if (bookFile) {
+        toast.loading("Scanning for duplicates...", { id: "dup-check" });
+        fileHash = await generateFileHash(bookFile);
+        const dup = await checkBookDuplicate({
+          fileHash,
+          title,
+          author,
+        });
+        toast.dismiss("dup-check");
+        if (dup.isDuplicate) {
+          const reason =
+            dup.matchType === "file"
+              ? "This exact file already exists in the SHA-VERSE library."
+              : `A book with this title and author already exists ("${dup.existingBook?.title}" by ${dup.existingBook?.author}).`;
+          throw new Error(reason);
+        }
+        toast.success("File verified — no duplicates found", { duration: 1500 });
+      } else {
+        // No file: still check metadata-level duplicates
+        const dup = await checkBookDuplicate({ title, author });
+        if (dup.isDuplicate) {
+          throw new Error(
+            `A book with this title and author already exists ("${dup.existingBook?.title}" by ${dup.existingBook?.author}).`
+          );
+        }
+      }
 
       // Upload cover image to books bucket
       if (coverFile) {
