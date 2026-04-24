@@ -198,25 +198,17 @@ const NovaChat = () => {
         {sidebarOpen && (
 
           <ChatSidebar
-
             conversations={conversations}
-
             isLoading={conversationsLoading}
-
             currentConversationId={currentConversationId}
-
             user={user}
-
             onNewChat={newChat}
-
             onSelectConversation={selectConversation}
-
             onDeleteConversation={(id) => deleteConversation.mutate(id)}
-
             onRenameConversation={(id, title) => updateTitle.mutate({ id, title })}
-
+            usage={usage}
+            onUpgradeClick={() => setPricingOpen(true)}
           />
-
         )}
 
       </aside>
