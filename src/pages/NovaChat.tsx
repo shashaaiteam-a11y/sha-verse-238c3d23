@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Menu, X, SquarePen, Download, Printer, Image as ImageIcon, Globe } from 'lucide-react';
-import { useNovaChat, Attachment, ChatMode } from '@/hooks/useNovaChat';
+import { useNovaChat, useNovaUsage, Attachment, ChatMode } from '@/hooks/useNovaChat';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import ChatMessage from '@/components/novachat/ChatMessage';
