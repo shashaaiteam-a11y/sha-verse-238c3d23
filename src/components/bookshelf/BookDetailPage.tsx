@@ -212,7 +212,7 @@ const BookDetailPage = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
-                    onClick={() => setShowDeletionDialog(true)}
+                    onClick={() => setShowReportDialog(true)}
                   >
                     <Flag className="w-4 h-4 mr-2" />
                     Report
