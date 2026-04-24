@@ -211,22 +211,11 @@ export const formatLastSeen = (date: Date | null): string => {
 export const useChatPartnerPresence = (partnerId?: string) => {
   const { isOnline, lastSeen } = useUserPresence(partnerId);
 
-  // Tick every 60s so the relative "Last seen X ago" string updates live
-  // without re-fetching from the server.
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    if (isOnline || !lastSeen) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => window.clearInterval(id);
-  }, [isOnline, lastSeen]);
-
-  // WhatsApp behaviour: if we have nothing to show (privacy/blocked/unknown),
-  // return an empty string instead of the literal "Offline".
   const statusText = isOnline
     ? 'Online'
     : lastSeen
       ? `Last seen ${formatLastSeen(lastSeen)}`
-      : '';
+      : 'Offline';
 
   return {
     isOnline,
@@ -234,4 +223,3 @@ export const useChatPartnerPresence = (partnerId?: string) => {
     statusText,
   };
 };
-

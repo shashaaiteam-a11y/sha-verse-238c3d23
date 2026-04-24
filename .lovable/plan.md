@@ -1,121 +1,157 @@
-Goal (IMPLEMENT ALL THE PLAN WITH REALTIME WORKING SYSTEM WITH RLS POLICY, SQL ETC.)
+Goal (implement all the plan with realtime working features including rls policy, sql etc.)
 
-Make the **Chats** module presence behave exactly like WhatsApp/Messenger:
-
-- When the partner is **online** → show **"Online"** (green).
-- When the partner is **offline** with a valid `last_seen` → show **"Last seen** &nbsp;**"**.
-- When `last_seen` is hidden by privacy / blocked / unknown → show **NOTHING** (just the name, no "Offline" text, no grey dot). Same as WhatsApp.
-- The 3-dot **menu** entries:
-  - **View Profile** → instant in-app navigation to `/profile/:username` (already wired with `useNavigate`, just confirm).
-  - **Privacy** → opens `ChatPrivacyDialog`, which must update **in realtime** (changes apply instantly to header pill of every viewer).
-  - Last-seen / online visibility rules (`everyone / contacts / nobody`) and the **Give-and-Take** rule must propagate live without page reload.
-
-Everything must stay strictly inside the **Chats** module — NovaChat, Groups, Profile, Feed, etc. are NOT touched.
+Polish the Chats module header (3-dot menu) to match WhatsApp behavior, and make sure the Chat Privacy dialog is genuinely realtime end-to-end. Strictly Chats-only — no NovaChat, no Groups, no other modules touched.
 
 ---
 
-# What's already correct (DO NOT TOUCH)
+## What you're seeing right now (from the screenshot)
 
-- DB function `public.get_user_presence_safe(uuid)` correctly enforces:
-  - block check (either side blocked → hidden)
-  - `last_seen_visibility` (everyone / contacts / nobody)
-  - `online_status_visibility` (everyone / contacts / nobody)
-  - "Give and Take" rule
-- DB function `public.upsert_my_chat_privacy(...)` saves settings safely.
-- `usePresenceTracker` heartbeat (25s) + visibility/unload handlers correctly mark current user online/offline.
-- `useUserPresence` already subscribes to 4 realtime channels (`user_presence`, target `user_settings`, viewer `user_settings`, `user_blocks`).
-- `ChatPrivacyDialog` already realtime-syncs across tabs and invalidates `user-presence` queries on save.
-- `MessengerChat` already passes `isOnline`, `lastSeen` and uses `usePresenceTracker`.
+In `src/components/chat/ChatHeader.tsx`, the 3-dot menu currently shows three flat mute rows:
 
-These are the foundations — we won't rebuild them; we'll only fix the **rendering** + **fallback behaviour** + a few realtime gaps.
+- Mute for 8 hours
+- Mute for 1 week
+- Mute always
+
+And:
+
+- "View Profile" opens a new browser tab via `window.open(...)` instead of in-app navigation.
+- There is no "Unmute" entry when the chat is already muted.
+
+Privacy dialog (`ChatPrivacyDialog.tsx`) already calls the secure `upsert_my_chat_privacy` RPC and subscribes to its own `user_settings` row, but several presence views still need to refresh instantly when *that* dialog saves.
 
 ---
 
-# Files to modify (chats module only)
+## Changes (Chats module only)
 
-## 1. `src/components/chat/PresenceStatus.tsx`  (UI rule change)
+### 1. `src/components/chat/ChatHeader.tsx` — menu cleanup
 
-Current behaviour shows a grey dot + the word **"offline"** when not online and `lastSeen` is null. WhatsApp doesn't do that.
+**View Profile**
 
-Change:
+- Replace `window.open('/profile/${username}', '_blank')` with in-app navigation using `useNavigate()` from `react-router-dom`:
+  ```ts
+  navigate(`/profile/${otherUser.username}`)
+  ```
+- Closes the menu, instantly takes the user to the friend's profile page (no new tab).
 
-- If `isOnline === true` → render green dot + **"Online"** (keep as is).
-- Else if `lastSeen` is a valid Date → render **"Last seen** &nbsp;**"** with NO coloured dot (WhatsApp shows just the text).
-- Else → render `null` (component returns nothing). No "offline" word, no grey dot.
-- Keep `isLoading` behaviour as is but render `null` instead of "Loading..." text when used inside the chat header (subtitle area), so the header doesn't flash placeholder text.
+**Mute → single entry with submenu**
 
-Acceptance: the partner header subtitle now shows exactly one of:
-  `Online`  |  `Last seen 5m ago`  |  *(empty — only the name visible)*
+- Remove the three flat `Mute for 8 hours / 1 week / always` items.
+- Add ONE entry:
+  - If `isMuted === false` → "Mute notifications" (uses `DropdownMenuSub` + `DropdownMenuSubTrigger` + `DropdownMenuSubContent`) which expands into:
+    - Mute for 8 hours
+    - Mute for 1 week
+    - Mute always
+  - If `isMuted === true` → "Unmute notifications" (single direct item, no submenu) → calls a new `onUnmute` handler.
+- Add `onUnmute: () => void` to `ChatHeaderProps`.
 
-## 2. `src/hooks/usePresenceEnhanced.ts`  (`useChatPartnerPresence`)
+This matches WhatsApp exactly: one row, expands into durations; flips to "Unmute" when active.
 
-Current `statusText` falls back to the literal string `'Offline'`. Remove that fallback so the API mirrors the new UI rule:
+### 2. `src/components/MessengerChat.tsx` — wire unmute + ensure realtime mute state
 
-```ts
-const statusText = isOnline
-  ? 'Online'
-  : lastSeen
-    ? `Last seen ${formatLastSeen(lastSeen)}`
-    : '';                       // was: 'Offline'
+- Pass `onUnmute={() => unmuteConversation.mutate()}` to `<ChatHeader>` (the mutation already exists at lines 146–160).
+- Add a realtime subscription on `conversation_members` for the current `(conversationId, user.id)` row so `isMuted` updates instantly across tabs/devices when muted/unmuted (uses unique channel suffix per project rules):
+  ```ts
+  supabase.channel(`chat-mute-${conversationId}-${user.id}-${suffix}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'conversation_members',
+      filter: `conversation_id=eq.${conversationId}`,
+    }, () => queryClient.invalidateQueries({ queryKey: ['chat-muted', conversationId, user.id] }))
+    .subscribe();
+  ```
+- Cleanup with `removeChannel` on unmount.
+
+### 3. `src/components/chat/ChatPrivacyDialog.tsx` — confirm true realtime
+
+Already wired through `upsert_my_chat_privacy` RPC + a self-realtime listener on `user_settings`. Two small reliability fixes:
+
+- The current effect re-runs every time `saving` flips, which tears down the channel mid-save. Move `saving` out of the dependency array and use a ref instead so the live channel persists across save cycles.
+- After a successful save, invalidate the open chat's presence queries so the *header presence pill* (Online / last seen) immediately reflects the user's new visibility choices, e.g.:
+  ```ts
+  queryClient.invalidateQueries({ queryKey: ['user-presence'] });
+  ```
+  (Chats hooks only — NovaChat / Groups never use this key.)
+
+### 4. `src/hooks/usePresenceEnhanced.ts` — already has multi-channel realtime
+
+No structural change needed; verified it already listens to:
+
+- target `user_presence`
+- target `user_settings`
+- viewer `user_settings`
+- `user_blocks`
+
+So when a user changes Last Seen / Online Status visibility in the dialog, every chat partner viewing them sees the header pill update within ~1 frame without refresh. No edits required here unless verification shows a bug.
+
+---
+
+## Database
+
+No schema changes needed:
+
+- `conversation_members.is_muted` and `muted_until` already exist (migrations `20260330124533_*` and `20260401185025_*`).
+- Privacy RPCs (`upsert_my_chat_privacy`, `get_user_presence_safe`) already exist.
+- Realtime publication already includes `user_settings`, `user_presence`, `messages`, `conversation_members` from prior work.
+
+If the `conversation_members` table is not yet in the realtime publication for UPDATE events, add a tiny migration:
+
+```sql
+ALTER TABLE public.conversation_members REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.conversation_members;
 ```
 
-This is consumed by anything that reads `.statusText` — empty string is safer than `'Offline'` and matches WhatsApp.
+(only runs the ADD if not already present, wrapped in a guard).
 
-Also: add a 60-second `setInterval` re-render trigger inside `useChatPartnerPresence` so that the relative time string ("3m ago" → "4m ago") ticks forward without needing a network event. It does NOT re-fetch — it just calls `setTick(t => t + 1)`. Keeps the header live.
-
-## 3. `src/components/chat/ChatHeader.tsx`  (small wiring)
-
-- Confirm `View Profile` already uses `navigate(\`/profile/${otherUser.username})` — it does. No change needed there.
-- The `<PresenceStatus>` block keeps the same props; thanks to change #1 it will now render nothing when there's no lastSeen and user is offline. That gives the WhatsApp look the user wants.
-- Remove the now-redundant block-status / muted-status sub-lines? **NO** — those are separate features (block + mute) and out of scope; leave them untouched.
-
-## 4. `src/components/MessengerChat.tsx`  (small consumer tweak)
-
-- Where `statusText` is read for any tooltip / aria-label, treat empty string as "no subtitle". No layout change.
-- The conversation list item dot (`OnlineBadge`): keep behaviour — green when online, grey when not. That's the small avatar dot; WhatsApp also keeps a subtle grey state there. Acceptable.
-
-(If the user later wants the grey avatar dot also hidden when offline, that's a one-line tweak — but they specifically asked about "online/last seen system", which lives in the chat header subtitle, so we keep the avatar dot logic untouched for now.)
-
-## 5. `src/components/chat/ChatPrivacyDialog.tsx`  (verify only)
-
-Already:
-
-- realtime-syncs across tabs using `user_settings` postgres_changes
-- invalidates `['user-presence']` and `['chat-partner-presence']` query keys on save
-- uses `savingRef` so its own write doesn't trigger a teardown
-
-No change required. We will only confirm the dialog opens from the 3-dot menu (it already does via `setShowPrivacyDialog(true)`).
+No new RLS policies required — users already control only their own `conversation_members` row, and `is_muted`/`muted_until` updates are restricted by the existing self-row policy.
 
 ---
 
-# Database
+## Final behavior
 
-**No migration needed.** All required pieces already exist:
+### 3-dot menu (single chat)
 
-- `user_presence` table has `is_online`, `last_seen`, `status`
-- `user_settings` has `last_seen_visibility`, `online_status_visibility`, `read_receipts_enabled`
-- `get_user_presence_safe` RPC enforces all privacy rules server-side
-- `upsert_my_chat_privacy` RPC handles writes
-- Realtime publication already includes `user_presence` and `user_settings`
+- **View Profile** → in-app navigate to `/profile/<username>` instantly.
+- **Privacy** → opens Chat Privacy dialog (realtime).
+- **Mute notifications** ▸ submenu (8 hours / 1 week / Always) — only shown when chat is not muted.
+- **Unmute notifications** — only shown when chat is currently muted; one click restores notifications.
+- **Clear chat** — unchanged.
+- **Block / Unblock user** — unchanged.
+
+### Privacy dialog (realtime)
+
+- Open dialog → loads current Last Seen / Online Status / Read Receipts via `user_settings`.
+- Change settings on Device A → Device B's open dialog reflects the change live (already wired, made more robust).
+- Save settings → every chat partner currently viewing this user sees their header presence pill (Online / Last seen X) update within seconds, with no refresh, enforced server-side by `get_user_presence_safe` (Give-and-Take rule, block check, contacts vs everyone vs nobody).
+
+### Mute (realtime)
+
+- Mute on Device A → header on Device B flips to "Unmute notifications" instantly.
+- Unmute on Device A → header on Device B flips back to "Mute notifications" submenu.
+- Auto-expiry (8h / 1w) handled by existing `muted_until` check (`new Date(muted_until) > new Date()`); no changes needed.
 
 ---
 
-# Strict isolation guarantees
+## Strict isolation guarantees
 
-- **NovaChat**: not imported, not touched.
-- **Groups**: not imported, not touched.
-- **Profile / Feed / Movion / Bookshelf**: not imported, not touched.
-- All edits are inside `src/components/chat/*` and `src/hooks/usePresenceEnhanced.ts`, both of which are exclusive to the Chats module.
+- Files touched: only
+  - `src/components/chat/ChatHeader.tsx`
+  - `src/components/MessengerChat.tsx` (Chats-owned)
+  - `src/components/chat/ChatPrivacyDialog.tsx`
+  - optional 1-line migration to ensure `conversation_members` is in realtime publication
+- Zero edits to: NovaChat, Groups, Movion, Bookshelf, Profile, Home, Posts, Stories, Reactions, Ads.
+- Zero changes to: `group_members`, `group_messages`, NovaChat tables, or any other module's hooks/UI.
+- All new realtime channels follow the project mandate: unique 6-char suffix appended to channel ID to prevent subscribe collisions.
 
-# Acceptance criteria
+---
 
-1. Open a chat with another user who is online → header subtitle shows green-dot **"Online"** in realtime.
-2. The other user closes the tab/app → within ≤30s the subtitle changes to **"Last seen just now"** then ticks up (`1m ago`, `2m ago`, ...) without page refresh.
-3. The other user changes Privacy → "Last seen: Nobody" → my header subtitle disappears entirely (only the name shows) within ~1 second, no refresh.
-4. The other user changes "Online status: Nobody" → green "Online" never appears for me even if they're active.
-5. If I myself set both Last Seen and Online to Nobody (Give-and-Take) → I stop seeing anyone's status — empty subtitle for everyone.
-6. If either side blocks the other → status is hidden immediately.
-7. 3-dot → **View Profile** → instantly navigates in-app to `/profile/<username>` (no new tab, no reload).
-8. 3-dot → **Privacy** → opens dialog; saving updates header pill of all viewers within ~1 second.
-9. The word **"Offline"** never appears anywhere in the chat header.
-10. NovaChat and Groups screens are visually and functionally unchanged.
+## Acceptance criteria
+
+1. 3-dot menu shows exactly one mute row at a time:
+  - "Mute notifications" with submenu (8h / 1w / Always) when not muted.
+  - "Unmute notifications" (no submenu) when muted.
+2. Clicking any duration mutes immediately; the row flips to "Unmute notifications" without refresh.
+3. Clicking Unmute restores the submenu state without refresh.
+4. View Profile navigates inside the app (no new browser tab).
+5. Privacy dialog saves via secure RPC; changes propagate to other open clients (own dialog + chat-partner header) within ~1s.
+6. NovaChat, Groups, and all other modules are visually and functionally untouched.
