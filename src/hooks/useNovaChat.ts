@@ -374,6 +374,14 @@ export const useNovaChat = () => {
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+        // Daily limit reached -> open Pro upgrade modal instead of toast
+        if (resp.status === 429 && err.error === 'daily_limit_reached') {
+          setLimitReached({ used: err.used ?? 10, limit: err.limit ?? 10 });
+          // Roll back the user message we optimistically added
+          setMessages(messages);
+          setIsStreaming(false);
+          return;
+        }
         throw new Error(err.error || 'AI request failed');
       }
       if (!resp.body) throw new Error('No response body');
