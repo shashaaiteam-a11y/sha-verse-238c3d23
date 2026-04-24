@@ -60,6 +60,9 @@ export type Database = {
           created_at: string | null
           id: string
           is_archived: boolean | null
+          model_override: string | null
+          share_token: string | null
+          shared_at: string | null
           title: string | null
           updated_at: string | null
           user_id: string
@@ -68,6 +71,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_archived?: boolean | null
+          model_override?: string | null
+          share_token?: string | null
+          shared_at?: string | null
           title?: string | null
           updated_at?: string | null
           user_id: string
@@ -76,6 +82,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_archived?: boolean | null
+          model_override?: string | null
+          share_token?: string | null
+          shared_at?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string
@@ -2042,6 +2051,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      novachat_settings: {
+        Row: {
+          created_at: string
+          custom_system_prompt: string | null
+          id: string
+          memory_facts: string | null
+          preferred_model: string
+          show_reasoning: boolean
+          updated_at: string
+          user_id: string
+          voice_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          custom_system_prompt?: string | null
+          id?: string
+          memory_facts?: string | null
+          preferred_model?: string
+          show_reasoning?: boolean
+          updated_at?: string
+          user_id: string
+          voice_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          custom_system_prompt?: string | null
+          id?: string
+          memory_facts?: string | null
+          preferred_model?: string
+          show_reasoning?: boolean
+          updated_at?: string
+          user_id?: string
+          voice_enabled?: boolean
+        }
+        Relationships: []
       }
       page_blocked_users: {
         Row: {

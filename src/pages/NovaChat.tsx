@@ -1,62 +1,48 @@
 import { useState, useRef, useEffect } from 'react';
-
 import { Button } from '@/components/ui/button';
-
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-import { Menu, X, SquarePen } from 'lucide-react';
-
-import { useNovaChat, Attachment } from '@/hooks/useNovaChat';
-
+import { Menu, X, SquarePen, Settings, Download, Share2, Printer, Image as ImageIcon, Globe } from 'lucide-react';
+import { useNovaChat, Attachment, ChatMode } from '@/hooks/useNovaChat';
 import { useAuth } from '@/contexts/AuthContext';
-
 import { cn } from '@/lib/utils';
-
 import ChatMessage from '@/components/novachat/ChatMessage';
-
 import ChatSidebar from '@/components/novachat/ChatSidebar';
-
 import WelcomeScreen from '@/components/novachat/WelcomeScreen';
-
 import ChatInput from '@/components/novachat/ChatInput';
-
 import { RewardedAdButton, BannerAd } from '@/components/ads';
-
 import { useRewardedAd } from '@/hooks/useRewardedAd';
-
 import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
+import NovaChatSettingsDialog from '@/components/novachat/NovaChatSettingsDialog';
+import { downloadMarkdown, downloadAsHtml, printConversation } from '@/components/novachat/exportUtils';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import { useToast } from '@/components/ui/use-toast';
 
 
 
 const NovaChat = () => {
-
   const { user } = useAuth();
-
+  const { toast } = useToast();
   const {
-
     conversations,
-
     conversationsLoading,
-
     currentConversationId,
-
     messages,
-
     isStreaming,
-
+    settings,
+    updateSettings,
     sendMessage,
-
     selectConversation,
-
     newChat,
-
     deleteConversation,
-
     updateTitle,
-
+    toggleShare,
     stopGeneration
-
   } = useNovaChat();
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [chatMode, setChatMode] = useState<ChatMode>('chat');
 
 
 
@@ -97,20 +83,35 @@ const NovaChat = () => {
 
 
   const handleSend = () => {
-
     if ((!input.trim() && attachments.length === 0) || isStreaming) return;
-
-    if (messageLimit <= 0) return; // Block if limit reached
-
-    sendMessage(input, false, attachments);
-
+    if (messageLimit <= 0) return;
+    sendMessage(input, false, attachments, chatMode);
     setInput('');
-
     setAttachments([]);
-
-    setMessageLimit(prev => Math.max(0, prev - 1)); // Decrement limit
-
+    setChatMode('chat');
+    setMessageLimit(prev => Math.max(0, prev - 1));
   };
+
+  const currentConv = conversations?.find(c => c.id === currentConversationId);
+  const handleShare = async () => {
+    if (!currentConversationId) {
+      toast({ title: 'Open a chat first', variant: 'destructive' });
+      return;
+    }
+    if (currentConv?.share_token) {
+      const url = `${window.location.origin}/novachat/share/${currentConv.share_token}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied', description: 'Share link copied to clipboard' });
+      return;
+    }
+    const token = await toggleShare.mutateAsync({ id: currentConversationId, enable: true });
+    if (token) {
+      const url = `${window.location.origin}/novachat/share/${token}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Share link created', description: 'Link copied to clipboard' });
+    }
+  };
+
 
 
 
@@ -298,15 +299,50 @@ const NovaChat = () => {
 
 
 
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs flex-shrink-0" onClick={newChat}>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9" title="More">
+                  <Download className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel>This conversation</DropdownMenuLabel>
+                <DropdownMenuItem disabled={!messages.length} onClick={() => downloadMarkdown(currentConv?.title || 'novachat', messages)}>
+                  <Download className="w-4 h-4 mr-2" /> Export as Markdown
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={!messages.length} onClick={() => downloadAsHtml(currentConv?.title || 'novachat', messages)}>
+                  <Download className="w-4 h-4 mr-2" /> Export as HTML
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={!messages.length} onClick={() => printConversation(currentConv?.title || 'novachat', messages)}>
+                  <Printer className="w-4 h-4 mr-2" /> Print / Save as PDF
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={!currentConversationId} onClick={handleShare}>
+                  <Share2 className="w-4 h-4 mr-2" /> {currentConv?.share_token ? 'Copy share link' : 'Create share link'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <SquarePen className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSettingsOpen(true)} title="Settings">
+              <Settings className="w-4 h-4" />
+            </Button>
 
-            <span className="hidden sm:inline">New chat</span>
-
-          </Button>
-
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={newChat}>
+              <SquarePen className="w-4 h-4" />
+              <span className="hidden sm:inline">New chat</span>
+            </Button>
+          </div>
         </header>
+
+        <NovaChatSettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          settings={settings}
+          onSave={(patch) => updateSettings.mutate(patch)}
+          isSaving={updateSettings.isPending}
+        />
+
 
 
 
