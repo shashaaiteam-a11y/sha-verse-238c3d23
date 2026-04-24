@@ -100,6 +100,35 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return jsonResponse({ error: "AI service not configured" }, 500);
 
+    // ---------- RATE LIMIT CHECK (Phase 2) ----------
+    // Free tier: 10 messages/day. Pro users: unlimited.
+    // Use service role client so RLS doesn't restrict the RPC.
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (serviceKey) {
+      const adminClient = createClient(supabaseUrl, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: usageData, error: usageErr } = await adminClient.rpc(
+        "check_and_increment_nova_usage",
+        { _user_id: user.id }
+      );
+      if (usageErr) {
+        console.error("Usage check failed:", usageErr.message);
+        // Fail open so legitimate users aren't blocked by infra issues
+      } else if (usageData && (usageData as any).allowed === false) {
+        return jsonResponse(
+          {
+            error: "daily_limit_reached",
+            message: "Aapki aaj ki free messages khatam ho gayi hain. Pro upgrade karein for unlimited.",
+            used: (usageData as any).used,
+            limit: (usageData as any).limit,
+            is_pro: false,
+          },
+          429
+        );
+      }
+    }
+
     // ---------- IMAGE GENERATION MODE ----------
     if (mode === "image") {
       const lastUserMsg = [...v.data].reverse().find((m) => m.role === "user");
