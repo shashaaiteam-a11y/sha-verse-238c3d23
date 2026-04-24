@@ -440,6 +440,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 }}
                 onBlock={handleBlockToggle}
                 onMute={(duration) => muteConversation.mutate(duration || 'always')}
+                onUnmute={() => unmuteConversation.mutate()}
                 onClearChat={() => {
                   if (confirm('Clear all messages in this chat?')) {
                     clearMessages.mutate();
