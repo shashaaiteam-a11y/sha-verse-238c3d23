@@ -2,7 +2,6 @@
  * PresenceStatus - Shows "Online" or "Last seen X minutes ago"
  */
 
-import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PresenceStatusProps {
@@ -23,15 +22,12 @@ export const PresenceStatus = ({
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
   const dotSize = size === 'sm' ? 'w-2 h-2' : 'w-3 h-3';
 
+  // While loading we render nothing so the header doesn't flash a placeholder.
   if (isLoading) {
-    return (
-      <div className={cn(`flex items-center gap-1 ${textSize} text-muted-foreground`, className)}>
-        <Loader2 className={cn(dotSize, 'animate-spin')} />
-        <span>Loading...</span>
-      </div>
-    );
+    return null;
   }
 
+  // Online → green dot + "Online" (WhatsApp style)
   if (isOnline) {
     return (
       <div className={cn(`flex items-center gap-1 ${textSize} font-medium text-green-500`, className)}>
@@ -41,12 +37,17 @@ export const PresenceStatus = ({
     );
   }
 
-  return (
-    <div className={cn(`flex items-center gap-1 ${textSize} text-muted-foreground`, className)}>
-      <div className={cn(dotSize, 'rounded-full bg-gray-400')} />
-      <span>{formatLastSeen(lastSeen)}</span>
-    </div>
-  );
+  // Offline + we know last_seen → just the text "Last seen X ago" (no dot)
+  if (lastSeen) {
+    return (
+      <div className={cn(`${textSize} text-muted-foreground`, className)}>
+        <span>Last seen {formatLastSeen(lastSeen)}</span>
+      </div>
+    );
+  }
+
+  // Privacy hides it / blocked / unknown → render nothing (WhatsApp behaviour)
+  return null;
 };
 
 /**
