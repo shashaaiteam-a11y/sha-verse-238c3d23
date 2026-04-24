@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, Send, Phone, Video, MoreVertical,
-  Search, Plus, FileText, X, ShieldX, Ban, BellOff
+  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
@@ -22,6 +22,7 @@ import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
 import { TickIndicator } from './chat/TickIndicator';
+import { MessageInfoDialog } from './chat/MessageInfoDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
