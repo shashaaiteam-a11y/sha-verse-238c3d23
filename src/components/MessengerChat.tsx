@@ -17,7 +17,7 @@ import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ChatTypingBar } from './chat/ChatTypingBar';
-import { VideoCallDialog } from './chat/VideoCallDialog';
+import { useCall } from '@/modules/chats/components/CallProvider';
 import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
@@ -47,8 +47,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [initializing, setInitializing] = useState(false);
-  const [showCallDialog, setShowCallDialog] = useState(false);
-  const [isVideoCall, setIsVideoCall] = useState(false);
+  const { startCall } = useCall();
+  // (call dialog now handled globally by GlobalCallHost / CallProvider)
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
@@ -493,12 +493,18 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   isMuted={isMuted || false}
                   onBack={() => setSelectedConversation(null)}
                   onCall={() => {
-                    setIsVideoCall(false);
-                    setShowCallDialog(true);
+                    if (otherUser) startCall({
+                      id: otherUser.id,
+                      display_name: otherUser.display_name || 'User',
+                      avatar_url: otherUser.avatar_url,
+                    }, 'voice');
                   }}
                   onVideoCall={() => {
-                    setIsVideoCall(true);
-                    setShowCallDialog(true);
+                    if (otherUser) startCall({
+                      id: otherUser.id,
+                      display_name: otherUser.display_name || 'User',
+                      avatar_url: otherUser.avatar_url,
+                    }, 'video');
                   }}
                   onBlock={handleBlockToggle}
                   onMute={(duration) => muteConversation.mutate(duration || 'always')}
@@ -670,13 +676,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         )}
       </div>
 
-      {/* Video/Voice Call Dialog */}
-      <VideoCallDialog
-        isOpen={showCallDialog}
-        onClose={() => setShowCallDialog(false)}
-        otherUser={otherUser || null}
-        isVideoCall={isVideoCall}
-      />
+      {/* Call dialogs are now rendered globally by GlobalCallHost (CallProvider) */}
 
       {/* User Search Dialog for Starting New Conversations */}
       <ChatUserSearchDialog

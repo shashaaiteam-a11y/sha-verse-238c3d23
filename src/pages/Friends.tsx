@@ -1,13 +1,15 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { UserPlus, UserMinus, Check, X, MessageCircle } from "lucide-react";
+import { UserPlus, UserMinus, Check, X, MessageCircle, Phone, Video } from "lucide-react";
 import { useFriends } from '@/hooks/useFriends';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from 'react-router-dom';
+import { useCall } from '@/modules/chats/components/CallProvider';
 
 const Friends = () => {
   const navigate = useNavigate();
+  const { startCall } = useCall();
   const {
     friends,
     friendsLoading,
@@ -90,6 +92,32 @@ const Friends = () => {
                       >
                         <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
                         <span className="hidden sm:inline">Message</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
+                        title="Voice call"
+                        onClick={() => friendship.profiles && startCall({
+                          id: friendship.profiles.id,
+                          display_name: friendship.profiles.display_name || 'User',
+                          avatar_url: friendship.profiles.avatar_url,
+                        }, 'voice')}
+                      >
+                        <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
+                        title="Video call"
+                        onClick={() => friendship.profiles && startCall({
+                          id: friendship.profiles.id,
+                          display_name: friendship.profiles.display_name || 'User',
+                          avatar_url: friendship.profiles.avatar_url,
+                        }, 'video')}
+                      >
+                        <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </Button>
                       <Button
                         variant="outline"
