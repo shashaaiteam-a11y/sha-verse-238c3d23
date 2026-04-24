@@ -619,7 +619,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       {/* User Search Dialog for Starting New Conversations */}
       <ChatUserSearchDialog
         open={showUserSearch}
-        onOpenChange={setShowUserSearch}
+        onOpenChange={(open) => {
+          setShowUserSearch(open);
+          if (!open && activeTab === 'people') setActiveTab('chats');
+        }}
         onSelectUser={async (selectedUser) => {
           try {
             const conversationId = await startConversation.mutateAsync(selectedUser.id);
@@ -631,6 +634,15 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
           } catch (error) {
             toast.error('Failed to start conversation');
           }
+        }}
+      />
+
+      {/* Chat Privacy Settings Dialog (opened from nav Settings tab) */}
+      <ChatPrivacyDialog
+        open={showPrivacyDialog}
+        onOpenChange={(open) => {
+          setShowPrivacyDialog(open);
+          if (!open && activeTab === 'settings') setActiveTab('chats');
         }}
       />
     </div>
