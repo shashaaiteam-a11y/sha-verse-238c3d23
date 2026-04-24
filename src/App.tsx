@@ -97,6 +97,7 @@ const App = () => (
             <MobileProvider>
               <AdProvider>
               <ChatPresenceBridge />
+              <GlobalCallHost>
               <div className="min-h-screen bg-background safe-left safe-right">
                 <SwipeWrapper>
                   <Routes>
