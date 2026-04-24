@@ -1,9 +1,12 @@
 import { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Square, Paperclip, X, Plus } from 'lucide-react';
+import { Send, Square, Paperclip, X, Plus, Mic, MicOff, Image as ImageIcon, Globe, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Attachment } from '@/hooks/useNovaChat';
+import { Attachment, ChatMode } from '@/hooks/useNovaChat';
+import { extractPdfText, extractTextFile } from './pdfExtract';
+import { useVoiceInput } from './useVoiceInput';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ChatInputProps {
   value: string;
@@ -15,6 +18,8 @@ interface ChatInputProps {
   attachments?: Attachment[];
   onAttachmentsChange?: (attachments: Attachment[]) => void;
   onNewChat?: () => void;
+  mode?: ChatMode;
+  onModeChange?: (mode: ChatMode) => void;
 }
 
 const ChatInput = ({
@@ -26,10 +31,21 @@ const ChatInput = ({
   disabled = false,
   attachments = [],
   onAttachmentsChange,
-  onNewChat
+  onNewChat,
+  mode = 'chat',
+  onModeChange,
 }: ChatInputProps) => {
+  const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const parsingRef = useRef(false);
+
+  const { listening, supported: voiceSupported, start: startVoice, stop: stopVoice } = useVoiceInput({
+    onTranscript: (text) => {
+      onChange(value ? `${value} ${text}` : text);
+    },
+    onError: (msg) => toast({ title: 'Voice error', description: msg, variant: 'destructive' }),
+  });
 
   // Auto-resize textarea
   useEffect(() => {
@@ -51,24 +67,68 @@ const ChatInput = ({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
+    parsingRef.current = true;
 
-    const newAttachments: Attachment[] = await Promise.all(
-      files.map(file => new Promise<Attachment>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          // dataUrl is "data:<mimeType>;base64,<data>" — extract base64 only
-          const base64 = dataUrl.split(',')[1];
-          resolve({ name: file.name, mimeType: file.type, data: base64 });
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      }))
-    );
+    try {
+      const newAttachments: Attachment[] = [];
+      for (const file of files) {
+        // Size guard 15 MB
+        if (file.size > 15 * 1024 * 1024) {
+          toast({ title: 'File too large', description: `${file.name} exceeds 15MB`, variant: 'destructive' });
+          continue;
+        }
 
-    onAttachmentsChange?.([...attachments, ...newAttachments]);
-    // reset file input so same file can be re-selected
-    e.target.value = '';
+        if (file.type === 'application/pdf') {
+          // Extract text and inject as a context attachment
+          try {
+            const text = await extractPdfText(file);
+            newAttachments.push({
+              name: file.name,
+              mimeType: 'text/plain',
+              data: btoa(unescape(encodeURIComponent(`PDF "${file.name}" contents:\n\n${text}`))),
+            });
+            toast({ description: `Loaded ${file.name}` });
+          } catch (err: any) {
+            toast({ title: 'PDF parse failed', description: err?.message || 'Could not read PDF', variant: 'destructive' });
+          }
+        } else if (
+          file.type === 'text/plain' ||
+          file.type === 'text/markdown' ||
+          file.type === 'text/csv' ||
+          file.name.match(/\.(txt|md|csv|json)$/i)
+        ) {
+          try {
+            const text = await extractTextFile(file);
+            newAttachments.push({
+              name: file.name,
+              mimeType: 'text/plain',
+              data: btoa(unescape(encodeURIComponent(`File "${file.name}" contents:\n\n${text}`))),
+            });
+            toast({ description: `Loaded ${file.name}` });
+          } catch {
+            toast({ title: 'Read failed', description: file.name, variant: 'destructive' });
+          }
+        } else {
+          // Image or other binary: read as base64
+          await new Promise<void>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = reader.result as string;
+              const base64 = dataUrl.split(',')[1];
+              newAttachments.push({ name: file.name, mimeType: file.type || 'application/octet-stream', data: base64 });
+              resolve();
+            };
+            reader.onerror = () => reject(new Error('Read failed'));
+            reader.readAsDataURL(file);
+          });
+        }
+      }
+
+      onAttachmentsChange?.([...attachments, ...newAttachments]);
+    } finally {
+      parsingRef.current = false;
+      e.target.value = '';
+    }
   };
 
   const removeAttachment = (index: number) => {
@@ -77,9 +137,30 @@ const ChatInput = ({
 
   const canSend = (value.trim() || attachments.length > 0) && !disabled;
 
+  const toggleMode = (target: ChatMode) => {
+    onModeChange?.(mode === target ? 'chat' : target);
+  };
+
   return (
     <div className="border-t border-border p-2 sm:p-3 pb-16 sm:pb-20 bg-background relative z-50">
       <div className="max-w-3xl mx-auto space-y-1.5 sm:space-y-2">
+        {/* Mode banner */}
+        {mode !== 'chat' && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-xs text-primary">
+            {mode === 'image' ? <ImageIcon className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
+            <span className="font-medium">
+              {mode === 'image' ? 'Image generation mode' : 'Web search mode'}
+            </span>
+            <button
+              onClick={() => onModeChange?.('chat')}
+              className="ml-auto opacity-70 hover:opacity-100"
+              type="button"
+              aria-label="Cancel mode"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Attachment Previews */}
         {attachments.length > 0 && (
@@ -114,7 +195,7 @@ const ChatInput = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,application/pdf,.txt,.md,.csv"
+            accept="image/*,application/pdf,.txt,.md,.csv,.json"
             multiple
             className="hidden"
             onChange={handleFileChange}
@@ -138,14 +219,47 @@ const ChatInput = ({
             variant="ghost"
             size="icon"
             className={cn(
-              "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl ml-0.5 sm:ml-1 mb-0.5 sm:mb-1 text-muted-foreground hover:text-foreground",
+              "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl mb-0.5 sm:mb-1 text-muted-foreground hover:text-foreground",
               attachments.length > 0 && "text-primary hover:text-primary"
             )}
             disabled={isStreaming}
             onClick={() => fileInputRef.current?.click()}
             type="button"
+            title="Attach image / PDF / text"
           >
             <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
+          </Button>
+
+          {/* Image-gen mode toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl mb-0.5 sm:mb-1 text-muted-foreground hover:text-foreground",
+              mode === 'image' && "text-primary bg-primary/10 hover:text-primary",
+            )}
+            disabled={isStreaming}
+            onClick={() => toggleMode('image')}
+            type="button"
+            title="Generate an image"
+          >
+            <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+          </Button>
+
+          {/* Web search mode toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl mb-0.5 sm:mb-1 text-muted-foreground hover:text-foreground",
+              mode === 'search' && "text-primary bg-primary/10 hover:text-primary",
+            )}
+            disabled={isStreaming}
+            onClick={() => toggleMode('search')}
+            type="button"
+            title="Search the web"
+          >
+            <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
 
           {/* Textarea */}
@@ -154,7 +268,15 @@ const ChatInput = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={disabled ? "Message limit reached — watch an ad to continue" : "Message NovaChat..."}
+            placeholder={
+              disabled
+                ? "Message limit reached — watch an ad to continue"
+                : mode === 'image'
+                ? "Describe the image you want to generate..."
+                : mode === 'search'
+                ? "Ask about anything happening on the web..."
+                : "Message NovaChat..."
+            }
             className={cn(
               "flex-1 min-h-[44px] sm:min-h-[52px] max-h-[150px] sm:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 sm:py-3.5 px-0 text-sm sm:text-base",
               disabled && "text-muted-foreground cursor-not-allowed"
@@ -165,6 +287,26 @@ const ChatInput = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-0.5 sm:gap-1 mr-0.5 sm:mr-1 mb-0.5 sm:mb-1">
+            {/* Voice mic */}
+            {voiceSupported && (
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={isStreaming || disabled}
+                onClick={listening ? stopVoice : startVoice}
+                className={cn(
+                  "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl",
+                  listening
+                    ? "text-destructive bg-destructive/10 hover:bg-destructive/20 animate-pulse"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                type="button"
+                title={listening ? 'Stop listening' : 'Voice input'}
+              >
+                {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </Button>
+            )}
+
             {isStreaming ? (
               <Button
                 onClick={onStop}

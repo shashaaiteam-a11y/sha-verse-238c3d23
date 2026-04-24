@@ -284,16 +284,25 @@ export const useNovaChat = () => {
       const apiMessages = newMessages.map((m) => {
         if (m.attachments && m.attachments.length > 0) {
           const parts: any[] = [];
-          if (m.content) parts.push({ type: 'text', text: m.content });
+          let textBuffer = m.content || '';
           for (const att of m.attachments) {
             if (att.mimeType.startsWith('image/')) {
+              // Vision input
               parts.push({ type: 'image_url', image_url: { url: `data:${att.mimeType};base64,${att.data}` } });
+            } else if (att.mimeType === 'text/plain' || att.mimeType.startsWith('text/')) {
+              // Decode base64 text and inline into the prompt
+              try {
+                const decoded = decodeURIComponent(escape(atob(att.data)));
+                textBuffer += `\n\n${decoded}`;
+              } catch {
+                textBuffer += `\n\n[Attached file: ${att.name}]`;
+              }
             } else {
-              // Non-image: include as text reference
-              parts.push({ type: 'text', text: `\n[Attached file: ${att.name}]` });
+              textBuffer += `\n\n[Attached file: ${att.name}]`;
             }
           }
-          return { role: m.role, content: parts };
+          if (textBuffer) parts.unshift({ type: 'text', text: textBuffer });
+          return { role: m.role, content: parts.length ? parts : textBuffer };
         }
         return { role: m.role, content: m.content };
       });
@@ -313,6 +322,7 @@ export const useNovaChat = () => {
           systemPrompt: settings?.custom_system_prompt,
           memoryFacts: settings?.memory_facts,
           mode,
+          showReasoning: settings?.show_reasoning,
         }),
         signal: abortControllerRef.current.signal,
       });
