@@ -579,7 +579,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                             )}
                             <div className="flex items-center justify-end gap-1 mt-1">
                               <span className="text-[10px] text-muted-foreground">
-                                {format(new Date(message.created_at), 'HH:mm')}
+                                {format(new Date(message.created_at), 'h:mm a')}
                               </span>
                               {isOwn && (
                                 <TickIndicator status={tickStatus} />
