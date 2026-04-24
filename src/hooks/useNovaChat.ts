@@ -280,8 +280,19 @@ export const useNovaChat = () => {
     abortControllerRef.current = new AbortController();
 
     try {
+      // Strip huge base64 data URLs (e.g. previously generated images) from prior
+      // assistant messages so we don't blow past the edge function's MAX_MESSAGE_LENGTH.
+      const sanitizeContent = (text: string): string => {
+        if (!text) return text;
+        let out = text.replace(/!\[([^\]]*)\]\(data:[^)]+\)/g, '![$1](image)');
+        out = out.replace(/data:[a-zA-Z0-9.+/-]+;base64,[A-Za-z0-9+/=]+/g, '[binary omitted]');
+        if (out.length > 45000) out = out.slice(0, 45000) + '\n…[truncated]';
+        return out;
+      };
+
       // Build OpenAI-style messages with multimodal content for vision
-      const apiMessages = newMessages.map((m) => {
+      const apiMessages = newMessages.map((m, idx) => {
+        const isLast = idx === newMessages.length - 1;
         if (m.attachments && m.attachments.length > 0) {
           const parts: any[] = [];
           let textBuffer = m.content || '';
@@ -301,10 +312,10 @@ export const useNovaChat = () => {
               textBuffer += `\n\n[Attached file: ${att.name}]`;
             }
           }
-          if (textBuffer) parts.unshift({ type: 'text', text: textBuffer });
-          return { role: m.role, content: parts.length ? parts : textBuffer };
+          if (textBuffer) parts.unshift({ type: 'text', text: isLast ? textBuffer : sanitizeContent(textBuffer) });
+          return { role: m.role, content: parts.length ? parts : (isLast ? textBuffer : sanitizeContent(textBuffer)) };
         }
-        return { role: m.role, content: m.content };
+        return { role: m.role, content: isLast ? m.content : sanitizeContent(m.content) };
       });
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/novachat-ai`;
