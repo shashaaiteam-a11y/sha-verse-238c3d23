@@ -695,6 +695,13 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
           }
         }}
       />
+
+      {/* WhatsApp-style Message Info dialog (Sent / Delivered / Read times + realtime) */}
+      <MessageInfoDialog
+        open={!!infoMessage}
+        onOpenChange={(o) => !o && setInfoMessage(null)}
+        message={infoMessage}
+      />
     </div>
   );
 };
