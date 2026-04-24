@@ -331,16 +331,8 @@ const NovaChat = () => {
                 <DropdownMenuItem disabled={!messages.length} onClick={() => printConversation(currentConv?.title || 'novachat', messages)}>
                   <Printer className="w-4 h-4 mr-2" /> Print / Save as PDF
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={!currentConversationId} onClick={handleShare}>
-                  <Share2 className="w-4 h-4 mr-2" /> {currentConv?.share_token ? 'Copy share link' : 'Create share link'}
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSettingsOpen(true)} title="Settings">
-              <Settings className="w-4 h-4" />
-            </Button>
 
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={newChat}>
               <SquarePen className="w-4 h-4" />
