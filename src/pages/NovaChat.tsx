@@ -83,20 +83,35 @@ const NovaChat = () => {
 
 
   const handleSend = () => {
-
     if ((!input.trim() && attachments.length === 0) || isStreaming) return;
-
-    if (messageLimit <= 0) return; // Block if limit reached
-
-    sendMessage(input, false, attachments);
-
+    if (messageLimit <= 0) return;
+    sendMessage(input, false, attachments, chatMode);
     setInput('');
-
     setAttachments([]);
-
-    setMessageLimit(prev => Math.max(0, prev - 1)); // Decrement limit
-
+    setChatMode('chat');
+    setMessageLimit(prev => Math.max(0, prev - 1));
   };
+
+  const currentConv = conversations?.find(c => c.id === currentConversationId);
+  const handleShare = async () => {
+    if (!currentConversationId) {
+      toast({ title: 'Open a chat first', variant: 'destructive' });
+      return;
+    }
+    if (currentConv?.share_token) {
+      const url = `${window.location.origin}/novachat/share/${currentConv.share_token}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied', description: 'Share link copied to clipboard' });
+      return;
+    }
+    const token = await toggleShare.mutateAsync({ id: currentConversationId, enable: true });
+    if (token) {
+      const url = `${window.location.origin}/novachat/share/${token}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Share link created', description: 'Link copied to clipboard' });
+    }
+  };
+
 
 
 
