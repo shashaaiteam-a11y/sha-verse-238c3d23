@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useBookFeed, useTrendingBooks } from "./useBookFeeds";
+import { generateFileHash, checkBookDuplicate } from "@/modules/bookshelf/lib/fileHash";
 
 export interface Book {
   id: string;
