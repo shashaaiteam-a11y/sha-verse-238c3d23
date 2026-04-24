@@ -1514,6 +1514,13 @@ const EnhancedUploadBookDialog = ({
           </div>
         )}
       </DialogContent>
+
+      <CopyrightAgreementDialog
+        open={showCopyrightDialog}
+        onOpenChange={setShowCopyrightDialog}
+        onAgree={handleSubmit}
+        currentUserName={user?.user_metadata?.display_name || user?.email || null}
+      />
     </Dialog>
   );
 };
