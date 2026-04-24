@@ -55,6 +55,33 @@ const DEFAULT_SETTINGS: NovaSettings = {
   show_reasoning: false,
 };
 
+export interface NovaUsage {
+  is_pro: boolean;
+  used: number;
+  limit: number; // -1 = unlimited
+}
+
+export const useNovaUsage = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['novachat-usage', user?.id],
+    queryFn: async (): Promise<NovaUsage> => {
+      if (!user) return { is_pro: false, used: 0, limit: 10 };
+      const { data, error } = await (supabase as any).rpc('get_nova_usage_today', {
+        _user_id: user.id,
+      });
+      if (error || !data) return { is_pro: false, used: 0, limit: 10 };
+      return {
+        is_pro: !!data.is_pro,
+        used: Number(data.used ?? 0),
+        limit: Number(data.limit ?? 10),
+      };
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+};
+
 export const useNovaChat = () => {
   const { user, session } = useAuth();
   const { toast } = useToast();
@@ -62,6 +89,7 @@ export const useNovaChat = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [limitReached, setLimitReached] = useState<{ used: number; limit: number } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // ---------- Settings ----------
@@ -346,6 +374,14 @@ export const useNovaChat = () => {
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+        // Daily limit reached -> open Pro upgrade modal instead of toast
+        if (resp.status === 429 && err.error === 'daily_limit_reached') {
+          setLimitReached({ used: err.used ?? 10, limit: err.limit ?? 10 });
+          // Roll back the user message we optimistically added
+          setMessages(messages);
+          setIsStreaming(false);
+          return;
+        }
         throw new Error(err.error || 'AI request failed');
       }
       if (!resp.body) throw new Error('No response body');
@@ -387,6 +423,8 @@ export const useNovaChat = () => {
         await saveMessage(conversationId, 'assistant', assistantContent);
         await supabase.from('ai_conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
       }
+      // Refresh usage indicator (free tier counts up)
+      queryClient.invalidateQueries({ queryKey: ['novachat-usage', user.id] });
     } catch (error: any) {
       if (error?.name === 'AbortError') {
         if (assistantContent) await saveMessage(conversationId!, 'assistant', assistantContent);
@@ -431,5 +469,7 @@ export const useNovaChat = () => {
     archiveConversation,
     toggleShare,
     stopGeneration,
+    limitReached,
+    clearLimitReached: () => setLimitReached(null),
   };
 };

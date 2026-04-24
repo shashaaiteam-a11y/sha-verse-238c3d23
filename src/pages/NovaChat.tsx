@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Menu, X, SquarePen, Download, Printer, Image as ImageIcon, Globe } from 'lucide-react';
-import { useNovaChat, Attachment, ChatMode } from '@/hooks/useNovaChat';
+import { useNovaChat, useNovaUsage, Attachment, ChatMode } from '@/hooks/useNovaChat';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import ChatMessage from '@/components/novachat/ChatMessage';
@@ -12,6 +12,8 @@ import ChatInput from '@/components/novachat/ChatInput';
 import { RewardedAdButton, BannerAd } from '@/components/ads';
 import { useRewardedAd } from '@/hooks/useRewardedAd';
 import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
+import LimitReachedModal from '@/components/novachat/LimitReachedModal';
+import PricingModal from '@/components/novachat/PricingModal';
 
 import { downloadMarkdown, downloadAsHtml, printConversation } from '@/components/novachat/exportUtils';
 import {
@@ -38,8 +40,12 @@ const NovaChat = () => {
     newChat,
     deleteConversation,
     updateTitle,
-    stopGeneration
+    stopGeneration,
+    limitReached,
+    clearLimitReached,
   } = useNovaChat();
+  const { data: usage } = useNovaUsage();
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   const [chatMode, setChatMode] = useState<ChatMode>('chat');
 
@@ -192,25 +198,17 @@ const NovaChat = () => {
         {sidebarOpen && (
 
           <ChatSidebar
-
             conversations={conversations}
-
             isLoading={conversationsLoading}
-
             currentConversationId={currentConversationId}
-
             user={user}
-
             onNewChat={newChat}
-
             onSelectConversation={selectConversation}
-
             onDeleteConversation={(id) => deleteConversation.mutate(id)}
-
             onRenameConversation={(id, title) => updateTitle.mutate({ id, title })}
-
+            usage={usage}
+            onUpgradeClick={() => setPricingOpen(true)}
           />
-
         )}
 
       </aside>
@@ -513,6 +511,21 @@ const NovaChat = () => {
 
       </main>
 
+      {/* Phase 2: Daily limit reached modal */}
+      <LimitReachedModal
+        open={!!limitReached}
+        onOpenChange={(o) => !o && clearLimitReached()}
+        used={limitReached?.used ?? 10}
+        limit={limitReached?.limit ?? 10}
+        onUpgrade={() => setPricingOpen(true)}
+      />
+
+      {/* Phase 3: Pricing / Pro upgrade modal */}
+      <PricingModal
+        open={pricingOpen}
+        onOpenChange={setPricingOpen}
+        isPro={!!usage?.is_pro}
+      />
     </div>
 
   );
