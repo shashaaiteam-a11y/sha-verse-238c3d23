@@ -12,6 +12,8 @@ import ChatInput from '@/components/novachat/ChatInput';
 import { RewardedAdButton, BannerAd } from '@/components/ads';
 import { useRewardedAd } from '@/hooks/useRewardedAd';
 import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
+import LimitReachedModal from '@/components/novachat/LimitReachedModal';
+import PricingModal from '@/components/novachat/PricingModal';
 
 import { downloadMarkdown, downloadAsHtml, printConversation } from '@/components/novachat/exportUtils';
 import {
