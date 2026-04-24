@@ -95,6 +95,32 @@ const Friends = () => {
                       </Button>
                       <Button
                         variant="outline"
+                        size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
+                        title="Voice call"
+                        onClick={() => friendship.profiles && startCall({
+                          id: friendship.profiles.id,
+                          display_name: friendship.profiles.display_name || 'User',
+                          avatar_url: friendship.profiles.avatar_url,
+                        }, 'voice')}
+                      >
+                        <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
+                        title="Video call"
+                        onClick={() => friendship.profiles && startCall({
+                          id: friendship.profiles.id,
+                          display_name: friendship.profiles.display_name || 'User',
+                          avatar_url: friendship.profiles.avatar_url,
+                        }, 'video')}
+                      >
+                        <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
                         size="sm"
                         className="text-xs sm:text-sm h-8 sm:h-9"
                         onClick={() => removeFriend.mutate(friendship.id)}
