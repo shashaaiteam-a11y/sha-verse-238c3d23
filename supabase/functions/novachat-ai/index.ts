@@ -9,7 +9,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_MESSAGE_LENGTH = 50000;
+const MAX_MESSAGE_LENGTH = 200000;
 const MAX_MESSAGES = 100;
 const ALLOWED_ROLES = ["user", "assistant", "system"];
 
@@ -24,7 +24,7 @@ const ALLOWED_MODELS = new Set([
   "openai/gpt-5-nano",
 ]);
 
-const IMAGE_MODEL = "google/gemini-2.5-flash-image";
+const IMAGE_MODEL = "google/gemini-2.5-flash-image-preview";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -132,12 +132,23 @@ Deno.serve(async (req) => {
       const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       const text = imgData.choices?.[0]?.message?.content || "Here is your generated image:";
 
-      // Return as fake SSE stream so frontend parser works uniformly
+      if (!imageUrl) {
+        console.error("No image returned from gateway:", JSON.stringify(imgData).slice(0, 500));
+        return jsonResponse({ error: "Image generation returned no image. Please try again." }, 500);
+      }
+
+      // Return as fake SSE stream so frontend parser works uniformly.
+      // Send the text first, then the image markdown in a separate event so the
+      // frontend's incremental parser handles the (very large) data URL safely.
       const stream = new ReadableStream({
         start(controller) {
           const enc = new TextEncoder();
-          const payload = { choices: [{ delta: { content: `${text}\n\n![Generated image](${imageUrl})` } }] };
-          controller.enqueue(enc.encode(`data: ${JSON.stringify(payload)}\n\n`));
+          const send = (content: string) => {
+            const payload = { choices: [{ delta: { content } }] };
+            controller.enqueue(enc.encode(`data: ${JSON.stringify(payload)}\n\n`));
+          };
+          send(`${text}\n\n`);
+          send(`![Generated image](${imageUrl})`);
           controller.enqueue(enc.encode("data: [DONE]\n\n"));
           controller.close();
         },

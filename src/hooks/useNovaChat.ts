@@ -134,7 +134,8 @@ export const useNovaChat = () => {
   });
 
   // ---------- Messages for current conversation ----------
-  const { isLoading: messagesLoading } = useQuery({
+  // Use cached data instantly so clicking a chat opens it immediately.
+  const { data: cachedMessages, isLoading: messagesLoading } = useQuery({
     queryKey: ['ai-messages', currentConversationId],
     queryFn: async () => {
       if (!currentConversationId) return [];
@@ -144,12 +145,17 @@ export const useNovaChat = () => {
         .eq('conversation_id', currentConversationId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      const msgs = data.map((m: any) => ({ id: m.id, role: m.role, content: m.content }));
-      setMessages(msgs);
-      return msgs;
+      return data.map((m: any) => ({ id: m.id, role: m.role, content: m.content })) as Message[];
     },
     enabled: !!currentConversationId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
+
+  // Sync query results into local state without blocking the UI render.
+  useEffect(() => {
+    if (cachedMessages) setMessages(cachedMessages);
+  }, [cachedMessages]);
 
   // ---------- Mutations ----------
   const deleteConversation = useMutation({
@@ -399,7 +405,13 @@ export const useNovaChat = () => {
     }
   }, [user, session, currentConversationId, messages, toast, queryClient, settings, mergeConversationIntoCache]);
 
-  const selectConversation = useCallback((id: string) => setCurrentConversationId(id), []);
+  const selectConversation = useCallback((id: string) => {
+    if (id === currentConversationId) return;
+    // Show cached messages instantly if we already have them, else clear.
+    const cached = queryClient.getQueryData<Message[]>(['ai-messages', id]);
+    setMessages(cached ?? []);
+    setCurrentConversationId(id);
+  }, [currentConversationId, queryClient]);
   const newChat = useCallback(() => { setCurrentConversationId(null); setMessages([]); }, []);
 
   return {
