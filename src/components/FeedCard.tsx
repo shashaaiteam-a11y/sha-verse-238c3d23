@@ -471,8 +471,9 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
                   <img 
                     src={allMedia[0]} 
                     alt="Post" 
-                    className="w-full max-h-[500px] object-cover"
+                    className={`w-full max-h-[500px] object-cover ${contentClickableClass}`}
                     loading="lazy"
+                    onClick={handleContentClick}
                   />
                 )}
               </div>
@@ -493,8 +494,9 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
                       key={idx}
                       src={url} 
                       alt={`Media ${idx + 1}`} 
-                      className="w-full object-cover aspect-square"
+                      className={`w-full object-cover aspect-square ${contentClickableClass}`}
                       loading="lazy"
+                      onClick={handleContentClick}
                     />
                   )
                 ))}
