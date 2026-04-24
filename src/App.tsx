@@ -13,6 +13,7 @@ import { ThemeProvider } from "next-themes";
 import { SwipeWrapper } from "./components/SwipeWrapper";
 import { AdProvider } from "./contexts/AdContext";
 import { ChatPresenceBridge } from "./components/chat/ChatPresenceBridge";
+import { GlobalCallHost } from "./modules/chats/components/GlobalCallHost";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("./modules/home/pages/Home"));
