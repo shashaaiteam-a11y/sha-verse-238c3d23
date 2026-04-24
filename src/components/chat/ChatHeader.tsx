@@ -3,6 +3,7 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +11,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -17,18 +21,17 @@ import {
   Phone,
   Video,
   MoreVertical,
-  Copy,
   Bell,
   BellOff,
   ShieldX,
   Ban,
   Trash2,
-  AlertCircle,
+  User,
   Lock,
+  Clock,
 } from 'lucide-react';
 import { PresenceStatus, OnlineBadge } from './PresenceStatus';
 import { ChatPrivacyDialog } from './ChatPrivacyDialog';
-import { cn } from '@/lib/utils';
 
 interface ChatHeaderProps {
   otherUser: {
@@ -47,6 +50,7 @@ interface ChatHeaderProps {
   onVideoCall: () => void;
   onBlock: () => void;
   onMute: (duration: 'always' | '8hours' | '1week') => void;
+  onUnmute: () => void;
   onClearChat: () => void;
   isLoading?: boolean;
 }
@@ -63,9 +67,11 @@ export const ChatHeader = ({
   onVideoCall,
   onBlock,
   onMute,
+  onUnmute,
   onClearChat,
   isLoading = false,
 }: ChatHeaderProps) => {
+  const navigate = useNavigate();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
 
@@ -164,17 +170,18 @@ export const ChatHeader = ({
               <MoreVertical className="w-5 h-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {/* View contact */}
-            <DropdownMenuItem onClick={() => {
-              // Navigate to profile
-              window.open(`/profile/${otherUser.username}`, '_blank');
-              setShowMoreMenu(false);
-            }}>
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                <span>View Profile</span>
-              </div>
+          <DropdownMenuContent align="end" className="w-56">
+            {/* View Profile - in-app navigation */}
+            <DropdownMenuItem
+              onClick={() => {
+                if (otherUser.username) {
+                  navigate(`/profile/${otherUser.username}`);
+                }
+                setShowMoreMenu(false);
+              }}
+            >
+              <User className="w-4 h-4 mr-2" />
+              <span>View Profile</span>
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
@@ -192,36 +199,55 @@ export const ChatHeader = ({
 
             <DropdownMenuSeparator />
 
-            {/* Mute options */}
-            <DropdownMenuItem
-              onClick={() => {
-                onMute('8hours');
-                setShowMoreMenu(false);
-              }}
-            >
-              <BellOff className="w-4 h-4 mr-2" />
-              <span>Mute for 8 hours</span>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem
-              onClick={() => {
-                onMute('1week');
-                setShowMoreMenu(false);
-              }}
-            >
-              <BellOff className="w-4 h-4 mr-2" />
-              <span>Mute for 1 week</span>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem
-              onClick={() => {
-                onMute('always');
-                setShowMoreMenu(false);
-              }}
-            >
-              <BellOff className="w-4 h-4 mr-2" />
-              <span>Mute always</span>
-            </DropdownMenuItem>
+            {/* Mute / Unmute - WhatsApp-style single entry */}
+            {isMuted ? (
+              <DropdownMenuItem
+                onClick={() => {
+                  onUnmute();
+                  setShowMoreMenu(false);
+                }}
+                className="text-emerald-600 focus:text-emerald-700"
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                <span>Unmute notifications</span>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <BellOff className="w-4 h-4 mr-2" />
+                  <span>Mute notifications</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      onMute('8hours');
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    <span>Mute for 8 hours</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      onMute('1week');
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    <span>Mute for 1 week</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      onMute('always');
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    <BellOff className="w-4 h-4 mr-2" />
+                    <span>Mute always</span>
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
 
             <DropdownMenuSeparator />
 
