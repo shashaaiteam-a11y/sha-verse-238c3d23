@@ -60,6 +60,7 @@ const BookDetailPage = () => {
 
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [pdfOutline, setPdfOutline] = useState<any[]>([]);
 
   // Use debouncing for progress updates
