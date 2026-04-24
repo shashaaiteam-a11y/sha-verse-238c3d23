@@ -55,6 +55,33 @@ const DEFAULT_SETTINGS: NovaSettings = {
   show_reasoning: false,
 };
 
+export interface NovaUsage {
+  is_pro: boolean;
+  used: number;
+  limit: number; // -1 = unlimited
+}
+
+export const useNovaUsage = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['novachat-usage', user?.id],
+    queryFn: async (): Promise<NovaUsage> => {
+      if (!user) return { is_pro: false, used: 0, limit: 10 };
+      const { data, error } = await (supabase as any).rpc('get_nova_usage_today', {
+        _user_id: user.id,
+      });
+      if (error || !data) return { is_pro: false, used: 0, limit: 10 };
+      return {
+        is_pro: !!data.is_pro,
+        used: Number(data.used ?? 0),
+        limit: Number(data.limit ?? 10),
+      };
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+};
+
 export const useNovaChat = () => {
   const { user, session } = useAuth();
   const { toast } = useToast();
@@ -62,6 +89,7 @@ export const useNovaChat = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [limitReached, setLimitReached] = useState<{ used: number; limit: number } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // ---------- Settings ----------
