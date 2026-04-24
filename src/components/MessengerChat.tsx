@@ -493,12 +493,18 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   isMuted={isMuted || false}
                   onBack={() => setSelectedConversation(null)}
                   onCall={() => {
-                    setIsVideoCall(false);
-                    setShowCallDialog(true);
+                    if (otherUser) startCall({
+                      id: otherUser.id,
+                      display_name: otherUser.display_name || 'User',
+                      avatar_url: otherUser.avatar_url,
+                    }, 'voice');
                   }}
                   onVideoCall={() => {
-                    setIsVideoCall(true);
-                    setShowCallDialog(true);
+                    if (otherUser) startCall({
+                      id: otherUser.id,
+                      display_name: otherUser.display_name || 'User',
+                      avatar_url: otherUser.avatar_url,
+                    }, 'video');
                   }}
                   onBlock={handleBlockToggle}
                   onMute={(duration) => muteConversation.mutate(duration || 'always')}
