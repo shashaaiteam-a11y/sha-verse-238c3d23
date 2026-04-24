@@ -21,6 +21,7 @@ const ChannelPage = lazy(() => import("./modules/movion/pages/ChannelPage"));
 const CreatorStudio = lazy(() => import("./modules/movion/pages/CreatorStudio"));
 const MovionLibrary = lazy(() => import("./modules/movion/pages/MovionLibrary"));
 const NovaChat = lazy(() => import("./modules/novachat/pages/NovaChat"));
+const NovaChatShare = lazy(() => import("./pages/NovaChatShare"));
 const Bookshelf = lazy(() => import("./modules/bookshelf/pages/Bookshelf"));
 const BookDetail = lazy(() => import("./modules/bookshelf/pages/BookDetail"));
 const EditBook = lazy(() => import("./modules/bookshelf/pages/EditBook"));
@@ -103,6 +104,7 @@ const App = () => (
                     <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(VideoWatch)}</ProtectedRoute>} />
                     <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(ChannelPage)}</ProtectedRoute>} />
                     <Route path="/novachat" element={<ProtectedRoute>{withSuspense(NovaChat)}</ProtectedRoute>} />
+                    <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
                     <Route path="/bookshelf" element={<ProtectedRoute>{withSuspense(Bookshelf)}</ProtectedRoute>} />
                     <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute>{withSuspense(EditBook)}</ProtectedRoute>} />
                     <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute>{withSuspense(BookReader)}</ProtectedRoute>} />
