@@ -301,6 +301,59 @@ export type Database = {
           },
         ]
       }
+      book_reports: {
+        Row: {
+          admin_notes: string | null
+          book_id: string
+          contact_email: string | null
+          created_at: string
+          description: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          book_id: string
+          contact_email?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          book_id?: string
+          contact_email?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_reports_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       books: {
         Row: {
           age_restriction: string | null
@@ -314,6 +367,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           downloads_count: number | null
+          file_hash: string | null
           id: string
           language: string | null
           likes_count: number | null
@@ -338,6 +392,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           downloads_count?: number | null
+          file_hash?: string | null
           id?: string
           language?: string | null
           likes_count?: number | null
@@ -362,6 +417,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           downloads_count?: number | null
+          file_hash?: string | null
           id?: string
           language?: string | null
           likes_count?: number | null
