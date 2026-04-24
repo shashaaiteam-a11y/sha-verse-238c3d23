@@ -9,7 +9,9 @@
  * Saves through `upsert_my_chat_privacy` RPC. Server enforces the
  * "Give and Take" rule (hiding both means you can't see others' status).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
 import {
   Dialog,
   DialogContent,
@@ -42,11 +44,14 @@ interface ChatPrivacyDialogProps {
 
 export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [lastSeen, setLastSeen] = useState<Visibility>('everyone');
   const [onlineStatus, setOnlineStatus] = useState<Visibility>('everyone');
   const [readReceipts, setReadReceipts] = useState(true);
+
 
   // Load current settings + subscribe to live changes (other tabs/devices)
   useEffect(() => {
@@ -85,7 +90,7 @@ export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          if (!saving) void loadSettings();
+          if (!savingRef.current) void loadSettings();
         }
       )
       .subscribe();
@@ -94,10 +99,11 @@ export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [open, user?.id, saving]);
+  }, [open, user?.id]);
 
   const handleSave = async () => {
     if (!user?.id) return;
+    savingRef.current = true;
     setSaving(true);
 
     const { error } = await (supabase as any).rpc('upsert_my_chat_privacy', {
@@ -107,12 +113,17 @@ export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps
     });
 
     setSaving(false);
+    savingRef.current = false;
 
     if (error) {
       console.error('Failed to save chat privacy:', error);
       toast.error('Could not save privacy settings');
       return;
     }
+
+    // Make presence header pills (Online / Last seen) reflect new visibility instantly
+    queryClient.invalidateQueries({ queryKey: ['user-presence'] });
+    queryClient.invalidateQueries({ queryKey: ['chat-partner-presence'] });
 
     toast.success('Privacy settings saved');
     onOpenChange(false);
