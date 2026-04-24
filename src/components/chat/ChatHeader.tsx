@@ -71,6 +71,7 @@ export const ChatHeader = ({
   onMute,
   onUnmute,
   onClearChat,
+  onSearchToggle,
   isLoading = false,
 }: ChatHeaderProps) => {
   const navigate = useNavigate();
