@@ -322,6 +322,7 @@ export const useNovaChat = () => {
           systemPrompt: settings?.custom_system_prompt,
           memoryFacts: settings?.memory_facts,
           mode,
+          showReasoning: settings?.show_reasoning,
         }),
         signal: abortControllerRef.current.signal,
       });
