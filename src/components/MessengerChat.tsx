@@ -289,13 +289,27 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   if (!isOpen) return null;
 
+  // Tab change side-effects (Settings opens dialog, People opens user search)
+  const handleTabChange = (tab: ChatNavTab) => {
+    setActiveTab(tab);
+    if (tab === 'settings') {
+      setShowPrivacyDialog(true);
+    } else if (tab === 'people') {
+      setShowUserSearch(true);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex bg-background">
+    <div className="fixed inset-0 z-50 flex bg-background pb-14 sm:pb-0">
+      {/* Messenger-style responsive nav bar (left on tablet/desktop, bottom on mobile) */}
+      <ChatNavBar active={activeTab} onChange={handleTabChange} onClose={onClose} />
+
       {/* Sidebar - Conversations List */}
       <div className={cn(
-        "w-full sm:w-[340px] border-r border-border flex flex-col bg-card",
+        "w-full sm:w-[320px] lg:w-[360px] border-r border-border flex flex-col bg-card",
         selectedConversation && "hidden sm:flex"
       )}>
+
         {/* Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
