@@ -18,6 +18,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/components/ui/use-toast';
+import { speakText, stopSpeaking } from '@/components/novachat/useVoiceInput';
 
 
 
@@ -79,6 +80,19 @@ const NovaChat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   }, [messages]);
+
+  // Speak the latest assistant reply when voice is enabled and streaming has stopped
+  useEffect(() => {
+    if (!settings?.voice_enabled || isStreaming) return;
+    const last = messages[messages.length - 1];
+    if (last?.role === 'assistant' && last.content) {
+      speakText(last.content);
+    }
+    return () => stopSpeaking();
+  }, [isStreaming, settings?.voice_enabled, messages]);
+
+  // Stop any ongoing TTS on unmount
+  useEffect(() => () => stopSpeaking(), []);
 
 
 
@@ -524,6 +538,10 @@ const NovaChat = () => {
           onAttachmentsChange={setAttachments}
 
           onNewChat={newChat}
+
+          mode={chatMode}
+
+          onModeChange={setChatMode}
 
         />
 
