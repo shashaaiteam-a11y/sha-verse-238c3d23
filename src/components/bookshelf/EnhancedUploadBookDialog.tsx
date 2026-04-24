@@ -28,6 +28,7 @@ import {
 import { useBooks } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import CopyrightAgreementDialog from "./CopyrightAgreementDialog";
 
 interface EnhancedUploadBookDialogProps {
   open: boolean;
