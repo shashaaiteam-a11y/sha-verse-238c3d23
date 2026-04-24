@@ -174,8 +174,8 @@ export const ChatHeader = ({
             {/* View Profile - in-app navigation */}
             <DropdownMenuItem
               onClick={() => {
-                if (otherUser.username) {
-                  navigate(`/profile/${otherUser.username}`);
+                if (otherUser.id) {
+                  navigate(`/profile/${otherUser.id}`);
                 }
                 setShowMoreMenu(false);
               }}
