@@ -30,6 +30,7 @@ import { useBookInteractions } from "@/hooks/useBookInteractions";
 import PDFViewer from "./PDFViewer";
 import BookRatingDialog from "./BookRatingDialog";
 import BookDeletionDialog from "./BookDeletionDialog";
+import BookReportDialog from "./BookReportDialog";
 import CommentSection from "./CommentSection";
 import { BannerAd, RewardedAdButton, StickyBannerAd } from "@/components/ads";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
