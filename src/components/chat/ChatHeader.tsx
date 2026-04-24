@@ -29,6 +29,7 @@ import {
   User,
   Lock,
   Clock,
+  Search,
 } from 'lucide-react';
 import { PresenceStatus, OnlineBadge } from './PresenceStatus';
 import { ChatPrivacyDialog } from './ChatPrivacyDialog';
@@ -52,6 +53,7 @@ interface ChatHeaderProps {
   onMute: (duration: 'always' | '8hours' | '1week') => void;
   onUnmute: () => void;
   onClearChat: () => void;
+  onSearchToggle?: () => void;
   isLoading?: boolean;
 }
 
@@ -69,6 +71,7 @@ export const ChatHeader = ({
   onMute,
   onUnmute,
   onClearChat,
+  onSearchToggle,
   isLoading = false,
 }: ChatHeaderProps) => {
   const navigate = useNavigate();
@@ -183,6 +186,21 @@ export const ChatHeader = ({
               <User className="w-4 h-4 mr-2" />
               <span>View Profile</span>
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            {/* Search in chat - WhatsApp style */}
+            {onSearchToggle && (
+              <DropdownMenuItem
+                onClick={() => {
+                  onSearchToggle();
+                  setShowMoreMenu(false);
+                }}
+              >
+                <Search className="w-4 h-4 mr-2" />
+                <span>Search</span>
+              </DropdownMenuItem>
+            )}
 
             <DropdownMenuSeparator />
 

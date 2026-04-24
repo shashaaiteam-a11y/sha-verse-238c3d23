@@ -442,37 +442,74 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         {selectedConversation ? (
           <ChatLayout
             header={
-              <ChatHeader
-                otherUser={otherUser ? {
-                  id: otherUser.id || '',
-                  display_name: otherUser.display_name || 'Unknown User',
-                  username: otherUser.username || '',
-                  avatar_url: otherUser.avatar_url
-                } : null}
-                isOnline={isOnline || false}
-                lastSeen={lastSeen || null}
-                isBlocked={isBlocked || false}
-                isBlockedBy={isBlockedBy || false}
-                isMuted={isMuted || false}
-                onBack={() => setSelectedConversation(null)}
-                onCall={() => {
-                  setIsVideoCall(false);
-                  setShowCallDialog(true);
-                }}
-                onVideoCall={() => {
-                  setIsVideoCall(true);
-                  setShowCallDialog(true);
-                }}
-                onBlock={handleBlockToggle}
-                onMute={(duration) => muteConversation.mutate(duration || 'always')}
-                onUnmute={() => unmuteConversation.mutate()}
-                onClearChat={() => {
-                  if (confirm('Clear all messages in this chat?')) {
-                    clearMessages.mutate();
-                  }
-                }}
-                isLoading={blockUser.isPending || unblockUser.isPending}
-              />
+              isSearching ? (
+                <div className="flex items-center gap-2 p-3 border-b bg-background sticky top-0 z-40">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setIsSearching(false);
+                      setMessageSearchQuery('');
+                    }}
+                    className="flex-shrink-0"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      autoFocus
+                      value={messageSearchQuery}
+                      onChange={(e) => setMessageSearchQuery(e.target.value)}
+                      placeholder="Search messages..."
+                      className="pl-10 bg-secondary border-0 rounded-full"
+                    />
+                  </div>
+                  {messageSearchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMessageSearchQuery('')}
+                      className="flex-shrink-0"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <ChatHeader
+                  otherUser={otherUser ? {
+                    id: otherUser.id || '',
+                    display_name: otherUser.display_name || 'Unknown User',
+                    username: otherUser.username || '',
+                    avatar_url: otherUser.avatar_url
+                  } : null}
+                  isOnline={isOnline || false}
+                  lastSeen={lastSeen || null}
+                  isBlocked={isBlocked || false}
+                  isBlockedBy={isBlockedBy || false}
+                  isMuted={isMuted || false}
+                  onBack={() => setSelectedConversation(null)}
+                  onCall={() => {
+                    setIsVideoCall(false);
+                    setShowCallDialog(true);
+                  }}
+                  onVideoCall={() => {
+                    setIsVideoCall(true);
+                    setShowCallDialog(true);
+                  }}
+                  onBlock={handleBlockToggle}
+                  onMute={(duration) => muteConversation.mutate(duration || 'always')}
+                  onUnmute={() => unmuteConversation.mutate()}
+                  onClearChat={() => {
+                    if (confirm('Clear all messages in this chat?')) {
+                      clearMessages.mutate();
+                    }
+                  }}
+                  onSearchToggle={() => setIsSearching(true)}
+                  isLoading={blockUser.isPending || unblockUser.isPending}
+                />
+              )
             }
             messages={
               filteredMessages.length > 0 ? (
