@@ -22,6 +22,8 @@ import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
 import { TickIndicator } from './chat/TickIndicator';
+import { ChatNavBar, type ChatNavTab } from './chat/ChatNavBar';
+import { ChatPrivacyDialog } from './chat/ChatPrivacyDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
