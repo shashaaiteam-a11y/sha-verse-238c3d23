@@ -22,8 +22,6 @@ import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
 import { TickIndicator } from './chat/TickIndicator';
-import { ChatNavBar, type ChatNavTab } from './chat/ChatNavBar';
-import { ChatPrivacyDialog } from './chat/ChatPrivacyDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -53,8 +51,6 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<ChatNavTab>('chats');
-  const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
 
   const conversationId = selectedConversation?.id || null;
   const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
@@ -289,27 +285,13 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   if (!isOpen) return null;
 
-  // Tab change side-effects (Settings opens dialog, People opens user search)
-  const handleTabChange = (tab: ChatNavTab) => {
-    setActiveTab(tab);
-    if (tab === 'settings') {
-      setShowPrivacyDialog(true);
-    } else if (tab === 'people') {
-      setShowUserSearch(true);
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex bg-background pb-14 sm:pb-0">
-      {/* Messenger-style responsive nav bar (left on tablet/desktop, bottom on mobile) */}
-      <ChatNavBar active={activeTab} onChange={handleTabChange} onClose={onClose} />
-
+    <div className="fixed inset-0 z-50 flex bg-background">
       {/* Sidebar - Conversations List */}
       <div className={cn(
-        "w-full sm:w-[320px] lg:w-[360px] border-r border-border flex flex-col bg-card",
+        "w-full sm:w-[340px] border-r border-border flex flex-col bg-card",
         selectedConversation && "hidden sm:flex"
       )}>
-
         {/* Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
@@ -619,10 +601,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       {/* User Search Dialog for Starting New Conversations */}
       <ChatUserSearchDialog
         open={showUserSearch}
-        onOpenChange={(open) => {
-          setShowUserSearch(open);
-          if (!open && activeTab === 'people') setActiveTab('chats');
-        }}
+        onOpenChange={setShowUserSearch}
         onSelectUser={async (selectedUser) => {
           try {
             const conversationId = await startConversation.mutateAsync(selectedUser.id);
@@ -634,15 +613,6 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
           } catch (error) {
             toast.error('Failed to start conversation');
           }
-        }}
-      />
-
-      {/* Chat Privacy Settings Dialog (opened from nav Settings tab) */}
-      <ChatPrivacyDialog
-        open={showPrivacyDialog}
-        onOpenChange={(open) => {
-          setShowPrivacyDialog(open);
-          if (!open && activeTab === 'settings') setActiveTab('chats');
         }}
       />
     </div>
