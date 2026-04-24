@@ -660,25 +660,17 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
         ) : null}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <div className="flex justify-between items-center">
-          <h4 className="font-semibold text-sm truncate">
-            {otherUser?.display_name || 'Unknown User'}
+        {/* Row 1: Name only (WhatsApp-style 3-word + ellipsis truncation) */}
+        <div className="flex items-center gap-1 min-w-0">
+          <h4 className="font-semibold text-sm truncate min-w-0 flex-1">
+            {truncateNameWords(otherUser?.display_name || 'Unknown User', 3)}
           </h4>
-          <div className="flex items-center gap-1">
-            {isMuted && (
-              <BellOff className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-            )}
-            {convo.lastMessage && (
-              <span className={cn(
-                "text-[11px]",
-                unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
-              )}>
-                {formatDistanceToNow(new Date(convo.lastMessage.created_at), { addSuffix: false })}
-              </span>
-            )}
-          </div>
+          {isMuted && (
+            <BellOff className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          )}
         </div>
-        <div className="flex items-center justify-between gap-1">
+        {/* Row 2: Ticks + last message + time + unread badge */}
+        <div className="flex items-center justify-between gap-2 mt-0.5">
           <div className="flex items-center gap-1 min-w-0 flex-1">
             {convo.lastMessage?.sender_id === currentUserId && (
               <TickIndicator 
@@ -688,6 +680,16 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
             <p className="text-sm text-muted-foreground truncate">
               {isBlocked ? '🚫 Blocked' : (convo.lastMessage?.content || 'No messages yet')}
             </p>
+            {convo.lastMessage && (
+              <span
+                className={cn(
+                  "text-[11px] flex-shrink-0 ml-1 whitespace-nowrap",
+                  unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+                )}
+              >
+                · {formatDistanceToNow(new Date(convo.lastMessage.created_at), { addSuffix: false })}
+              </span>
+            )}
           </div>
           {unreadCount > 0 && !isBlocked && (
             <span
