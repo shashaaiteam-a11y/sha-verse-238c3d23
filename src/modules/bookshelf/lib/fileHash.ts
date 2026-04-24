@@ -58,7 +58,7 @@ export async function checkBookDuplicate(params: {
 
   // 2. Metadata match (title + author, case-insensitive)
   if (title && author) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("books")
       .select("id, title, author")
       .ilike("title", title.trim())
@@ -68,7 +68,7 @@ export async function checkBookDuplicate(params: {
       return {
         isDuplicate: true,
         matchType: "metadata",
-        existingBook: data as any,
+        existingBook: data,
       };
     }
   }
