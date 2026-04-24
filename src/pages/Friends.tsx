@@ -1,10 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { UserPlus, UserMinus, Check, X, MessageCircle } from "lucide-react";
+import { UserPlus, UserMinus, Check, X, MessageCircle, Phone, Video } from "lucide-react";
 import { useFriends } from '@/hooks/useFriends';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from 'react-router-dom';
+import { useCall } from '@/modules/chats/components/CallProvider';
 
 const Friends = () => {
   const navigate = useNavigate();
