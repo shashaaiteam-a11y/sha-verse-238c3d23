@@ -633,7 +633,7 @@ const BookReader = () => {
           {/* PDF Viewer — wrapper paints theme bg behind canvas so any
               side gutters from natural aspect ratio match the reader theme. */}
           {fileType === "pdf" && book.book_url && (
-            <div className={cn("w-full h-full flex items-center justify-center", colors.bg)}>
+            <div className={cn("w-full h-full overflow-auto overscroll-contain", colors.bg)} style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y pinch-zoom" }}>
               <PDFViewer
                 key={`${book.id}-${book.book_url}`}
                 url={book.book_url}
@@ -643,7 +643,7 @@ const BookReader = () => {
                 onOutlineExtracted={handleOutlineExtracted}
                 isDarkMode={theme === "dark"}
                 scale={scale}
-                className="max-w-full max-h-full"
+                className="max-w-full"
               />
             </div>
           )}
