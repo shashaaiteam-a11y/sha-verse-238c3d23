@@ -159,7 +159,32 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     }
   });
 
-  // Unread counts for all conversations (WhatsApp-style per-chat badge)
+  // Realtime: mute state syncs across tabs/devices instantly
+  useEffect(() => {
+    if (!conversationId || !user?.id) return;
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const channel = supabase
+      .channel(`chat-mute-${conversationId}-${user.id}-${suffix}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversation_members',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload: any) => {
+          if (payload.new?.user_id === user.id) {
+            queryClient.invalidateQueries({ queryKey: ['chat-muted', conversationId, user.id] });
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, user?.id, queryClient]);
+
   const conversationIds = conversations?.map((c: any) => c.id).filter(Boolean) || [];
   const conversationIdsKey = conversationIds.join(',');
 
