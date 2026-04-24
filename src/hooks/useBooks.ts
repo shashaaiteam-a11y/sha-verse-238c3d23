@@ -179,6 +179,7 @@ export const useBooks = (options: {
           isbn: isbn || undefined,
           publisher: publisher || undefined,
           publication_date: publicationDate || undefined,
+          file_hash: fileHash || undefined,
         } as any)
         .select()
         .single();
