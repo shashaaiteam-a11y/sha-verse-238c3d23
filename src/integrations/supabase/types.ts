@@ -2063,9 +2063,13 @@ export type Database = {
           created_at: string
           custom_system_prompt: string | null
           id: string
+          is_pro: boolean
           memory_facts: string | null
           preferred_model: string
+          pro_expires_at: string | null
           show_reasoning: boolean
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string
           user_id: string
           voice_enabled: boolean
@@ -2074,9 +2078,13 @@ export type Database = {
           created_at?: string
           custom_system_prompt?: string | null
           id?: string
+          is_pro?: boolean
           memory_facts?: string | null
           preferred_model?: string
+          pro_expires_at?: string | null
           show_reasoning?: boolean
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
           voice_enabled?: boolean
@@ -2085,12 +2093,43 @@ export type Database = {
           created_at?: string
           custom_system_prompt?: string | null
           id?: string
+          is_pro?: boolean
           memory_facts?: string | null
           preferred_model?: string
+          pro_expires_at?: string | null
           show_reasoning?: boolean
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
           voice_enabled?: boolean
+        }
+        Relationships: []
+      }
+      novachat_usage: {
+        Row: {
+          created_at: string
+          id: string
+          message_count: number
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_count?: number
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_count?: number
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -4271,6 +4310,10 @@ export type Database = {
         Args: { _profile_owner_id: string; _viewer_id: string }
         Returns: boolean
       }
+      check_and_increment_nova_usage: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
       check_rate_limit: {
         Args: { p_attempt_type: string; p_identifier: string }
         Returns: boolean
@@ -4307,6 +4350,7 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: string
       }
+      get_nova_usage_today: { Args: { _user_id: string }; Returns: Json }
       get_user_presence_safe: {
         Args: { _target_user_id: string }
         Returns: {
