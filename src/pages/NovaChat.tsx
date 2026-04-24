@@ -341,13 +341,7 @@ const NovaChat = () => {
           </div>
         </header>
 
-        <NovaChatSettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          settings={settings}
-          onSave={(patch) => updateSettings.mutate(patch)}
-          isSaving={updateSettings.isPending}
-        />
+
 
 
 
