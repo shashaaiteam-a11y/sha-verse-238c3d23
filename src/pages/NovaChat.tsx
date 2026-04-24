@@ -1,30 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
-
 import { Button } from '@/components/ui/button';
-
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-import { Menu, X, SquarePen } from 'lucide-react';
-
-import { useNovaChat, Attachment } from '@/hooks/useNovaChat';
-
+import { Menu, X, SquarePen, Settings, Download, Share2, Printer, Image as ImageIcon, Globe } from 'lucide-react';
+import { useNovaChat, Attachment, ChatMode } from '@/hooks/useNovaChat';
 import { useAuth } from '@/contexts/AuthContext';
-
 import { cn } from '@/lib/utils';
-
 import ChatMessage from '@/components/novachat/ChatMessage';
-
 import ChatSidebar from '@/components/novachat/ChatSidebar';
-
 import WelcomeScreen from '@/components/novachat/WelcomeScreen';
-
 import ChatInput from '@/components/novachat/ChatInput';
-
 import { RewardedAdButton, BannerAd } from '@/components/ads';
-
 import { useRewardedAd } from '@/hooks/useRewardedAd';
-
 import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
+import NovaChatSettingsDialog from '@/components/novachat/NovaChatSettingsDialog';
+import { downloadMarkdown, downloadAsHtml, printConversation } from '@/components/novachat/exportUtils';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import { useToast } from '@/components/ui/use-toast';
 
 
 
