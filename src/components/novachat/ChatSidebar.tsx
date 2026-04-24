@@ -50,7 +50,9 @@ const ChatSidebar = ({
   onNewChat,
   onSelectConversation,
   onDeleteConversation,
-  onRenameConversation
+  onRenameConversation,
+  usage,
+  onUpgradeClick,
 }: ChatSidebarProps) => {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
