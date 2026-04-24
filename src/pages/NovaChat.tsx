@@ -105,24 +105,6 @@ const NovaChat = () => {
   };
 
   const currentConv = conversations?.find(c => c.id === currentConversationId);
-  const handleShare = async () => {
-    if (!currentConversationId) {
-      toast({ title: 'Open a chat first', variant: 'destructive' });
-      return;
-    }
-    if (currentConv?.share_token) {
-      const url = `${window.location.origin}/novachat/share/${currentConv.share_token}`;
-      await navigator.clipboard.writeText(url);
-      toast({ title: 'Link copied', description: 'Share link copied to clipboard' });
-      return;
-    }
-    const token = await toggleShare.mutateAsync({ id: currentConversationId, enable: true });
-    if (token) {
-      const url = `${window.location.origin}/novachat/share/${token}`;
-      await navigator.clipboard.writeText(url);
-      toast({ title: 'Share link created', description: 'Link copied to clipboard' });
-    }
-  };
 
 
 
