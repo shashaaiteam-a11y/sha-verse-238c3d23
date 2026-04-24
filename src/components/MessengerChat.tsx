@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, Send, Phone, Video, MoreVertical,
-  Search, Plus, FileText, X, ShieldX, Ban, BellOff
+  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
@@ -22,6 +22,7 @@ import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
 import { TickIndicator } from './chat/TickIndicator';
+import { MessageInfoDialog } from './chat/MessageInfoDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -51,6 +52,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [infoMessage, setInfoMessage] = useState<any | null>(null);
 
   const conversationId = selectedConversation?.id || null;
   const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
@@ -533,9 +535,24 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           </div>
                         )}
                         <div className={cn(
-                          "flex",
+                          "flex group/msg items-center gap-1",
                           isOwn ? "justify-end" : "justify-start"
                         )}>
+                          {/* Info button on the LEFT of own bubbles (hover/touch) */}
+                          {isOwn && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInfoMessage(message);
+                              }}
+                              aria-label="Message info"
+                              className="opacity-0 group-hover/msg:opacity-100 focus:opacity-100 active:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          )}
+
                           <div className={cn(
                             "max-w-[75%] px-3 py-2 rounded-lg shadow-sm",
                             isOwn 
@@ -677,6 +694,13 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
             toast.error('Failed to start conversation');
           }
         }}
+      />
+
+      {/* WhatsApp-style Message Info dialog (Sent / Delivered / Read times + realtime) */}
+      <MessageInfoDialog
+        open={!!infoMessage}
+        onOpenChange={(o) => !o && setInfoMessage(null)}
+        message={infoMessage}
       />
     </div>
   );
