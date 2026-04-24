@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import { SwipeWrapper } from "./components/SwipeWrapper";
 import { AdProvider } from "./contexts/AdContext";
+import { ChatPresenceBridge } from "./components/chat/ChatPresenceBridge";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("./modules/home/pages/Home"));
@@ -94,6 +95,7 @@ const App = () => (
           <AuthProvider>
             <MobileProvider>
               <AdProvider>
+              <ChatPresenceBridge />
               <div className="min-h-screen bg-background safe-left safe-right">
                 <SwipeWrapper>
                   <Routes>
