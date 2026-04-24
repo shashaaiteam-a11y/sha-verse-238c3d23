@@ -42,16 +42,16 @@ export async function checkBookDuplicate(params: {
 
   // 1. File-hash match (strongest signal)
   if (fileHash) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("books")
       .select("id, title, author")
-      .eq("file_hash" as any, fileHash)
+      .eq("file_hash", fileHash)
       .maybeSingle();
     if (!error && data) {
       return {
         isDuplicate: true,
         matchType: "file",
-        existingBook: data as any,
+        existingBook: data,
       };
     }
   }
