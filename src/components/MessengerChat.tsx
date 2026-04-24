@@ -619,6 +619,14 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   );
 };
 
+// WhatsApp-style: keep first N words, append "..." if more
+const truncateNameWords = (name: string, maxWords: number = 3): string => {
+  if (!name) return 'Unknown User';
+  const words = name.trim().split(/\s+/);
+  if (words.length <= maxWords) return name;
+  return words.slice(0, maxWords).join(' ') + '...';
+};
+
 // Conversation List Item with online status & blocked indicator
 const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted, unreadCount, currentUserId, onClick }: {
   convo: any;
