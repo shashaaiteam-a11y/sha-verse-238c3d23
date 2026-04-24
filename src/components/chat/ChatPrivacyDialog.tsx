@@ -9,7 +9,9 @@
  * Saves through `upsert_my_chat_privacy` RPC. Server enforces the
  * "Give and Take" rule (hiding both means you can't see others' status).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
 import {
   Dialog,
   DialogContent,
@@ -42,11 +44,14 @@ interface ChatPrivacyDialogProps {
 
 export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [lastSeen, setLastSeen] = useState<Visibility>('everyone');
   const [onlineStatus, setOnlineStatus] = useState<Visibility>('everyone');
   const [readReceipts, setReadReceipts] = useState(true);
+
 
   // Load current settings + subscribe to live changes (other tabs/devices)
   useEffect(() => {
