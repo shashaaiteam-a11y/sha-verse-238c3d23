@@ -1295,7 +1295,7 @@ const EnhancedUploadBookDialog = ({
                 </Button>
                 <Button
                   className="flex-1"
-                  onClick={handleSubmit}
+                  onClick={handleRequestPublish}
                   disabled={uploadBook.isPending}
                 >
                   {uploadBook.isPending ? (
