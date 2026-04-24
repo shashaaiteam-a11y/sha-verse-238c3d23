@@ -52,6 +52,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [infoMessage, setInfoMessage] = useState<any | null>(null);
 
   const conversationId = selectedConversation?.id || null;
   const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
