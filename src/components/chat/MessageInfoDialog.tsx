@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, CheckCheck, Send } from 'lucide-react';
+import { Check, CheckCheck } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -125,16 +125,24 @@ export const MessageInfoDialog = ({
           </p>
         </div>
 
-        {/* Status rows */}
-        <div className="mt-2 space-y-3">
+        {/* Status rows — WhatsApp order: Read → Delivered → Sent (most recent first) */}
+        <div className="mt-2 space-y-1">
           <InfoRow
-            icon={<CheckCheck className={cn('h-5 w-5', readAt ? 'text-blue-500' : 'text-muted-foreground/40')} />}
+            icon={
+              <CheckCheck
+                className={cn('h-5 w-5', readAt ? 'text-blue-500' : 'text-muted-foreground/40')}
+              />
+            }
             label="Read"
             time={readLabel}
             active={!!readAt}
           />
           <InfoRow
-            icon={<CheckCheck className={cn('h-5 w-5', deliveredAt ? 'text-foreground' : 'text-muted-foreground/40')} />}
+            icon={
+              <CheckCheck
+                className={cn('h-5 w-5', deliveredAt ? 'text-foreground' : 'text-muted-foreground/40')}
+              />
+            }
             label="Delivered"
             time={deliveredLabel}
             active={!!deliveredAt}
