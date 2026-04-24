@@ -197,16 +197,21 @@ export const useBooks = (options: {
       console.error('Book upload failed:', error);
 
       // Handle specific error types
-      if (error.message.includes('storage_limit_exceeded')) {
+      const msg = error.message || '';
+      if (msg.includes('already exists in the SHA-VERSE library') || msg.includes('book with this title and author already exists')) {
+        toast.error(msg);
+      } else if (msg.includes('idx_books_file_hash_unique') || msg.includes('idx_books_title_author_unique') || msg.includes('duplicate key')) {
+        toast.error('This book already exists in the SHA-VERSE library.');
+      } else if (msg.includes('storage_limit_exceeded')) {
         toast.error('Storage limit exceeded. Please upgrade your plan or remove some files.');
-      } else if (error.message.includes('file_size_limit')) {
+      } else if (msg.includes('file_size_limit')) {
         toast.error('File too large. Maximum file size is 100MB.');
-      } else if (error.message.includes('invalid_file_format')) {
+      } else if (msg.includes('invalid_file_format')) {
         toast.error('Invalid file format. Please upload PDF, EPUB, or MOBI files.');
-      } else if (error.message.includes('not_authenticated')) {
+      } else if (msg.includes('not_authenticated')) {
         toast.error('Please sign in to upload books.');
       } else {
-        toast.error(`Upload failed: ${error.message}`);
+        toast.error(`Upload failed: ${msg}`);
       }
     },
   });
