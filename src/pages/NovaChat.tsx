@@ -511,6 +511,21 @@ const NovaChat = () => {
 
       </main>
 
+      {/* Phase 2: Daily limit reached modal */}
+      <LimitReachedModal
+        open={!!limitReached}
+        onOpenChange={(o) => !o && clearLimitReached()}
+        used={limitReached?.used ?? 10}
+        limit={limitReached?.limit ?? 10}
+        onUpgrade={() => setPricingOpen(true)}
+      />
+
+      {/* Phase 3: Pricing / Pro upgrade modal */}
+      <PricingModal
+        open={pricingOpen}
+        onOpenChange={setPricingOpen}
+        isPro={!!usage?.is_pro}
+      />
     </div>
 
   );
