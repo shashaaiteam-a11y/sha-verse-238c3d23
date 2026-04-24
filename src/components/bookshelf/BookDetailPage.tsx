@@ -567,6 +567,13 @@ const BookDetailPage = () => {
         bookId={id || ''}
         bookTitle={book.title}
       />
+
+      <BookReportDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        bookId={id || ''}
+        bookTitle={book.title}
+      />
     </div>
   );
 };
