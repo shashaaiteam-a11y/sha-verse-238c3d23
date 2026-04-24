@@ -90,7 +90,7 @@ export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          if (!saving) void loadSettings();
+          if (!savingRef.current) void loadSettings();
         }
       )
       .subscribe();
@@ -99,10 +99,11 @@ export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [open, user?.id, saving]);
+  }, [open, user?.id]);
 
   const handleSave = async () => {
     if (!user?.id) return;
+    savingRef.current = true;
     setSaving(true);
 
     const { error } = await (supabase as any).rpc('upsert_my_chat_privacy', {
@@ -112,12 +113,17 @@ export const ChatPrivacyDialog = ({ open, onOpenChange }: ChatPrivacyDialogProps
     });
 
     setSaving(false);
+    savingRef.current = false;
 
     if (error) {
       console.error('Failed to save chat privacy:', error);
       toast.error('Could not save privacy settings');
       return;
     }
+
+    // Make presence header pills (Online / Last seen) reflect new visibility instantly
+    queryClient.invalidateQueries({ queryKey: ['user-presence'] });
+    queryClient.invalidateQueries({ queryKey: ['chat-partner-presence'] });
 
     toast.success('Privacy settings saved');
     onOpenChange(false);
