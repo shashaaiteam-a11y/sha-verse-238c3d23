@@ -91,6 +91,7 @@ Deno.serve(async (req) => {
       systemPrompt: customSystem,
       memoryFacts,
       mode, // "chat" | "image" | "search"
+      showReasoning,
     } = body;
 
     const v = validateMessages(messages);
@@ -175,6 +176,11 @@ Key behaviors:
     // Web search mode -> add Lovable AI grounding tool
     if (mode === "search") {
       payload.tools = [{ type: "function", function: { name: "google_search", description: "Search the web for fresh info", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } }];
+    }
+
+    // Optional reasoning for capable models
+    if (showReasoning && (model.includes("gpt-5") || model.includes("gemini-2.5-pro") || model.includes("gemini-3"))) {
+      payload.reasoning = { effort: "medium" };
     }
 
     const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
