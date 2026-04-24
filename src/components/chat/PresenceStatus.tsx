@@ -50,32 +50,38 @@ export const PresenceStatus = ({
 };
 
 /**
- * Format last seen time like WhatsApp
+ * Format last seen time like WhatsApp — always shows actual clock time
+ *   - Today      → "Last seen today at 1:45 PM"
+ *   - Yesterday  → "Last seen yesterday at 1:45 PM"
+ *   - This week  → "Last seen Mon at 1:45 PM"
+ *   - Older      → "Last seen 12 Apr at 1:45 PM"
  */
 const formatLastSeen = (date: Date | null | undefined): string => {
   if (!date) return 'offline';
 
   const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDiff = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86_400_000);
 
-  if (seconds < 60) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
+  const time = new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
     minute: '2-digit',
-  });
+    hour12: true,
+  }).format(date);
 
-  return formatter.format(date);
+  if (dayDiff <= 0) return `Last seen today at ${time}`;
+  if (dayDiff === 1) return `Last seen yesterday at ${time}`;
+  if (dayDiff < 7) {
+    const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(date);
+    return `Last seen ${weekday} at ${time}`;
+  }
+
+  const day = new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+  }).format(date);
+  return `Last seen ${day} at ${time}`;
 };
 
 /**
