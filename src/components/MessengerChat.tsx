@@ -48,7 +48,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [searchQuery, setSearchQuery] = useState('');
   const [initializing, setInitializing] = useState(false);
   const { startCall } = useCall();
-  const [isVideoCall, setIsVideoCall] = useState(false);
+  // (call dialog now handled globally by GlobalCallHost / CallProvider)
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
