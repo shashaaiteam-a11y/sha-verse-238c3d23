@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Plus, MessageSquare, Trash2, Loader2, Search,
-  MoreHorizontal, Pencil, Check, X
+  MoreHorizontal, Pencil, Check, X, Crown, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
