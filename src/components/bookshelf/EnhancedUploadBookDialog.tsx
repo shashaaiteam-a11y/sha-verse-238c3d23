@@ -413,13 +413,18 @@ const EnhancedUploadBookDialog = ({
     }
   };
 
-  const handleSubmit = async () => {
-    // Validate form first
+  // Step 1: validate form, then open copyright agreement gate.
+  const handleRequestPublish = () => {
     if (!validateForm()) {
       toast.error("Please fix the errors before publishing");
       return;
     }
+    setShowCopyrightDialog(true);
+  };
 
+  // Step 2: actual publish flow, runs only after copyright agreement.
+  const handleSubmit = async () => {
+    setShowCopyrightDialog(false);
     setStep("processing");
     setProcessingSteps(INITIAL_PROCESSING_STEPS);
     setUploadProgress(0);
@@ -429,7 +434,7 @@ const EnhancedUploadBookDialog = ({
       // Start processing animation
       const processingPromise = simulateProcessing();
 
-      // Actual upload with all metadata
+      // Actual upload with all metadata (file_hash + duplicate check happens inside the hook)
       const result = await uploadBook.mutateAsync({
         title,
         author,
@@ -449,18 +454,23 @@ const EnhancedUploadBookDialog = ({
 
       await processingPromise;
       setPublishedBookId(result?.id || null);
-      
+
       // Clear draft on successful publish
       localStorage.removeItem(`book_draft_${channelId}`);
-      
+
       setStep("success");
-    } catch (error) {
+    } catch (error: any) {
       // Mark current step as error
-      setProcessingSteps(prev => prev.map((s, idx) => 
+      setProcessingSteps(prev => prev.map((s, idx) =>
         idx === currentProcessingStep ? { ...s, status: "error" } : s
       ));
       setStep("error");
-      toast.error("Failed to publish book. Please try again.");
+      // Hook already shows a specific toast for duplicates; avoid generic override.
+      const msg = error?.message || "";
+      const isDuplicate = msg.includes("already exists") || msg.includes("title and author");
+      if (!isDuplicate) {
+        toast.error("Failed to publish book. Please try again.");
+      }
     }
   };
 
