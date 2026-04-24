@@ -676,13 +676,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         )}
       </div>
 
-      {/* Video/Voice Call Dialog */}
-      <VideoCallDialog
-        isOpen={showCallDialog}
-        onClose={() => setShowCallDialog(false)}
-        otherUser={otherUser || null}
-        isVideoCall={isVideoCall}
-      />
+      {/* Call dialogs are now rendered globally by GlobalCallHost (CallProvider) */}
 
       {/* User Search Dialog for Starting New Conversations */}
       <ChatUserSearchDialog
