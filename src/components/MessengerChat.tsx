@@ -17,7 +17,7 @@ import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ChatTypingBar } from './chat/ChatTypingBar';
-import { VideoCallDialog } from './chat/VideoCallDialog';
+import { useCall } from '@/modules/chats/components/CallProvider';
 import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
