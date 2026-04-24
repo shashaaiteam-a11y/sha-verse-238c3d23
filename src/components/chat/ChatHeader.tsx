@@ -53,6 +53,7 @@ interface ChatHeaderProps {
   onMute: (duration: 'always' | '8hours' | '1week') => void;
   onUnmute: () => void;
   onClearChat: () => void;
+  onSearchToggle?: () => void;
   isLoading?: boolean;
 }
 
