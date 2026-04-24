@@ -1965,33 +1965,39 @@ export type Database = {
           content: string | null
           conversation_id: string | null
           created_at: string | null
+          delivered_at: string | null
           edited: boolean | null
           id: string
           is_delivered: boolean | null
           is_read: boolean | null
           metadata: Json | null
+          read_at: string | null
           sender_id: string | null
         }
         Insert: {
           content?: string | null
           conversation_id?: string | null
           created_at?: string | null
+          delivered_at?: string | null
           edited?: boolean | null
           id?: string
           is_delivered?: boolean | null
           is_read?: boolean | null
           metadata?: Json | null
+          read_at?: string | null
           sender_id?: string | null
         }
         Update: {
           content?: string | null
           conversation_id?: string | null
           created_at?: string | null
+          delivered_at?: string | null
           edited?: boolean | null
           id?: string
           is_delivered?: boolean | null
           is_read?: boolean | null
           metadata?: Json | null
+          read_at?: string | null
           sender_id?: string | null
         }
         Relationships: [
