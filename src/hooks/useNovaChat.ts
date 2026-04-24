@@ -312,10 +312,10 @@ export const useNovaChat = () => {
               textBuffer += `\n\n[Attached file: ${att.name}]`;
             }
           }
-          if (textBuffer) parts.unshift({ type: 'text', text: textBuffer });
-          return { role: m.role, content: parts.length ? parts : textBuffer };
+          if (textBuffer) parts.unshift({ type: 'text', text: isLast ? textBuffer : sanitizeContent(textBuffer) });
+          return { role: m.role, content: parts.length ? parts : (isLast ? textBuffer : sanitizeContent(textBuffer)) };
         }
-        return { role: m.role, content: m.content };
+        return { role: m.role, content: isLast ? m.content : sanitizeContent(m.content) };
       });
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/novachat-ai`;
