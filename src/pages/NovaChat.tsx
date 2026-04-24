@@ -22,34 +22,27 @@ import { useToast } from '@/components/ui/use-toast';
 
 
 const NovaChat = () => {
-
   const { user } = useAuth();
-
+  const { toast } = useToast();
   const {
-
     conversations,
-
     conversationsLoading,
-
     currentConversationId,
-
     messages,
-
     isStreaming,
-
+    settings,
+    updateSettings,
     sendMessage,
-
     selectConversation,
-
     newChat,
-
     deleteConversation,
-
     updateTitle,
-
+    toggleShare,
     stopGeneration
-
   } = useNovaChat();
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [chatMode, setChatMode] = useState<ChatMode>('chat');
 
 
 
