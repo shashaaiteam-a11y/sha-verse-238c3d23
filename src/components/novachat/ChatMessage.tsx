@@ -135,7 +135,19 @@ const ChatMessage = ({
               </div>
             )}
             <ReactMarkdown
+              urlTransform={(url) => url}
               components={{
+                img({ src, alt }) {
+                  if (!src) return null;
+                  return (
+                    <img
+                      src={src}
+                      alt={alt || 'Generated image'}
+                      className="rounded-lg border border-border max-w-full h-auto my-3"
+                      loading="lazy"
+                    />
+                  );
+                },
                 code({ node, className, children, ...props }) {
                   const match = /language-(\w+)/.exec(className || '');
                   const codeString = String(children).replace(/\n$/, '');
