@@ -152,6 +152,9 @@ const EnhancedUploadBookDialog = ({
   // Draft state
   const [draftSaved, setDraftSaved] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+  // Copyright agreement gate
+  const [showCopyrightDialog, setShowCopyrightDialog] = useState(false);
   
   // Refs
   const coverInputRef = useRef<HTMLInputElement>(null);
