@@ -423,6 +423,8 @@ export const useNovaChat = () => {
         await saveMessage(conversationId, 'assistant', assistantContent);
         await supabase.from('ai_conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
       }
+      // Refresh usage indicator (free tier counts up)
+      queryClient.invalidateQueries({ queryKey: ['novachat-usage', user.id] });
     } catch (error: any) {
       if (error?.name === 'AbortError') {
         if (assistantContent) await saveMessage(conversationId!, 'assistant', assistantContent);
