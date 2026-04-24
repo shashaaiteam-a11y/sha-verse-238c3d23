@@ -189,6 +189,21 @@ export const ChatHeader = ({
 
             <DropdownMenuSeparator />
 
+            {/* Search in chat - WhatsApp style */}
+            {onSearchToggle && (
+              <DropdownMenuItem
+                onClick={() => {
+                  onSearchToggle();
+                  setShowMoreMenu(false);
+                }}
+              >
+                <Search className="w-4 h-4 mr-2" />
+                <span>Search</span>
+              </DropdownMenuItem>
+            )}
+
+            <DropdownMenuSeparator />
+
             {/* Privacy */}
             <DropdownMenuItem
               onClick={() => {
