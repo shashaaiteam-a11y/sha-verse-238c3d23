@@ -469,5 +469,7 @@ export const useNovaChat = () => {
     archiveConversation,
     toggleShare,
     stopGeneration,
+    limitReached,
+    clearLimitReached: () => setLimitReached(null),
   };
 };
