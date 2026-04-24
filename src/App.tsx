@@ -138,6 +138,7 @@ const App = () => (
                 </SwipeWrapper>
                 <BottomNav />
               </div>
+              </GlobalCallHost>
               </AdProvider>
             </MobileProvider>
           </AuthProvider>
