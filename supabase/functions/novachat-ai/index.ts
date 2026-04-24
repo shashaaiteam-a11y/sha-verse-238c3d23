@@ -9,7 +9,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_MESSAGE_LENGTH = 50000;
+const MAX_MESSAGE_LENGTH = 200000;
 const MAX_MESSAGES = 100;
 const ALLOWED_ROLES = ["user", "assistant", "system"];
 
