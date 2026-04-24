@@ -535,9 +535,24 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           </div>
                         )}
                         <div className={cn(
-                          "flex",
+                          "flex group/msg items-center gap-1",
                           isOwn ? "justify-end" : "justify-start"
                         )}>
+                          {/* Info button on the LEFT of own bubbles (hover/touch) */}
+                          {isOwn && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInfoMessage(message);
+                              }}
+                              aria-label="Message info"
+                              className="opacity-0 group-hover/msg:opacity-100 focus:opacity-100 active:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          )}
+
                           <div className={cn(
                             "max-w-[75%] px-3 py-2 rounded-lg shadow-sm",
                             isOwn 
