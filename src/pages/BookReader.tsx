@@ -328,7 +328,8 @@ const BookReader = () => {
 
   return (
     <div
-      className={cn("fixed inset-0 w-screen h-screen overflow-hidden transition-colors duration-300", colors.bg, colors.text)}
+      className={cn("fixed inset-0 w-screen overflow-hidden transition-colors duration-300", colors.bg, colors.text)}
+      style={{ height: "100dvh" }}
       onClick={toggleControls}
     >
       {/* Top Bar */}
@@ -694,38 +695,44 @@ const BookReader = () => {
 
           {/* Tap zones for mobile/tablet — invisible, only visible on touch.
               Left 25% prev, center 50% toggle controls, right 25% next.
+              For PDFs we DISABLE the tap-zone overlay so vertical scrolling
+              works natively when the page is zoomed beyond viewport. EPUB
+              is paginated (no scroll needed) so tap zones stay active.
               Hidden on desktop (md+) where keyboard arrows are used. */}
-          <div className="absolute inset-0 z-30 md:hidden flex pointer-events-none">
-            <button
-              type="button"
-              aria-label="Previous page"
-              className="h-full w-1/4 pointer-events-auto bg-transparent"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (fileType === "epub") epubPrev();
-                else goToPage(currentPage - 1);
-              }}
-            />
-            <button
-              type="button"
-              aria-label="Toggle controls"
-              className="h-full w-2/4 pointer-events-auto bg-transparent"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleControls();
-              }}
-            />
-            <button
-              type="button"
-              aria-label="Next page"
-              className="h-full w-1/4 pointer-events-auto bg-transparent"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (fileType === "epub") epubNext();
-                else goToPage(currentPage + 1);
-              }}
-            />
-          </div>
+          {fileType === "epub" && (
+            <div className="absolute inset-0 z-30 md:hidden flex pointer-events-none">
+              <button
+                type="button"
+                aria-label="Previous page"
+                className="h-full w-1/4 pointer-events-auto bg-transparent"
+                style={{ touchAction: "pan-y" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  epubPrev();
+                }}
+              />
+              <button
+                type="button"
+                aria-label="Toggle controls"
+                className="h-full w-2/4 pointer-events-auto bg-transparent"
+                style={{ touchAction: "pan-y" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleControls();
+                }}
+              />
+              <button
+                type="button"
+                aria-label="Next page"
+                className="h-full w-1/4 pointer-events-auto bg-transparent"
+                style={{ touchAction: "pan-y" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  epubNext();
+                }}
+              />
+            </div>
+          )}
 
           {/* 📖 Floating inline reader ad — docked above footer area, never
               shrinks the reading content. Dismissible per page. */}
