@@ -417,6 +417,24 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
           ...(item.media_urls || [])
         ].filter(Boolean);
 
+        // Navigation target for clickable content (group_post → group page, page_post → page)
+        const navigateTarget =
+          item.type === 'group_post' && item.group_id
+            ? `/groups/${item.group_id}`
+            : item.type === 'page_post' && item.page_id
+            ? `/pages/${item.page_id}`
+            : null;
+
+        const handleContentClick = (e: React.MouseEvent) => {
+          if (!navigateTarget) return;
+          // Don't navigate if user clicked on an interactive element (link, button, video controls, hashtag)
+          const target = e.target as HTMLElement;
+          if (target.closest('a, button, video, input, [role="button"]')) return;
+          navigate(navigateTarget);
+        };
+
+        const contentClickableClass = navigateTarget ? 'cursor-pointer' : '';
+
         return (
           <>
             {/* Feeling/Activity Badge */}
@@ -427,7 +445,10 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
             )}
             
             {item.content && (
-              <div className="text-sm sm:text-base mb-3 break-words leading-relaxed whitespace-pre-wrap">
+              <div
+                className={`text-sm sm:text-base mb-3 break-words leading-relaxed whitespace-pre-wrap ${contentClickableClass}`}
+                onClick={handleContentClick}
+              >
                 <HashtagText content={item.content} />
               </div>
             )}
