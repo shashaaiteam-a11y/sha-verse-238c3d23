@@ -9,6 +9,7 @@ import { useCall } from '@/modules/chats/components/CallProvider';
 
 const Friends = () => {
   const navigate = useNavigate();
+  const { startCall } = useCall();
   const {
     friends,
     friendsLoading,
