@@ -12,7 +12,7 @@ import ChatInput from '@/components/novachat/ChatInput';
 import { RewardedAdButton, BannerAd } from '@/components/ads';
 import { useRewardedAd } from '@/hooks/useRewardedAd';
 import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
-import NovaChatSettingsDialog from '@/components/novachat/NovaChatSettingsDialog';
+
 import { downloadMarkdown, downloadAsHtml, printConversation } from '@/components/novachat/exportUtils';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
