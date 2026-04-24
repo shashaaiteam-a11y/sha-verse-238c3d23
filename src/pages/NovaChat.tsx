@@ -299,15 +299,50 @@ const NovaChat = () => {
 
 
 
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs flex-shrink-0" onClick={newChat}>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9" title="More">
+                  <Download className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel>This conversation</DropdownMenuLabel>
+                <DropdownMenuItem disabled={!messages.length} onClick={() => downloadMarkdown(currentConv?.title || 'novachat', messages)}>
+                  <Download className="w-4 h-4 mr-2" /> Export as Markdown
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={!messages.length} onClick={() => downloadAsHtml(currentConv?.title || 'novachat', messages)}>
+                  <Download className="w-4 h-4 mr-2" /> Export as HTML
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={!messages.length} onClick={() => printConversation(currentConv?.title || 'novachat', messages)}>
+                  <Printer className="w-4 h-4 mr-2" /> Print / Save as PDF
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={!currentConversationId} onClick={handleShare}>
+                  <Share2 className="w-4 h-4 mr-2" /> {currentConv?.share_token ? 'Copy share link' : 'Create share link'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <SquarePen className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSettingsOpen(true)} title="Settings">
+              <Settings className="w-4 h-4" />
+            </Button>
 
-            <span className="hidden sm:inline">New chat</span>
-
-          </Button>
-
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={newChat}>
+              <SquarePen className="w-4 h-4" />
+              <span className="hidden sm:inline">New chat</span>
+            </Button>
+          </div>
         </header>
+
+        <NovaChatSettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          settings={settings}
+          onSave={(patch) => updateSettings.mutate(patch)}
+          isSaving={updateSettings.isPending}
+        />
+
 
 
 
