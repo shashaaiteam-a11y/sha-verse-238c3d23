@@ -246,22 +246,6 @@ const ChatInput = ({
             <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
 
-          {/* Web search mode toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl mb-0.5 sm:mb-1 text-muted-foreground hover:text-foreground",
-              mode === 'search' && "text-primary bg-primary/10 hover:text-primary",
-            )}
-            disabled={isStreaming}
-            onClick={() => toggleMode('search')}
-            type="button"
-            title="Search the web"
-          >
-            <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
-          </Button>
-
           {/* Textarea */}
           <Textarea
             ref={textareaRef}
