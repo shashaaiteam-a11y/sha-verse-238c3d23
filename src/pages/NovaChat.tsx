@@ -40,8 +40,12 @@ const NovaChat = () => {
     newChat,
     deleteConversation,
     updateTitle,
-    stopGeneration
+    stopGeneration,
+    limitReached,
+    clearLimitReached,
   } = useNovaChat();
+  const { data: usage } = useNovaUsage();
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   const [chatMode, setChatMode] = useState<ChatMode>('chat');
 
