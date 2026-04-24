@@ -30,6 +30,7 @@ import { useBookInteractions } from "@/hooks/useBookInteractions";
 import PDFViewer from "./PDFViewer";
 import BookRatingDialog from "./BookRatingDialog";
 import BookDeletionDialog from "./BookDeletionDialog";
+import BookReportDialog from "./BookReportDialog";
 import CommentSection from "./CommentSection";
 import { BannerAd, RewardedAdButton, StickyBannerAd } from "@/components/ads";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
@@ -59,6 +60,7 @@ const BookDetailPage = () => {
 
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [pdfOutline, setPdfOutline] = useState<any[]>([]);
 
   // Use debouncing for progress updates
@@ -210,7 +212,7 @@ const BookDetailPage = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
-                    onClick={() => setShowDeletionDialog(true)}
+                    onClick={() => setShowReportDialog(true)}
                   >
                     <Flag className="w-4 h-4 mr-2" />
                     Report
@@ -562,6 +564,13 @@ const BookDetailPage = () => {
       <BookDeletionDialog
         open={showDeletionDialog}
         onOpenChange={setShowDeletionDialog}
+        bookId={id || ''}
+        bookTitle={book.title}
+      />
+
+      <BookReportDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
         bookId={id || ''}
         bookTitle={book.title}
       />

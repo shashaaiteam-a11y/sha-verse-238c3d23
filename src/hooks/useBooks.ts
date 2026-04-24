@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useBookFeed, useTrendingBooks } from "./useBookFeeds";
+import { generateFileHash, checkBookDuplicate } from "@/modules/bookshelf/lib/fileHash";
 
 export interface Book {
   id: string;
@@ -90,6 +91,35 @@ export const useBooks = (options: {
 
       let coverUrl = null;
       let bookUrl = null;
+      let fileHash: string | null = null;
+
+      // PHASE 1: Pre-flight anti-duplication check (file fingerprint + metadata)
+      if (bookFile) {
+        toast.loading("Scanning for duplicates...", { id: "dup-check" });
+        fileHash = await generateFileHash(bookFile);
+        const dup = await checkBookDuplicate({
+          fileHash,
+          title,
+          author,
+        });
+        toast.dismiss("dup-check");
+        if (dup.isDuplicate) {
+          const reason =
+            dup.matchType === "file"
+              ? "This exact file already exists in the SHA-VERSE library."
+              : `A book with this title and author already exists ("${dup.existingBook?.title}" by ${dup.existingBook?.author}).`;
+          throw new Error(reason);
+        }
+        toast.success("File verified — no duplicates found", { duration: 1500 });
+      } else {
+        // No file: still check metadata-level duplicates
+        const dup = await checkBookDuplicate({ title, author });
+        if (dup.isDuplicate) {
+          throw new Error(
+            `A book with this title and author already exists ("${dup.existingBook?.title}" by ${dup.existingBook?.author}).`
+          );
+        }
+      }
 
       // Upload cover image to books bucket
       if (coverFile) {
@@ -149,6 +179,7 @@ export const useBooks = (options: {
           isbn: isbn || undefined,
           publisher: publisher || undefined,
           publication_date: publicationDate || undefined,
+          file_hash: fileHash || undefined,
         } as any)
         .select()
         .single();
@@ -166,16 +197,21 @@ export const useBooks = (options: {
       console.error('Book upload failed:', error);
 
       // Handle specific error types
-      if (error.message.includes('storage_limit_exceeded')) {
+      const msg = error.message || '';
+      if (msg.includes('already exists in the SHA-VERSE library') || msg.includes('book with this title and author already exists')) {
+        toast.error(msg);
+      } else if (msg.includes('idx_books_file_hash_unique') || msg.includes('idx_books_title_author_unique') || msg.includes('duplicate key')) {
+        toast.error('This book already exists in the SHA-VERSE library.');
+      } else if (msg.includes('storage_limit_exceeded')) {
         toast.error('Storage limit exceeded. Please upgrade your plan or remove some files.');
-      } else if (error.message.includes('file_size_limit')) {
+      } else if (msg.includes('file_size_limit')) {
         toast.error('File too large. Maximum file size is 100MB.');
-      } else if (error.message.includes('invalid_file_format')) {
+      } else if (msg.includes('invalid_file_format')) {
         toast.error('Invalid file format. Please upload PDF, EPUB, or MOBI files.');
-      } else if (error.message.includes('not_authenticated')) {
+      } else if (msg.includes('not_authenticated')) {
         toast.error('Please sign in to upload books.');
       } else {
-        toast.error(`Upload failed: ${error.message}`);
+        toast.error(`Upload failed: ${msg}`);
       }
     },
   });
