@@ -26,7 +26,21 @@ import {
 import { useProfileSettings } from '@/hooks/useProfileSettings';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/components/ui/use-toast';
-import { formatDistanceToNow, format, startOfWeek, endOfWeek } from 'date-fns';
+import { formatDistanceToNow, format, startOfWeek, endOfWeek, isValid } from 'date-fns';
+
+const safeDate = (value: any): Date | null => {
+  if (!value) return null;
+  const d = new Date(value);
+  return isValid(d) ? d : null;
+};
+const safeDistance = (value: any, fallback = 'recently') => {
+  const d = safeDate(value);
+  return d ? formatDistanceToNow(d, { addSuffix: true }) : fallback;
+};
+const safeFormat = (value: any, pattern: string, fallback = '—') => {
+  const d = safeDate(value);
+  return d ? format(d, pattern) : fallback;
+};
 
 interface ProfileSettingsDialogProps {
   trigger?: React.ReactNode;
@@ -141,7 +155,8 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
     const grouped = new Map<string, { label: string; weekStart: Date; items: any[] }>();
 
     (activities || []).forEach((activity: any) => {
-      const createdAt = new Date(activity.created_at);
+      const createdAt = safeDate(activity.created_at);
+      if (!createdAt) return;
       const weekStart = startOfWeek(createdAt, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(createdAt, { weekStartsOn: 1 });
       const key = format(weekStart, 'yyyy-MM-dd');
@@ -362,7 +377,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                                 )}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {session.location || 'Unknown location'} · {formatDistanceToNow(new Date(session.last_active), { addSuffix: true })}
+                                {session.location || 'Unknown location'} · {safeDistance(session.last_active)}
                               </p>
                             </div>
                           </div>
@@ -453,7 +468,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                                   <p className="text-[11px] text-muted-foreground truncate">@{username}</p>
                                 )}
                                 <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                                  Blocked {formatDistanceToNow(new Date(block.created_at), { addSuffix: true })}
+                                  Blocked {safeDistance(block.created_at)}
                                 </p>
                               </div>
                             </div>
@@ -532,7 +547,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                                       <p className="text-xs text-muted-foreground mt-0.5 break-words line-clamp-2">{activity.content}</p>
                                     )}
                                     <p className="text-[10px] text-muted-foreground/60 mt-1">
-                                      {format(new Date(activity.created_at), 'MMM d, yyyy · h:mm a')}
+                                      {safeFormat(activity.created_at, 'MMM d, yyyy · h:mm a')}
                                     </p>
                                   </div>
                                   <Button
