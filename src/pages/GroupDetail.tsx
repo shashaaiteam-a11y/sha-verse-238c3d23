@@ -575,7 +575,7 @@ const GroupDetail = () => {
           ) : posts && posts.length > 0 ? (
             posts.flatMap((post: any, postIdx: number) => {
               const card = (
-              <Card key={post.id} className="p-3 sm:p-4 shadow-md">
+              <Card key={post.id} id={`post-${post.id}`} className="p-3 sm:p-4 shadow-md scroll-mt-20">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
