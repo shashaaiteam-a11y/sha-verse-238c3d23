@@ -47,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/contexts/AuthContext';
 
 import { usePosts } from '@/hooks/usePosts';
+import { useScrollToSharedPost } from '@/hooks/useScrollToSharedPost';
 
 import { useShares } from '@/hooks/useShares';
 
