@@ -1930,65 +1930,55 @@ const Profile = () => {
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
 
-                    {videos.map((video: any) => (
-
-                      <Card 
-
-                        key={video.id} 
-
-                        className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-
-                        onClick={() => navigate(`/video/${video.id}`)}
-
-                      >
-
-                        <div className="aspect-video relative">
-
-                          {video.thumbnail_url ? (
-
-                            <img 
-
-                              src={video.thumbnail_url} 
-
-                              alt={video.title} 
-
-                              className="w-full h-full object-cover"
-
-                            />
-
-                          ) : (
-
-                            <div className="w-full h-full bg-muted flex items-center justify-center">
-
-                              <Video className="w-8 h-8 text-muted-foreground" />
-
+                    {videos.map((video: any) => {
+                      const isPostVideo = video.source === 'post';
+                      const targetHref = isPostVideo ? `/post/${video.id}` : `/video/${video.id}`;
+                      return (
+                        <Card
+                          key={`${video.source || 'channel'}-${video.id}`}
+                          className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => navigate(targetHref)}
+                        >
+                          <div className="aspect-video relative bg-black">
+                            {video.thumbnail_url ? (
+                              <img
+                                src={video.thumbnail_url}
+                                alt={video.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : video.video_url ? (
+                              <video
+                                src={video.video_url}
+                                className="w-full h-full object-cover"
+                                muted
+                                playsInline
+                                preload="metadata"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-muted flex items-center justify-center">
+                                <Video className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center">
+                                <Video className="w-5 h-5 text-white" />
+                              </div>
                             </div>
-
-                          )}
-
-                          {video.duration && (
-
-                            <span className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 rounded">
-
-                              {Math.floor(video.duration / 60)}:{String(video.duration % 60).padStart(2, '0')}
-
-                            </span>
-
-                          )}
-
-                        </div>
-
-                        <div className="p-2">
-
-                          <h4 className="font-medium text-sm truncate">{video.title}</h4>
-
-                          <p className="text-xs text-muted-foreground">{video.views_count || 0} views</p>
-
-                        </div>
-
-                      </Card>
-
-                    ))}
+                            {video.duration && (
+                              <span className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 rounded">
+                                {Math.floor(video.duration / 60)}:{String(video.duration % 60).padStart(2, '0')}
+                              </span>
+                            )}
+                          </div>
+                          <div className="p-2">
+                            <h4 className="font-medium text-sm truncate">{video.title}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {isPostVideo ? 'Posted video' : `${video.views_count || 0} views`}
+                            </p>
+                          </div>
+                        </Card>
+                      );
+                    })}
 
                   </div>
 
