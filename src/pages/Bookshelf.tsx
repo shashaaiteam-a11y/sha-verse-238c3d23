@@ -480,344 +480,102 @@ const Bookshelf = () => {
 
           <TabsContent value="discover" className="space-y-6">
 
-            {/* Trending Section (Preview) */}
-
+            {/* 1️⃣ Recently Added (now FIRST) */}
             <section>
-
               <div className="flex items-center justify-between mb-4">
-
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-
-                  <TrendingUp className="w-5 h-5 text-primary" />
-
-                  Trending Books
-
+                  <Clock className="w-5 h-5 text-primary" />
+                  Recently Added
                 </h2>
-
                 <div className="flex items-center gap-2">
-
                   <Button
-
                     variant="ghost"
-
                     size="icon"
-
                     onClick={() => setViewMode("grid")}
-
                     className={viewMode === "grid" ? "bg-accent" : ""}
-
                   >
-
                     <Grid className="w-4 h-4" />
-
                   </Button>
-
                   <Button
-
                     variant="ghost"
-
                     size="icon"
-
                     onClick={() => setViewMode("list")}
-
                     className={viewMode === "list" ? "bg-accent" : ""}
-
                   >
-
                     <List className="w-4 h-4" />
-
                   </Button>
-
                 </div>
-
               </div>
-
-
-
-              {viewMode === "grid" ? (
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-
-                  {trendingBooks.slice(0, 12).flatMap((book, idx) => {
-
-                    const card = <BookCard key={book.id} book={book} />;
-
-                    // 📚 Inject Sponsored Book (book-shaped native ad) every 6 books
-                    if ((idx + 1) % 6 === 0) {
-
-                      return [
-
-                        card,
-
-                        <SponsoredBookCard key={`sponsored-${book.id}`} />
-
-                      ];
-
-                    }
-
-                    return [card];
-
-                  })}
-
-                </div>
-
-              ) : (
-
-                <div className="space-y-3">
-
-                  {trendingBooks.slice(0, 10).map((book) => (
-
-                    <Card
-
-                      key={book.id}
-
-                      className="p-4 flex gap-4 hover:shadow-md transition-shadow cursor-pointer"
-
-                    >
-
-                      <div className="w-20 h-28 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-primary">
-
-                        {book.cover_url ? (
-
-                          <img
-
-                            src={book.cover_url}
-
-                            alt={book.title}
-
-                            className="w-full h-full object-cover"
-
-                          />
-
-                        ) : (
-
-                          <div className="w-full h-full flex items-center justify-center">
-
-                            <Book className="w-8 h-8 text-white" />
-
-                          </div>
-
-                        )}
-
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-
-                        <h3 className="font-semibold line-clamp-1">{book.title}</h3>
-
-                        <p className="text-sm text-muted-foreground">{book.author}</p>
-
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-
-                          {book.description || "No description"}
-
-                        </p>
-
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-
-                          <span className="flex items-center gap-1">
-
-                            <Eye className="w-3 h-3" />
-
-                            {book.views_count || 0}
-
-                          </span>
-
-                          <span className="flex items-center gap-1">
-
-                            <ThumbsUp className="w-3 h-3" />
-
-                            {book.likes_count || 0}
-
-                          </span>
-
-                          <span className="flex items-center gap-1">
-
-                            <MessageCircle className="w-3 h-3" />
-
-                            {book.comments_count || 0}
-
-                          </span>
-
-                        </div>
-
-                      </div>
-
-                    </Card>
-
-                  ))}
-
-                </div>
-
-              )}
-
-            </section>
-
-            {/* 🔥 Sponsored Books Strip — high-CPM advertiser section */}
-            <section>
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                Sponsored Books
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-                {[0, 1, 2, 3].map((i) => (
-                  <SponsoredBookCard key={`strip-${i}`} />
-                ))}
-              </div>
-            </section>
-
-            {/* All Books Section */}
-
-            <section>
-
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-
-                <Clock className="w-5 h-5 text-primary" />
-
-                Recently Added
-
-              </h2>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-
-                {books.flatMap((book, idx) => {
-
-                  const node = <BookCard key={book.id} book={book} />;
-
-                  // 📚 Native book-shaped ad every 6 items (per strategy: 5–6 items)
-
-                  if ((idx + 1) % 6 === 0) {
-
-                    return [
-
-                      node,
-
-                      <SponsoredBookCard key={`ad-${book.id}`} />,
-
-                    ];
-
-                  }
-
-                  return [node];
-
-                })}
-
+                {renderBooksWithAds(books, 4, "recent-ad")}
               </div>
-
-
 
               {isLoading && (
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 mt-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-
                     <Card key={i} className="overflow-hidden animate-pulse">
-
                       <div className="aspect-[2/3] bg-muted" />
-
                       <div className="p-3 space-y-2">
-
                         <div className="h-4 bg-muted rounded" />
-
                         <div className="h-3 bg-muted rounded w-2/3" />
-
                       </div>
-
                     </Card>
-
                   ))}
-
                 </div>
-
               )}
-
-
 
               {!isLoading && books.length === 0 && (
-
                 <Card className="p-8 text-center">
-
                   <Book className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-
                   <h3 className="font-semibold mb-2">No books found</h3>
-
                   <p className="text-muted-foreground text-sm">
-
-                    {searchQuery
-
-                      ? "Try a different search term"
-
-                      : "Be the first to upload a book!"}
-
+                    {searchQuery ? "Try a different search term" : "Be the first to upload a book!"}
                   </p>
-
                 </Card>
-
               )}
 
-
-
               {renderPagination(books.length)}
-
             </section>
 
-
-
-            {/* Popular Authors */}
-
+            {/* 2️⃣ Trending Books */}
             <section>
-
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-
-                <Users className="w-5 h-5 text-primary" />
-
-                Popular Authors
-
+                <TrendingUp className="w-5 h-5 text-primary" />
+                Trending Books
               </h2>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-
-                {channels?.slice(0, 6).map((channel) => (
-
-                  <Card
-
-                    key={channel.id}
-
-                    className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
-
-                    onClick={() => navigate(`/bookshelf/channel/${channel.id}`)}
-
-                  >
-
-                    <Avatar className="w-16 h-16 mx-auto mb-2">
-
-                      <AvatarImage src={channel.avatar_url || ""} />
-
-                      <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
-
-                    </Avatar>
-
-                    <h3 className="font-semibold text-sm line-clamp-1">{channel.name}</h3>
-
-                    <p className="text-xs text-muted-foreground">
-
-                      {channel.subscribers_count || 0} subscribers
-
-                    </p>
-
-                    <Badge variant="secondary" className="mt-2 text-xs">
-
-                      Author
-
-                    </Badge>
-
-                  </Card>
-
-                ))}
-
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                {renderBooksWithAds(trendingBooks.slice(0, 12), 4, "trend-ad")}
               </div>
+            </section>
 
+            {/* 3️⃣ Popular Authors (Channels) */}
+            <section>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Popular Authors
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {channels?.slice(0, 6).map((channel) => (
+                  <Card
+                    key={channel.id}
+                    className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/bookshelf/channel/${channel.id}`)}
+                  >
+                    <Avatar className="w-16 h-16 mx-auto mb-2">
+                      <AvatarImage src={channel.avatar_url || ""} />
+                      <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <h3 className="font-semibold text-sm line-clamp-1">{channel.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {channel.subscribers_count || 0} subscribers
+                    </p>
+                    <Badge variant="secondary" className="mt-2 text-xs">
+                      Author
+                    </Badge>
+                  </Card>
+                ))}
+              </div>
             </section>
 
           </TabsContent>
