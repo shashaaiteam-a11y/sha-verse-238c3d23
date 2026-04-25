@@ -155,7 +155,8 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
     const grouped = new Map<string, { label: string; weekStart: Date; items: any[] }>();
 
     (activities || []).forEach((activity: any) => {
-      const createdAt = new Date(activity.created_at);
+      const createdAt = safeDate(activity.created_at);
+      if (!createdAt) return;
       const weekStart = startOfWeek(createdAt, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(createdAt, { weekStartsOn: 1 });
       const key = format(weekStart, 'yyyy-MM-dd');
