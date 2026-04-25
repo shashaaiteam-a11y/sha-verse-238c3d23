@@ -227,13 +227,35 @@ const BookDetail = () => {
     }
 
     try {
-      // Increment download count
-      await incrementDownload.mutateAsync();
+      // Increment download count (non-blocking for the download itself)
+      incrementDownload.mutateAsync().catch(() => {});
       toast.success("Download started!");
 
-      // Open download in new tab/window
-      window.open(book.book_url, "_blank");
+      // Fetch as blob to bypass ad-blockers (ERR_BLOCKED_BY_CLIENT)
+      // that intercept direct storage URLs opened in a new tab.
+      const response = await fetch(book.book_url, { mode: "cors" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Derive a safe filename
+      const urlPath = new URL(book.book_url).pathname;
+      const ext = urlPath.split(".").pop()?.toLowerCase() || "pdf";
+      const safeTitle = (book.title || "book").replace(/[^\w\-]+/g, "_");
+      const filename = `${safeTitle}.${ext}`;
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Cleanup blob URL after a tick
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (error) {
+      console.error("[BookDetail] Download error:", error);
       toast.error("Failed to download. Please try again.");
     }
   };
