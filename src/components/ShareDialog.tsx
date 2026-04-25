@@ -53,7 +53,9 @@ export const ShareDialog = ({
   postType = 'post',
   postContent,
   postImage,
-  postVisibility = 'public'
+  postVisibility = 'public',
+  shareUrl,
+  groupId,
 }: ShareDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -72,13 +74,25 @@ export const ShareDialog = ({
   const [canShare, setCanShare] = useState(true);
   const [shareRestriction, setShareRestriction] = useState<string>('');
 
-  const postUrl = `${window.location.origin}/${
-    postType === 'video'
-      ? 'movion/watch'
-      : postType === 'book'
-      ? 'bookshelf/book'
-      : 'post'
-  }/${postId}`;
+  // Build a real deep-link URL using the actual app routes.
+  // Falls back to the explicit shareUrl prop when provided.
+  const derivedUrl = (() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    switch (postType) {
+      case 'video':
+        return `${origin}/video/${postId}`;
+      case 'book':
+        return `${origin}/bookshelf/book/${postId}`;
+      case 'group_post':
+        return groupId
+          ? `${origin}/groups/${groupId}?post=${postId}`
+          : `${origin}/?post=${postId}`;
+      case 'post':
+      default:
+        return `${origin}/?post=${postId}`;
+    }
+  })();
+  const postUrl = shareUrl || derivedUrl;
 
   // Check share permissions when dialog opens
   useEffect(() => {
