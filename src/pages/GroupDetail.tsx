@@ -112,6 +112,8 @@ const GroupDetail = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { posts, isLoading, group, groupLoading, members, createPost, deletePost, updatePost } = useGroupPosts(groupId);
+
+  useScrollToSharedPost(!isLoading && (posts?.length ?? 0) > 0);
   const { leaveGroup, myGroups } = useGroups();
   const { shareGroupPost } = useShares();
   const { isPostSaved, toggleSavePost } = useSavedPosts();
