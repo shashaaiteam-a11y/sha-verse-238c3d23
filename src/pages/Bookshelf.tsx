@@ -1051,11 +1051,19 @@ const Bookshelf = () => {
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
 
-                    {savedBooks.map((book: any) => (
+                    {savedBooks.flatMap((book: any, idx: number) => {
 
-                      <BookCard key={book.id} book={book} />
+                      const card = <BookCard key={book.id} book={book} />;
 
-                    ))}
+                      if ((idx + 1) % 4 === 0) {
+
+                        return [card, <SponsoredBookCard key={`saved-ad-${book.id}`} />];
+
+                      }
+
+                      return [card];
+
+                    })}
 
                   </div>
 
