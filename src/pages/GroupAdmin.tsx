@@ -79,6 +79,10 @@ const GroupAdmin = () => {
     deleteRule,
   } = useGroupAdmin(groupId);
 
+  // Reports + member moderation hooks
+  const { reports, pendingCount: pendingReports, updateReportStatus } = useGroupReports(groupId);
+  const { muteMember, unmuteMember, issueWarning } = useGroupMembers(groupId);
+
   // Settings form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -90,6 +94,12 @@ const GroupAdmin = () => {
   const [newRuleTitle, setNewRuleTitle] = useState('');
   const [newRuleDescription, setNewRuleDescription] = useState('');
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+
+  // Warning dialog state
+  const [warnDialogOpen, setWarnDialogOpen] = useState(false);
+  const [warnTargetUserId, setWarnTargetUserId] = useState<string | null>(null);
+  const [warnTargetName, setWarnTargetName] = useState<string>('');
+  const [warnReason, setWarnReason] = useState('');
 
   // Sync form whenever groupDetails loads or changes (e.g. after realtime update)
   useEffect(() => {
