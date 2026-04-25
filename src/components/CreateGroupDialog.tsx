@@ -32,22 +32,48 @@ export const CreateGroupDialog = () => {
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('English');
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [rules, setRules] = useState('');
+  const [rules, setRules] = useState(DEFAULT_RULES);
   const [activeTab, setActiveTab] = useState('basic');
-  
+
   const { createGroup } = useGroups();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const categoryItems = GROUP_CATEGORIES.filter(c => c.value !== "trending");
   const categoryLabel = categoryItems.find(c => c.value === category)?.label || category;
 
+  const handleNext = () => {
+    if (activeTab === 'basic') {
+      if (!name.trim()) {
+        toast({
+          title: 'Group name is required',
+          description: 'Please enter a name to continue.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setActiveTab('settings');
+    } else if (activeTab === 'settings') {
+      setActiveTab('rules');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setActiveTab('basic');
+      toast({
+        title: 'Group name is required',
+        description: 'Please enter a name to create the group.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     createGroup.mutate(
       { name, description, privacy, category, country, language, rules },
       {
-        onSuccess: () => {
+        onSuccess: (created: any) => {
           setOpen(false);
           setName('');
           setDescription('');
@@ -55,8 +81,11 @@ export const CreateGroupDialog = () => {
           setCategory('General');
           setCountry('');
           setLanguage('English');
-          setRules('');
+          setRules(DEFAULT_RULES);
           setActiveTab('basic');
+          if (created?.id) {
+            navigate(`/groups/${created.id}`);
+          }
         },
       }
     );
