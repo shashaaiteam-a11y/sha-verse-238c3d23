@@ -16,8 +16,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 
-export const CreateGroupDialog = () => {
-  const [open, setOpen] = useState(false);
 const DEFAULT_RULES = `1. Be respectful to others
 2. No spam or self-promotion
 3. Keep discussions on-topic`;
