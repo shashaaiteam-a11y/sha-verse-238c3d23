@@ -468,7 +468,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                                   <p className="text-[11px] text-muted-foreground truncate">@{username}</p>
                                 )}
                                 <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                                  Blocked {formatDistanceToNow(new Date(block.created_at), { addSuffix: true })}
+                                  Blocked {safeDistance(block.created_at)}
                                 </p>
                               </div>
                             </div>
