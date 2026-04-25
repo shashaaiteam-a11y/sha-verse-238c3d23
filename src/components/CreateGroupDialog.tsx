@@ -151,10 +151,16 @@ export const CreateGroupDialog = () => {
                       className="w-[--radix-popover-trigger-width] p-0 z-[100]"
                       align="start"
                       onOpenAutoFocus={(e) => e.preventDefault()}
+                      onWheel={(e) => e.stopPropagation()}
+                      onTouchMove={(e) => e.stopPropagation()}
                     >
                       <Command>
                         <CommandInput placeholder="Search categories..." />
-                        <CommandList className="max-h-[260px] overflow-y-auto overscroll-contain">
+                        <CommandList
+                          className="max-h-[260px] overflow-y-auto overscroll-contain touch-pan-y"
+                          onWheel={(e) => e.stopPropagation()}
+                          onTouchMove={(e) => e.stopPropagation()}
+                        >
                           <CommandEmpty>No category found.</CommandEmpty>
                           <CommandGroup>
                             {categoryItems.map((c) => (
