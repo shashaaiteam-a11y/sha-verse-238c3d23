@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupAdmin } from '@/hooks/useGroupAdmin';
+import { useGroupReports } from '@/hooks/useGroupReports';
+import { useGroupMembers } from '@/hooks/useGroupMembers';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
