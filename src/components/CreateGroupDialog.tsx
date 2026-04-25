@@ -127,7 +127,7 @@ export const CreateGroupDialog = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                  <Popover open={categoryOpen} onOpenChange={setCategoryOpen} modal={true}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -139,10 +139,15 @@ export const CreateGroupDialog = () => {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                      align="start"
+                      onWheel={(e) => e.stopPropagation()}
+                      onTouchMove={(e) => e.stopPropagation()}
+                    >
                       <Command>
                         <CommandInput placeholder="Search categories..." />
-                        <CommandList className="max-h-[200px]">
+                        <CommandList className="max-h-[240px] overflow-y-auto overscroll-contain">
                           <CommandEmpty>No category found.</CommandEmpty>
                           <CommandGroup>
                             {categoryItems.map((c) => (
@@ -217,7 +222,7 @@ export const CreateGroupDialog = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Language</Label>
-                    <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
+                    <Popover open={languageOpen} onOpenChange={setLanguageOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -229,10 +234,15 @@ export const CreateGroupDialog = () => {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                        align="start"
+                        onWheel={(e) => e.stopPropagation()}
+                        onTouchMove={(e) => e.stopPropagation()}
+                      >
                         <Command>
                           <CommandInput placeholder="Search languages..." />
-                          <CommandList className="max-h-[200px]">
+                          <CommandList className="max-h-[240px] overflow-y-auto overscroll-contain">
                             <CommandEmpty>No language found.</CommandEmpty>
                             <CommandGroup>
                               {WORLD_LANGUAGES.map((lang) => (
