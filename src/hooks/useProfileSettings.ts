@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { useEffect } from 'react';
+import { getCurrentDeviceToken, clearDeviceToken } from '@/lib/sessionTracker';
 
 export const useProfileSettings = () => {
   const { user } = useAuth();
