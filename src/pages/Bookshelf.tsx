@@ -98,21 +98,7 @@ const Bookshelf = () => {
 
 
 
-  // Subscribed Books (Server-Side Filtered & Paginated)
-
-  const { data: subscribedBooks = [] } = useSubscribedBooks({
-
-    search: searchQuery,
-
-    category: selectedCategory,
-
-    page: activeTab === 'subscribed' ? page : 0,
-
-    limit: 20
-
-  });
-
-
+  // (Subscribed tab now shows channels, not books — see useSubscribedBookChannels below)
 
   // Saved Books (Server-Side Filtered & Paginated)
 
