@@ -726,6 +726,46 @@ const GroupAdmin = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Issue Warning Dialog */}
+      <Dialog open={warnDialogOpen} onOpenChange={setWarnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Issue Warning to {warnTargetName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label htmlFor="warnReason">Reason</Label>
+              <Textarea
+                id="warnReason"
+                value={warnReason}
+                onChange={(e) => setWarnReason(e.target.value)}
+                placeholder="Explain why this user is being warned..."
+                rows={3}
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={!warnReason.trim() || !warnTargetUserId || issueWarning.isPending}
+              onClick={() => {
+                if (!warnTargetUserId || !warnReason.trim()) return;
+                issueWarning.mutate(
+                  { userId: warnTargetUserId, reason: warnReason.trim() },
+                  {
+                    onSuccess: () => {
+                      setWarnDialogOpen(false);
+                      setWarnTargetUserId(null);
+                      setWarnReason('');
+                    },
+                  }
+                );
+              }}
+            >
+              {issueWarning.isPending ? 'Issuing...' : 'Issue Warning'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
