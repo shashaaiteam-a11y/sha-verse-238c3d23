@@ -2,11 +2,8 @@ import { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -598,19 +595,26 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
               You can reactivate anytime by signing back in.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deactivateAccount.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="outline"
               disabled={deactivateAccount.isPending}
-              onClick={(e) => {
-                e.preventDefault();
+              onClick={() => setDeactivateOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deactivateAccount.isPending}
+              onClick={() => {
                 deactivateAccount.mutate();
               }}
             >
               {deactivateAccount.isPending ? 'Deactivating…' : 'Yes, deactivate'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+            </Button>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -626,12 +630,19 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
               They'll be able to see your public posts and send you messages again. You won't be friends — to reconnect, you'll need to send a new friend request.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={unblockUser.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="outline"
               disabled={unblockUser.isPending}
-              onClick={(e) => {
-                e.preventDefault();
+              onClick={() => setUnblockTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={unblockUser.isPending}
+              onClick={() => {
                 if (unblockTarget) {
                   unblockUser.mutate(unblockTarget.id, {
                     onSettled: () => setUnblockTarget(null),
@@ -640,8 +651,8 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
               }}
             >
               {unblockUser.isPending ? 'Unblocking…' : 'Yes, unblock'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+            </Button>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </>
