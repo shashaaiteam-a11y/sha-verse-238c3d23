@@ -330,7 +330,12 @@ export const useProfileSettings = () => {
     onSuccess: async () => {
       toast({ title: 'Account deactivated', description: 'Your account has been deactivated. Sign in again to reactivate.' });
       clearDeviceToken();
-      await supabase.auth.signOut();
+      // Global scope invalidates refresh tokens on every device server-side.
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch {
+        await supabase.auth.signOut();
+      }
       window.location.href = '/auth';
     },
     onError: (error: any) => {
