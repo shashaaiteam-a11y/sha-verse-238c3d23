@@ -119,31 +119,39 @@ export const ShareDialog = ({
       const userComment = shareComment.trim();
 
       if (shareTarget === 'timeline') {
-        if (postType === 'post') {
-          await sharePost.mutateAsync({ postId, comment: (userComment ? userComment : '') + linkLine });
-        } else if (postType === 'group_post') {
-          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: (userComment ? userComment : '') + linkLine });
-        } else {
-          // For videos and books, create a real post on the timeline carrying link + thumbnail
-          const composedContent =
-            (userComment ? userComment + '\n\n' : '') +
-            (postType === 'video' ? '🎬 Shared a video' : '📚 Shared a book') +
-            (postContent ? `: ${postContent.slice(0, 140)}` : '') +
-            linkLine;
+        // Compose human-readable content with the link so it's auto-linkified in feeds
+        const typeLabel =
+          postType === 'video' ? '🎬 Shared a video'
+          : postType === 'book' ? '📚 Shared a book'
+          : postType === 'group_post' ? '💬 Shared a group post'
+          : '🔗 Shared a post';
+        const composedContent =
+          (userComment ? userComment + '\n\n' : '') +
+          typeLabel +
+          (postContent ? `: ${postContent.slice(0, 140)}` : '') +
+          `\n\n${postUrl}`;
 
-          const { error } = await supabase
-            .from('posts')
-            .insert({
-              user_id: user.id,
-              content: composedContent,
-              image_url: postImage || null,
-              visibility: 'public',
-            });
-          if (error) throw error;
-          queryClient.invalidateQueries({ queryKey: ['posts'] });
-          queryClient.invalidateQueries({ queryKey: ['user-posts'] });
-          toast({ title: 'Shared to your timeline!' });
+        // Always create a real visible post on the user's timeline with the thumbnail
+        const { error: postErr } = await supabase
+          .from('posts')
+          .insert({
+            user_id: user.id,
+            content: composedContent,
+            image_url: postImage || null,
+            visibility: 'public',
+          });
+        if (postErr) throw postErr;
+
+        // Also record the share relation for analytics/counters when applicable
+        if (postType === 'post') {
+          await sharePost.mutateAsync({ postId, comment: userComment || undefined }).catch(() => {});
+        } else if (postType === 'group_post') {
+          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: userComment || undefined }).catch(() => {});
         }
+
+        queryClient.invalidateQueries({ queryKey: ['posts'] });
+        queryClient.invalidateQueries({ queryKey: ['user-posts'] });
+        toast({ title: 'Shared to your timeline!' });
       } else if (shareTarget === 'group' && selectedGroupId) {
         await shareToGroup.mutateAsync({
           groupId: selectedGroupId,
