@@ -4532,6 +4532,15 @@ export type Database = {
         Args: { _blocked_id: string; _blocker_id: string }
         Returns: boolean
       }
+      log_user_activity: {
+        Args: {
+          _activity_type: string
+          _content: string
+          _metadata?: Json
+          _user_id: string
+        }
+        Returns: undefined
+      }
       mark_all_conversations_read: { Args: never; Returns: number }
       mark_conversation_as_read: {
         Args: { _conversation_id: string }
