@@ -377,10 +377,15 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                 <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
                   <SectionHeader icon={AlertTriangle} title="Deactivate Account" color="text-destructive" bg="bg-destructive/15" />
                   <p className="text-xs text-muted-foreground mb-3 pl-10">
-                    Temporarily disable your account. You can reactivate it anytime by logging in.
+                    Temporarily disable your account. You'll be signed out from all devices. Sign in again anytime to reactivate.
                   </p>
-                  <Button variant="destructive" className="w-full h-10 rounded-xl text-sm font-semibold">
-                    Deactivate Account
+                  <Button
+                    variant="destructive"
+                    className="w-full h-10 rounded-xl text-sm font-semibold"
+                    onClick={() => setDeactivateOpen(true)}
+                    disabled={deactivateAccount.isPending}
+                  >
+                    {deactivateAccount.isPending ? 'Deactivating…' : 'Deactivate Account'}
                   </Button>
                 </div>
               </div>
