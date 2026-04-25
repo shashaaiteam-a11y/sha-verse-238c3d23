@@ -40,7 +40,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { 
   ArrowLeft, Settings, Users, FileText, Shield, BarChart3, 
-  Check, X, Trash2, Ban, UserMinus, Crown, Plus, Edit, Pin, PinOff
+  Check, X, Trash2, Ban, UserMinus, Crown, Plus, Edit, Pin, PinOff,
+  Flag, AlertTriangle, VolumeX, Volume2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
