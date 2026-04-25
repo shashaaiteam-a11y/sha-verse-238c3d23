@@ -26,7 +26,21 @@ import {
 import { useProfileSettings } from '@/hooks/useProfileSettings';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/components/ui/use-toast';
-import { formatDistanceToNow, format, startOfWeek, endOfWeek } from 'date-fns';
+import { formatDistanceToNow, format, startOfWeek, endOfWeek, isValid } from 'date-fns';
+
+const safeDate = (value: any): Date | null => {
+  if (!value) return null;
+  const d = new Date(value);
+  return isValid(d) ? d : null;
+};
+const safeDistance = (value: any, fallback = 'recently') => {
+  const d = safeDate(value);
+  return d ? formatDistanceToNow(d, { addSuffix: true }) : fallback;
+};
+const safeFormat = (value: any, pattern: string, fallback = '—') => {
+  const d = safeDate(value);
+  return d ? format(d, pattern) : fallback;
+};
 
 interface ProfileSettingsDialogProps {
   trigger?: React.ReactNode;
