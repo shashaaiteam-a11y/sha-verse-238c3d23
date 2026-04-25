@@ -160,11 +160,35 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
     return Array.from(grouped.values()).sort((a, b) => b.weekStart.getTime() - a.weekStart.getTime());
   }, [activities]);
 
+  const ACTIVITY_LABELS: Record<string, string> = {
+    post_created: 'Created a post',
+    group_post_created: 'Posted in a group',
+    comment_created: 'Wrote a comment',
+    reaction_added: 'Reacted to content',
+    message_sent: 'Sent a message',
+    friend_request_sent: 'Sent a friend request',
+    friend_request_accepted: 'Accepted a friend request',
+    user_blocked: 'Blocked a user',
+    user_unblocked: 'Unblocked a user',
+    video_uploaded: 'Uploaded a video',
+    book_uploaded: 'Uploaded a book',
+    group_joined: 'Joined a group',
+    life_event: 'Account activity',
+    profile_pic_change: 'Updated profile picture',
+    cover_change: 'Updated cover photo',
+  };
+
   const getActivityTitle = (activity: any) => {
+    const type = activity.activity_type as string;
+    if (ACTIVITY_LABELS[type]) return ACTIVITY_LABELS[type];
     if (activity?.metadata?.action) {
       return String(activity.metadata.action).replace(/_/g, ' ');
     }
-    return String(activity.activity_type || 'activity').replace(/_/g, ' ');
+    return String(type || 'activity').replace(/_/g, ' ');
+  };
+
+  const getActivityModule = (activity: any): string | null => {
+    return activity?.metadata?.module || null;
   };
 
   return (
