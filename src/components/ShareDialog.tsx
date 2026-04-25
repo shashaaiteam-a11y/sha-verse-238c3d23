@@ -38,6 +38,10 @@ interface ShareDialogProps {
   postContent?: string;
   postImage?: string;
   postVisibility?: string;
+  /** Optional explicit deep-link URL. If omitted, one is derived from postType + postId. */
+  shareUrl?: string;
+  /** Optional group context (used for group_post deep links). */
+  groupId?: string;
 }
 
 type ShareTargetType = 'timeline' | 'group' | 'page';
