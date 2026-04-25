@@ -674,7 +674,7 @@ const GroupDetail = () => {
                   </div>
                 ) : (
                   post.content && (
-                    <p className="text-xs sm:text-sm mb-3 break-words whitespace-pre-wrap">{post.content}</p>
+                    <HashtagText content={post.content} className="text-xs sm:text-sm mb-3 break-words whitespace-pre-wrap block" />
                   )
                 )}
 

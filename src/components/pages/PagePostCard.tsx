@@ -79,7 +79,7 @@ const PagePostCard = ({ post, page, canDelete }: PagePostCardProps) => {
       </div>
 
       {/* Content */}
-      <p className="mb-3 whitespace-pre-wrap">{post.content}</p>
+      <HashtagText content={post.content} className="mb-3 whitespace-pre-wrap block" />
 
       {/* Image */}
       {post.image_url && (
