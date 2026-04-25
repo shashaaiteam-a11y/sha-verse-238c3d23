@@ -4,12 +4,13 @@ import { Fragment } from 'react';
 interface HashtagTextProps {
   content: string;
   className?: string;
+  onNavigate?: () => void;
 }
 
 // Match #hashtag OR full http(s) URL
 const TOKEN_REGEX = /(#[a-zA-Z0-9_]+|https?:\/\/[^\s]+)/g;
 
-export const HashtagText = ({ content, className = '' }: HashtagTextProps) => {
+export const HashtagText = ({ content, className = '', onNavigate }: HashtagTextProps) => {
   const navigate = useNavigate();
 
   const handleLinkClick = (e: React.MouseEvent, url: string) => {
@@ -21,6 +22,7 @@ export const HashtagText = ({ content, className = '' }: HashtagTextProps) => {
       if (typeof window !== 'undefined' && parsed.origin === window.location.origin) {
         e.preventDefault();
         navigate(`${parsed.pathname}${parsed.search}${parsed.hash}`);
+        onNavigate?.();
         return;
       }
     } catch {
