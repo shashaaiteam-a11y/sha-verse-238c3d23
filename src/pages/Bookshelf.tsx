@@ -128,6 +128,9 @@ const Bookshelf = () => {
 
   });
 
+  // Subscribed book channels (for Subscribed tab)
+  const { data: subscribedChannels = [] } = useSubscribedBookChannels();
+
 
 
   // Fetch reading history (Keep existing logic, maybe move to hook later)
