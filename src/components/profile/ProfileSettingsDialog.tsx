@@ -547,7 +547,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                                       <p className="text-xs text-muted-foreground mt-0.5 break-words line-clamp-2">{activity.content}</p>
                                     )}
                                     <p className="text-[10px] text-muted-foreground/60 mt-1">
-                                      {format(new Date(activity.created_at), 'MMM d, yyyy · h:mm a')}
+                                      {safeFormat(activity.created_at, 'MMM d, yyyy · h:mm a')}
                                     </p>
                                   </div>
                                   <Button
