@@ -561,6 +561,37 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Unblock confirmation */}
+      <AlertDialog open={!!unblockTarget} onOpenChange={(open) => !open && setUnblockTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-primary" />
+              Unblock {unblockTarget?.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              They'll be able to see your public posts and send you messages again. You won't be friends — to reconnect, you'll need to send a new friend request.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unblockUser.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={unblockUser.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (unblockTarget) {
+                  unblockUser.mutate(unblockTarget.id, {
+                    onSettled: () => setUnblockTarget(null),
+                  });
+                }
+              }}
+            >
+              {unblockUser.isPending ? 'Unblocking…' : 'Yes, unblock'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
