@@ -290,18 +290,48 @@ export const useProfileSettings = () => {
     },
   });
 
-  // Change password
+  // Change password (verifies current password first)
   const changePassword = useMutation({
     mutationFn: async ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) => {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
+      if (!user?.email) throw new Error('No email associated with this account');
+      if (!currentPassword) throw new Error('Current password is required');
+
+      // Verify current password by re-authenticating
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
       });
-      
+      if (signInError) {
+        throw new Error('Current password is incorrect');
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
       if (error) throw error;
     },
     onSuccess: () => {
       logActivity('Changed account password', { action: 'change_password' });
-      toast({ title: 'Password changed', description: 'Your password has been updated' });
+      toast({ title: 'Password updated', description: 'Your password has been changed successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Deactivate account
+  const deactivateAccount = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase.rpc('deactivate_my_account');
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast({ title: 'Account deactivated', description: 'Your account has been deactivated. Sign in again to reactivate.' });
+      clearDeviceToken();
+      await supabase.auth.signOut();
+      window.location.href = '/auth';
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
