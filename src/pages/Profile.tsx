@@ -121,6 +121,8 @@ const Profile = () => {
 
   const { posts, hasMore: postsHasMore, isLoading: postsLoading } = useUserPosts(userId || user?.id, postsPage);
 
+  useScrollToSharedPost(!postsLoading && (posts?.length ?? 0) > 0);
+
   const { photos, hasMore: photosHasMore, isLoading: photosLoading } = useUserPhotos(userId || user?.id, photosPage);
 
   const { videos, isLoading: videosLoading } = useUserVideos(userId || user?.id);
