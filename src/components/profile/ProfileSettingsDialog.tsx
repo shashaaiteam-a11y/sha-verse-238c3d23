@@ -207,6 +207,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
@@ -582,6 +583,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
           </TabsContent>
         </Tabs>
       </DialogContent>
+    </Dialog>
 
       {/* Deactivate confirmation */}
       <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
@@ -642,6 +644,6 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+    </>
   );
 };
