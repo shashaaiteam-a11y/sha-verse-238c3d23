@@ -310,10 +310,10 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                     </div>
                     <Button
                       onClick={handleChangePassword}
-                      disabled={!newPassword || newPassword !== confirmPassword || changePassword.isPending}
+                      disabled={!currentPassword || !newPassword || newPassword !== confirmPassword || changePassword.isPending}
                       className="w-full h-10 rounded-xl font-semibold bg-gradient-primary"
                     >
-                      {changePassword.isPending ? 'Changing...' : 'Update Password'}
+                      {changePassword.isPending ? 'Updating…' : 'Update Password'}
                     </Button>
                   </div>
                 </div>
