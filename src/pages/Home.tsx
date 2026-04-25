@@ -52,12 +52,14 @@ import { NativeAdCard, BannerAd, StickyBannerAd } from '@/components/ads';
 import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 
 import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
+import { useScrollToSharedPost } from '@/hooks/useScrollToSharedPost';
 
 
 
 const Home = () => {
 
   const { feedItems, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeed();
+  useScrollToSharedPost(!isLoading && (feedItems?.length ?? 0) > 0);
 
   const { friends, pendingRequests } = useFriends();
 
