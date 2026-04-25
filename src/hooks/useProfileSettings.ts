@@ -435,6 +435,7 @@ export const useProfileSettings = () => {
     updateProfile,
     updatePrivacy,
     changePassword,
+    deactivateAccount,
     deleteActivity,
     deleteActivitiesByWeek,
     isUserBlocked,
