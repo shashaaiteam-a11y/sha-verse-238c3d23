@@ -288,7 +288,7 @@ export const ProfilePostCard = ({
             </div>
           </div>
         ) : (
-          <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+          <HashtagText content={post.content || ''} className="text-sm whitespace-pre-wrap block" />
         )}
       </div>
 
