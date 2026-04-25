@@ -772,6 +772,7 @@ const GroupDetail = () => {
           postType="group_post"
           postContent={shareDialogPost.content}
           postImage={shareDialogPost.image}
+          groupId={groupId}
         />
       )}
 
