@@ -241,6 +241,17 @@ const Bookshelf = () => {
 
   };
 
+  // Interleaves a SponsoredBookCard (book-shaped native ad) every `every` items.
+  const renderBooksWithAds = (items: any[], every = 4, keyPrefix = "ad") => {
+    return items.flatMap((book, idx) => {
+      const card = <BookCard key={book.id} book={book} />;
+      if ((idx + 1) % every === 0 && idx !== items.length - 1) {
+        return [card, <SponsoredBookCard key={`${keyPrefix}-${book.id}`} />];
+      }
+      return [card];
+    });
+  };
+
 
 
   return (
