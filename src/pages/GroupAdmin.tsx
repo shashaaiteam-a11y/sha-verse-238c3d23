@@ -308,15 +308,27 @@ const GroupAdmin = () => {
                           {member.role === 'admin' && <Crown className="w-4 h-4 text-yellow-500" />}
                           {member.role === 'moderator' && <Shield className="w-4 h-4 text-blue-500" />}
                         </div>
-                        <p className="text-xs text-muted-foreground">Joined {formatDistanceToNow(new Date(member.joined_at), { addSuffix: true })}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                          <span>Joined {formatDistanceToNow(new Date(member.joined_at), { addSuffix: true })}</span>
+                          {member.status === 'muted' && (
+                            <Badge variant="outline" className="h-4 px-1 text-[10px] border-yellow-500 text-yellow-600">
+                              <VolumeX className="w-2.5 h-2.5 mr-0.5" />Muted
+                            </Badge>
+                          )}
+                          {member.warnings > 0 && (
+                            <Badge variant="outline" className="h-4 px-1 text-[10px] border-red-500 text-red-600">
+                              <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />{member.warnings}
+                            </Badge>
+                          )}
+                        </p>
                       </div>
                       {isAdmin && member.profiles?.id !== user?.id && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-end">
                           <Select
                             value={member.role || 'member'}
                             onValueChange={(value) => updateMemberRole.mutate({ userId: member.user_id, role: value })}
                           >
-                            <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectTrigger className="w-24 sm:w-28 h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -325,9 +337,50 @@ const GroupAdmin = () => {
                               <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
+
+                          {/* Warn */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-yellow-600 hover:text-yellow-700"
+                            title="Issue warning"
+                            onClick={() => {
+                              setWarnTargetUserId(member.user_id);
+                              setWarnTargetName(member.profiles?.display_name || 'this member');
+                              setWarnReason('');
+                              setWarnDialogOpen(true);
+                            }}
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                          </Button>
+
+                          {/* Mute / Unmute */}
+                          {member.status === 'muted' ? (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-blue-600"
+                              title="Unmute"
+                              onClick={() => unmuteMember.mutate(member.user_id)}
+                            >
+                              <Volume2 className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-yellow-600"
+                              title="Mute"
+                              onClick={() => muteMember.mutate({ userId: member.user_id })}
+                            >
+                              <VolumeX className="w-4 h-4" />
+                            </Button>
+                          )}
+
+                          {/* Remove */}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Remove">
                                 <UserMinus className="w-4 h-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -344,9 +397,11 @@ const GroupAdmin = () => {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+
+                          {/* Block */}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Block">
                                 <Ban className="w-4 h-4" />
                               </Button>
                             </AlertDialogTrigger>
