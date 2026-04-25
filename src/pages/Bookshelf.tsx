@@ -951,23 +951,57 @@ const Bookshelf = () => {
 
           <TabsContent value="subscribed">
 
-            {subscribedBooks.length > 0 ? (
+            {subscribedChannels.length > 0 ? (
 
-              <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                {subscribedChannels.flatMap((channel: any, idx: number) => {
 
-                  {subscribedBooks.map((book: any) => (
+                  const card = (
 
-                    <BookCard key={book.id} book={book} />
+                    <Card
 
-                  ))}
+                      key={channel.id}
 
-                </div>
+                      className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
 
-                {renderPagination(subscribedBooks.length)}
+                      onClick={() => navigate(`/bookshelf/channel/${channel.id}`)}
 
-              </>
+                    >
+
+                      <Avatar className="w-16 h-16 mx-auto mb-2">
+
+                        <AvatarImage src={channel.avatar_url || ""} />
+
+                        <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
+
+                      </Avatar>
+
+                      <h3 className="font-semibold text-sm line-clamp-1">{channel.name}</h3>
+
+                      <p className="text-xs text-muted-foreground">
+
+                        {channel.subscribers_count || 0} subscribers
+
+                      </p>
+
+                      <Badge variant="secondary" className="mt-2 text-xs">Author</Badge>
+
+                    </Card>
+
+                  );
+
+                  if ((idx + 1) % 4 === 0) {
+
+                    return [card, <SponsoredBookCard key={`sub-ad-${channel.id}`} />];
+
+                  }
+
+                  return [card];
+
+                })}
+
+              </div>
 
             ) : (
 
@@ -979,7 +1013,7 @@ const Bookshelf = () => {
 
                 <p className="text-muted-foreground text-sm mb-4">
 
-                  Subscribe to authors to see their books here
+                  Subscribe to authors to see their channels here
 
                 </p>
 
