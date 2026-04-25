@@ -68,13 +68,19 @@ export const ShareDialog = ({
   const [canShare, setCanShare] = useState(true);
   const [shareRestriction, setShareRestriction] = useState<string>('');
 
-  const postUrl = `${window.location.origin}/${
-    postType === 'video'
-      ? 'movion/watch'
-      : postType === 'book'
-      ? 'bookshelf/book'
-      : 'post'
-  }/${postId}`;
+  const getPostPath = () => {
+    switch (postType) {
+      case 'video':
+        return `movion/watch/${postId}`;
+      case 'book':
+        return `bookshelf/book/${postId}`;
+      case 'group_post':
+        return `post/${postId}`;
+      default:
+        return `post/${postId}`;
+    }
+  };
+  const postUrl = `${window.location.origin}/${getPostPath()}`;
 
   // Check share permissions when dialog opens
   useEffect(() => {
@@ -108,21 +114,34 @@ export const ShareDialog = ({
     
     setIsSharing(true);
     try {
+      // Build a share line that always carries the link so it's clickable
+      const linkLine = `\n\n🔗 ${postUrl}`;
+      const userComment = shareComment.trim();
+
       if (shareTarget === 'timeline') {
-        // Share to own timeline
         if (postType === 'post') {
-          await sharePost.mutateAsync({ postId, comment: shareComment.trim() || undefined });
+          await sharePost.mutateAsync({ postId, comment: (userComment ? userComment : '') + linkLine });
         } else if (postType === 'group_post') {
-          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: shareComment.trim() || undefined });
+          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: (userComment ? userComment : '') + linkLine });
         } else {
-          // For videos and books, create a share entry
+          // For videos and books, create a real post on the timeline carrying link + thumbnail
+          const composedContent =
+            (userComment ? userComment + '\n\n' : '') +
+            (postType === 'video' ? '🎬 Shared a video' : '📚 Shared a book') +
+            (postContent ? `: ${postContent.slice(0, 140)}` : '') +
+            linkLine;
+
           const { error } = await supabase
-            .from('shares')
+            .from('posts')
             .insert({
               user_id: user.id,
-              comment: shareComment.trim() || null
+              content: composedContent,
+              image_url: postImage || null,
+              visibility: 'public',
             });
           if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ['posts'] });
+          queryClient.invalidateQueries({ queryKey: ['user-posts'] });
           toast({ title: 'Shared to your timeline!' });
         }
       } else if (shareTarget === 'group' && selectedGroupId) {
@@ -130,14 +149,16 @@ export const ShareDialog = ({
           groupId: selectedGroupId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: (userComment ? userComment : '') + linkLine,
+          imageUrl: postImage,
         });
       } else if (shareTarget === 'page' && selectedPageId) {
         await shareToPage.mutateAsync({
           pageId: selectedPageId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: (userComment ? userComment : '') + linkLine,
+          imageUrl: postImage,
         });
       }
 
@@ -192,9 +213,12 @@ export const ShareDialog = ({
       const blob = await response.blob();
       const file = new File([blob], 'shared-story.jpg', { type: 'image/jpeg' });
       
+      const baseCaption = shareComment.trim() || postContent?.slice(0, 100) || 'Shared post';
+      const captionWithLink = `${baseCaption}\n\n🔗 ${postUrl}`;
+
       await createStory.mutateAsync({
         mediaFile: file,
-        caption: shareComment || postContent?.slice(0, 100) || 'Shared post'
+        caption: captionWithLink,
       });
 
       toast({ title: 'Shared to your story!' });

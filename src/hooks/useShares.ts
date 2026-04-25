@@ -89,16 +89,17 @@ export const useShares = () => {
       groupId, 
       originalPostId, 
       originalPostType,
-      comment 
+      comment,
+      imageUrl,
     }: { 
       groupId: string; 
       originalPostId: string;
       originalPostType: 'post' | 'group_post' | 'video' | 'book';
       comment?: string;
+      imageUrl?: string;
     }) => {
       if (!user) throw new Error('Not authenticated');
 
-      // Create a group post with reference to original
       const sharedContent = `[Shared ${originalPostType}]${comment ? `\n\n${comment}` : ''}`;
       
       const { data, error } = await supabase
@@ -107,6 +108,7 @@ export const useShares = () => {
           group_id: groupId,
           user_id: user.id,
           content: sharedContent,
+          image_url: imageUrl || null,
         })
         .select()
         .single();
@@ -136,12 +138,14 @@ export const useShares = () => {
       pageId, 
       originalPostId,
       originalPostType,
-      comment 
+      comment,
+      imageUrl,
     }: { 
       pageId: string; 
       originalPostId: string;
       originalPostType: 'post' | 'group_post' | 'video' | 'book';
       comment?: string;
+      imageUrl?: string;
     }) => {
       if (!user) throw new Error('Not authenticated');
 
@@ -153,6 +157,7 @@ export const useShares = () => {
           page_id: pageId,
           posted_by: user.id,
           content: sharedContent,
+          image_url: imageUrl || null,
           is_published: true,
           published_at: new Date().toISOString(),
         })
