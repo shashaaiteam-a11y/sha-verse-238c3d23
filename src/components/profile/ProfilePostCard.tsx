@@ -291,16 +291,83 @@ export const ProfilePostCard = ({
         )}
       </div>
 
-      {/* Post Image */}
-      {post.image_url && (
-        <div className="bg-muted">
-          <img 
-            src={post.image_url} 
-            alt="Post" 
-            className="w-full max-h-[500px] object-cover"
-          />
-        </div>
-      )}
+      {/* Post Media (images + videos) */}
+      {(() => {
+        const allMedia = [
+          ...(post.image_url ? [post.image_url] : []),
+          ...(post.media_urls || [])
+        ].filter(Boolean);
+        if (allMedia.length === 0) return null;
+
+        const isVideo = (url: string) => /\.(mp4|webm|ogg|mov)$/i.test(url);
+
+        if (allMedia.length === 1) {
+          const url = allMedia[0];
+          if (isVideo(url)) {
+            return (
+              <div className="bg-muted">
+                <video
+                  src={url}
+                  controls
+                  className="w-full max-h-[500px] object-cover"
+                  preload="metadata"
+                />
+              </div>
+            );
+          }
+          return (
+            <div className="bg-muted">
+              <img
+                src={url}
+                alt="Post"
+                className="w-full max-h-[500px] object-cover"
+                loading="lazy"
+              />
+            </div>
+          );
+        }
+
+        return (
+          <div className={`grid gap-0.5 bg-muted ${
+            allMedia.length === 2 ? 'grid-cols-2' :
+            allMedia.length === 3 ? 'grid-cols-2' :
+            'grid-cols-2'
+          }`}>
+            {allMedia.slice(0, 4).map((url, idx) => {
+              const isLastVisible = idx === 3 && allMedia.length > 4;
+              return (
+                <div
+                  key={idx}
+                  className={`relative ${
+                    allMedia.length === 3 && idx === 0 ? 'row-span-2' : ''
+                  }`}
+                >
+                  {isVideo(url) ? (
+                    <video
+                      src={url}
+                      controls
+                      className="w-full h-full object-cover aspect-square"
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img
+                      src={url}
+                      alt={`Media ${idx + 1}`}
+                      className="w-full h-full object-cover aspect-square"
+                      loading="lazy"
+                    />
+                  )}
+                  {isLastVisible && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
+                      <span className="text-white text-2xl font-bold">+{allMedia.length - 4}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Reaction Counts */}
       {(totalReactions > 0 || post.comments_count > 0 || post.shares_count > 0) && (
