@@ -154,7 +154,7 @@ export const ShareDialog = ({
           groupId: selectedGroupId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: (userComment ? userComment : '') + linkLine,
+          comment: (userComment ? userComment + '\n\n' : '') + postUrl,
           imageUrl: postImage,
         });
       } else if (shareTarget === 'page' && selectedPageId) {
@@ -162,7 +162,7 @@ export const ShareDialog = ({
           pageId: selectedPageId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: (userComment ? userComment : '') + linkLine,
+          comment: (userComment ? userComment + '\n\n' : '') + postUrl,
           imageUrl: postImage,
         });
       }
