@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { useGroups, GroupPrivacy } from '@/hooks/useGroups';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GROUP_CATEGORIES } from '@/lib/constants/groupCategories';
@@ -13,6 +14,13 @@ import { WORLD_LANGUAGES } from '@/lib/constants/languages';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/use-toast';
+
+const DEFAULT_RULES = `1. Be respectful to all members
+2. No spam or self-promotion
+3. Keep discussions on-topic
+4. No hate speech or harassment
+5. Respect privacy — don't share personal information`;
 
 export const CreateGroupDialog = () => {
   const [open, setOpen] = useState(false);
@@ -24,22 +32,48 @@ export const CreateGroupDialog = () => {
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('English');
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [rules, setRules] = useState('');
+  const [rules, setRules] = useState(DEFAULT_RULES);
   const [activeTab, setActiveTab] = useState('basic');
-  
+
   const { createGroup } = useGroups();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const categoryItems = GROUP_CATEGORIES.filter(c => c.value !== "trending");
   const categoryLabel = categoryItems.find(c => c.value === category)?.label || category;
 
+  const handleNext = () => {
+    if (activeTab === 'basic') {
+      if (!name.trim()) {
+        toast({
+          title: 'Group name is required',
+          description: 'Please enter a name to continue.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setActiveTab('settings');
+    } else if (activeTab === 'settings') {
+      setActiveTab('rules');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setActiveTab('basic');
+      toast({
+        title: 'Group name is required',
+        description: 'Please enter a name to create the group.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     createGroup.mutate(
       { name, description, privacy, category, country, language, rules },
       {
-        onSuccess: () => {
+        onSuccess: (created: any) => {
           setOpen(false);
           setName('');
           setDescription('');
@@ -47,8 +81,11 @@ export const CreateGroupDialog = () => {
           setCategory('General');
           setCountry('');
           setLanguage('English');
-          setRules('');
+          setRules(DEFAULT_RULES);
           setActiveTab('basic');
+          if (created?.id) {
+            navigate(`/groups/${created.id}`);
+          }
         },
       }
     );
@@ -272,19 +309,27 @@ export const CreateGroupDialog = () => {
               </div>
               <div className="flex gap-2">
                 {activeTab !== 'rules' ? (
-                  <Button 
-                    type="button" 
-                    onClick={() => setActiveTab(activeTab === 'basic' ? 'settings' : 'rules')}
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={activeTab === 'basic' && !name.trim()}
                   >
                     Next Step
                   </Button>
                 ) : (
                   <Button
                     type="submit"
-                    className="bg-gradient-primary shadow-glow min-w-[120px]"
+                    className="bg-gradient-primary shadow-glow min-w-[140px]"
                     disabled={createGroup.isPending || !name.trim()}
                   >
-                    {createGroup.isPending ? 'Creating...' : 'Create Group'}
+                    {createGroup.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Group'
+                    )}
                   </Button>
                 )}
               </div>
