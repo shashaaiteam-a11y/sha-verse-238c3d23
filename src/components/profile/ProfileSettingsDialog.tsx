@@ -398,39 +398,53 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
             <ScrollArea className="h-[calc(90vh-130px)]">
               <div className="px-5 py-4">
                 <div className="rounded-2xl border border-border bg-card p-4">
-                  <SectionHeader icon={UserX} title="Blocked Users" />
+                  <div className="flex items-center justify-between mb-3">
+                    <SectionHeader icon={UserX} title="Blocked Users" />
+                    {blockedUsers && blockedUsers.length > 0 && (
+                      <span className="text-[11px] font-semibold bg-secondary text-muted-foreground px-2 py-1 rounded-full">
+                        {blockedUsers.length}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mb-4 pl-10">
                     Blocked users can't see your posts, tag you, or send you messages. They're removed from your friends list automatically.
                   </p>
                   {blockedUsers && blockedUsers.length > 0 ? (
                     <div className="space-y-2">
-                      {blockedUsers.map((block: any) => (
-                        <div key={block.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-secondary">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <Avatar className="h-9 w-9 shrink-0">
-                              {block.profiles?.avatar_url && <AvatarImage src={block.profiles.avatar_url} />}
-                              <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">
-                                {block.profiles?.display_name?.[0] || 'U'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold truncate">{block.profiles?.display_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Blocked {formatDistanceToNow(new Date(block.created_at), { addSuffix: true })}
-                              </p>
+                      {blockedUsers.map((block: any) => {
+                        const name = block.profiles?.display_name || block.profiles?.username || 'Unknown user';
+                        const username = block.profiles?.username;
+                        return (
+                          <div key={block.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-secondary">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <Avatar className="h-9 w-9 shrink-0">
+                                {block.profiles?.avatar_url && <AvatarImage src={block.profiles.avatar_url} />}
+                                <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">
+                                  {name[0]?.toUpperCase() || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold truncate">{name}</p>
+                                {username && (
+                                  <p className="text-[11px] text-muted-foreground truncate">@{username}</p>
+                                )}
+                                <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                                  Blocked {formatDistanceToNow(new Date(block.created_at), { addSuffix: true })}
+                                </p>
+                              </div>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0 h-7 text-xs rounded-lg ml-2"
+                              onClick={() => setUnblockTarget({ id: block.id, name })}
+                              disabled={unblockUser.isPending}
+                            >
+                              Unblock
+                            </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="shrink-0 h-7 text-xs rounded-lg"
-                            onClick={() => unblockUser.mutate(block.id)}
-                            disabled={unblockUser.isPending}
-                          >
-                            Unblock
-                          </Button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-10">
