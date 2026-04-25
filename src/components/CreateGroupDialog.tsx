@@ -309,19 +309,27 @@ export const CreateGroupDialog = () => {
               </div>
               <div className="flex gap-2">
                 {activeTab !== 'rules' ? (
-                  <Button 
-                    type="button" 
-                    onClick={() => setActiveTab(activeTab === 'basic' ? 'settings' : 'rules')}
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={activeTab === 'basic' && !name.trim()}
                   >
                     Next Step
                   </Button>
                 ) : (
                   <Button
                     type="submit"
-                    className="bg-gradient-primary shadow-glow min-w-[120px]"
+                    className="bg-gradient-primary shadow-glow min-w-[140px]"
                     disabled={createGroup.isPending || !name.trim()}
                   >
-                    {createGroup.isPending ? 'Creating...' : 'Create Group'}
+                    {createGroup.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Group'
+                    )}
                   </Button>
                 )}
               </div>
