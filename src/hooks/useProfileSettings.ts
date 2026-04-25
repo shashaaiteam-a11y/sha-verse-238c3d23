@@ -355,7 +355,7 @@ export const useProfileSettings = () => {
         .select();
 
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error('Delete blocked by RLS — run DELETE policy SQL in Supabase dashboard');
+      if (!data || data.length === 0) throw new Error('Activity not found or already deleted');
     },
     onMutate: async (activityId: string) => {
       if (!user) return {};
@@ -394,7 +394,7 @@ export const useProfileSettings = () => {
         .select();
 
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error('Delete blocked by RLS — run DELETE policy SQL in Supabase dashboard');
+      if (!data || data.length === 0) throw new Error('No activities were deleted');
     },
     onMutate: async (activityIds: string[]) => {
       if (!user) return {};

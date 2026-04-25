@@ -160,11 +160,35 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
     return Array.from(grouped.values()).sort((a, b) => b.weekStart.getTime() - a.weekStart.getTime());
   }, [activities]);
 
+  const ACTIVITY_LABELS: Record<string, string> = {
+    post_created: 'Created a post',
+    group_post_created: 'Posted in a group',
+    comment_created: 'Wrote a comment',
+    reaction_added: 'Reacted to content',
+    message_sent: 'Sent a message',
+    friend_request_sent: 'Sent a friend request',
+    friend_request_accepted: 'Accepted a friend request',
+    user_blocked: 'Blocked a user',
+    user_unblocked: 'Unblocked a user',
+    video_uploaded: 'Uploaded a video',
+    book_uploaded: 'Uploaded a book',
+    group_joined: 'Joined a group',
+    life_event: 'Account activity',
+    profile_pic_change: 'Updated profile picture',
+    cover_change: 'Updated cover photo',
+  };
+
   const getActivityTitle = (activity: any) => {
+    const type = activity.activity_type as string;
+    if (ACTIVITY_LABELS[type]) return ACTIVITY_LABELS[type];
     if (activity?.metadata?.action) {
       return String(activity.metadata.action).replace(/_/g, ' ');
     }
-    return String(activity.activity_type || 'activity').replace(/_/g, ' ');
+    return String(type || 'activity').replace(/_/g, ' ');
+  };
+
+  const getActivityModule = (activity: any): string | null => {
+    return activity?.metadata?.module || null;
   };
 
   return (
@@ -488,31 +512,42 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                           </div>
 
                           <div className="space-y-2">
-                            {week.items.map((activity: any) => (
-                              <div key={activity.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl bg-secondary">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                                  <Clock className="w-3.5 h-3.5 text-primary" />
+                            {week.items.map((activity: any) => {
+                              const moduleName = getActivityModule(activity);
+                              return (
+                                <div key={activity.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl bg-secondary">
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                                    <Clock className="w-3.5 h-3.5 text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <p className="text-sm font-medium leading-tight">{getActivityTitle(activity)}</p>
+                                      {moduleName && (
+                                        <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/15 text-primary px-1.5 py-0.5 rounded">
+                                          {moduleName}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {activity.content && activity.content !== getActivityTitle(activity) && (
+                                      <p className="text-xs text-muted-foreground mt-0.5 break-words line-clamp-2">{activity.content}</p>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                      {format(new Date(activity.created_at), 'MMM d, yyyy · h:mm a')}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="shrink-0 h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={() => deleteActivity.mutate(activity.id)}
+                                    disabled={deleteActivity.isPending}
+                                    title="Delete this activity permanently"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium capitalize leading-tight">{getActivityTitle(activity)}</p>
-                                  {activity.content && (
-                                    <p className="text-xs text-muted-foreground mt-0.5 break-words">{activity.content}</p>
-                                  )}
-                                  <p className="text-[10px] text-muted-foreground/60 mt-1">
-                                    {format(new Date(activity.created_at), 'MMM d, yyyy · h:mm a')}
-                                  </p>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="shrink-0 h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                  onClick={() => deleteActivity.mutate(activity.id)}
-                                  disabled={deleteActivity.isPending}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
