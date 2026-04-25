@@ -96,10 +96,13 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
       });
       return;
     }
-    changePassword.mutate({ currentPassword, newPassword });
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    changePassword.mutate({ currentPassword, newPassword }, {
+      onSuccess: () => {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    });
   };
 
   const PrivacySelect = ({ field, label, icon: Icon }: { field: string; label: string; icon: any }) => (
@@ -206,6 +209,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
@@ -376,7 +380,10 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                   <Button
                     variant="destructive"
                     className="w-full h-10 rounded-xl text-sm font-semibold"
-                    onClick={() => setDeactivateOpen(true)}
+                    onClick={() => {
+                      console.log('[ProfileSettings] Opening deactivate confirmation dialog');
+                      setDeactivateOpen(true);
+                    }}
                     disabled={deactivateAccount.isPending}
                   >
                     {deactivateAccount.isPending ? 'Deactivating…' : 'Deactivate Account'}
@@ -536,68 +543,70 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
           </TabsContent>
         </Tabs>
       </DialogContent>
-
-      {/* Deactivate confirmation */}
-      <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
-        <AlertDialogContent className="z-[90]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-              Deactivate your account?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Your profile will be hidden, you'll be signed out from every device, and your active sessions will be cleared.
-              You can reactivate anytime by signing back in.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deactivateAccount.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deactivateAccount.isPending}
-              onClick={(e) => {
-                e.preventDefault();
-                deactivateAccount.mutate(undefined, {
-                  onSettled: () => setDeactivateOpen(false),
-                });
-              }}
-            >
-              {deactivateAccount.isPending ? 'Deactivating…' : 'Yes, deactivate'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Unblock confirmation */}
-      <AlertDialog open={!!unblockTarget} onOpenChange={(open) => !open && setUnblockTarget(null)}>
-        <AlertDialogContent className="z-[90]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-primary" />
-              Unblock {unblockTarget?.name}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              They'll be able to see your public posts and send you messages again. You won't be friends — to reconnect, you'll need to send a new friend request.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={unblockUser.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={unblockUser.isPending}
-              onClick={(e) => {
-                e.preventDefault();
-                if (unblockTarget) {
-                  unblockUser.mutate(unblockTarget.id, {
-                    onSettled: () => setUnblockTarget(null),
-                  });
-                }
-              }}
-            >
-              {unblockUser.isPending ? 'Unblocking…' : 'Yes, unblock'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Dialog>
-  );
+
+    {/* Deactivate confirmation - Rendered outside Dialog to avoid z-index/focus issues */}
+    <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            Deactivate your account?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Your profile will be hidden, you'll be signed out from every device, and your active sessions will be cleared.
+            You can reactivate anytime by signing back in.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deactivateAccount.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deactivateAccount.isPending}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              deactivateAccount.mutate(undefined, {
+                onSettled: () => setDeactivateOpen(false),
+              });
+            }}
+          >
+            {deactivateAccount.isPending ? 'Deactivating…' : 'Yes, deactivate'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Unblock confirmation - Rendered outside Dialog to avoid z-index/focus issues */}
+    <AlertDialog open={!!unblockTarget} onOpenChange={(open) => !open && setUnblockTarget(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-primary" />
+            Unblock {unblockTarget?.name}?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            They'll be able to see your public posts and send you messages again. You won't be friends — to reconnect, you'll need to send a new friend request.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={unblockUser.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={unblockUser.isPending}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (unblockTarget) {
+                unblockUser.mutate(unblockTarget.id, {
+                  onSettled: () => setUnblockTarget(null),
+                });
+              }
+            }}
+          >
+            {unblockUser.isPending ? 'Unblocking…' : 'Yes, unblock'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>);
 };
