@@ -77,18 +77,22 @@ const NovaChatSidebarAd = ({ className }: NovaChatSidebarAdProps) => {
   return (
     <div
       className={cn(
-        "group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors hover:bg-secondary/50 border border-dashed border-primary/20",
+        // Match conversation-row dimensions exactly so the ad fits the sidebar.
+        // Single-line layout, subtle background instead of dashed border to avoid overflow.
+        "group flex items-center gap-2 px-3 py-2 my-1 rounded-lg cursor-pointer transition-colors",
+        "bg-primary/5 hover:bg-primary/10 max-w-full overflow-hidden",
         className
       )}
       onClick={handleClick}
     >
       <MessageSquare className="w-4 h-4 flex-shrink-0 text-primary" />
+
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
           <span className="truncate text-sm font-medium">{sample.brand}</span>
           <TestAdBadge variant="small" />
         </div>
-        <p className="text-[10px] text-muted-foreground truncate">
+        <p className="text-[10px] text-muted-foreground truncate leading-tight">
           {sample.title} · Sponsored
         </p>
       </div>
