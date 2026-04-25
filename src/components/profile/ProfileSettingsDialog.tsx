@@ -38,6 +38,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
   const { toast } = useToast();
   
   const { profile } = useProfile();
@@ -50,6 +51,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
     endAllOtherSessions,
     updatePrivacy,
     changePassword,
+    deactivateAccount,
     deleteActivity,
     deleteActivitiesByWeek,
   } = useProfileSettings();
