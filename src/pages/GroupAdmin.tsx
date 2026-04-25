@@ -183,10 +183,19 @@ const GroupAdmin = () => {
 
       <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="w-full grid grid-cols-5 mb-4 sm:mb-6">
+          <TabsList className="w-full grid grid-cols-6 mb-4 sm:mb-6">
             <TabsTrigger value="settings" className="text-xs sm:text-sm"><Settings className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Settings</span></TabsTrigger>
             <TabsTrigger value="members" className="text-xs sm:text-sm"><Users className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Members</span></TabsTrigger>
             <TabsTrigger value="posts" className="text-xs sm:text-sm"><FileText className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Posts</span></TabsTrigger>
+            <TabsTrigger value="reports" className="text-xs sm:text-sm relative">
+              <Flag className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Reports</span>
+              {pendingReports > 0 && (
+                <span className="absolute -top-1 -right-1 sm:static sm:ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                  {pendingReports}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="rules" className="text-xs sm:text-sm"><Shield className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Rules</span></TabsTrigger>
             <TabsTrigger value="insights" className="text-xs sm:text-sm"><BarChart3 className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Insights</span></TabsTrigger>
           </TabsList>
