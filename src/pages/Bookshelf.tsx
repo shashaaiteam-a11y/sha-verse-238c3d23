@@ -22,7 +22,7 @@ import { useBooks } from "@/hooks/useBooks";
 
 import { useChannels } from "@/hooks/useChannels";
 
-import { useSubscribedBooks, useSavedBooks } from "@/hooks/useBookFeeds";
+import { useSubscribedBooks, useSavedBooks, useSubscribedBookChannels } from "@/hooks/useBookFeeds";
 
 import { useAuth } from "@/contexts/AuthContext";
 
