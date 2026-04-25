@@ -53,6 +53,16 @@ export async function registerCurrentSession(): Promise<void> {
       p_device_info: detectDevice(ua),
       p_user_agent: ua.slice(0, 500),
     });
+
+    // Reactivate account if previously deactivated (logging in reactivates)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from('profiles')
+        .update({ is_deactivated: false, deactivated_at: null } as any)
+        .eq('id', user.id)
+        .eq('is_deactivated', true);
+    }
   } catch (err) {
     console.warn('[sessionTracker] Failed to register session:', err);
   }
