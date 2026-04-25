@@ -16,12 +16,12 @@ export const useGroupJoinRequests = (groupId?: string) => {
       const { data, error } = await supabase
         .from('group_join_requests')
         .select(`
-          id, status, created_at, user_id,
+          id, status, requested_at, user_id,
           profiles:user_id (id, display_name, avatar_url, username)
         `)
         .eq('group_id', groupId)
         .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        .order('requested_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },

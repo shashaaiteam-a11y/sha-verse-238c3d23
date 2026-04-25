@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupAdmin } from '@/hooks/useGroupAdmin';
+import { useGroupReports } from '@/hooks/useGroupReports';
+import { useGroupMembers } from '@/hooks/useGroupMembers';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,7 +40,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { 
   ArrowLeft, Settings, Users, FileText, Shield, BarChart3, 
-  Check, X, Trash2, Ban, UserMinus, Crown, Plus, Edit, Pin, PinOff
+  Check, X, Trash2, Ban, UserMinus, Crown, Plus, Edit, Pin, PinOff,
+  Flag, AlertTriangle, VolumeX, Volume2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -76,6 +79,10 @@ const GroupAdmin = () => {
     deleteRule,
   } = useGroupAdmin(groupId);
 
+  // Reports + member moderation hooks
+  const { reports, pendingCount: pendingReports, updateReportStatus } = useGroupReports(groupId);
+  const { muteMember, unmuteMember, issueWarning } = useGroupMembers(groupId);
+
   // Settings form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -87,6 +94,12 @@ const GroupAdmin = () => {
   const [newRuleTitle, setNewRuleTitle] = useState('');
   const [newRuleDescription, setNewRuleDescription] = useState('');
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+
+  // Warning dialog state
+  const [warnDialogOpen, setWarnDialogOpen] = useState(false);
+  const [warnTargetUserId, setWarnTargetUserId] = useState<string | null>(null);
+  const [warnTargetName, setWarnTargetName] = useState<string>('');
+  const [warnReason, setWarnReason] = useState('');
 
   // Sync form whenever groupDetails loads or changes (e.g. after realtime update)
   useEffect(() => {
@@ -170,10 +183,19 @@ const GroupAdmin = () => {
 
       <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="w-full grid grid-cols-5 mb-4 sm:mb-6">
+          <TabsList className="w-full grid grid-cols-6 mb-4 sm:mb-6">
             <TabsTrigger value="settings" className="text-xs sm:text-sm"><Settings className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Settings</span></TabsTrigger>
             <TabsTrigger value="members" className="text-xs sm:text-sm"><Users className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Members</span></TabsTrigger>
             <TabsTrigger value="posts" className="text-xs sm:text-sm"><FileText className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Posts</span></TabsTrigger>
+            <TabsTrigger value="reports" className="text-xs sm:text-sm relative">
+              <Flag className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Reports</span>
+              {pendingReports > 0 && (
+                <span className="absolute -top-1 -right-1 sm:static sm:ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                  {pendingReports}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="rules" className="text-xs sm:text-sm"><Shield className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Rules</span></TabsTrigger>
             <TabsTrigger value="insights" className="text-xs sm:text-sm"><BarChart3 className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Insights</span></TabsTrigger>
           </TabsList>
@@ -286,15 +308,27 @@ const GroupAdmin = () => {
                           {member.role === 'admin' && <Crown className="w-4 h-4 text-yellow-500" />}
                           {member.role === 'moderator' && <Shield className="w-4 h-4 text-blue-500" />}
                         </div>
-                        <p className="text-xs text-muted-foreground">Joined {formatDistanceToNow(new Date(member.joined_at), { addSuffix: true })}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                          <span>Joined {formatDistanceToNow(new Date(member.joined_at), { addSuffix: true })}</span>
+                          {member.status === 'muted' && (
+                            <Badge variant="outline" className="h-4 px-1 text-[10px] border-yellow-500 text-yellow-600">
+                              <VolumeX className="w-2.5 h-2.5 mr-0.5" />Muted
+                            </Badge>
+                          )}
+                          {member.warnings > 0 && (
+                            <Badge variant="outline" className="h-4 px-1 text-[10px] border-red-500 text-red-600">
+                              <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />{member.warnings}
+                            </Badge>
+                          )}
+                        </p>
                       </div>
                       {isAdmin && member.profiles?.id !== user?.id && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-end">
                           <Select
                             value={member.role || 'member'}
                             onValueChange={(value) => updateMemberRole.mutate({ userId: member.user_id, role: value })}
                           >
-                            <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectTrigger className="w-24 sm:w-28 h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -303,9 +337,50 @@ const GroupAdmin = () => {
                               <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
+
+                          {/* Warn */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-yellow-600 hover:text-yellow-700"
+                            title="Issue warning"
+                            onClick={() => {
+                              setWarnTargetUserId(member.user_id);
+                              setWarnTargetName(member.profiles?.display_name || 'this member');
+                              setWarnReason('');
+                              setWarnDialogOpen(true);
+                            }}
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                          </Button>
+
+                          {/* Mute / Unmute */}
+                          {member.status === 'muted' ? (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-blue-600"
+                              title="Unmute"
+                              onClick={() => unmuteMember.mutate(member.user_id)}
+                            >
+                              <Volume2 className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-yellow-600"
+                              title="Mute"
+                              onClick={() => muteMember.mutate({ userId: member.user_id })}
+                            >
+                              <VolumeX className="w-4 h-4" />
+                            </Button>
+                          )}
+
+                          {/* Remove */}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Remove">
                                 <UserMinus className="w-4 h-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -322,9 +397,11 @@ const GroupAdmin = () => {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+
+                          {/* Block */}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Block">
                                 <Ban className="w-4 h-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -424,6 +501,82 @@ const GroupAdmin = () => {
                 </p>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Reports Tab */}
+          <TabsContent value="reports">
+            <Card className="p-4 sm:p-6">
+              <h3 className="text-lg font-semibold mb-4">
+                Reports ({reports?.length || 0})
+                {pendingReports > 0 && (
+                  <Badge variant="destructive" className="ml-2">{pendingReports} pending</Badge>
+                )}
+              </h3>
+              {!reports || reports.length === 0 ? (
+                <div className="text-center py-8">
+                  <Flag className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">No reports yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reports.map((report: any) => {
+                    const target = report.reported_post_id ? 'Post' : (report.reported_user_id ? 'Member' : 'Item');
+                    const reporter = report.reporter;
+                    const reportedUser = report.reported_user;
+                    return (
+                      <div key={report.id} className="p-3 bg-secondary/30 rounded-lg space-y-2">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar className="h-8 w-8">
+                              {reporter?.avatar_url && <AvatarImage src={reporter.avatar_url} />}
+                              <AvatarFallback>{reporter?.display_name?.[0] || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{reporter?.display_name || 'Unknown'} reported a {target}</p>
+                              <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}</p>
+                            </div>
+                          </div>
+                          <Badge variant={report.status === 'pending' ? 'destructive' : 'secondary'} className="text-xs">
+                            {report.status || 'pending'}
+                          </Badge>
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium">Reason:</span> {report.reason}
+                        </div>
+                        {report.description && (
+                          <div className="text-xs text-muted-foreground bg-background/60 p-2 rounded">
+                            {report.description}
+                          </div>
+                        )}
+                        {reportedUser && (
+                          <div className="text-xs text-muted-foreground">
+                            Reported member: <span className="font-medium">{reportedUser.display_name}</span> (@{reportedUser.username})
+                          </div>
+                        )}
+                        {report.status === 'pending' && (
+                          <div className="flex gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => updateReportStatus.mutate({ reportId: report.id, status: 'resolved' })}
+                            >
+                              <Check className="w-4 h-4 mr-1" /> Resolve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateReportStatus.mutate({ reportId: report.id, status: 'dismissed' })}
+                            >
+                              <X className="w-4 h-4 mr-1" /> Dismiss
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
           </TabsContent>
 
           {/* Rules Tab */}
@@ -573,6 +726,46 @@ const GroupAdmin = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Issue Warning Dialog */}
+      <Dialog open={warnDialogOpen} onOpenChange={setWarnDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Issue Warning to {warnTargetName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label htmlFor="warnReason">Reason</Label>
+              <Textarea
+                id="warnReason"
+                value={warnReason}
+                onChange={(e) => setWarnReason(e.target.value)}
+                placeholder="Explain why this user is being warned..."
+                rows={3}
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={!warnReason.trim() || !warnTargetUserId || issueWarning.isPending}
+              onClick={() => {
+                if (!warnTargetUserId || !warnReason.trim()) return;
+                issueWarning.mutate(
+                  { userId: warnTargetUserId, reason: warnReason.trim() },
+                  {
+                    onSuccess: () => {
+                      setWarnDialogOpen(false);
+                      setWarnTargetUserId(null);
+                      setWarnReason('');
+                    },
+                  }
+                );
+              }}
+            >
+              {issueWarning.isPending ? 'Issuing...' : 'Issue Warning'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
