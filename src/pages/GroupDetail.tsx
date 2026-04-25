@@ -22,6 +22,7 @@ import { EmojiReactionPicker } from '@/components/EmojiReactionPicker';
 import { useReactions } from '@/hooks/useReactions';
 import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { ShareDialog } from '@/components/ShareDialog';
+import { HashtagText } from '@/components/HashtagText';
 import { useScrollToSharedPost } from '@/hooks/useScrollToSharedPost';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -673,7 +674,7 @@ const GroupDetail = () => {
                   </div>
                 ) : (
                   post.content && (
-                    <p className="text-xs sm:text-sm mb-3 break-words whitespace-pre-wrap">{post.content}</p>
+                    <HashtagText content={post.content} className="text-xs sm:text-sm mb-3 break-words whitespace-pre-wrap block" />
                   )
                 )}
 

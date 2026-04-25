@@ -511,7 +511,7 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
   const commentType = item.type === 'group_post' ? 'group_post' : item.type === 'video' ? 'video' : item.type === 'book' ? 'book' : 'post';
 
   return (
-    <Card className="p-3 sm:p-4 shadow-md hover:shadow-lg transition-all">
+    <Card id={`post-${item.id}`} className="p-3 sm:p-4 shadow-md hover:shadow-lg transition-all scroll-mt-20">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
@@ -652,6 +652,7 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
         postType={item.type === 'group_post' ? 'group_post' : item.type === 'video' ? 'video' : item.type === 'book' ? 'book' : 'post'}
         postContent={item.content || item.description || item.title}
         postImage={item.image_url || item.cover_url || item.thumbnail_url}
+        groupId={item.group_id}
       />
     </Card>
   );
