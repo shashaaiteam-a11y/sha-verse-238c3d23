@@ -58,7 +58,7 @@ export const useGroupReports = (groupId?: string) => {
       if (targetType === 'post') payload.reported_post_id = targetId;
       else payload.reported_user_id = targetId;
 
-      const { error } = await supabase.from('group_reports').insert(payload);
+      const { error } = await (supabase.from('group_reports') as any).insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
