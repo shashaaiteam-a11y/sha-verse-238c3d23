@@ -582,35 +582,62 @@ const Bookshelf = () => {
 
 
 
-          <TabsContent value="trending">
+          <TabsContent value="trending" className="space-y-6">
 
-            {trendingBooks.length > 0 ? (
+            {/* Trending Books with native ads every 4 */}
+            <section>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                Trending Books
+              </h2>
+              {trendingBooks.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                  {renderBooksWithAds(trendingBooks, 4, "trending-tab-ad")}
+                </div>
+              ) : (
+                <Card className="p-8 text-center">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="font-semibold mb-2">No trending books in this category</h3>
+                  <p className="text-muted-foreground text-sm">Try selecting a different category</p>
+                </Card>
+              )}
+            </section>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-
-                {trendingBooks.map((book) => (
-
-                  <BookCard key={book.id} book={book} />
-
-                ))}
-
-              </div>
-
-            ) : (
-
-              <Card className="p-8 text-center">
-
-                <TrendingUp className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-
-                <h3 className="font-semibold mb-2">No trending books in this category</h3>
-
-                <p className="text-muted-foreground text-sm">Try selecting a different category</p>
-
-              </Card>
-
-            )}
-
-            {/* No pagination for trending for now as per design choice or add if needed */}
+            {/* Trending Author Channels */}
+            <section>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Trending Author Channels
+              </h2>
+              {channels && channels.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {channels.slice(0, 12).map((channel) => (
+                    <Card
+                      key={channel.id}
+                      className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/bookshelf/channel/${channel.id}`)}
+                    >
+                      <Avatar className="w-16 h-16 mx-auto mb-2">
+                        <AvatarImage src={channel.avatar_url || ""} />
+                        <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <h3 className="font-semibold text-sm line-clamp-1">{channel.name}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {channel.subscribers_count || 0} subscribers
+                      </p>
+                      <Badge variant="secondary" className="mt-2 text-xs">
+                        Author
+                      </Badge>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-6 text-center">
+                  <Users className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground text-sm">No author channels yet</p>
+                </Card>
+              )}
+            </section>
 
           </TabsContent>
 
@@ -618,46 +645,39 @@ const Bookshelf = () => {
 
           <TabsContent value="subscribed">
 
-            {subscribedBooks.length > 0 ? (
-
-              <>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-
-                  {subscribedBooks.map((book: any) => (
-
-                    <BookCard key={book.id} book={book} />
-
-                  ))}
-
-                </div>
-
-                {renderPagination(subscribedBooks.length)}
-
-              </>
-
+            {subscribedChannels.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {subscribedChannels.map((channel: any) => (
+                  <Card
+                    key={channel.id}
+                    className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/bookshelf/channel/${channel.id}`)}
+                  >
+                    <Avatar className="w-16 h-16 mx-auto mb-2">
+                      <AvatarImage src={channel.avatar_url || ""} />
+                      <AvatarFallback>{channel.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <h3 className="font-semibold text-sm line-clamp-1">{channel.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {channel.subscribers_count || 0} subscribers
+                    </p>
+                    <Badge variant="secondary" className="mt-2 text-xs">
+                      Subscribed
+                    </Badge>
+                  </Card>
+                ))}
+              </div>
             ) : (
-
               <Card className="p-8 text-center">
-
                 <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-
                 <h3 className="font-semibold mb-2">No Subscriptions Yet</h3>
-
                 <p className="text-muted-foreground text-sm mb-4">
-
-                  Subscribe to authors to see their books here
-
+                  Subscribe to author channels to see them here
                 </p>
-
                 <Button onClick={() => setActiveTab("discover")}>
-
                   Discover Authors
-
                 </Button>
-
               </Card>
-
             )}
 
           </TabsContent>
