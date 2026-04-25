@@ -60,9 +60,9 @@ export function useDiscoveryAds(itemCount: number, slotType: SlotType): Discover
 
     // Per-slot rules — softened for social discovery surfaces
     // Stories: 1 ad after 5-6 real stories (none for new users)
-    // PYMK:    1 ad after every 3-4 real cards
+    // PYMK:    1 ad after EVERY 3 real cards (strict)
     const everyN = slotType === "pymk" ? 3 : 6;
-    const maxAds = isNewUser ? (slotType === "pymk" ? 1 : 0) : slotType === "pymk" ? 3 : 1;
+    const maxAds = isNewUser ? (slotType === "pymk" ? 1 : 0) : slotType === "pymk" ? 5 : 1;
     if (maxAds === 0) return empty;
 
     // PYMK: skip if fewer than 3 real suggestions (avoid "ad shelf" feel)
