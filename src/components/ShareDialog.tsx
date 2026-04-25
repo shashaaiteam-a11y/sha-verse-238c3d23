@@ -68,13 +68,19 @@ export const ShareDialog = ({
   const [canShare, setCanShare] = useState(true);
   const [shareRestriction, setShareRestriction] = useState<string>('');
 
-  const postUrl = `${window.location.origin}/${
-    postType === 'video'
-      ? 'movion/watch'
-      : postType === 'book'
-      ? 'bookshelf/book'
-      : 'post'
-  }/${postId}`;
+  const getPostPath = () => {
+    switch (postType) {
+      case 'video':
+        return `movion/watch/${postId}`;
+      case 'book':
+        return `bookshelf/book/${postId}`;
+      case 'group_post':
+        return `post/${postId}`;
+      default:
+        return `post/${postId}`;
+    }
+  };
+  const postUrl = `${window.location.origin}/${getPostPath()}`;
 
   // Check share permissions when dialog opens
   useEffect(() => {
