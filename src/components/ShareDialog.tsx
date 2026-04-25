@@ -38,6 +38,10 @@ interface ShareDialogProps {
   postContent?: string;
   postImage?: string;
   postVisibility?: string;
+  /** Optional explicit deep-link URL. If omitted, one is derived from postType + postId. */
+  shareUrl?: string;
+  /** Optional group context (used for group_post deep links). */
+  groupId?: string;
 }
 
 type ShareTargetType = 'timeline' | 'group' | 'page';
@@ -49,7 +53,9 @@ export const ShareDialog = ({
   postType = 'post',
   postContent,
   postImage,
-  postVisibility = 'public'
+  postVisibility = 'public',
+  shareUrl,
+  groupId,
 }: ShareDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -68,13 +74,25 @@ export const ShareDialog = ({
   const [canShare, setCanShare] = useState(true);
   const [shareRestriction, setShareRestriction] = useState<string>('');
 
-  const postUrl = `${window.location.origin}/${
-    postType === 'video'
-      ? 'movion/watch'
-      : postType === 'book'
-      ? 'bookshelf/book'
-      : 'post'
-  }/${postId}`;
+  // Build a real deep-link URL using the actual app routes.
+  // Falls back to the explicit shareUrl prop when provided.
+  const derivedUrl = (() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    switch (postType) {
+      case 'video':
+        return `${origin}/video/${postId}`;
+      case 'book':
+        return `${origin}/bookshelf/book/${postId}`;
+      case 'group_post':
+        return groupId
+          ? `${origin}/groups/${groupId}?post=${postId}`
+          : `${origin}/?post=${postId}`;
+      case 'post':
+      default:
+        return `${origin}/?post=${postId}`;
+    }
+  })();
+  const postUrl = shareUrl || derivedUrl;
 
   // Check share permissions when dialog opens
   useEffect(() => {
@@ -103,24 +121,34 @@ export const ShareDialog = ({
     }
   };
 
+  // Always append the deep-link to the share comment so the destination
+  // (timeline / group / page) shows a clickable link to the original content.
+  const buildCommentWithLink = (raw: string) => {
+    const base = raw.trim();
+    if (!base) return postUrl;
+    return base.includes(postUrl) ? base : `${base}\n\n${postUrl}`;
+  };
+
   const handleShareToTimeline = async () => {
     if (!user || !canShare) return;
     
     setIsSharing(true);
     try {
+      const commentWithLink = buildCommentWithLink(shareComment);
+
       if (shareTarget === 'timeline') {
         // Share to own timeline
         if (postType === 'post') {
-          await sharePost.mutateAsync({ postId, comment: shareComment.trim() || undefined });
+          await sharePost.mutateAsync({ postId, comment: commentWithLink });
         } else if (postType === 'group_post') {
-          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: shareComment.trim() || undefined });
+          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: commentWithLink });
         } else {
-          // For videos and books, create a share entry
+          // For videos and books, create a share entry that carries the link
           const { error } = await supabase
             .from('shares')
             .insert({
               user_id: user.id,
-              comment: shareComment.trim() || null
+              comment: commentWithLink,
             });
           if (error) throw error;
           toast({ title: 'Shared to your timeline!' });
@@ -130,14 +158,14 @@ export const ShareDialog = ({
           groupId: selectedGroupId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: commentWithLink,
         });
       } else if (shareTarget === 'page' && selectedPageId) {
         await shareToPage.mutateAsync({
           pageId: selectedPageId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: commentWithLink,
         });
       }
 
@@ -192,9 +220,11 @@ export const ShareDialog = ({
       const blob = await response.blob();
       const file = new File([blob], 'shared-story.jpg', { type: 'image/jpeg' });
       
+      const baseCaption =
+        shareComment.trim() || postContent?.slice(0, 100) || 'Shared post';
       await createStory.mutateAsync({
         mediaFile: file,
-        caption: shareComment || postContent?.slice(0, 100) || 'Shared post'
+        caption: `${baseCaption}\n\n${postUrl}`,
       });
 
       toast({ title: 'Shared to your story!' });
