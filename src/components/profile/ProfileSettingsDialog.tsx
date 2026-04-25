@@ -539,7 +539,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
 
       {/* Deactivate confirmation */}
       <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[90]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-destructive" />
@@ -557,7 +557,9 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
               disabled={deactivateAccount.isPending}
               onClick={(e) => {
                 e.preventDefault();
-                deactivateAccount.mutate();
+                deactivateAccount.mutate(undefined, {
+                  onSettled: () => setDeactivateOpen(false),
+                });
               }}
             >
               {deactivateAccount.isPending ? 'Deactivating…' : 'Yes, deactivate'}
@@ -568,7 +570,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
 
       {/* Unblock confirmation */}
       <AlertDialog open={!!unblockTarget} onOpenChange={(open) => !open && setUnblockTarget(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[90]">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-primary" />

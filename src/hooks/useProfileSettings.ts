@@ -173,17 +173,21 @@ export const useProfileSettings = () => {
   // Unblock user mutation with proper handling
   const unblockUser = useMutation({
     mutationFn: async (blockId: string) => {
+      if (!user) throw new Error('Not authenticated');
       // First get the blocked user ID before deleting the block
-      const { data: blockData } = await supabase
+      const { data: blockData, error: fetchError } = await supabase
         .from('user_blocks')
         .select('blocked_id')
         .eq('id', blockId)
+        .eq('blocker_id', user.id)
         .single();
+      if (fetchError) throw fetchError;
       
       const { error } = await supabase
         .from('user_blocks')
         .delete()
-        .eq('id', blockId);
+        .eq('id', blockId)
+        .eq('blocker_id', user.id);
       
       if (error) throw error;
       
@@ -324,6 +328,7 @@ export const useProfileSettings = () => {
   const deactivateAccount = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated');
+      queryClient.setQueryData(['user-sessions', user.id], []);
       const { error } = await supabase.rpc('deactivate_my_account');
       if (error) throw error;
     },
