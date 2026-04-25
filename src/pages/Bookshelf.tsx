@@ -466,7 +466,7 @@ const Bookshelf = () => {
 
           <TabsContent value="discover" className="space-y-6">
 
-            {/* Trending Section (Preview) */}
+            {/* Recently Added (now FIRST) */}
 
             <section>
 
@@ -474,9 +474,9 @@ const Bookshelf = () => {
 
                 <h2 className="text-lg font-semibold flex items-center gap-2">
 
-                  <TrendingUp className="w-5 h-5 text-primary" />
+                  <Clock className="w-5 h-5 text-primary" />
 
-                  Trending Books
+                  Recently Added
 
                 </h2>
 
@@ -520,6 +520,96 @@ const Bookshelf = () => {
 
 
 
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+
+                {books.flatMap((book, idx) => {
+
+                  const node = <BookCard key={book.id} book={book} />;
+
+                  // 📚 Native book-shaped ad every 4 books
+
+                  if ((idx + 1) % 4 === 0) {
+
+                    return [node, <SponsoredBookCard key={`ad-recent-${book.id}`} />];
+
+                  }
+
+                  return [node];
+
+                })}
+
+              </div>
+
+
+
+              {isLoading && (
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 mt-3">
+
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+
+                    <Card key={i} className="overflow-hidden animate-pulse">
+
+                      <div className="aspect-[2/3] bg-muted" />
+
+                      <div className="p-3 space-y-2">
+
+                        <div className="h-4 bg-muted rounded" />
+
+                        <div className="h-3 bg-muted rounded w-2/3" />
+
+                      </div>
+
+                    </Card>
+
+                  ))}
+
+                </div>
+
+              )}
+
+
+
+              {!isLoading && books.length === 0 && (
+
+                <Card className="p-8 text-center">
+
+                  <Book className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+
+                  <h3 className="font-semibold mb-2">No books found</h3>
+
+                  <p className="text-muted-foreground text-sm">
+
+                    {searchQuery ? "Try a different search term" : "Be the first to upload a book!"}
+
+                  </p>
+
+                </Card>
+
+              )}
+
+
+
+              {renderPagination(books.length)}
+
+            </section>
+
+
+
+            {/* Trending Books (now SECOND) */}
+
+            <section>
+
+              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+
+                <TrendingUp className="w-5 h-5 text-primary" />
+
+                Trending Books
+
+              </h2>
+
+
+
               {viewMode === "grid" ? (
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
@@ -528,8 +618,8 @@ const Bookshelf = () => {
 
                     const card = <BookCard key={book.id} book={book} />;
 
-                    // 📚 Inject Sponsored Book (book-shaped native ad) every 6 books
-                    if ((idx + 1) % 6 === 0) {
+                    // 📚 Inject Sponsored Book (book-shaped native ad) every 4 books
+                    if ((idx + 1) % 4 === 0) {
 
                       return [
 
