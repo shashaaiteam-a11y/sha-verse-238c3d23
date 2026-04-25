@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Settings, Shield, Lock, Eye, UserX, Smartphone, 
@@ -260,6 +261,51 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                   </div>
                 </div>
 
+                {/* Timeline & Tagging */}
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <SectionHeader icon={Tag} title="Timeline & Tagging" />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Eye className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Review tags before they appear</p>
+                          <p className="text-xs text-muted-foreground">Approve posts you're tagged in</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={privacySettings['review_tags'] !== 'false'}
+                        onCheckedChange={(checked) => handlePrivacyChange('review_tags', checked ? 'true' : 'false')}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Users className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        <p className="text-sm font-medium">Who can post on your timeline</p>
+                      </div>
+                      <Select
+                        value={privacySettings['timeline_post'] || 'friends'}
+                        onValueChange={(v) => handlePrivacyChange('timeline_post', v)}
+                      >
+                        <SelectTrigger className="w-28 h-8 text-xs border-border bg-secondary rounded-lg">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="friends">
+                            <div className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-blue-500" /><span>Friends</span></div>
+                          </SelectItem>
+                          <SelectItem value="only_me">
+                            <div className="flex items-center gap-2"><Lock className="w-3.5 h-3.5 text-orange-500" /><span>Only Me</span></div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
               </div>
             </ScrollArea>
           </TabsContent>
@@ -539,7 +585,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
 
       {/* Deactivate confirmation */}
       <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
-        <AlertDialogContent className="z-[90]">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-destructive" />
@@ -557,9 +603,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
               disabled={deactivateAccount.isPending}
               onClick={(e) => {
                 e.preventDefault();
-                deactivateAccount.mutate(undefined, {
-                  onSettled: () => setDeactivateOpen(false),
-                });
+                deactivateAccount.mutate();
               }}
             >
               {deactivateAccount.isPending ? 'Deactivating…' : 'Yes, deactivate'}
@@ -570,7 +614,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
 
       {/* Unblock confirmation */}
       <AlertDialog open={!!unblockTarget} onOpenChange={(open) => !open && setUnblockTarget(null)}>
-        <AlertDialogContent className="z-[90]">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-primary" />

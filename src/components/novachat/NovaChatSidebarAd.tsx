@@ -77,19 +77,19 @@ const NovaChatSidebarAd = ({ className }: NovaChatSidebarAdProps) => {
   return (
     <div
       className={cn(
-        "group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors hover:bg-secondary/50 w-full max-w-full overflow-hidden",
+        "group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors hover:bg-secondary/50 border border-dashed border-primary/20",
         className
       )}
       onClick={handleClick}
     >
       <MessageSquare className="w-4 h-4 flex-shrink-0 text-primary" />
-      <div className="flex-1 min-w-0 overflow-hidden">
-        <div className="flex items-center gap-1 min-w-0">
-          <span className="truncate text-sm font-medium flex-1 min-w-0">{sample.brand}</span>
-          <TestAdBadge variant="small" className="flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="truncate text-sm font-medium">{sample.brand}</span>
+          <TestAdBadge variant="small" />
         </div>
         <p className="text-[10px] text-muted-foreground truncate">
-          {sample.title}
+          {sample.title} · Sponsored
         </p>
       </div>
 

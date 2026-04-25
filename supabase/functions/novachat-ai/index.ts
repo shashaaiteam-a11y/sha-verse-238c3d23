@@ -163,23 +163,7 @@ Deno.serve(async (req) => {
 
       if (!imageUrl) {
         console.error("No image returned from gateway:", JSON.stringify(imgData).slice(0, 500));
-        // Model replied with text (e.g. asking for clarification) instead of an image.
-        // Stream that text back as a normal assistant message so the UI doesn't break.
-        const fallbackText = text && text.trim().length > 0
-          ? text
-          : "Mujhe image generate karne ke liye thoda aur detail chahiye. Kripya batayein aap kya banwana chahte hain (subject, style, colors, etc.).";
-        const stream = new ReadableStream({
-          start(controller) {
-            const enc = new TextEncoder();
-            const payload = { choices: [{ delta: { content: fallbackText } }] };
-            controller.enqueue(enc.encode(`data: ${JSON.stringify(payload)}\n\n`));
-            controller.enqueue(enc.encode(`data: [DONE]\n\n`));
-            controller.close();
-          },
-        });
-        return new Response(stream, {
-          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-        });
+        return jsonResponse({ error: "Image generation returned no image. Please try again." }, 500);
       }
 
       // Return as fake SSE stream so frontend parser works uniformly.

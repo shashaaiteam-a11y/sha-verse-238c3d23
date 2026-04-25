@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown } from 'lucide-react';
 import { useGroups, GroupPrivacy } from '@/hooks/useGroups';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GROUP_CATEGORIES } from '@/lib/constants/groupCategories';
@@ -14,13 +13,6 @@ import { WORLD_LANGUAGES } from '@/lib/constants/languages';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/components/ui/use-toast';
-
-const DEFAULT_RULES = `1. Be respectful to all members
-2. No spam or self-promotion
-3. Keep discussions on-topic
-4. No hate speech or harassment
-5. Respect privacy — don't share personal information`;
 
 export const CreateGroupDialog = () => {
   const [open, setOpen] = useState(false);
@@ -32,48 +24,22 @@ export const CreateGroupDialog = () => {
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('English');
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [rules, setRules] = useState(DEFAULT_RULES);
+  const [rules, setRules] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
-
+  
   const { createGroup } = useGroups();
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
   const categoryItems = GROUP_CATEGORIES.filter(c => c.value !== "trending");
   const categoryLabel = categoryItems.find(c => c.value === category)?.label || category;
 
-  const handleNext = () => {
-    if (activeTab === 'basic') {
-      if (!name.trim()) {
-        toast({
-          title: 'Group name is required',
-          description: 'Please enter a name to continue.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      setActiveTab('settings');
-    } else if (activeTab === 'settings') {
-      setActiveTab('rules');
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setActiveTab('basic');
-      toast({
-        title: 'Group name is required',
-        description: 'Please enter a name to create the group.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!name.trim()) return;
 
     createGroup.mutate(
       { name, description, privacy, category, country, language, rules },
       {
-        onSuccess: (created: any) => {
+        onSuccess: () => {
           setOpen(false);
           setName('');
           setDescription('');
@@ -81,11 +47,8 @@ export const CreateGroupDialog = () => {
           setCategory('General');
           setCountry('');
           setLanguage('English');
-          setRules(DEFAULT_RULES);
+          setRules('');
           setActiveTab('basic');
-          if (created?.id) {
-            navigate(`/groups/${created.id}`);
-          }
         },
       }
     );
@@ -147,36 +110,20 @@ export const CreateGroupDialog = () => {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[--radix-popover-trigger-width] p-0 z-[100]"
-                      align="start"
-                      onOpenAutoFocus={(e) => e.preventDefault()}
-                      onWheel={(e) => e.stopPropagation()}
-                      onTouchMove={(e) => e.stopPropagation()}
-                    >
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Search categories..." />
-                        <CommandList
-                          className="max-h-[260px] overflow-y-auto overscroll-contain touch-pan-y"
-                          onWheel={(e) => e.stopPropagation()}
-                          onTouchMove={(e) => e.stopPropagation()}
-                        >
+                        <CommandList className="max-h-[200px]">
                           <CommandEmpty>No category found.</CommandEmpty>
                           <CommandGroup>
                             {categoryItems.map((c) => (
                               <CommandItem
                                 key={c.value}
                                 value={c.label}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  setCategory(c.value);
-                                  setCategoryOpen(false);
-                                }}
                                 onSelect={() => {
                                   setCategory(c.value);
                                   setCategoryOpen(false);
                                 }}
-                                className="cursor-pointer"
                               >
                                 <Check className={cn("mr-2 h-4 w-4", category === c.value ? "opacity-100" : "opacity-0")} />
                                 {c.label}
@@ -253,36 +200,20 @@ export const CreateGroupDialog = () => {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent
-                        className="w-[--radix-popover-trigger-width] p-0 z-[100]"
-                        align="start"
-                        onOpenAutoFocus={(e) => e.preventDefault()}
-                        onWheel={(e) => e.stopPropagation()}
-                        onTouchMove={(e) => e.stopPropagation()}
-                      >
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search languages..." />
-                          <CommandList
-                            className="max-h-[260px] overflow-y-auto overscroll-contain touch-pan-y"
-                            onWheel={(e) => e.stopPropagation()}
-                            onTouchMove={(e) => e.stopPropagation()}
-                          >
+                          <CommandList className="max-h-[200px]">
                             <CommandEmpty>No language found.</CommandEmpty>
                             <CommandGroup>
                               {WORLD_LANGUAGES.map((lang) => (
                                 <CommandItem
                                   key={lang}
                                   value={lang}
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    setLanguage(lang);
-                                    setLanguageOpen(false);
-                                  }}
                                   onSelect={() => {
                                     setLanguage(lang);
                                     setLanguageOpen(false);
                                   }}
-                                  className="cursor-pointer"
                                 >
                                   <Check className={cn("mr-2 h-4 w-4", language === lang ? "opacity-100" : "opacity-0")} />
                                   {lang}
@@ -341,27 +272,19 @@ export const CreateGroupDialog = () => {
               </div>
               <div className="flex gap-2">
                 {activeTab !== 'rules' ? (
-                  <Button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={activeTab === 'basic' && !name.trim()}
+                  <Button 
+                    type="button" 
+                    onClick={() => setActiveTab(activeTab === 'basic' ? 'settings' : 'rules')}
                   >
                     Next Step
                   </Button>
                 ) : (
                   <Button
                     type="submit"
-                    className="bg-gradient-primary shadow-glow min-w-[140px]"
+                    className="bg-gradient-primary shadow-glow min-w-[120px]"
                     disabled={createGroup.isPending || !name.trim()}
                   >
-                    {createGroup.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Create Group'
-                    )}
+                    {createGroup.isPending ? 'Creating...' : 'Create Group'}
                   </Button>
                 )}
               </div>

@@ -130,50 +130,6 @@ const Bookshelf = () => {
 
 
 
-  // Subscribed Channels (for the "Subscribed" tab — shows channels, not books)
-
-  const { data: subscribedChannels = [] } = useQuery({
-
-    queryKey: ["subscribed-channels", user?.id, "books"],
-
-    queryFn: async () => {
-
-      if (!user?.id) return [];
-
-      const { data: subs } = await (supabase as any)
-
-        .from("subscriptions")
-
-        .select("channel_id")
-
-        .eq("user_id", user.id);
-
-      if (!subs || subs.length === 0) return [];
-
-      const ids = subs.map((s: any) => s.channel_id);
-
-      const { data } = await (supabase as any)
-
-        .from("channels")
-
-        .select("*")
-
-        .in("id", ids)
-
-        .eq("channel_type", "books")
-
-        .order("subscribers_count", { ascending: false });
-
-      return data || [];
-
-    },
-
-    enabled: !!user?.id,
-
-  });
-
-
-
   // Fetch reading history (Keep existing logic, maybe move to hook later)
 
   const { data: readingHistory = [] } = useQuery({
@@ -510,7 +466,7 @@ const Bookshelf = () => {
 
           <TabsContent value="discover" className="space-y-6">
 
-            {/* Recently Added (now FIRST) */}
+            {/* Trending Section (Preview) */}
 
             <section>
 
@@ -518,9 +474,9 @@ const Bookshelf = () => {
 
                 <h2 className="text-lg font-semibold flex items-center gap-2">
 
-                  <Clock className="w-5 h-5 text-primary" />
+                  <TrendingUp className="w-5 h-5 text-primary" />
 
-                  Recently Added
+                  Trending Books
 
                 </h2>
 
@@ -564,96 +520,6 @@ const Bookshelf = () => {
 
 
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-
-                {books.flatMap((book, idx) => {
-
-                  const node = <BookCard key={book.id} book={book} />;
-
-                  // 📚 Native book-shaped ad every 4 books
-
-                  if ((idx + 1) % 4 === 0) {
-
-                    return [node, <SponsoredBookCard key={`ad-recent-${book.id}`} />];
-
-                  }
-
-                  return [node];
-
-                })}
-
-              </div>
-
-
-
-              {isLoading && (
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 mt-3">
-
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-
-                    <Card key={i} className="overflow-hidden animate-pulse">
-
-                      <div className="aspect-[2/3] bg-muted" />
-
-                      <div className="p-3 space-y-2">
-
-                        <div className="h-4 bg-muted rounded" />
-
-                        <div className="h-3 bg-muted rounded w-2/3" />
-
-                      </div>
-
-                    </Card>
-
-                  ))}
-
-                </div>
-
-              )}
-
-
-
-              {!isLoading && books.length === 0 && (
-
-                <Card className="p-8 text-center">
-
-                  <Book className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-
-                  <h3 className="font-semibold mb-2">No books found</h3>
-
-                  <p className="text-muted-foreground text-sm">
-
-                    {searchQuery ? "Try a different search term" : "Be the first to upload a book!"}
-
-                  </p>
-
-                </Card>
-
-              )}
-
-
-
-              {renderPagination(books.length)}
-
-            </section>
-
-
-
-            {/* Trending Books (now SECOND) */}
-
-            <section>
-
-              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-
-                <TrendingUp className="w-5 h-5 text-primary" />
-
-                Trending Books
-
-              </h2>
-
-
-
               {viewMode === "grid" ? (
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
@@ -662,8 +528,8 @@ const Bookshelf = () => {
 
                     const card = <BookCard key={book.id} book={book} />;
 
-                    // 📚 Inject Sponsored Book (book-shaped native ad) every 4 books
-                    if ((idx + 1) % 4 === 0) {
+                    // 📚 Inject Sponsored Book (book-shaped native ad) every 6 books
+                    if ((idx + 1) % 6 === 0) {
 
                       return [
 
@@ -773,6 +639,115 @@ const Bookshelf = () => {
 
             </section>
 
+            {/* 🔥 Sponsored Books Strip — high-CPM advertiser section */}
+            <section>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                Sponsored Books
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                {[0, 1, 2, 3].map((i) => (
+                  <SponsoredBookCard key={`strip-${i}`} />
+                ))}
+              </div>
+            </section>
+
+            {/* All Books Section */}
+
+            <section>
+
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+
+                <Clock className="w-5 h-5 text-primary" />
+
+                Recently Added
+
+              </h2>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+
+                {books.flatMap((book, idx) => {
+
+                  const node = <BookCard key={book.id} book={book} />;
+
+                  // 📚 Native book-shaped ad every 6 items (per strategy: 5–6 items)
+
+                  if ((idx + 1) % 6 === 0) {
+
+                    return [
+
+                      node,
+
+                      <SponsoredBookCard key={`ad-${book.id}`} />,
+
+                    ];
+
+                  }
+
+                  return [node];
+
+                })}
+
+              </div>
+
+
+
+              {isLoading && (
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+
+                    <Card key={i} className="overflow-hidden animate-pulse">
+
+                      <div className="aspect-[2/3] bg-muted" />
+
+                      <div className="p-3 space-y-2">
+
+                        <div className="h-4 bg-muted rounded" />
+
+                        <div className="h-3 bg-muted rounded w-2/3" />
+
+                      </div>
+
+                    </Card>
+
+                  ))}
+
+                </div>
+
+              )}
+
+
+
+              {!isLoading && books.length === 0 && (
+
+                <Card className="p-8 text-center">
+
+                  <Book className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+
+                  <h3 className="font-semibold mb-2">No books found</h3>
+
+                  <p className="text-muted-foreground text-sm">
+
+                    {searchQuery
+
+                      ? "Try a different search term"
+
+                      : "Be the first to upload a book!"}
+
+                  </p>
+
+                </Card>
+
+              )}
+
+
+
+              {renderPagination(books.length)}
+
+            </section>
+
 
 
             {/* Popular Authors */}
@@ -835,39 +810,19 @@ const Bookshelf = () => {
 
 
 
-          <TabsContent value="trending" className="space-y-6">
+          <TabsContent value="trending">
 
             {trendingBooks.length > 0 ? (
 
-              <section>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
 
-                <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                {trendingBooks.map((book) => (
 
-                  <TrendingUp className="w-5 h-5 text-primary" />
+                  <BookCard key={book.id} book={book} />
 
-                  Trending Books
+                ))}
 
-                </h2>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-
-                  {trendingBooks.flatMap((book, idx) => {
-
-                    const card = <BookCard key={book.id} book={book} />;
-
-                    if ((idx + 1) % 4 === 0) {
-
-                      return [card, <SponsoredBookCard key={`trending-ad-${book.id}`} />];
-
-                    }
-
-                    return [card];
-
-                  })}
-
-                </div>
-
-              </section>
+              </div>
 
             ) : (
 
@@ -883,67 +838,7 @@ const Bookshelf = () => {
 
             )}
 
-
-
-            {/* Trending Author Channels */}
-
-            {channels && channels.length > 0 && (
-
-              <section>
-
-                <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-
-                  <Users className="w-5 h-5 text-primary" />
-
-                  Trending Author Channels
-
-                </h2>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-
-                  {channels.slice(0, 12).map((channel) => (
-
-                    <Card
-
-                      key={channel.id}
-
-                      className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
-
-                      onClick={() => navigate(`/bookshelf/channel/${channel.id}`)}
-
-                    >
-
-                      <Avatar className="w-16 h-16 mx-auto mb-2">
-
-                        <AvatarImage src={channel.avatar_url || ""} />
-
-                        <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
-
-                      </Avatar>
-
-                      <h3 className="font-semibold text-sm line-clamp-1">{channel.name}</h3>
-
-                      <p className="text-xs text-muted-foreground">
-
-                        {channel.subscribers_count || 0} subscribers
-
-                      </p>
-
-                      <Badge variant="secondary" className="mt-2 text-xs">
-
-                        Author
-
-                      </Badge>
-
-                    </Card>
-
-                  ))}
-
-                </div>
-
-              </section>
-
-            )}
+            {/* No pagination for trending for now as per design choice or add if needed */}
 
           </TabsContent>
 
@@ -951,57 +846,23 @@ const Bookshelf = () => {
 
           <TabsContent value="subscribed">
 
-            {subscribedChannels.length > 0 ? (
+            {subscribedBooks.length > 0 ? (
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              <>
 
-                {subscribedChannels.flatMap((channel: any, idx: number) => {
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
 
-                  const card = (
+                  {subscribedBooks.map((book: any) => (
 
-                    <Card
+                    <BookCard key={book.id} book={book} />
 
-                      key={channel.id}
+                  ))}
 
-                      className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
+                </div>
 
-                      onClick={() => navigate(`/bookshelf/channel/${channel.id}`)}
+                {renderPagination(subscribedBooks.length)}
 
-                    >
-
-                      <Avatar className="w-16 h-16 mx-auto mb-2">
-
-                        <AvatarImage src={channel.avatar_url || ""} />
-
-                        <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
-
-                      </Avatar>
-
-                      <h3 className="font-semibold text-sm line-clamp-1">{channel.name}</h3>
-
-                      <p className="text-xs text-muted-foreground">
-
-                        {channel.subscribers_count || 0} subscribers
-
-                      </p>
-
-                      <Badge variant="secondary" className="mt-2 text-xs">Author</Badge>
-
-                    </Card>
-
-                  );
-
-                  if ((idx + 1) % 4 === 0) {
-
-                    return [card, <SponsoredBookCard key={`sub-ad-${channel.id}`} />];
-
-                  }
-
-                  return [card];
-
-                })}
-
-              </div>
+              </>
 
             ) : (
 
@@ -1013,7 +874,7 @@ const Bookshelf = () => {
 
                 <p className="text-muted-foreground text-sm mb-4">
 
-                  Subscribe to authors to see their channels here
+                  Subscribe to authors to see their books here
 
                 </p>
 
@@ -1051,19 +912,11 @@ const Bookshelf = () => {
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
 
-                    {savedBooks.flatMap((book: any, idx: number) => {
+                    {savedBooks.map((book: any) => (
 
-                      const card = <BookCard key={book.id} book={book} />;
+                      <BookCard key={book.id} book={book} />
 
-                      if ((idx + 1) % 4 === 0) {
-
-                        return [card, <SponsoredBookCard key={`saved-ad-${book.id}`} />];
-
-                      }
-
-                      return [card];
-
-                    })}
+                    ))}
 
                   </div>
 

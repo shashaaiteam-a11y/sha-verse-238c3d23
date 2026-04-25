@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, Send, Phone, Video, MoreVertical,
-  Search, Plus, FileText, X, ShieldX, Ban, BellOff
+  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
@@ -17,11 +17,12 @@ import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ChatTypingBar } from './chat/ChatTypingBar';
-import { VideoCallDialog } from './chat/VideoCallDialog';
+import { useCall } from '@/modules/chats/components/CallProvider';
 import { ChatLayout } from './chat/ChatLayout';
 import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
 import { TickIndicator } from './chat/TickIndicator';
+import { MessageInfoDialog } from './chat/MessageInfoDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -46,11 +47,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [initializing, setInitializing] = useState(false);
-  const [showCallDialog, setShowCallDialog] = useState(false);
-  const [isVideoCall, setIsVideoCall] = useState(false);
+  const { startCall } = useCall();
+  // (call dialog now handled globally by GlobalCallHost / CallProvider)
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [infoMessage, setInfoMessage] = useState<any | null>(null);
 
   const conversationId = selectedConversation?.id || null;
   const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
@@ -83,7 +85,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const markConversationRead = useMarkConversationRead();
   const markAllRead = useMarkAllConversationsRead();
 
-  // WhatsApp behavior: opening a chat instantly resets its unread count
+  // NOTE: Centralized "open chat = mark read" lives inside useMessagesRealtime.
+  // We keep an extra optimistic call here so the green badge in the LEFT list
+  // visually disappears the same frame the user taps a chat, even before the
+  // server round-trip resolves.
   useEffect(() => {
     if (conversationId && user?.id) {
       markConversationRead.mutate(conversationId);
@@ -156,11 +161,37 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     }
   });
 
-  // Unread counts for all conversations
+  // Realtime: mute state syncs across tabs/devices instantly
+  useEffect(() => {
+    if (!conversationId || !user?.id) return;
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const channel = supabase
+      .channel(`chat-mute-${conversationId}-${user.id}-${suffix}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversation_members',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload: any) => {
+          if (payload.new?.user_id === user.id) {
+            queryClient.invalidateQueries({ queryKey: ['chat-muted', conversationId, user.id] });
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, user?.id, queryClient]);
+
   const conversationIds = conversations?.map((c: any) => c.id).filter(Boolean) || [];
+  const conversationIdsKey = conversationIds.join(',');
 
   const { data: allUnreadCounts = {} } = useQuery({
-    queryKey: ['unread-counts-all', user?.id, conversationIds.join(',')],
+    queryKey: ['unread-counts-all', user?.id, conversationIdsKey],
     queryFn: async () => {
       if (!user || conversationIds.length === 0) return {};
       const { data } = await supabase
@@ -177,7 +208,39 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       return counts;
     },
     enabled: !!user,
+    refetchInterval: 15000,
+    staleTime: 2000,
   });
+
+  // Realtime: re-fetch per-chat counters the moment a message INSERT/UPDATE arrives
+  useEffect(() => {
+    if (!user?.id || conversationIds.length === 0) return;
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const channel = supabase
+      .channel(`chat-list-unread-${user.id}-${suffix}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: any) => {
+          if (payload.new?.sender_id !== user.id) {
+            queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+            queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, conversationIdsKey, queryClient]);
 
   // Filter messages - ensure always an array
   const filteredMessages = isSearching && messageSearchQuery.trim()
@@ -269,9 +332,19 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 </AvatarFallback>}
               </Avatar>
               <div>
-                <h2 className="font-bold text-lg">Chats</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg">Chats</h2>
+                  {totalUnread > 0 && (
+                    <span
+                      className="bg-emerald-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow-sm animate-in fade-in zoom-in duration-200"
+                      aria-label={`${totalUnread} unread messages`}
+                    >
+                      {totalUnread > 99 ? '99+' : totalUnread}
+                    </span>
+                  )}
+                </div>
                 {totalUnread > 0 && (
-                  <p className="text-xs text-primary font-semibold">{totalUnread} unread</p>
+                  <p className="text-xs text-muted-foreground">{totalUnread} unread</p>
                 )}
               </div>
             </div>
@@ -371,37 +444,80 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         {selectedConversation ? (
           <ChatLayout
             header={
-              <ChatHeader
-                otherUser={otherUser ? {
-                  id: otherUser.id || '',
-                  display_name: otherUser.display_name || 'Unknown User',
-                  username: otherUser.username || '',
-                  avatar_url: otherUser.avatar_url
-                } : null}
-                isOnline={isOnline || false}
-                lastSeen={lastSeen || null}
-                isBlocked={isBlocked || false}
-                isBlockedBy={isBlockedBy || false}
-                isMuted={isMuted || false}
-                onBack={() => setSelectedConversation(null)}
-                onCall={() => {
-                  setIsVideoCall(false);
-                  setShowCallDialog(true);
-                }}
-                onVideoCall={() => {
-                  setIsVideoCall(true);
-                  setShowCallDialog(true);
-                }}
-                onBlock={handleBlockToggle}
-                onMute={(duration) => muteConversation.mutate(duration || 'always')}
-                onUnmute={() => unmuteConversation.mutate()}
-                onClearChat={() => {
-                  if (confirm('Clear all messages in this chat?')) {
-                    clearMessages.mutate();
-                  }
-                }}
-                isLoading={blockUser.isPending || unblockUser.isPending}
-              />
+              isSearching ? (
+                <div className="flex items-center gap-2 p-3 border-b bg-background sticky top-0 z-40">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setIsSearching(false);
+                      setMessageSearchQuery('');
+                    }}
+                    className="flex-shrink-0"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      autoFocus
+                      value={messageSearchQuery}
+                      onChange={(e) => setMessageSearchQuery(e.target.value)}
+                      placeholder="Search messages..."
+                      className="pl-10 bg-secondary border-0 rounded-full"
+                    />
+                  </div>
+                  {messageSearchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMessageSearchQuery('')}
+                      className="flex-shrink-0"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <ChatHeader
+                  otherUser={otherUser ? {
+                    id: otherUser.id || '',
+                    display_name: otherUser.display_name || 'Unknown User',
+                    username: otherUser.username || '',
+                    avatar_url: otherUser.avatar_url
+                  } : null}
+                  isOnline={isOnline || false}
+                  lastSeen={lastSeen || null}
+                  isBlocked={isBlocked || false}
+                  isBlockedBy={isBlockedBy || false}
+                  isMuted={isMuted || false}
+                  onBack={() => setSelectedConversation(null)}
+                  onCall={() => {
+                    if (otherUser) startCall({
+                      id: otherUser.id,
+                      display_name: otherUser.display_name || 'User',
+                      avatar_url: otherUser.avatar_url,
+                    }, 'voice');
+                  }}
+                  onVideoCall={() => {
+                    if (otherUser) startCall({
+                      id: otherUser.id,
+                      display_name: otherUser.display_name || 'User',
+                      avatar_url: otherUser.avatar_url,
+                    }, 'video');
+                  }}
+                  onBlock={handleBlockToggle}
+                  onMute={(duration) => muteConversation.mutate(duration || 'always')}
+                  onUnmute={() => unmuteConversation.mutate()}
+                  onClearChat={() => {
+                    if (confirm('Clear all messages in this chat?')) {
+                      clearMessages.mutate();
+                    }
+                  }}
+                  onSearchToggle={() => setIsSearching(true)}
+                  isLoading={blockUser.isPending || unblockUser.isPending}
+                />
+              )
             }
             messages={
               filteredMessages.length > 0 ? (
@@ -425,9 +541,24 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           </div>
                         )}
                         <div className={cn(
-                          "flex",
+                          "flex group/msg items-center gap-1",
                           isOwn ? "justify-end" : "justify-start"
                         )}>
+                          {/* Info button on the LEFT of own bubbles (hover/touch) */}
+                          {isOwn && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInfoMessage(message);
+                              }}
+                              aria-label="Message info"
+                              className="opacity-0 group-hover/msg:opacity-100 focus:opacity-100 active:opacity-100 transition-opacity p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          )}
+
                           <div className={cn(
                             "max-w-[75%] px-3 py-2 rounded-lg shadow-sm",
                             isOwn 
@@ -471,7 +602,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                             )}
                             <div className="flex items-center justify-end gap-1 mt-1">
                               <span className="text-[10px] text-muted-foreground">
-                                {format(new Date(message.created_at), 'HH:mm')}
+                                {format(new Date(message.created_at), 'h:mm a')}
                               </span>
                               {isOwn && (
                                 <TickIndicator status={tickStatus} />
@@ -545,13 +676,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         )}
       </div>
 
-      {/* Video/Voice Call Dialog */}
-      <VideoCallDialog
-        isOpen={showCallDialog}
-        onClose={() => setShowCallDialog(false)}
-        otherUser={otherUser || null}
-        isVideoCall={isVideoCall}
-      />
+      {/* Call dialogs are now rendered globally by GlobalCallHost (CallProvider) */}
 
       {/* User Search Dialog for Starting New Conversations */}
       <ChatUserSearchDialog
@@ -570,8 +695,23 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
           }
         }}
       />
+
+      {/* WhatsApp-style Message Info dialog (Sent / Delivered / Read times + realtime) */}
+      <MessageInfoDialog
+        open={!!infoMessage}
+        onOpenChange={(o) => !o && setInfoMessage(null)}
+        message={infoMessage}
+      />
     </div>
   );
+};
+
+// WhatsApp-style: keep first N words, append "..." if more
+const truncateNameWords = (name: string, maxWords: number = 3): string => {
+  if (!name) return 'Unknown User';
+  const words = name.trim().split(/\s+/);
+  if (words.length <= maxWords) return name;
+  return words.slice(0, maxWords).join(' ') + '...';
 };
 
 // Conversation List Item with online status & blocked indicator
@@ -615,25 +755,17 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
         ) : null}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <div className="flex justify-between items-center">
-          <h4 className="font-semibold text-sm truncate">
-            {otherUser?.display_name || 'Unknown User'}
+        {/* Row 1: Name only (WhatsApp-style 3-word + ellipsis truncation) */}
+        <div className="flex items-center gap-1 min-w-0">
+          <h4 className="font-semibold text-sm truncate min-w-0 flex-1">
+            {truncateNameWords(otherUser?.display_name || 'Unknown User', 3)}
           </h4>
-          <div className="flex items-center gap-1">
-            {isMuted && (
-              <BellOff className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-            )}
-            {convo.lastMessage && (
-              <span className={cn(
-                "text-[11px]",
-                unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
-              )}>
-                {formatDistanceToNow(new Date(convo.lastMessage.created_at), { addSuffix: false })}
-              </span>
-            )}
-          </div>
+          {isMuted && (
+            <BellOff className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          )}
         </div>
-        <div className="flex items-center justify-between gap-1">
+        {/* Row 2: Ticks + last message + time + unread badge */}
+        <div className="flex items-center justify-between gap-2 mt-0.5">
           <div className="flex items-center gap-1 min-w-0 flex-1">
             {convo.lastMessage?.sender_id === currentUserId && (
               <TickIndicator 
@@ -648,9 +780,22 @@ const ConversationListItem = ({ convo, otherUser, isSelected, isBlocked, isMuted
                     return text.length > 16 ? `${text.slice(0, 16)}...` : text;
                   })()}
             </p>
+            {convo.lastMessage && (
+              <span
+                className={cn(
+                  "text-[11px] flex-shrink-0 ml-1 whitespace-nowrap",
+                  unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+                )}
+              >
+                · {formatDistanceToNow(new Date(convo.lastMessage.created_at), { addSuffix: false })}
+              </span>
+            )}
           </div>
           {unreadCount > 0 && !isBlocked && (
-            <span className="bg-blue-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0 shadow-sm">
+            <span
+              className="bg-emerald-500 dark:bg-emerald-400 text-white dark:text-emerald-950 text-[10px] font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 flex-shrink-0 shadow-sm animate-in fade-in zoom-in duration-200"
+              aria-label={`${unreadCount} unread`}
+            >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}

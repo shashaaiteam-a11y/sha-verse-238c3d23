@@ -235,17 +235,15 @@ export const useGroupAdmin = (groupId: string | undefined) => {
       };
     },
     enabled: !!groupId && isModerator,
-    refetchInterval: 10000, // auto-refresh every 10s for live feel
-    refetchOnWindowFocus: true,
+    refetchInterval: 30000, // auto-refresh every 30s
   });
 
   // ── Realtime subscriptions ───────────────────────────────────────────
   useEffect(() => {
     if (!groupId || !isModerator) return;
 
-    const channelSuffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`group-admin-${groupId}-${channelSuffix}`)
+      .channel(`group-admin-${groupId}`)
       // New join request
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'group_join_requests',
@@ -572,79 +570,34 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Approve post — uses security definer RPC to bypass RLS
+  // Approve post
   const approvePost = useMutation({
     mutationFn: async (postId: string) => {
-      // Fetch author for notification before approving
-      const { data: postData } = await supabase
+      const { error } = await supabase
         .from('group_posts')
-        .select('user_id, content')
-        .eq('id', postId)
-        .single();
-
-      const { error } = await (supabase.rpc as any)('admin_approve_group_post', {
-        p_post_id: postId,
-        p_admin_id: user!.id,
-      });
+        .update({ approval_status: 'approved' })
+        .eq('id', postId);
       if (error) throw error;
-
-      // Notify post author (silent)
-      if (postData && postData.user_id !== user?.id) {
-        const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
-        await sendNotification(
-          postData.user_id,
-          'group_post_approved',
-          'Post Approved ✅',
-          `Your post in "${(grp as any)?.name || 'the group'}" has been approved.`,
-          { group_id: groupId, post_id: postId }
-        );
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-pending-posts', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
       toast({ title: 'Post approved!' });
-    },
-    onError: (error: any) => {
-      toast({ title: 'Approve failed', description: error.message, variant: 'destructive' });
     },
   });
 
-  // Reject post — uses security definer RPC; this DELETES the post per spec
+  // Reject post
   const rejectPost = useMutation({
     mutationFn: async (postId: string) => {
-      const { data: postData } = await supabase
+      const { error } = await supabase
         .from('group_posts')
-        .select('user_id')
-        .eq('id', postId)
-        .single();
-
-      const { error } = await (supabase.rpc as any)('admin_reject_group_post', {
-        p_post_id: postId,
-        p_admin_id: user!.id,
-      });
+        .update({ approval_status: 'rejected' })
+        .eq('id', postId);
       if (error) throw error;
-
-      if (postData && postData.user_id !== user?.id) {
-        const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
-        await sendNotification(
-          postData.user_id,
-          'group_post_rejected',
-          'Post Rejected',
-          `Your post in "${(grp as any)?.name || 'the group'}" was not approved.`,
-          { group_id: groupId }
-        );
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-pending-posts', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
       toast({ title: 'Post rejected' });
-    },
-    onError: (error: any) => {
-      toast({ title: 'Reject failed', description: error.message, variant: 'destructive' });
     },
   });
 

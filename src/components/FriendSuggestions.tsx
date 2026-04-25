@@ -11,7 +11,7 @@ import { useDiscoveryAds } from '@/hooks/useDiscoveryAds';
 export const FriendSuggestions = () => {
   const { suggestions, isLoading, sendRequest } = useFriendSuggestions();
   const navigate = useNavigate();
-  const visibleSuggestions = suggestions?.slice(0, 9) || [];
+  const visibleSuggestions = suggestions?.slice(0, 6) || [];
   const { adPositions } = useDiscoveryAds(visibleSuggestions.length, 'pymk');
 
   if (isLoading) {

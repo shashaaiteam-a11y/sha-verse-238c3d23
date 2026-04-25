@@ -1841,59 +1841,47 @@ export type Database = {
         Row: {
           avatar_url: string | null
           category: string | null
-          country: string | null
           cover_url: string | null
           created_at: string | null
           creator_id: string
           description: string | null
           id: string
           is_private: boolean | null
-          language: string | null
           members_count: number | null
           name: string
           posts_count: number | null
-          privacy: string | null
           require_join_approval: boolean | null
           require_post_approval: boolean | null
-          rules: string | null
         }
         Insert: {
           avatar_url?: string | null
           category?: string | null
-          country?: string | null
           cover_url?: string | null
           created_at?: string | null
           creator_id: string
           description?: string | null
           id?: string
           is_private?: boolean | null
-          language?: string | null
           members_count?: number | null
           name: string
           posts_count?: number | null
-          privacy?: string | null
           require_join_approval?: boolean | null
           require_post_approval?: boolean | null
-          rules?: string | null
         }
         Update: {
           avatar_url?: string | null
           category?: string | null
-          country?: string | null
           cover_url?: string | null
           created_at?: string | null
           creator_id?: string
           description?: string | null
           id?: string
           is_private?: boolean | null
-          language?: string | null
           members_count?: number | null
           name?: string
           posts_count?: number | null
-          privacy?: string | null
           require_join_approval?: boolean | null
           require_post_approval?: boolean | null
-          rules?: string | null
         }
         Relationships: [
           {

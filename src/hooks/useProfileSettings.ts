@@ -173,21 +173,17 @@ export const useProfileSettings = () => {
   // Unblock user mutation with proper handling
   const unblockUser = useMutation({
     mutationFn: async (blockId: string) => {
-      if (!user) throw new Error('Not authenticated');
       // First get the blocked user ID before deleting the block
-      const { data: blockData, error: fetchError } = await supabase
+      const { data: blockData } = await supabase
         .from('user_blocks')
         .select('blocked_id')
         .eq('id', blockId)
-        .eq('blocker_id', user.id)
         .single();
-      if (fetchError) throw fetchError;
       
       const { error } = await supabase
         .from('user_blocks')
         .delete()
-        .eq('id', blockId)
-        .eq('blocker_id', user.id);
+        .eq('id', blockId);
       
       if (error) throw error;
       
@@ -328,19 +324,13 @@ export const useProfileSettings = () => {
   const deactivateAccount = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated');
-      queryClient.setQueryData(['user-sessions', user.id], []);
       const { error } = await supabase.rpc('deactivate_my_account');
       if (error) throw error;
     },
     onSuccess: async () => {
-      toast({ title: 'Account deactivated', description: 'You have been signed out from all devices. Sign in again to reactivate.' });
+      toast({ title: 'Account deactivated', description: 'Your account has been deactivated. Sign in again to reactivate.' });
       clearDeviceToken();
-      // Global sign-out: invalidates ALL refresh tokens across every device
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch {
-        await supabase.auth.signOut();
-      }
+      await supabase.auth.signOut();
       window.location.href = '/auth';
     },
     onError: (error: any) => {

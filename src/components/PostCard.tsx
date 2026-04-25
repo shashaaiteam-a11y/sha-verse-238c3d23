@@ -333,7 +333,7 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
 
   return (
     <>
-      <Card id={`post-${post.id}`} className="p-3 sm:p-4 shadow-md hover:shadow-lg transition-all scroll-mt-20 target:ring-2 target:ring-primary">
+      <Card className="p-3 sm:p-4 shadow-md hover:shadow-lg transition-all">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div 
