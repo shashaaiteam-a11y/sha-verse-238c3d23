@@ -43,7 +43,7 @@ export const useProfileSettings = () => {
     enabled: !!user,
   });
 
-  // Fetch active sessions
+  // Fetch active sessions (mark this device as current based on local token)
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ['user-sessions', user?.id],
     queryFn: async () => {
@@ -55,7 +55,11 @@ export const useProfileSettings = () => {
         .order('last_active', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      const localToken = getCurrentDeviceToken();
+      return (data || []).map((s: any) => ({
+        ...s,
+        is_current: s.session_token === localToken,
+      }));
     },
     enabled: !!user,
   });
