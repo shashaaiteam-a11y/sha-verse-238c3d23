@@ -835,19 +835,39 @@ const Bookshelf = () => {
 
 
 
-          <TabsContent value="trending">
+          <TabsContent value="trending" className="space-y-6">
 
             {trendingBooks.length > 0 ? (
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              <section>
 
-                {trendingBooks.map((book) => (
+                <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
 
-                  <BookCard key={book.id} book={book} />
+                  <TrendingUp className="w-5 h-5 text-primary" />
 
-                ))}
+                  Trending Books
 
-              </div>
+                </h2>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+
+                  {trendingBooks.flatMap((book, idx) => {
+
+                    const card = <BookCard key={book.id} book={book} />;
+
+                    if ((idx + 1) % 4 === 0) {
+
+                      return [card, <SponsoredBookCard key={`trending-ad-${book.id}`} />];
+
+                    }
+
+                    return [card];
+
+                  })}
+
+                </div>
+
+              </section>
 
             ) : (
 
@@ -863,7 +883,67 @@ const Bookshelf = () => {
 
             )}
 
-            {/* No pagination for trending for now as per design choice or add if needed */}
+
+
+            {/* Trending Author Channels */}
+
+            {channels && channels.length > 0 && (
+
+              <section>
+
+                <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+
+                  <Users className="w-5 h-5 text-primary" />
+
+                  Trending Author Channels
+
+                </h2>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+
+                  {channels.slice(0, 12).map((channel) => (
+
+                    <Card
+
+                      key={channel.id}
+
+                      className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
+
+                      onClick={() => navigate(`/bookshelf/channel/${channel.id}`)}
+
+                    >
+
+                      <Avatar className="w-16 h-16 mx-auto mb-2">
+
+                        <AvatarImage src={channel.avatar_url || ""} />
+
+                        <AvatarFallback>{channel.name.charAt(0)}</AvatarFallback>
+
+                      </Avatar>
+
+                      <h3 className="font-semibold text-sm line-clamp-1">{channel.name}</h3>
+
+                      <p className="text-xs text-muted-foreground">
+
+                        {channel.subscribers_count || 0} subscribers
+
+                      </p>
+
+                      <Badge variant="secondary" className="mt-2 text-xs">
+
+                        Author
+
+                      </Badge>
+
+                    </Card>
+
+                  ))}
+
+                </div>
+
+              </section>
+
+            )}
 
           </TabsContent>
 
