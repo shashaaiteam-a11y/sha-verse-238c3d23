@@ -1,5 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +38,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
   const { toast } = useToast();
   
   const { profile } = useProfile();
@@ -40,6 +51,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
     endAllOtherSessions,
     updatePrivacy,
     changePassword,
+    deactivateAccount,
     deleteActivity,
     deleteActivitiesByWeek,
   } = useProfileSettings();
@@ -298,10 +310,10 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                     </div>
                     <Button
                       onClick={handleChangePassword}
-                      disabled={!newPassword || newPassword !== confirmPassword || changePassword.isPending}
+                      disabled={!currentPassword || !newPassword || newPassword !== confirmPassword || changePassword.isPending}
                       className="w-full h-10 rounded-xl font-semibold bg-gradient-primary"
                     >
-                      {changePassword.isPending ? 'Changing...' : 'Update Password'}
+                      {changePassword.isPending ? 'Updating…' : 'Update Password'}
                     </Button>
                   </div>
                 </div>
@@ -365,10 +377,15 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                 <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
                   <SectionHeader icon={AlertTriangle} title="Deactivate Account" color="text-destructive" bg="bg-destructive/15" />
                   <p className="text-xs text-muted-foreground mb-3 pl-10">
-                    Temporarily disable your account. You can reactivate it anytime by logging in.
+                    Temporarily disable your account. You'll be signed out from all devices. Sign in again anytime to reactivate.
                   </p>
-                  <Button variant="destructive" className="w-full h-10 rounded-xl text-sm font-semibold">
-                    Deactivate Account
+                  <Button
+                    variant="destructive"
+                    className="w-full h-10 rounded-xl text-sm font-semibold"
+                    onClick={() => setDeactivateOpen(true)}
+                    disabled={deactivateAccount.isPending}
+                  >
+                    {deactivateAccount.isPending ? 'Deactivating…' : 'Deactivate Account'}
                   </Button>
                 </div>
               </div>
@@ -500,6 +517,35 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Deactivate confirmation */}
+      <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Deactivate your account?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Your profile will be hidden, you'll be signed out from every device, and your active sessions will be cleared.
+              You can reactivate anytime by signing back in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deactivateAccount.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deactivateAccount.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                deactivateAccount.mutate();
+              }}
+            >
+              {deactivateAccount.isPending ? 'Deactivating…' : 'Yes, deactivate'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
