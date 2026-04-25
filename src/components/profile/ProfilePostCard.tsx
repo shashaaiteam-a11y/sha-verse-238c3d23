@@ -35,6 +35,7 @@ import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ShareDialog } from '@/components/ShareDialog';
+import { HashtagText } from '@/components/HashtagText';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
