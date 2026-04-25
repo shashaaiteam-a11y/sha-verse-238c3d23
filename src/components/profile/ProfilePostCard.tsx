@@ -154,7 +154,7 @@ export const ProfilePostCard = ({
   };
 
   return (
-    <Card className="shadow-sm overflow-hidden">
+    <Card id={`post-${post.id}`} className="shadow-sm overflow-hidden scroll-mt-20">
       {/* Post Header */}
       <div className="p-4 pb-0">
         <div className="flex items-start justify-between">
