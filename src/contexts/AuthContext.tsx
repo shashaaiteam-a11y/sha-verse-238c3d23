@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { registerCurrentSession, clearDeviceToken } from '@/lib/sessionTracker';
+import { startSessionRevocationWatcher, stopSessionRevocationWatcher } from '@/lib/sessionRevocationWatcher';
 
 interface AuthContextType {
   user: User | null;
