@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useGroups, GroupPrivacy } from '@/hooks/useGroups';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GROUP_CATEGORIES } from '@/lib/constants/groupCategories';
