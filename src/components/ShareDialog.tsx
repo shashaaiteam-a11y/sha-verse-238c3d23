@@ -213,9 +213,12 @@ export const ShareDialog = ({
       const blob = await response.blob();
       const file = new File([blob], 'shared-story.jpg', { type: 'image/jpeg' });
       
+      const baseCaption = shareComment.trim() || postContent?.slice(0, 100) || 'Shared post';
+      const captionWithLink = `${baseCaption}\n\n🔗 ${postUrl}`;
+
       await createStory.mutateAsync({
         mediaFile: file,
-        caption: shareComment || postContent?.slice(0, 100) || 'Shared post'
+        caption: captionWithLink,
       });
 
       toast({ title: 'Shared to your story!' });
