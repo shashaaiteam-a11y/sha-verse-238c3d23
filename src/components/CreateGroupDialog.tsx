@@ -18,6 +18,13 @@ import { cn } from '@/lib/utils';
 
 export const CreateGroupDialog = () => {
   const [open, setOpen] = useState(false);
+const DEFAULT_RULES = `1. Be respectful to others
+2. No spam or self-promotion
+3. Keep discussions on-topic`;
+
+export const CreateGroupDialog = () => {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [privacy, setPrivacy] = useState<GroupPrivacy>('public');
@@ -26,31 +33,53 @@ export const CreateGroupDialog = () => {
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('English');
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [rules, setRules] = useState('');
+  const [rules, setRules] = useState(DEFAULT_RULES);
   const [activeTab, setActiveTab] = useState('basic');
-  
+
   const { createGroup } = useGroups();
 
   const categoryItems = GROUP_CATEGORIES.filter(c => c.value !== "trending");
   const categoryLabel = categoryItems.find(c => c.value === category)?.label || category;
 
+  const isNameValid = name.trim().length > 0;
+
+  // Guard tab navigation: cannot leave Basic Info without a valid name.
+  const handleTabChange = (next: string) => {
+    if (next !== 'basic' && !isNameValid) {
+      toast.error('Group name is required to continue');
+      setActiveTab('basic');
+      return;
+    }
+    setActiveTab(next);
+  };
+
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setPrivacy('public');
+    setCategory('General');
+    setCountry('');
+    setLanguage('English');
+    setRules(DEFAULT_RULES);
+    setActiveTab('basic');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!isNameValid) {
+      toast.error('Group name is required');
+      setActiveTab('basic');
+      return;
+    }
 
     createGroup.mutate(
-      { name, description, privacy, category, country, language, rules },
+      { name: name.trim(), description, privacy, category, country, language, rules },
       {
-        onSuccess: () => {
+        onSuccess: (group: any) => {
           setOpen(false);
-          setName('');
-          setDescription('');
-          setPrivacy('public');
-          setCategory('General');
-          setCountry('');
-          setLanguage('English');
-          setRules('');
-          setActiveTab('basic');
+          resetForm();
+          // Redirect to the newly created group page.
+          if (group?.id) navigate(`/groups/${group.id}`);
         },
       }
     );
