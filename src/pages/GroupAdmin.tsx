@@ -503,6 +503,82 @@ const GroupAdmin = () => {
             )}
           </TabsContent>
 
+          {/* Reports Tab */}
+          <TabsContent value="reports">
+            <Card className="p-4 sm:p-6">
+              <h3 className="text-lg font-semibold mb-4">
+                Reports ({reports?.length || 0})
+                {pendingReports > 0 && (
+                  <Badge variant="destructive" className="ml-2">{pendingReports} pending</Badge>
+                )}
+              </h3>
+              {!reports || reports.length === 0 ? (
+                <div className="text-center py-8">
+                  <Flag className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">No reports yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reports.map((report: any) => {
+                    const target = report.reported_post_id ? 'Post' : (report.reported_user_id ? 'Member' : 'Item');
+                    const reporter = report.reporter;
+                    const reportedUser = report.reported_user;
+                    return (
+                      <div key={report.id} className="p-3 bg-secondary/30 rounded-lg space-y-2">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar className="h-8 w-8">
+                              {reporter?.avatar_url && <AvatarImage src={reporter.avatar_url} />}
+                              <AvatarFallback>{reporter?.display_name?.[0] || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{reporter?.display_name || 'Unknown'} reported a {target}</p>
+                              <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}</p>
+                            </div>
+                          </div>
+                          <Badge variant={report.status === 'pending' ? 'destructive' : 'secondary'} className="text-xs">
+                            {report.status || 'pending'}
+                          </Badge>
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium">Reason:</span> {report.reason}
+                        </div>
+                        {report.description && (
+                          <div className="text-xs text-muted-foreground bg-background/60 p-2 rounded">
+                            {report.description}
+                          </div>
+                        )}
+                        {reportedUser && (
+                          <div className="text-xs text-muted-foreground">
+                            Reported member: <span className="font-medium">{reportedUser.display_name}</span> (@{reportedUser.username})
+                          </div>
+                        )}
+                        {report.status === 'pending' && (
+                          <div className="flex gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => updateReportStatus.mutate({ reportId: report.id, status: 'resolved' })}
+                            >
+                              <Check className="w-4 h-4 mr-1" /> Resolve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateReportStatus.mutate({ reportId: report.id, status: 'dismissed' })}
+                            >
+                              <X className="w-4 h-4 mr-1" /> Dismiss
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
           {/* Rules Tab */}
           <TabsContent value="rules">
             <Card className="p-4 sm:p-6">
