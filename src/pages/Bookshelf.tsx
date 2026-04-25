@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useQuery } from "@tanstack/react-query";
 
-import { Book, Plus, Search, TrendingUp, Clock, Star, Users, Eye, MessageCircle, ThumbsUp, Grid, List, BookOpen, Heart } from "lucide-react";
+import { Book, Plus, Search, TrendingUp, Clock, Users, Grid, List, BookOpen, Heart } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 
