@@ -243,8 +243,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
   useEffect(() => {
     if (!groupId || !isModerator) return;
 
+    const channelSuffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`group-admin-${groupId}`)
+      .channel(`group-admin-${groupId}-${channelSuffix}`)
       // New join request
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'group_join_requests',
