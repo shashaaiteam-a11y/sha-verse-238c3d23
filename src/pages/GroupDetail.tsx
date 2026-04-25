@@ -22,6 +22,7 @@ import { EmojiReactionPicker } from '@/components/EmojiReactionPicker';
 import { useReactions } from '@/hooks/useReactions';
 import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { ShareDialog } from '@/components/ShareDialog';
+import { useScrollToSharedPost } from '@/hooks/useScrollToSharedPost';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -111,6 +112,8 @@ const GroupDetail = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { posts, isLoading, group, groupLoading, members, createPost, deletePost, updatePost } = useGroupPosts(groupId);
+
+  useScrollToSharedPost(!isLoading && (posts?.length ?? 0) > 0);
   const { leaveGroup, myGroups } = useGroups();
   const { shareGroupPost } = useShares();
   const { isPostSaved, toggleSavePost } = useSavedPosts();
@@ -575,7 +578,7 @@ const GroupDetail = () => {
           ) : posts && posts.length > 0 ? (
             posts.flatMap((post: any, postIdx: number) => {
               const card = (
-              <Card key={post.id} className="p-3 sm:p-4 shadow-md">
+              <Card key={post.id} id={`post-${post.id}`} className="p-3 sm:p-4 shadow-md scroll-mt-20">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
@@ -769,6 +772,7 @@ const GroupDetail = () => {
           postType="group_post"
           postContent={shareDialogPost.content}
           postImage={shareDialogPost.image}
+          groupId={groupId}
         />
       )}
 

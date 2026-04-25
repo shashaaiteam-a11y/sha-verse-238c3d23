@@ -35,6 +35,7 @@ import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ShareDialog } from '@/components/ShareDialog';
+import { HashtagText } from '@/components/HashtagText';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -153,7 +154,7 @@ export const ProfilePostCard = ({
   };
 
   return (
-    <Card className="shadow-sm overflow-hidden">
+    <Card id={`post-${post.id}`} className="shadow-sm overflow-hidden scroll-mt-20">
       {/* Post Header */}
       <div className="p-4 pb-0">
         <div className="flex items-start justify-between">
@@ -287,7 +288,7 @@ export const ProfilePostCard = ({
             </div>
           </div>
         ) : (
-          <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+          <HashtagText content={post.content || ''} className="text-sm whitespace-pre-wrap block" />
         )}
       </div>
 

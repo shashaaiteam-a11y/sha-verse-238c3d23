@@ -47,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/contexts/AuthContext';
 
 import { usePosts } from '@/hooks/usePosts';
+import { useScrollToSharedPost } from '@/hooks/useScrollToSharedPost';
 
 import { useShares } from '@/hooks/useShares';
 
@@ -119,6 +120,8 @@ const Profile = () => {
   const { friends: friendsData, friendsHasMore, friendsLoading, sendFriendRequest, removeFriend, acceptFriendRequest, declineFriendRequest, pendingRequests, sentRequests } = useFriends(friendsPage);
 
   const { posts, hasMore: postsHasMore, isLoading: postsLoading } = useUserPosts(userId || user?.id, postsPage);
+
+  useScrollToSharedPost(!postsLoading && (posts?.length ?? 0) > 0);
 
   const { photos, hasMore: photosHasMore, isLoading: photosLoading } = useUserPhotos(userId || user?.id, photosPage);
 
