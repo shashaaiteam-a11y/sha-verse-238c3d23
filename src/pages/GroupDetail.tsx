@@ -22,6 +22,7 @@ import { EmojiReactionPicker } from '@/components/EmojiReactionPicker';
 import { useReactions } from '@/hooks/useReactions';
 import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { ShareDialog } from '@/components/ShareDialog';
+import { HashtagText } from '@/components/HashtagText';
 import { useScrollToSharedPost } from '@/hooks/useScrollToSharedPost';
 import { useToast } from '@/hooks/use-toast';
 import {

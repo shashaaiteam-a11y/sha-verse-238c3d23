@@ -7,6 +7,7 @@ import { StoryGroup } from "@/hooks/useStories";
 import { useStories } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
+import { HashtagText } from "@/components/HashtagText";
 
 interface StoryViewerProps {
   storyGroup: StoryGroup;

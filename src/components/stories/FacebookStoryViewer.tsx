@@ -9,6 +9,7 @@ import { useStories } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { HashtagText } from "@/components/HashtagText";
 import {
   Sheet,
   SheetContent,

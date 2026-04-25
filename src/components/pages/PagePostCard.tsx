@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PagePost, Page, usePage } from '@/hooks/usePages';
+import { HashtagText } from '@/components/HashtagText';
 
 interface PagePostCardProps {
   post: PagePost;
