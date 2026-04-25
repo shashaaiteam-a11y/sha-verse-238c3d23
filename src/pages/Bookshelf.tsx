@@ -130,6 +130,50 @@ const Bookshelf = () => {
 
 
 
+  // Subscribed Channels (for the "Subscribed" tab — shows channels, not books)
+
+  const { data: subscribedChannels = [] } = useQuery({
+
+    queryKey: ["subscribed-channels", user?.id, "books"],
+
+    queryFn: async () => {
+
+      if (!user?.id) return [];
+
+      const { data: subs } = await (supabase as any)
+
+        .from("subscriptions")
+
+        .select("channel_id")
+
+        .eq("user_id", user.id);
+
+      if (!subs || subs.length === 0) return [];
+
+      const ids = subs.map((s: any) => s.channel_id);
+
+      const { data } = await (supabase as any)
+
+        .from("channels")
+
+        .select("*")
+
+        .in("id", ids)
+
+        .eq("channel_type", "books")
+
+        .order("subscribers_count", { ascending: false });
+
+      return data || [];
+
+    },
+
+    enabled: !!user?.id,
+
+  });
+
+
+
   // Fetch reading history (Keep existing logic, maybe move to hook later)
 
   const { data: readingHistory = [] } = useQuery({
