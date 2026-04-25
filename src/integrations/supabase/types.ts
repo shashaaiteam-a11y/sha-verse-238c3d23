@@ -2986,6 +2986,7 @@ export type Database = {
           cover_url: string | null
           created_at: string | null
           current_city: string | null
+          deactivated_at: string | null
           display_name: string
           education: string | null
           facebook_url: string | null
@@ -2994,6 +2995,7 @@ export type Database = {
           hometown: string | null
           id: string
           instagram_url: string | null
+          is_deactivated: boolean
           is_verified: boolean | null
           last_login: string | null
           location: string | null
@@ -3016,6 +3018,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string | null
           current_city?: string | null
+          deactivated_at?: string | null
           display_name: string
           education?: string | null
           facebook_url?: string | null
@@ -3024,6 +3027,7 @@ export type Database = {
           hometown?: string | null
           id: string
           instagram_url?: string | null
+          is_deactivated?: boolean
           is_verified?: boolean | null
           last_login?: string | null
           location?: string | null
@@ -3046,6 +3050,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string | null
           current_city?: string | null
+          deactivated_at?: string | null
           display_name?: string
           education?: string | null
           facebook_url?: string | null
@@ -3054,6 +3059,7 @@ export type Database = {
           hometown?: string | null
           id?: string
           instagram_url?: string | null
+          is_deactivated?: boolean
           is_verified?: boolean | null
           last_login?: string | null
           location?: string | null
@@ -3881,6 +3887,9 @@ export type Database = {
           is_current: boolean | null
           last_active: string | null
           location: string | null
+          os: string | null
+          session_token: string | null
+          user_agent: string | null
           user_id: string
         }
         Insert: {
@@ -3892,6 +3901,9 @@ export type Database = {
           is_current?: boolean | null
           last_active?: string | null
           location?: string | null
+          os?: string | null
+          session_token?: string | null
+          user_agent?: string | null
           user_id: string
         }
         Update: {
@@ -3903,6 +3915,9 @@ export type Database = {
           is_current?: boolean | null
           last_active?: string | null
           location?: string | null
+          os?: string | null
+          session_token?: string | null
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: [
@@ -4443,6 +4458,7 @@ export type Database = {
         }
         Returns: string
       }
+      deactivate_my_account: { Args: never; Returns: undefined }
       decrement_book_comment_count: {
         Args: { p_book_id: string }
         Returns: undefined
@@ -4516,6 +4532,15 @@ export type Database = {
         Args: { _blocked_id: string; _blocker_id: string }
         Returns: boolean
       }
+      log_user_activity: {
+        Args: {
+          _activity_type: string
+          _content: string
+          _metadata?: Json
+          _user_id: string
+        }
+        Returns: undefined
+      }
       mark_all_conversations_read: { Args: never; Returns: number }
       mark_conversation_as_read: {
         Args: { _conversation_id: string }
@@ -4531,6 +4556,16 @@ export type Database = {
       unsubscribe_from_channel: {
         Args: { target_channel_id: string }
         Returns: undefined
+      }
+      upsert_current_session: {
+        Args: {
+          p_browser?: string
+          p_device_info?: string
+          p_os?: string
+          p_session_token: string
+          p_user_agent?: string
+        }
+        Returns: string
       }
       upsert_my_chat_privacy: {
         Args: {
