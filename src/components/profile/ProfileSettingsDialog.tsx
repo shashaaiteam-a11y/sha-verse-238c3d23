@@ -39,6 +39,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [unblockTarget, setUnblockTarget] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
   
   const { profile } = useProfile();
