@@ -114,21 +114,34 @@ export const ShareDialog = ({
     
     setIsSharing(true);
     try {
+      // Build a share line that always carries the link so it's clickable
+      const linkLine = `\n\n🔗 ${postUrl}`;
+      const userComment = shareComment.trim();
+
       if (shareTarget === 'timeline') {
-        // Share to own timeline
         if (postType === 'post') {
-          await sharePost.mutateAsync({ postId, comment: shareComment.trim() || undefined });
+          await sharePost.mutateAsync({ postId, comment: (userComment ? userComment : '') + linkLine });
         } else if (postType === 'group_post') {
-          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: shareComment.trim() || undefined });
+          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: (userComment ? userComment : '') + linkLine });
         } else {
-          // For videos and books, create a share entry
+          // For videos and books, create a real post on the timeline carrying link + thumbnail
+          const composedContent =
+            (userComment ? userComment + '\n\n' : '') +
+            (postType === 'video' ? '🎬 Shared a video' : '📚 Shared a book') +
+            (postContent ? `: ${postContent.slice(0, 140)}` : '') +
+            linkLine;
+
           const { error } = await supabase
-            .from('shares')
+            .from('posts')
             .insert({
               user_id: user.id,
-              comment: shareComment.trim() || null
+              content: composedContent,
+              image_url: postImage || null,
+              visibility: 'public',
             });
           if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ['posts'] });
+          queryClient.invalidateQueries({ queryKey: ['user-posts'] });
           toast({ title: 'Shared to your timeline!' });
         }
       } else if (shareTarget === 'group' && selectedGroupId) {
@@ -136,14 +149,16 @@ export const ShareDialog = ({
           groupId: selectedGroupId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: (userComment ? userComment : '') + linkLine,
+          imageUrl: postImage,
         });
       } else if (shareTarget === 'page' && selectedPageId) {
         await shareToPage.mutateAsync({
           pageId: selectedPageId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: (userComment ? userComment : '') + linkLine,
+          imageUrl: postImage,
         });
       }
 
