@@ -104,7 +104,7 @@ export const CreateGroupDialog = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <div className="px-6 pt-4">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="basic" className="text-xs sm:text-sm">Basic Info</TabsTrigger>
