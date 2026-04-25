@@ -1937,15 +1937,21 @@ const Profile = () => {
 
                       <Card 
 
-                        key={video.id} 
+                        key={`${video.source || 'channel'}-${video.id}`} 
 
                         className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
 
-                        onClick={() => navigate(`/video/${video.id}`)}
+                        onClick={() => {
+                          if (video.source === 'post') {
+                            navigate(`/?post=${video.id}`);
+                          } else {
+                            navigate(`/video/${video.id}`);
+                          }
+                        }}
 
                       >
 
-                        <div className="aspect-video relative">
+                        <div className="aspect-video relative bg-black">
 
                           {video.thumbnail_url ? (
 
@@ -1957,6 +1963,16 @@ const Profile = () => {
 
                               className="w-full h-full object-cover"
 
+                            />
+
+                          ) : video.video_url ? (
+
+                            <video
+                              src={video.video_url}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
                             />
 
                           ) : (
