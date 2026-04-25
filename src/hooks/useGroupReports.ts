@@ -1,15 +1,8 @@
-import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
-/**
- * Group reports hook — matches actual DB schema:
- *   reporter_id, reported_user_id, reported_post_id, reason, description, status, created_at
- *
- * `targetType` ('post' | 'member') is a UI-side hint that maps to the right column.
- */
 export const useGroupReports = (groupId?: string) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -22,10 +15,8 @@ export const useGroupReports = (groupId?: string) => {
       const { data, error } = await supabase
         .from('group_reports')
         .select(`
-          id, reason, description, status, created_at,
-          reported_user_id, reported_post_id, reporter_id, resolved_at,
-          reporter:reporter_id (id, display_name, avatar_url, username),
-          reported_user:reported_user_id (id, display_name, avatar_url, username)
+          id, target_type, target_id, reason, details, status, created_at,
+          reporter:reported_by (display_name, avatar_url, username)
         `)
         .eq('group_id', groupId)
         .order('created_at', { ascending: false });
@@ -40,50 +31,33 @@ export const useGroupReports = (groupId?: string) => {
       targetType,
       targetId,
       reason,
-      description,
+      details,
     }: {
-      targetType: 'post' | 'member';
+      targetType: 'post' | 'message' | 'member' | 'group';
       targetId: string;
       reason: string;
-      description?: string;
+      details?: string;
     }) => {
       if (!user || !groupId) throw new Error('Not ready');
-      const payload: Record<string, any> = {
+      const { error } = await (supabase.from('group_reports') as any).insert({
         group_id: groupId,
-        reporter_id: user.id,
+        reported_by: user.id,
+        target_type: targetType,
+        target_id: targetId,
         reason,
-        description: description || null,
-        status: 'pending',
-      };
-      if (targetType === 'post') payload.reported_post_id = targetId;
-      else payload.reported_user_id = targetId;
-
-      const { error } = await (supabase.from('group_reports') as any).insert(payload);
+        details: details || null,
+      });
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['group-reports', groupId] });
-      toast({ title: 'Report submitted. We will review it.' });
-    },
-    onError: (e: any) =>
-      toast({ title: 'Failed to report', description: e.message, variant: 'destructive' }),
+    onSuccess: () => toast({ title: 'Report submitted. We will review it.' }),
+    onError: (e: any) => toast({ title: 'Failed to report', description: e.message, variant: 'destructive' }),
   });
 
   const updateReportStatus = useMutation({
-    mutationFn: async ({
-      reportId,
-      status,
-    }: {
-      reportId: string;
-      status: 'reviewed' | 'dismissed' | 'actioned' | 'resolved';
-    }) => {
+    mutationFn: async ({ reportId, status }: { reportId: string; status: 'reviewed' | 'dismissed' | 'actioned' }) => {
       const { error } = await supabase
         .from('group_reports')
-        .update({
-          status,
-          resolved_by: user!.id,
-          resolved_at: new Date().toISOString(),
-        } as any)
+        .update({ status, reviewed_by: user!.id } as any)
         .eq('id', reportId);
       if (error) throw error;
     },
@@ -91,29 +65,8 @@ export const useGroupReports = (groupId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['group-reports', groupId] });
       toast({ title: 'Report updated' });
     },
-    onError: (e: any) =>
-      toast({ title: 'Failed', description: e.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Failed', description: e.message, variant: 'destructive' }),
   });
 
-  // Realtime: live admin updates as new reports come in or status changes
-  useEffect(() => {
-    if (!groupId || !user) return;
-    const channel = supabase
-      .channel(`group-reports-${groupId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'group_reports', filter: `group_id=eq.${groupId}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['group-reports', groupId] });
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [groupId, user, queryClient]);
-
-  const pendingCount = (reports || []).filter((r: any) => r.status === 'pending').length;
-
-  return { reports, pendingCount, isLoading, submitReport, updateReportStatus };
+  return { reports, isLoading, submitReport, updateReportStatus };
 };
