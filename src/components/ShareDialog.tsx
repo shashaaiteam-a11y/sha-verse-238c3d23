@@ -114,10 +114,7 @@ export const ShareDialog = ({
     
     setIsSharing(true);
     try {
-      // Build a share line that always carries the link so it's clickable
-      const linkLine = `\n\n🔗 ${postUrl}`;
       const userComment = shareComment.trim();
-
       if (shareTarget === 'timeline') {
         // Compose human-readable content with the link so it's auto-linkified in feeds
         const typeLabel =
