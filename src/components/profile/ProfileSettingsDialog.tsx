@@ -377,7 +377,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                                 )}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {session.location || 'Unknown location'} · {formatDistanceToNow(new Date(session.last_active), { addSuffix: true })}
+                                {session.location || 'Unknown location'} · {safeDistance(session.last_active)}
                               </p>
                             </div>
                           </div>
