@@ -30,7 +30,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Register current device session whenever auth state changes to signed-in
         if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          setTimeout(() => { registerCurrentSession(); }, 0);
+          setTimeout(() => {
+            registerCurrentSession();
+            startSessionRevocationWatcher(session.user.id);
+          }, 0);
+        }
+
+        if (event === 'SIGNED_OUT') {
+          stopSessionRevocationWatcher();
         }
       }
     );
@@ -41,14 +48,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
-        setTimeout(() => { registerCurrentSession(); }, 0);
+        setTimeout(() => {
+          registerCurrentSession();
+          startSessionRevocationWatcher(session.user.id);
+        }, 0);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      stopSessionRevocationWatcher();
+    };
   }, []);
 
   const signOut = async () => {
+    stopSessionRevocationWatcher();
     clearDeviceToken();
     await supabase.auth.signOut();
     navigate('/auth');
