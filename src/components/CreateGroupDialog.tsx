@@ -247,20 +247,30 @@ export const CreateGroupDialog = () => {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[100]" align="start">
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                        align="start"
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                      >
                         <Command>
                           <CommandInput placeholder="Search languages..." />
-                          <CommandList className="max-h-[200px]">
+                          <CommandList className="max-h-[260px] overflow-y-auto overscroll-contain">
                             <CommandEmpty>No language found.</CommandEmpty>
                             <CommandGroup>
                               {WORLD_LANGUAGES.map((lang) => (
                                 <CommandItem
                                   key={lang}
                                   value={lang}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setLanguage(lang);
+                                    setLanguageOpen(false);
+                                  }}
                                   onSelect={() => {
                                     setLanguage(lang);
                                     setLanguageOpen(false);
                                   }}
+                                  className="cursor-pointer"
                                 >
                                   <Check className={cn("mr-2 h-4 w-4", language === lang ? "opacity-100" : "opacity-0")} />
                                   {lang}
