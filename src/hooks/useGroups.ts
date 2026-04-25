@@ -108,16 +108,21 @@ export const useGroups = () => {
         .eq('role', 'admin');
       if ((count || 0) >= 5) throw new Error('You can create a maximum of 5 groups.');
 
+      const privacyValue = payload.privacy || 'public';
       const { data: group, error: groupError } = await (supabase
         .from('groups') as any)
         .insert({
           name: payload.name,
           description: payload.description,
-          is_private: (payload.privacy || 'public') !== 'public',
+          is_private: privacyValue !== 'public',
+          privacy: privacyValue,
           creator_id: user.id,
           avatar_url: payload.avatarUrl || null,
           cover_url: payload.coverUrl || null,
           category: payload.category || 'General',
+          language: payload.language || null,
+          country: payload.country || null,
+          rules: payload.rules || null,
         })
         .select()
         .single();
