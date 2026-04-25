@@ -121,24 +121,34 @@ export const ShareDialog = ({
     }
   };
 
+  // Always append the deep-link to the share comment so the destination
+  // (timeline / group / page) shows a clickable link to the original content.
+  const buildCommentWithLink = (raw: string) => {
+    const base = raw.trim();
+    if (!base) return postUrl;
+    return base.includes(postUrl) ? base : `${base}\n\n${postUrl}`;
+  };
+
   const handleShareToTimeline = async () => {
     if (!user || !canShare) return;
     
     setIsSharing(true);
     try {
+      const commentWithLink = buildCommentWithLink(shareComment);
+
       if (shareTarget === 'timeline') {
         // Share to own timeline
         if (postType === 'post') {
-          await sharePost.mutateAsync({ postId, comment: shareComment.trim() || undefined });
+          await sharePost.mutateAsync({ postId, comment: commentWithLink });
         } else if (postType === 'group_post') {
-          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: shareComment.trim() || undefined });
+          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: commentWithLink });
         } else {
-          // For videos and books, create a share entry
+          // For videos and books, create a share entry that carries the link
           const { error } = await supabase
             .from('shares')
             .insert({
               user_id: user.id,
-              comment: shareComment.trim() || null
+              comment: commentWithLink,
             });
           if (error) throw error;
           toast({ title: 'Shared to your timeline!' });
@@ -148,14 +158,14 @@ export const ShareDialog = ({
           groupId: selectedGroupId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: commentWithLink,
         });
       } else if (shareTarget === 'page' && selectedPageId) {
         await shareToPage.mutateAsync({
           pageId: selectedPageId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: commentWithLink,
         });
       }
 
