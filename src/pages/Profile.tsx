@@ -2001,8 +2001,6 @@ const Profile = () => {
 
                           <h4 className="font-medium text-sm truncate">{video.title}</h4>
 
-                          <p className="text-xs text-muted-foreground">{video.views_count || 0} views</p>
-
                         </div>
 
                       </Card>
