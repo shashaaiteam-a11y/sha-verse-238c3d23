@@ -83,7 +83,7 @@ const UploadBookDialog = ({
       bookFile: bookFile || undefined,
       pages: pages ? parseInt(pages) : undefined,
       channelId,
-    } as any);
+    });
 
     // Reset form
     setTitle("");
