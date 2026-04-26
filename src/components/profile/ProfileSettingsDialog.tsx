@@ -47,6 +47,67 @@ interface ProfileSettingsDialogProps {
   trigger?: React.ReactNode;
 }
 
+/**
+ * Stable, top-level select for a single privacy field.
+ * Defined OUTSIDE the dialog component so its identity is preserved across
+ * re-renders — otherwise Radix Select unmounts mid-click and the change
+ * never fires (this was the "options don't react" bug).
+ */
+const PRIVACY_OPTIONS = [
+  { value: 'public', label: 'Public', Icon: Globe, color: 'text-green-500' },
+  { value: 'friends', label: 'Friends', Icon: Users, color: 'text-blue-500' },
+  { value: 'only_me', label: 'Only Me', Icon: Lock, color: 'text-orange-500' },
+] as const;
+
+interface PrivacyRowProps {
+  field: string;
+  label: string;
+  icon: any;
+  value: string;
+  onChange: (field: string, value: string) => void;
+}
+
+const PrivacyRow = ({ field, label, icon: Icon, value, onChange }: PrivacyRowProps) => (
+  <div className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-secondary/60 transition-colors group">
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+        <Icon className="w-3.5 h-3.5 text-primary" />
+      </div>
+      <span className="text-sm font-medium">{label}</span>
+    </div>
+    <Select value={value} onValueChange={(v) => onChange(field, v)}>
+      <SelectTrigger className="w-28 h-8 text-xs border-border bg-secondary rounded-lg">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="z-[100]">
+        {PRIVACY_OPTIONS.map(({ value: v, label: l, Icon: OptIcon, color }) => (
+          <SelectItem key={v} value={v}>
+            <div className="flex items-center gap-2">
+              <OptIcon className={`w-3.5 h-3.5 ${color}`} />
+              <span>{l}</span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+);
+
+interface SectionHeaderProps {
+  icon: any;
+  title: string;
+  color?: string;
+  bg?: string;
+}
+const SectionHeader = ({ icon: Icon, title, color = 'text-primary', bg = 'bg-primary/10' }: SectionHeaderProps) => (
+  <div className="flex items-center gap-2.5 mb-3">
+    <div className={`w-7 h-7 rounded-full ${bg} flex items-center justify-center shrink-0`}>
+      <Icon className={`w-3.5 h-3.5 ${color}`} />
+    </div>
+    <span className="font-semibold text-sm">{title}</span>
+  </div>
+);
+
 export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) => {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('privacy');
