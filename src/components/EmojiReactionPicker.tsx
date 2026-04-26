@@ -191,7 +191,10 @@ export const EmojiReactionPicker = ({
 
       {/* Full Emoji Chart Dialog - Responsive for all devices */}
       <Dialog open={showPicker} onOpenChange={setShowPicker}>
-        <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-2xl lg:max-w-4xl h-[65vh] sm:h-[75vh] lg:h-[85vh] p-0 rounded-xl overflow-hidden flex flex-col">
+        <DialogContent
+          data-no-swipe-nav="true"
+          className="w-[95vw] max-w-[95vw] sm:max-w-2xl lg:max-w-4xl h-[65vh] sm:h-[75vh] lg:h-[85vh] p-0 rounded-xl overflow-hidden flex flex-col"
+        >
           <DialogHeader className="p-3 sm:p-4 pb-2 border-b flex-shrink-0 bg-card z-10">
             <DialogTitle className="flex items-center justify-between text-base sm:text-lg">
               <span>Choose your reaction</span>
@@ -201,8 +204,11 @@ export const EmojiReactionPicker = ({
           <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full flex flex-col flex-1 min-h-0">
             {/* Category tabs - scrollable horizontally */}
             <div className="border-b flex-shrink-0">
-              <ScrollArea className="w-full h-auto" type="always">
-                <div className="px-2 py-1">
+              <div
+                data-no-swipe-nav="true"
+                className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-hide touch-pan-x"
+              >
+                <div className="px-2 py-1 w-max">
                   <TabsList className="h-auto p-1 bg-transparent inline-flex gap-1 w-max">
                     {Object.keys(emojiCategories).map((category) => (
                       <TabsTrigger 
@@ -215,11 +221,11 @@ export const EmojiReactionPicker = ({
                     ))}
                   </TabsList>
                 </div>
-              </ScrollArea>
+              </div>
             </div>
 
             {/* Emoji grid for each category */}
-            <ScrollArea className="flex-1 min-h-0 p-2 sm:p-3">
+            <ScrollArea data-no-swipe-nav="true" className="flex-1 min-h-0 p-2 sm:p-3">
               {Object.entries(emojiCategories).map(([category, emojis]) => (
                 <TabsContent key={category} value={category} className="m-0 mt-0">
                   <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-12 gap-0.5 sm:gap-1">
