@@ -1881,22 +1881,19 @@ const Profile = () => {
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1 sm:gap-2">
 
                       {photos.map((photo: any) => (
-
-                        <div key={photo.id} className="aspect-square cursor-pointer hover:opacity-90 transition-opacity">
-
-                          <img 
-
-                            src={photo.image_url} 
-
-                            alt={photo.content || 'Photo'} 
-
+                        <div
+                          key={photo.id}
+                          className="aspect-square cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => jumpToProfilePost(photo.id, photo.created_at)}
+                        >
+                          <img
+                            src={photo.image_url}
+                            alt={photo.content || 'Photo'}
                             className="w-full h-full object-cover rounded-lg"
-
                           />
-
                         </div>
-
                       ))}
+
 
                     </div>
 
