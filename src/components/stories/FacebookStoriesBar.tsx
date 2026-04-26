@@ -78,29 +78,29 @@ const FacebookStoriesBar = () => {
                 <div className="relative">
                   <button
                     onClick={() => ownStoryGroup && handleStoryClick(ownStoryGroup)}
-                    className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-blue-500 via-blue-600 to-blue-700"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full p-0.5 bg-gradient-to-tr from-blue-500 via-blue-600 to-blue-700"
                   >
                     <Avatar className="w-full h-full border-2 border-background">
                       <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
-                      <AvatarFallback>
+                      <AvatarFallback className="text-xs">
                         {user?.user_metadata?.display_name?.charAt(0) || "Y"}
                       </AvatarFallback>
                     </Avatar>
                   </button>
                   <button
                     onClick={() => setShowCreateDialog(true)}
-                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center border-2 border-background"
+                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center border border-background"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-2.5 h-2.5" />
                   </button>
                 </div>
               ) : (
                 // Show create story button
                 <button
                   onClick={() => setShowCreateDialog(true)}
-                  className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center border-2 border-dashed border-primary/50 hover:border-primary transition-colors"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center border-2 border-dashed border-primary/50 hover:border-primary transition-colors"
                 >
-                  <Plus className="w-6 h-6 text-primary" />
+                  <Plus className="w-4 h-4 text-primary" />
                 </button>
               )}
               <span className="text-xs text-muted-foreground">Your Story</span>
@@ -117,7 +117,7 @@ const FacebookStoriesBar = () => {
                 >
                   <div
                     className={cn(
-                      "w-16 h-16 rounded-full p-0.5",
+                      "w-9 h-9 sm:w-10 sm:h-10 rounded-full p-0.5",
                       group.hasUnviewed
                         ? "bg-gradient-to-tr from-blue-500 via-blue-600 to-blue-700"
                         : "bg-muted-foreground/30"
@@ -125,12 +125,12 @@ const FacebookStoriesBar = () => {
                   >
                     <Avatar className="w-full h-full border-2 border-background">
                       <AvatarImage src={group.user.avatar_url || ""} />
-                      <AvatarFallback>
+                      <AvatarFallback className="text-xs">
                         {group.user.display_name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                   </div>
-                  <span className="text-xs text-muted-foreground truncate max-w-[64px]">
+                  <span className="text-[11px] text-muted-foreground truncate max-w-[56px]">
                     {group.user.display_name.split(" ")[0]}
                   </span>
                 </div>
