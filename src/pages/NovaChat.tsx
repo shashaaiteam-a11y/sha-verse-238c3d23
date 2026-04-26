@@ -187,7 +187,7 @@ const NovaChat = () => {
 
         className={cn(
 
-          "fixed lg:relative z-[60] h-full transition-all duration-300 flex flex-col",
+          "fixed lg:relative z-50 h-full transition-all duration-300 flex flex-col",
 
           sidebarOpen ? "w-72 translate-x-0" : "w-0 -translate-x-full lg:w-0"
 
@@ -221,7 +221,7 @@ const NovaChat = () => {
 
         <div 
 
-          className="fixed inset-0 bg-black/50 z-[55] lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
 
           onClick={() => setSidebarOpen(false)}
 
