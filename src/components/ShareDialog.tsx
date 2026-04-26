@@ -29,6 +29,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { getEntityUrl, handleShare as nativeShare, type ShareEntityType } from "@/lib/deepLinks";
 
 interface ShareDialogProps {
   open: boolean;
@@ -68,19 +69,8 @@ export const ShareDialog = ({
   const [canShare, setCanShare] = useState(true);
   const [shareRestriction, setShareRestriction] = useState<string>('');
 
-  const getPostPath = () => {
-    switch (postType) {
-      case 'video':
-        return `movion/watch/${postId}`;
-      case 'book':
-        return `bookshelf/book/${postId}`;
-      case 'group_post':
-        return `post/${postId}`;
-      default:
-        return `post/${postId}`;
-    }
-  };
-  const postUrl = `${window.location.origin}/${getPostPath()}`;
+  // 🔗 Universal deep link — single source of truth (src/lib/deepLinks.ts)
+  const postUrl = getEntityUrl(postType as ShareEntityType, postId);
 
   // Check share permissions when dialog opens
   useEffect(() => {
