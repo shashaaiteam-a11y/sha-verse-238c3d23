@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Users, ShieldAlert, Globe, Lock, Key, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useGroups, GroupPrivacy } from '@/hooks/useGroups';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GROUP_CATEGORIES } from '@/lib/constants/groupCategories';
@@ -14,7 +16,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 
+const DEFAULT_RULES = `1. Be respectful to others
+2. No spam or self-promotion
+3. Keep discussions on-topic`;
+
 export const CreateGroupDialog = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -24,31 +31,53 @@ export const CreateGroupDialog = () => {
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('English');
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [rules, setRules] = useState('');
+  const [rules, setRules] = useState(DEFAULT_RULES);
   const [activeTab, setActiveTab] = useState('basic');
-  
+
   const { createGroup } = useGroups();
 
   const categoryItems = GROUP_CATEGORIES.filter(c => c.value !== "trending");
   const categoryLabel = categoryItems.find(c => c.value === category)?.label || category;
 
+  const isNameValid = name.trim().length > 0;
+
+  // Guard tab navigation: cannot leave Basic Info without a valid name.
+  const handleTabChange = (next: string) => {
+    if (next !== 'basic' && !isNameValid) {
+      toast.error('Group name is required to continue');
+      setActiveTab('basic');
+      return;
+    }
+    setActiveTab(next);
+  };
+
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setPrivacy('public');
+    setCategory('General');
+    setCountry('');
+    setLanguage('English');
+    setRules(DEFAULT_RULES);
+    setActiveTab('basic');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!isNameValid) {
+      toast.error('Group name is required');
+      setActiveTab('basic');
+      return;
+    }
 
     createGroup.mutate(
-      { name, description, privacy, category, country, language, rules },
+      { name: name.trim(), description, privacy, category, country, language, rules },
       {
-        onSuccess: () => {
+        onSuccess: (group: any) => {
           setOpen(false);
-          setName('');
-          setDescription('');
-          setPrivacy('public');
-          setCategory('General');
-          setCountry('');
-          setLanguage('English');
-          setRules('');
-          setActiveTab('basic');
+          resetForm();
+          // Redirect to the newly created group page.
+          if (group?.id) navigate(`/groups/${group.id}`);
         },
       }
     );
@@ -75,7 +104,7 @@ export const CreateGroupDialog = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <div className="px-6 pt-4">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="basic" className="text-xs sm:text-sm">Basic Info</TabsTrigger>
@@ -98,7 +127,7 @@ export const CreateGroupDialog = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                  <Popover open={categoryOpen} onOpenChange={setCategoryOpen} modal={true}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -110,10 +139,15 @@ export const CreateGroupDialog = () => {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                      align="start"
+                      onWheel={(e) => e.stopPropagation()}
+                      onTouchMove={(e) => e.stopPropagation()}
+                    >
                       <Command>
                         <CommandInput placeholder="Search categories..." />
-                        <CommandList className="max-h-[200px]">
+                        <CommandList className="max-h-[240px] overflow-y-auto overscroll-contain">
                           <CommandEmpty>No category found.</CommandEmpty>
                           <CommandGroup>
                             {categoryItems.map((c) => (
@@ -188,7 +222,7 @@ export const CreateGroupDialog = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Language</Label>
-                    <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
+                    <Popover open={languageOpen} onOpenChange={setLanguageOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -200,10 +234,15 @@ export const CreateGroupDialog = () => {
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                        align="start"
+                        onWheel={(e) => e.stopPropagation()}
+                        onTouchMove={(e) => e.stopPropagation()}
+                      >
                         <Command>
                           <CommandInput placeholder="Search languages..." />
-                          <CommandList className="max-h-[200px]">
+                          <CommandList className="max-h-[240px] overflow-y-auto overscroll-contain">
                             <CommandEmpty>No language found.</CommandEmpty>
                             <CommandGroup>
                               {WORLD_LANGUAGES.map((lang) => (
@@ -272,19 +311,27 @@ export const CreateGroupDialog = () => {
               </div>
               <div className="flex gap-2">
                 {activeTab !== 'rules' ? (
-                  <Button 
-                    type="button" 
-                    onClick={() => setActiveTab(activeTab === 'basic' ? 'settings' : 'rules')}
+                  <Button
+                    type="button"
+                    onClick={() => handleTabChange(activeTab === 'basic' ? 'settings' : 'rules')}
+                    disabled={activeTab === 'basic' && !isNameValid}
                   >
                     Next Step
                   </Button>
                 ) : (
                   <Button
                     type="submit"
-                    className="bg-gradient-primary shadow-glow min-w-[120px]"
-                    disabled={createGroup.isPending || !name.trim()}
+                    className="bg-gradient-primary shadow-glow min-w-[140px]"
+                    disabled={createGroup.isPending || !isNameValid}
                   >
-                    {createGroup.isPending ? 'Creating...' : 'Create Group'}
+                    {createGroup.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Group'
+                    )}
                   </Button>
                 )}
               </div>

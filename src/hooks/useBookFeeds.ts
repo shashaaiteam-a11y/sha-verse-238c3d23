@@ -273,3 +273,54 @@ export const useBook = (bookId?: string) => {
 
     return query;
 };
+
+/**
+ * Returns the list of book-type channels the current user is subscribed to.
+ * Realtime: invalidates when subscriptions change.
+ */
+export const useSubscribedBookChannels = () => {
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        if (!user?.id) return;
+        const ch = supabase
+            .channel(`subscribed-book-channels-rt-${user.id}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'subscriptions', filter: `user_id=eq.${user.id}` },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ["subscribed-book-channels", user.id] });
+                }
+            )
+            .subscribe();
+        return () => { supabase.removeChannel(ch); };
+    }, [user?.id, queryClient]);
+
+    return useQuery({
+        queryKey: ["subscribed-book-channels", user?.id],
+        queryFn: async () => {
+            if (!user?.id) return [];
+            const { data, error } = await (supabase as any)
+                .from("subscriptions")
+                .select(`
+                    channel_id,
+                    channels:channel_id!inner (
+                        id,
+                        name,
+                        avatar_url,
+                        banner_url,
+                        description,
+                        subscribers_count,
+                        channel_type
+                    )
+                `)
+                .eq("user_id", user.id)
+                .eq("channels.channel_type", "books");
+
+            if (error) throw error;
+            return (data || []).map((row: any) => row.channels).filter(Boolean);
+        },
+        enabled: !!user?.id,
+    });
+};

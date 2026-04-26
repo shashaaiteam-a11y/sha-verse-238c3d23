@@ -68,13 +68,19 @@ export const ShareDialog = ({
   const [canShare, setCanShare] = useState(true);
   const [shareRestriction, setShareRestriction] = useState<string>('');
 
-  const postUrl = `${window.location.origin}/${
-    postType === 'video'
-      ? 'movion/watch'
-      : postType === 'book'
-      ? 'bookshelf/book'
-      : 'post'
-  }/${postId}`;
+  const getPostPath = () => {
+    switch (postType) {
+      case 'video':
+        return `movion/watch/${postId}`;
+      case 'book':
+        return `bookshelf/book/${postId}`;
+      case 'group_post':
+        return `post/${postId}`;
+      default:
+        return `post/${postId}`;
+    }
+  };
+  const postUrl = `${window.location.origin}/${getPostPath()}`;
 
   // Check share permissions when dialog opens
   useEffect(() => {
@@ -108,36 +114,56 @@ export const ShareDialog = ({
     
     setIsSharing(true);
     try {
+      const userComment = shareComment.trim();
       if (shareTarget === 'timeline') {
-        // Share to own timeline
+        // Compose human-readable content with the link so it's auto-linkified in feeds
+        const typeLabel =
+          postType === 'video' ? '🎬 Shared a video'
+          : postType === 'book' ? '📚 Shared a book'
+          : postType === 'group_post' ? '💬 Shared a group post'
+          : '🔗 Shared a post';
+        const composedContent =
+          (userComment ? userComment + '\n\n' : '') +
+          typeLabel +
+          (postContent ? `: ${postContent.slice(0, 140)}` : '') +
+          `\n\n${postUrl}`;
+
+        // Always create a real visible post on the user's timeline with the thumbnail
+        const { error: postErr } = await supabase
+          .from('posts')
+          .insert({
+            user_id: user.id,
+            content: composedContent,
+            image_url: postImage || null,
+            visibility: 'public',
+          });
+        if (postErr) throw postErr;
+
+        // Also record the share relation for analytics/counters when applicable
         if (postType === 'post') {
-          await sharePost.mutateAsync({ postId, comment: shareComment.trim() || undefined });
+          await sharePost.mutateAsync({ postId, comment: userComment || undefined }).catch(() => {});
         } else if (postType === 'group_post') {
-          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: shareComment.trim() || undefined });
-        } else {
-          // For videos and books, create a share entry
-          const { error } = await supabase
-            .from('shares')
-            .insert({
-              user_id: user.id,
-              comment: shareComment.trim() || null
-            });
-          if (error) throw error;
-          toast({ title: 'Shared to your timeline!' });
+          await shareGroupPost.mutateAsync({ groupPostId: postId, comment: userComment || undefined }).catch(() => {});
         }
+
+        queryClient.invalidateQueries({ queryKey: ['posts'] });
+        queryClient.invalidateQueries({ queryKey: ['user-posts'] });
+        toast({ title: 'Shared to your timeline!' });
       } else if (shareTarget === 'group' && selectedGroupId) {
         await shareToGroup.mutateAsync({
           groupId: selectedGroupId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: (userComment ? userComment + '\n\n' : '') + postUrl,
+          imageUrl: postImage,
         });
       } else if (shareTarget === 'page' && selectedPageId) {
         await shareToPage.mutateAsync({
           pageId: selectedPageId,
           originalPostId: postId,
           originalPostType: postType,
-          comment: shareComment.trim() || undefined
+          comment: (userComment ? userComment + '\n\n' : '') + postUrl,
+          imageUrl: postImage,
         });
       }
 
@@ -192,9 +218,12 @@ export const ShareDialog = ({
       const blob = await response.blob();
       const file = new File([blob], 'shared-story.jpg', { type: 'image/jpeg' });
       
+      const baseCaption = shareComment.trim() || postContent?.slice(0, 100) || 'Shared post';
+      const captionWithLink = `${baseCaption}\n\n🔗 ${postUrl}`;
+
       await createStory.mutateAsync({
         mediaFile: file,
-        caption: shareComment || postContent?.slice(0, 100) || 'Shared post'
+        caption: captionWithLink,
       });
 
       toast({ title: 'Shared to your story!' });
