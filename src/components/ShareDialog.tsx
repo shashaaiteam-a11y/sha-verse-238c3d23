@@ -230,12 +230,27 @@ export const ShareDialog = ({
     }
   };
 
-  const handleShareToMessenger = () => {
-    toast({ 
-      title: 'Share via Messenger', 
-      description: 'Open a conversation and paste the link' 
-    });
-    handleCopyLink();
+  const handleNativeShare = async () => {
+    if (postVisibility === 'private') {
+      toast({
+        title: 'Cannot share externally',
+        description: 'Private content cannot be shared outside the app',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const result = await nativeShare(
+      postType as ShareEntityType,
+      postId,
+      postContent?.slice(0, 60) || 'SHA-VERSE',
+      postContent?.slice(0, 140) || 'Check this out on SHA-VERSE'
+    );
+    if (result === 'shared') {
+      toast({ title: 'Shared!' });
+      onOpenChange(false);
+    } else if (result === 'copied') {
+      toast({ title: 'Link copied to clipboard' });
+    }
   };
 
   const handleExternalShare = (platform: 'facebook' | 'twitter' | 'whatsapp' | 'email') => {
