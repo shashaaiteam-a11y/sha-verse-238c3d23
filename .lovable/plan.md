@@ -1,326 +1,148 @@
-# 📱 SHA-VERSE — Native Mobile App + Play Store + AdMob Complete Plan
 
-## ⚠️ Pehle Important Clarification
+# NovaChat 3-Phase System — Implementation Plan
 
-**Sawaal**: "Kya SDK install karne se mobile fitting auto-fix ho jayegi?"
-**Jawab**: ❌ **NAHI**. Capacitor sirf web app ko native wrapper deta hai. Agar abhi components mobile mein screen se bahar nikal rahe hain, toh APK mein bhi **wahi problem aayegi**. Pehle responsive issues fix karne honge, phir build.
-
-**Sawaal**: "Kya kuch tootega?"
-**Jawab**: ✅ Nahi, agar yeh plan exact follow karein. Aapka project pehle se hi tayyar hai:
-- ✅ Capacitor configured (`capacitor.config.ts`)
-- ✅ AdMob plugin installed (`@capacitor-community/admob`)
-- ✅ AdMob test mode active (`USE_TEST_ADS = true`)
-- ✅ Mobile context, splash, status bar setup hain
-
-Hum sirf 3 cheezein karenge: **Responsive fixes → Real AdMob IDs → Build & Publish**. Modules/features/UI ka logic chhua nahi jayega.
+## 🎯 Aapka Decision Summary
+- **Phase 1**: Current secure backend (Lovable AI Gateway via `novachat-ai` edge function) **as-is rakhna hai**. Koi backend change nahi.
+- **Phase 2**: Daily limit **10 messages/day** for free users.
+- **Phase 3**: Pro Upgrade UI **+ real Stripe payments enable**.
 
 ---
 
-## 🎯 PHASE 1: Mobile Responsive Fixes (Lovable mein)
+## 📋 Phase 1 — UI Polish Only (No Backend Touch)
 
-### Goal
-Sabhi screens ko 320px se 480px width tak perfect fit karna — bina kisi feature ko toda.
+NovaChat ka current UI already polished hai. Sirf chhote refinements karenge taaki "premium ChatGPT competitor" feel aaye:
 
-### Steps (sirf CSS/Tailwind level changes):
-1. **Global overflow lockdown**: `src/index.css` mein `html, body { overflow-x: hidden; max-width: 100vw }` ensure karna
-2. **Audit components for overflow**:
-   - Movion video player controls
-   - NovaChat message bubbles ka long text wrap
-   - Bookshelf book cards aur category strip
-   - Groups admin panel ke 4 tabs
-   - Profile header buttons row (Photos/Videos/Friends)
-   - Settings dialogs (privacy, upload book, create group)
-3. **Touch target audit**: Sabhi buttons ≥ 44px height (mobile guidelines)
-4. **Safe-area insets**: `env(safe-area-inset-*)` use karna notch wale phones ke liye
-5. **Test viewport**: 320px (smallest), 375px (iPhone SE), 414px (large phones)
+**Files affected:**
+- `src/components/novachat/ChatInput.tsx` — input box ke focus state, gradient border, smoother animations
+- `src/components/novachat/ChatMessage.tsx` — message bubbles ke spacing/typography refine
+- `src/components/novachat/ChatSidebar.tsx` — "Upgrade to Pro" button add (Phase 3 trigger)
+- `src/components/novachat/WelcomeScreen.tsx` — minor visual polish
 
-**Result**: Browser preview pe mobile view perfect → APK mein bhi perfect
+**Constraints respected:**
+- ✅ Edge function `novachat-ai` untouched (LOVABLE_API_KEY safe)
+- ✅ Module isolation — sirf `src/components/novachat/*` aur `src/hooks/useNovaChat.ts` me changes
+- ✅ Dark + Light theme dono support
+- ✅ Mobile-first, no horizontal scroll
+- ✅ Existing chat logic, history, attachments, voice — sab as-is
 
 ---
 
-## 🎯 PHASE 2: GitHub Export (One-time setup)
+## 📋 Phase 2 — Rate Limiting (10 messages/day for Free users)
 
-Capacitor Lovable sandbox mein run nahi hota — native build aapke local computer pe karna hota hai.
+### Database (new migration)
+Naya table `novachat_usage` (existing tables touch nahi karenge):
 
-### Step-by-step:
-1. Lovable editor → top-right **GitHub** button → **Connect to GitHub** → authorize
-2. **Create Repository** — naya repo ban jayega (e.g., `sha-verse`)
-3. Apne computer pe install karein:
-   - **Node.js 20+**: https://nodejs.org
-   - **Android Studio**: https://developer.android.com/studio
-   - **Java JDK 17+** (Android Studio ke saath aata hai)
-   - **Git**: https://git-scm.com
-4. Terminal kholein:
-   ```bash
-   git clone https://github.com/YOUR-USERNAME/sha-verse.git
-   cd sha-verse
-   npm install
-   ```
+```sql
+CREATE TABLE public.novachat_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  message_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, usage_date)
+);
+
+ALTER TABLE public.novachat_usage ENABLE ROW LEVEL SECURITY;
+
+-- User can only read their own usage
+CREATE POLICY "Users read own usage" ON public.novachat_usage
+  FOR SELECT USING (auth.uid() = user_id);
+```
+
+Add `is_pro` flag to `novachat_settings` (Phase 3 ready):
+```sql
+ALTER TABLE public.novachat_settings 
+  ADD COLUMN IF NOT EXISTS is_pro BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS pro_expires_at TIMESTAMPTZ;
+```
+
+RPC function for atomic check + increment (security definer):
+```sql
+CREATE FUNCTION public.check_and_increment_nova_usage(_user_id UUID)
+RETURNS jsonb
+-- Returns: { allowed: bool, used: int, limit: int, is_pro: bool }
+-- Pro users: always allowed, no increment
+-- Free users: check 10/day limit, increment if allowed
+```
+
+### Edge Function (`novachat-ai/index.ts`)
+Edge function ke top me, validation ke baad, RPC call:
+- Pro user → skip limit, proceed
+- Free user → call `check_and_increment_nova_usage`
+- If `allowed: false` → return `429` with `{ error: 'daily_limit_reached', used, limit }`
+
+### Frontend (`useNovaChat.ts`)
+- 429 response handle karke `setLimitReached(true)` state set karna
+- `useNovaUsage()` hook — current day ka usage fetch karna (sidebar me "7/10 messages today" dikhane ke liye)
+
+### UI — Limit Reached Modal
+New file: `src/components/novachat/LimitReachedModal.tsx`
+- Beautiful gradient modal
+- "Aapki aaj ki 10 free messages khatam ho gayi hain"
+- "Upgrade to Pro for Unlimited" CTA → opens Pricing modal (Phase 3)
+- "Reset in: X hours Y minutes" countdown
+- Dark + Light theme
+
+Sidebar me chhota usage indicator: `7 / 10 messages today` (Pro users ko nahi dikhega).
 
 ---
 
-## 🎯 PHASE 3: Capacitor Native Setup (Computer pe)
+## 📋 Phase 3 — Pro Upgrade + Real Stripe Payments
 
-Aapke project mein Capacitor **already configured** hai. Sirf platform add karna hai.
+### Step 1: Pricing Modal UI
+New file: `src/components/novachat/PricingModal.tsx`
+- 2 cards side-by-side:
+  - **Free** — 10 messages/day, ads, basic models
+  - **Pro** — Unlimited messages, no ads, all models (Gemini 2.5 Pro, GPT-5), priority
+- Premium look: gradient borders, checkmarks, "Most Popular" badge on Pro
+- Dark + Light theme
 
-### `capacitor.config.ts` ko production mode mein switch karna:
-```typescript
-// REMOVE the server.url block before production build (it points to Lovable preview)
-// Production build mein local dist/ folder use hota hai
-const config: CapacitorConfig = {
-  appId: 'app.lovable.b16b27b99c4646308c45b59b2b0e9094',
-  appName: 'Nexus',
-  webDir: 'dist',
-  // server: { ... }  ← yeh production ke liye REMOVE/COMMENT karein
-  plugins: { ... } // baaki sab same rahega
-};
-```
+### Step 2: Enable Stripe Payments (Lovable Built-in)
+**⚠️ Important pre-requisites jo aap ko karne padenge:**
+1. **Pro Lovable plan required** — Payments feature ke liye.
+2. Main `payments--recommend_payment_provider` chalaunga taaki confirm ho NovaChat (digital SaaS) ke liye Stripe eligible hai.
+3. Aapse confirm karunga before enabling.
+4. Phir `payments--enable_stripe_payments` call karunga.
+5. Aap test mode me product create karenge (Pro subscription, monthly/yearly).
+6. Checkout session edge function + webhook handler implement karenge.
 
-### Commands (terminal mein):
-```bash
-# 1. Android platform add karein (one-time)
-npx cap add android
-
-# 2. Web build
-npm run build
-
-# 3. Native project mein sync (har web change ke baad)
-npx cap sync android
-
-# 4. Android Studio mein open karein
-npx cap open android
-```
-
-Android Studio mein project khulega → **Run button (▶️)** dabaayein → Emulator/connected phone pe app chalega.
+### Step 3: Subscription Flow
+- "Upgrade to Pro" button → Pricing modal → Stripe Checkout
+- On successful payment → webhook updates `novachat_settings.is_pro = true`, sets `pro_expires_at`
+- Edge function reads `is_pro` to skip rate limit
+- Account page me "Manage Subscription" → Stripe Customer Portal
 
 ---
 
-## 🎯 PHASE 4: AdMob Real IDs Setup
+## 🔒 Constraints Strictly Followed
 
-### A. AdMob Account Banayein
-1. https://admob.google.com pe jayein → Google account se sign in
-2. **Apps** → **Add App** → "I haven't published yet" select karein
-3. App Name: **Nexus** (ya Sha-Verse), Platform: **Android**
-4. App ID milega: `ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX` — **note karein**
-
-### B. Ad Units Banayein (10 units total)
-AdMob dashboard mein **Ad Units** tab → har ek ke liye "Add ad unit":
-
-| Ad Unit Name | Type | Use For |
-|---|---|---|
-| Banner_Main | Banner | Bottom sticky banner |
-| Native_Feed | Native Advanced | Home/Group feed cards |
-| Rewarded_Reward | Rewarded | NovaChat msgs, Bookshelf premium |
-| Video_PreRoll | Rewarded Interstitial | Movion video pre-roll |
-| Video_MidRoll | Rewarded Interstitial | Movion mid-roll |
-| Shorts_Ad | Native | Shorts scroll ads |
-| Sponsored_Story | Native | Story sponsored |
-| Sponsored_Group | Native | Group suggestions |
-| Sponsored_Suggestion | Native | PYMK sponsored |
-| Sticky_Banner | Banner | Sticky bottom |
-
-Har unit ka ID copy karein (`ca-app-pub-XXX/YYY` format).
-
-### C. Code mein paste karein
-**File**: `src/lib/ads/adConfig.ts`
-
-```typescript
-export const USE_TEST_ADS = false;  // ⚠️ ONLY when ready to publish!
-
-const LIVE_AD_IDS = {
-  banner: "ca-app-pub-YOUR-ID/BANNER-ID",
-  native: "ca-app-pub-YOUR-ID/NATIVE-ID",
-  rewarded: "ca-app-pub-YOUR-ID/REWARDED-ID",
-  videoPreRoll: "ca-app-pub-YOUR-ID/PREROLL-ID",
-  videoMidRoll: "ca-app-pub-YOUR-ID/MIDROLL-ID",
-  shorts: "ca-app-pub-YOUR-ID/SHORTS-ID",
-  sponsoredStory: "ca-app-pub-YOUR-ID/STORY-ID",
-  sponsoredGroup: "ca-app-pub-YOUR-ID/GROUP-ID",
-  sponsoredSuggestion: "ca-app-pub-YOUR-ID/SUGG-ID",
-  stickyBanner: "ca-app-pub-YOUR-ID/STICKY-ID",
-} as const;
-```
-
-### D. Android Manifest mein App ID daalein
-**File**: `android/app/src/main/AndroidManifest.xml`
-
-`<application>` tag ke andar yeh add karein:
-```xml
-<meta-data
-    android:name="com.google.android.gms.ads.APPLICATION_ID"
-    android:value="ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX"/>
-```
-
-### 🚨 CRITICAL Rules
-- ❌ **Apne ads kabhi click na karein** (account permanent ban!)
-- ❌ Friends/family ko bhi mat kehna click karne
-- ✅ Real users naturally click karenge — wahi paisa hai
-- ⏳ **First payment threshold**: $100 (approximately ₹8,300)
-- 💰 **Payment**: Bank transfer monthly (21st around)
-
----
-
-## 🎯 PHASE 5: Production Build (APK/AAB)
-
-### Step 1: App icon aur splash screen
-- App icon: `1024x1024 PNG` banayein (Canva/Figma se)
-- https://icon.kitchen pe upload → Android icon set download
-- `android/app/src/main/res/` ke andar `mipmap-*` folders mein paste
-
-### Step 2: App signing key (one-time, **bahut important**)
-Terminal mein:
-```bash
-cd android/app
-keytool -genkey -v -keystore sha-verse-release.keystore \
-  -alias sha-verse -keyalg RSA -keysize 2048 -validity 10000
-```
-- Password yaad rakhein (kabhi kho na jaye!)
-- `sha-verse-release.keystore` file ko **backup karein** (Google Drive, USB)
-
-### Step 3: Signing config
-**File**: `android/app/build.gradle`
-```gradle
-android {
-  signingConfigs {
-    release {
-      storeFile file('sha-verse-release.keystore')
-      storePassword 'YOUR_PASSWORD'
-      keyAlias 'sha-verse'
-      keyPassword 'YOUR_PASSWORD'
-    }
-  }
-  buildTypes {
-    release {
-      signingConfig signingConfigs.release
-      minifyEnabled true
-    }
-  }
-}
-```
-
-### Step 4: Production AAB build
-Play Store ko **AAB (Android App Bundle)** chahiye, APK nahi.
-```bash
-cd android
-./gradlew bundleRelease
-```
-Output: `android/app/build/outputs/bundle/release/app-release.aab`
-
----
-
-## 🎯 PHASE 6: Play Store Publishing
-
-### Step 1: Google Play Console account
-1. https://play.google.com/console pe jayein
-2. **One-time fee: $25** (approx ₹2,100) credit/debit card se
-3. Identity verification (aadhar/passport) — 1-3 din
-4. Account approve hone ka wait karein
-
-### Step 2: New App Create karein
-Play Console → **Create app**:
-- App name: **Nexus** (ya jo aapne rakha hai)
-- Default language: English (US) ya Hindi
-- App or Game: **App**
-- Free or Paid: **Free**
-- Declarations checkbox tick karein
-
-### Step 3: App Setup (Left sidebar mein har section complete karein)
-
-| Section | Kya Karna Hai |
+| Constraint | How |
 |---|---|
-| **App access** | "All functionality available without restrictions" ya test login provide karein |
-| **Ads** | ✅ "Yes, my app contains ads" select karein (AdMob ke liye) |
-| **Content rating** | Questionnaire fill karein (chat app → mostly Teen) |
-| **Target audience** | Age 13+ (chat/social ke liye) |
-| **News app** | No |
-| **COVID-19** | No |
-| **Data safety** | Form fill karein — kya data collect karte ho (email, photos, messages) |
-| **Government app** | No |
-| **Financial features** | No (jab tak payments add nahi) |
-| **Health** | No |
-
-### Step 4: Store Listing (App ka description)
-**Main store listing** section:
-- **App name**: Nexus
-- **Short description** (80 chars): "Connect, chat, watch, read — all in one social universe"
-- **Full description** (4000 chars): Features ka detailed description
-- **App icon**: 512x512 PNG
-- **Feature graphic**: 1024x500 PNG (banner)
-- **Phone screenshots**: Min 2, max 8 (1080x1920 recommended)
-- **Tablet screenshots**: Optional but recommended
-- **Privacy policy URL**: ⚠️ **Mandatory** — https://www.privacypolicies.com pe free generate karein
-
-### Step 5: Internal Testing (Pehle yeh karein, production direct nahi!)
-1. **Testing → Internal testing** → **Create new release**
-2. AAB file upload karein (`app-release.aab`)
-3. Release notes likhein: "Initial release"
-4. **Testers**: apna email + 2-3 friends ke email add karein
-5. Opt-in URL share karein → install karke test karein
-6. **Bugs fix karein** → naya AAB upload → repeat
-
-### Step 6: Production Release
-1. **Production → Create new release**
-2. Same AAB upload (ya naya version)
-3. **Countries**: India + jahan launch karna (ya All countries)
-4. **Review release** → **Start rollout to Production**
-5. **Google review**: 1-7 days (pehli baar usually 3-5 din)
-6. Approve hone par email aayega → app live!
+| Module Isolation | Sirf `src/components/novachat/*`, `src/hooks/useNovaChat.ts`, `supabase/functions/novachat-ai/`, naya migration |
+| No backend exposure | LOVABLE_API_KEY edge function me hi rahega, frontend untouched |
+| Dark + Light theme | Saare new components dono themes me tested |
+| Mobile-first | Modals responsive, no horizontal scroll |
+| No interstitial ads | Limit-reached modal is upgrade prompt, not ad |
+| Existing features untouched | Chat history, attachments, voice, settings — koi change nahi |
+| Realtime stability | No new realtime channels needed for this feature |
 
 ---
 
-## 🎯 PHASE 7: Post-Launch AdMob Verification
+## 📦 Deliverables Order
 
-App live hone ke baad:
-1. AdMob dashboard → **Apps** → aapki app select karein
-2. **App-ads.txt verification** required hoga
-3. Play Store listing URL paste karein → AdMob auto-verify karega
-4. 24-48 ghante mein real ads dikhna start honge
-5. Earnings dashboard mein impressions/clicks/revenue dikhega
-
----
-
-## ✅ Kya Tootega? (Honest Answer)
-
-| Cheez | Status |
-|---|---|
-| Sabhi 6 modules (Home, Movion, NovaChat, Bookshelf, Groups, Profile) | ✅ Same rahenge |
-| Realtime features (chats, reactions, posts) | ✅ Same kaam karenge |
-| Authentication (Google, Phone, Email) | ✅ Same kaam karega |
-| Supabase backend / Lovable Cloud | ✅ Bilkul same |
-| UI/UX layouts | ✅ Same — sirf mobile pe better fit |
-| Ad placements | ✅ Same — sirf test → real IDs switch |
-| Existing features ka logic | ✅ Bilkul nahi chhuenge |
-
-**Risk areas**:
-- Agar capacitor.config.ts mein `server.url` production build mein remove na karein → app preview pe stuck rahega
-- Agar `USE_TEST_ADS = false` development mein karein aur khud click karein → AdMob ban
-- Agar keystore file kho jaye → app ko kabhi update nahi kar sakte (naya app banana padega)
+1. **Migration**: `novachat_usage` table + RPC + `is_pro` columns
+2. **Edge Function**: `novachat-ai` me rate limit check add
+3. **Hook**: `useNovaUsage` + 429 handling in `useNovaChat`
+4. **Components**: `LimitReachedModal`, `PricingModal`, sidebar usage indicator + Upgrade button
+5. **Stripe enable** (with your confirmation): provider check → enable → product setup → checkout flow → webhook
 
 ---
 
-## 📋 Aapka Action Plan (Order)
+## ❓ Final Confirmations Before Implementation
 
-1. ✅ **Abhi Lovable mein**: Mobile responsive fixes (Phase 1) — main yeh karunga jab aap approve karein
-2. 📤 **Aap karein**: GitHub export + local computer setup (Phase 2)
-3. 💻 **Aap karein**: Android Studio install + `npx cap add android` (Phase 3)
-4. 💰 **Aap karein**: AdMob account + 10 ad units banayein (Phase 4 A-B)
-5. 🔧 **Aap karein**: Real AdMob IDs paste + AndroidManifest update (Phase 4 C-D)
-6. 📦 **Aap karein**: Production build with signing key (Phase 5)
-7. 🏪 **Aap karein**: Play Console $25 + app submit (Phase 6)
-8. 🎉 **Wait**: Google review (3-7 din) → app LIVE!
+1. **Pro plan check**: Lovable Payments (Stripe) ke liye aap ka workspace **Pro plan** par hona chahiye. Confirm karein ki aap ke paas Pro plan hai?
+2. **Pricing**: Pro tier ka monthly price kya rakhein? (e.g., $4.99/month, $9.99/month)
+3. **Reset window**: Daily limit "midnight UTC" par reset ho ya "user ke local 24h se"? (Default suggestion: midnight UTC, simpler)
 
----
-
-## 🚀 Approval Ke Baad Main Kya Karunga?
-
-Is plan ko approve karne ke baad main **sirf Phase 1** execute karunga (Lovable mein possible kaam):
-
-1. **Mobile responsive audit & fixes** — har module ke un components ko fix karunga jo screen se bahar nikal rahe hain
-2. **Overflow guards** — global `overflow-x: hidden` strict karunga
-3. **Touch target enforcement** — sabhi interactive elements 44px+ ensure karunga
-4. **Safe-area insets** — notch wale phones ke liye padding
-5. **Capacitor production-ready config** — `server.url` ko comment karne ki guideline document karunga (aap local mein remove karenge build se pehle)
-
-Phase 2-7 aap apne computer pe execute karenge — main har step mein detailed help dunga jab aap puchhenge.
-
-**Yeh plan approve karein, aur main Phase 1 (mobile responsive fixes) start kar dunga — bina kisi module/feature ko chhede.**
+Plan approve karne ke baad main implementation start karunga — order strictly: Migration → Edge function → Frontend hooks → UI components → Stripe (last step).
