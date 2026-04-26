@@ -219,6 +219,13 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .eq('group_id', groupId)
         .eq('status', 'pending');
 
+      // Pending posts awaiting approval
+      const { count: pendingPostsCount } = await supabase
+        .from('group_posts')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+        .eq('approval_status', 'pending');
+
       // Blocked count
       const { count: blockedCount } = await supabase
         .from('group_blocked_users')
@@ -231,6 +238,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         totalPosts: totalPosts ?? 0,
         postsToday: postsToday ?? 0,
         pendingRequests: pendingRequests ?? 0,
+        pendingPosts: pendingPostsCount ?? 0,
         blockedCount: blockedCount ?? 0,
       };
     },
