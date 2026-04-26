@@ -11,13 +11,35 @@ const TOKEN_REGEX = /(https?:\/\/[^\s]+)|(#[a-zA-Z0-9_]+)/g;
 export const HashtagText = ({ content, className = '' }: HashtagTextProps) => {
   const navigate = useNavigate();
 
+  // Known in-app route prefixes — links matching these always SPA-navigate,
+  // even if the URL origin differs (e.g. shared from prod into preview).
+  const INTERNAL_PATH_PREFIXES = [
+    '/post/',
+    '/group-post/',
+    '/video/',
+    '/bookshelf/book/',
+    '/bookshelf/channel/',
+    '/bookshelf/read/',
+    '/bookshelf/edit/',
+    '/channel/',
+    '/groups/',
+    '/pages/',
+    '/profile/',
+    '/novachat/share/',
+  ];
+
+  const isInternalPath = (pathname: string) =>
+    INTERNAL_PATH_PREFIXES.some((p) => pathname.startsWith(p));
+
   const handleUrlClick = (e: React.MouseEvent, url: string) => {
     e.stopPropagation();
     e.preventDefault();
     try {
       const u = new URL(url);
-      if (typeof window !== 'undefined' && u.origin === window.location.origin) {
-        // Internal link → SPA navigate
+      const sameOrigin =
+        typeof window !== 'undefined' && u.origin === window.location.origin;
+      if (sameOrigin || isInternalPath(u.pathname)) {
+        // Internal link → SPA navigate (works across origins for known app routes)
         navigate(u.pathname + u.search + u.hash);
       } else {
         window.open(url, '_blank', 'noopener,noreferrer');
