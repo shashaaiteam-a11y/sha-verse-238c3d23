@@ -921,7 +921,9 @@ const Profile = () => {
 
             <h1 className="text-lg sm:text-xl font-bold truncate max-w-[200px]">
 
-              {profile?.display_name}
+              {profile?.display_name && profile.display_name.length > 9
+                ? `${profile.display_name.slice(0, 9)}...`
+                : profile?.display_name}
 
             </h1>
 
