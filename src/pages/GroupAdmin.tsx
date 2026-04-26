@@ -148,6 +148,7 @@ const GroupAdmin = () => {
   const newToday      = (insights as any)?.newToday      ?? 0;
   const postsToday    = (insights as any)?.postsToday    ?? 0;
   const pendingInsightRequests = (insights as any)?.pendingRequests ?? 0;
+  const pendingInsightPosts    = (insights as any)?.pendingPosts ?? pendingPosts?.length ?? 0;
   const blockedCount  = (insights as any)?.blockedCount  ?? 0;
 
   return (
