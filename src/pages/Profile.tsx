@@ -142,6 +142,63 @@ const Profile = () => {
 
   const [activeTab, setActiveTab] = useState('posts');
 
+  // Target post id to scroll to inside the Posts tab feed
+  // (used when clicking a thumbnail in Photos / Videos tabs)
+  const [scrollToPostId, setScrollToPostId] = useState<string | null>(null);
+
+  /**
+   * Jumps the Profile view to the Posts tab and scrolls to the specific post.
+   * Computes which paginated page contains the post (POSTS_PER_PAGE = 10) by
+   * counting how many of this user's posts are newer than the target.
+   */
+  const jumpToProfilePost = async (postId: string, createdAt?: string) => {
+    const targetUserId = userId || user?.id;
+    if (!targetUserId) return;
+
+    try {
+      let pageIndex = 0;
+      if (createdAt) {
+        const { count } = await supabase
+          .from('posts')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', targetUserId)
+          .gt('created_at', createdAt);
+        const POSTS_PER_PAGE = 10;
+        pageIndex = Math.floor((count || 0) / POSTS_PER_PAGE);
+      }
+      setPostsPage(pageIndex);
+      setScrollToPostId(postId);
+      setActiveTab('posts');
+    } catch (err) {
+      // Fallback: still switch tab + try scroll on current page
+      setScrollToPostId(postId);
+      setActiveTab('posts');
+    }
+  };
+
+  // Scroll to the requested post once the Posts tab has rendered it
+  useEffect(() => {
+    if (!scrollToPostId || activeTab !== 'posts' || postsLoading) return;
+    const tryScroll = (attempt: number) => {
+      const el = document.getElementById(`profile-post-${scrollToPostId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-primary', 'rounded-xl');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-primary', 'rounded-xl');
+        }, 1800);
+        setScrollToPostId(null);
+      } else if (attempt < 10) {
+        setTimeout(() => tryScroll(attempt + 1), 120);
+      } else {
+        setScrollToPostId(null);
+      }
+    };
+    // small delay to let the tab content mount
+    const t = setTimeout(() => tryScroll(0), 80);
+    return () => clearTimeout(t);
+  }, [scrollToPostId, activeTab, postsLoading, postsPage, posts]);
+
   
 
   // Story creation state
@@ -1319,24 +1376,21 @@ const Profile = () => {
                         {posts.flatMap((post: any, idx: number) => {
 
                           const card = (
-
-                            <ProfilePostCard
-
+                            <div
                               key={post.id}
-
-                              post={post}
-
-                              isOwnProfile={isOwnProfile}
-
-                              onShare={(postId) => sharePost.mutate({ postId })}
-
-                              onDelete={handleDeletePost}
-
-                              onPin={(postId) => togglePinPost.mutate(postId)}
-
-                            />
-
+                              id={`profile-post-${post.id}`}
+                              className="transition-shadow"
+                            >
+                              <ProfilePostCard
+                                post={post}
+                                isOwnProfile={isOwnProfile}
+                                onShare={(postId) => sharePost.mutate({ postId })}
+                                onDelete={handleDeletePost}
+                                onPin={(postId) => togglePinPost.mutate(postId)}
+                              />
+                            </div>
                           );
+
 
                           // Inject native ad every 4 posts
 
@@ -1827,22 +1881,19 @@ const Profile = () => {
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1 sm:gap-2">
 
                       {photos.map((photo: any) => (
-
-                        <div key={photo.id} className="aspect-square cursor-pointer hover:opacity-90 transition-opacity">
-
-                          <img 
-
-                            src={photo.image_url} 
-
-                            alt={photo.content || 'Photo'} 
-
+                        <div
+                          key={photo.id}
+                          className="aspect-square cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => jumpToProfilePost(photo.id, photo.created_at)}
+                        >
+                          <img
+                            src={photo.image_url}
+                            alt={photo.content || 'Photo'}
                             className="w-full h-full object-cover rounded-lg"
-
                           />
-
                         </div>
-
                       ))}
+
 
                     </div>
 
@@ -1932,13 +1983,22 @@ const Profile = () => {
 
                     {videos.map((video: any) => {
                       const isPostVideo = video.source === 'post';
-                      const targetHref = isPostVideo ? `/post/${video.id}` : `/video/${video.id}`;
+                      const handleClick = () => {
+                        if (isPostVideo) {
+                          // Post-source videos live in the profile feed → jump in-place
+                          jumpToProfilePost(video.id, video.created_at);
+                        } else {
+                          // Channel (Movion) videos open in their dedicated player
+                          navigate(`/video/${video.id}`);
+                        }
+                      };
                       return (
                         <Card
                           key={`${video.source || 'channel'}-${video.id}`}
                           className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                          onClick={() => navigate(targetHref)}
+                          onClick={handleClick}
                         >
+
                           <div className="aspect-video relative bg-black">
                             {video.thumbnail_url ? (
                               <img
