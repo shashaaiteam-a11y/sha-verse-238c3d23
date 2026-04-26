@@ -142,7 +142,7 @@ const ChatInput = ({
   };
 
   return (
-    <div className="border-t border-border p-2 sm:p-3 pb-16 sm:pb-20 bg-background relative z-30">
+    <div className="border-t border-border p-2 sm:p-3 pb-16 sm:pb-20 bg-background relative z-40">
       <div className="max-w-3xl mx-auto space-y-1.5 sm:space-y-2">
         {/* Mode banner */}
         {mode !== 'chat' && (
