@@ -294,25 +294,42 @@ export const useProfileSettings = () => {
     },
   });
 
-  // Update privacy settings
+  // Update privacy settings (with optimistic update for instant UI feedback)
   const updatePrivacy = useMutation({
     mutationFn: async (privacy: Record<string, string>) => {
       if (!user) throw new Error('Not authenticated');
-      
+
       const { error } = await supabase
         .from('profiles')
         .update({ privacy })
         .eq('id', user.id);
-      
+
       if (error) throw error;
+      return privacy;
+    },
+    onMutate: async (newPrivacy) => {
+      await queryClient.cancelQueries({ queryKey: ['profile'] });
+      const previous = queryClient.getQueriesData({ queryKey: ['profile'] });
+      // Patch every cached profile query that belongs to the current user
+      queryClient.setQueriesData({ queryKey: ['profile'] }, (old: any) => {
+        if (!old || old.id !== user?.id) return old;
+        return { ...old, privacy: newPrivacy };
+      });
+      return { previous };
+    },
+    onError: (error: any, _vars, ctx) => {
+      // Roll back on failure
+      if (ctx?.previous) {
+        ctx.previous.forEach(([key, data]: any) => queryClient.setQueryData(key, data));
+      }
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
       logActivity('Changed privacy settings', { action: 'update_privacy' });
       toast({ title: 'Privacy updated', description: 'Your privacy settings have been saved' });
     },
-    onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 
