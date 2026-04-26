@@ -496,9 +496,38 @@ const Bookshelf = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
-                {renderBooksWithAds(books, 4, "recent-ad")}
-              </div>
+              {viewMode === "grid" ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
+                  {renderBooksWithAds(books, 4, "recent-ad")}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {books.map((book) => (
+                    <Card
+                      key={book.id}
+                      className="p-3 flex gap-3 items-center hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/bookshelf/book/${book.id}`)}
+                    >
+                      <div className="w-12 h-16 flex-shrink-0 rounded overflow-hidden bg-gradient-primary">
+                        {book.cover_url ? (
+                          <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Book className="w-5 h-5 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm line-clamp-1">{book.title}</h3>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{book.author}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {(book.views_count || 0)} views{book.pages ? ` • ${book.pages} pages` : ""}
+                        </p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
               {isLoading && (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 mt-4">
