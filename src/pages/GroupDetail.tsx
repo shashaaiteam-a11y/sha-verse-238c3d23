@@ -22,6 +22,7 @@ import { EmojiReactionPicker } from '@/components/EmojiReactionPicker';
 import { useReactions } from '@/hooks/useReactions';
 import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { ShareDialog } from '@/components/ShareDialog';
+import { HashtagText } from '@/components/HashtagText';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -670,7 +671,9 @@ const GroupDetail = () => {
                   </div>
                 ) : (
                   post.content && (
-                    <p className="text-xs sm:text-sm mb-3 break-words whitespace-pre-wrap">{post.content}</p>
+                    <div className="text-xs sm:text-sm mb-3 break-words whitespace-pre-wrap">
+                      <HashtagText content={post.content} />
+                    </div>
                   )
                 )}
 
