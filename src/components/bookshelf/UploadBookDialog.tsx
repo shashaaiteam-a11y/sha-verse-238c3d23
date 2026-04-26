@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, Image, FileText, X } from "lucide-react";
+import { Upload, Image, FileText, X, Check, ChevronsUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,14 +11,22 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { useBooks } from "@/hooks/useBooks";
 import { BOOK_CATEGORIES } from "@/lib/constants/bookshelf";
+import { WORLD_LANGUAGES } from "@/lib/constants/languages";
 
 interface UploadBookDialogProps {
   open: boolean;
@@ -37,6 +45,9 @@ const UploadBookDialog = ({
   const [description, setDescription] = useState("");
   const [pages, setPages] = useState("");
   const [category, setCategory] = useState<string>(BOOK_CATEGORIES[0]);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [language, setLanguage] = useState<string>("English");
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [bookFile, setBookFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -67,6 +78,7 @@ const UploadBookDialog = ({
       author,
       description,
       category,
+      language,
       coverFile: coverFile || undefined,
       bookFile: bookFile || undefined,
       pages: pages ? parseInt(pages) : undefined,
@@ -79,6 +91,7 @@ const UploadBookDialog = ({
     setDescription("");
     setPages("");
     setCategory(BOOK_CATEGORIES[0]);
+    setLanguage("English");
     setCoverFile(null);
     setBookFile(null);
     setCoverPreview(null);
@@ -207,21 +220,108 @@ const UploadBookDialog = ({
             />
           </div>
 
-          {/* Category */}
+          {/* Category — searchable, scrollable combobox (replaces native Select to fix click-through inside scrollable dialog) */}
           <div>
-            <Label htmlFor="category">Category *</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category" className="mt-1">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {BOOK_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Category *</Label>
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen} modal={true}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={categoryOpen}
+                  className="w-full justify-between font-normal mt-1"
+                >
+                  {category}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                align="start"
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+              >
+                <Command>
+                  <CommandInput placeholder="Search categories..." />
+                  <CommandList className="max-h-[240px] overflow-y-auto overscroll-contain">
+                    <CommandEmpty>No category found.</CommandEmpty>
+                    <CommandGroup>
+                      {BOOK_CATEGORIES.map((cat) => (
+                        <CommandItem
+                          key={cat}
+                          value={cat}
+                          onSelect={() => {
+                            setCategory(cat);
+                            setCategoryOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              category === cat ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {cat}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Language — searchable, scrollable combobox */}
+          <div>
+            <Label>Language *</Label>
+            <Popover open={languageOpen} onOpenChange={setLanguageOpen} modal={true}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={languageOpen}
+                  className="w-full justify-between font-normal mt-1"
+                >
+                  {language}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                align="start"
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+              >
+                <Command>
+                  <CommandInput placeholder="Search languages..." />
+                  <CommandList className="max-h-[240px] overflow-y-auto overscroll-contain">
+                    <CommandEmpty>No language found.</CommandEmpty>
+                    <CommandGroup>
+                      {WORLD_LANGUAGES.map((lang) => (
+                        <CommandItem
+                          key={lang}
+                          value={lang}
+                          onSelect={() => {
+                            setLanguage(lang);
+                            setLanguageOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              language === lang ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {lang}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Description */}

@@ -237,6 +237,9 @@ export const CreateGroupDialog = () => {
                       <PopoverContent
                         className="w-[--radix-popover-trigger-width] p-0 z-[100]"
                         align="start"
+                        side="bottom"
+                        sideOffset={4}
+                        collisionPadding={16}
                         onWheel={(e) => e.stopPropagation()}
                         onTouchMove={(e) => e.stopPropagation()}
                       >
