@@ -92,7 +92,7 @@ const CreateStoryDialog = ({ open, onOpenChange }: CreateStoryDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-w-full p-0 overflow-hidden gap-0 mx-auto">
+      <DialogContent className="sm:max-w-3xl max-w-[calc(100vw-1rem)] w-[calc(100vw-1rem)] sm:w-full p-0 overflow-hidden gap-0 mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-center">Create Story</DialogTitle>
         </DialogHeader>
@@ -122,11 +122,11 @@ const CreateStoryDialog = ({ open, onOpenChange }: CreateStoryDialogProps) => {
             </Button>
           </div>
 
-          {/* Main Content Area - Flex layout for consistent sizing */}
-          <div className="flex gap-4 items-start">
+          {/* Main Content Area - Stacks on mobile, side-by-side on desktop */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
             {/* Preview Area - Fixed size for both media and text */}
             <div 
-              className="flex-shrink-0 w-56 aspect-[9/16] rounded-xl overflow-hidden bg-muted"
+              className="relative flex-shrink-0 w-44 sm:w-56 aspect-[9/16] rounded-xl overflow-hidden bg-muted"
               style={storyType === "text" ? { background: backgroundColor } : undefined}
             >
               {storyType === "media" ? (
@@ -196,7 +196,7 @@ const CreateStoryDialog = ({ open, onOpenChange }: CreateStoryDialogProps) => {
             </div>
 
             {/* Right Sidebar - Controls */}
-            <div className="flex-1 space-y-4 flex flex-col">
+            <div className="w-full flex-1 space-y-4 flex flex-col">
               {/* Background color picker for text stories - Fixed position next to preview */}
               {storyType === "text" && (
                 <div className="space-y-2">
