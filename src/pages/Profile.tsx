@@ -1376,24 +1376,21 @@ const Profile = () => {
                         {posts.flatMap((post: any, idx: number) => {
 
                           const card = (
-
-                            <ProfilePostCard
-
+                            <div
                               key={post.id}
-
-                              post={post}
-
-                              isOwnProfile={isOwnProfile}
-
-                              onShare={(postId) => sharePost.mutate({ postId })}
-
-                              onDelete={handleDeletePost}
-
-                              onPin={(postId) => togglePinPost.mutate(postId)}
-
-                            />
-
+                              id={`profile-post-${post.id}`}
+                              className="transition-shadow"
+                            >
+                              <ProfilePostCard
+                                post={post}
+                                isOwnProfile={isOwnProfile}
+                                onShare={(postId) => sharePost.mutate({ postId })}
+                                onDelete={handleDeletePost}
+                                onPin={(postId) => togglePinPost.mutate(postId)}
+                              />
+                            </div>
                           );
+
 
                           // Inject native ad every 4 posts
 
