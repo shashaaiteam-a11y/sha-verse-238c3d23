@@ -142,6 +142,63 @@ const Profile = () => {
 
   const [activeTab, setActiveTab] = useState('posts');
 
+  // Target post id to scroll to inside the Posts tab feed
+  // (used when clicking a thumbnail in Photos / Videos tabs)
+  const [scrollToPostId, setScrollToPostId] = useState<string | null>(null);
+
+  /**
+   * Jumps the Profile view to the Posts tab and scrolls to the specific post.
+   * Computes which paginated page contains the post (POSTS_PER_PAGE = 10) by
+   * counting how many of this user's posts are newer than the target.
+   */
+  const jumpToProfilePost = async (postId: string, createdAt?: string) => {
+    const targetUserId = userId || user?.id;
+    if (!targetUserId) return;
+
+    try {
+      let pageIndex = 0;
+      if (createdAt) {
+        const { count } = await supabase
+          .from('posts')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', targetUserId)
+          .gt('created_at', createdAt);
+        const POSTS_PER_PAGE = 10;
+        pageIndex = Math.floor((count || 0) / POSTS_PER_PAGE);
+      }
+      setPostsPage(pageIndex);
+      setScrollToPostId(postId);
+      setActiveTab('posts');
+    } catch (err) {
+      // Fallback: still switch tab + try scroll on current page
+      setScrollToPostId(postId);
+      setActiveTab('posts');
+    }
+  };
+
+  // Scroll to the requested post once the Posts tab has rendered it
+  useEffect(() => {
+    if (!scrollToPostId || activeTab !== 'posts' || postsLoading) return;
+    const tryScroll = (attempt: number) => {
+      const el = document.getElementById(`profile-post-${scrollToPostId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-primary', 'rounded-xl');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-primary', 'rounded-xl');
+        }, 1800);
+        setScrollToPostId(null);
+      } else if (attempt < 10) {
+        setTimeout(() => tryScroll(attempt + 1), 120);
+      } else {
+        setScrollToPostId(null);
+      }
+    };
+    // small delay to let the tab content mount
+    const t = setTimeout(() => tryScroll(0), 80);
+    return () => clearTimeout(t);
+  }, [scrollToPostId, activeTab, postsLoading, postsPage, posts]);
+
   
 
   // Story creation state
