@@ -453,8 +453,10 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                       {blockedUsers.map((block: any) => {
                         const name = block.profiles?.display_name || block.profiles?.username || 'Unknown user';
                         const username = block.profiles?.username;
+                        // Prefer the row id; fall back to blocked_id so unblock always has a valid uuid
+                        const targetId = block.id || block.blocked_id;
                         return (
-                          <div key={block.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-secondary">
+                          <div key={targetId} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-secondary">
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                               <Avatar className="h-9 w-9 shrink-0">
                                 {block.profiles?.avatar_url && <AvatarImage src={block.profiles.avatar_url} />}
@@ -476,7 +478,13 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                               variant="outline"
                               size="sm"
                               className="shrink-0 h-7 text-xs rounded-lg ml-2"
-                              onClick={() => setUnblockTarget({ id: block.id, name })}
+                              onClick={() => {
+                                if (!targetId) {
+                                  toast({ title: 'Error', description: 'Cannot identify block record', variant: 'destructive' });
+                                  return;
+                                }
+                                setUnblockTarget({ id: targetId, name });
+                              }}
                               disabled={unblockUser.isPending}
                             >
                               Unblock
