@@ -147,8 +147,9 @@ const GroupAdmin = () => {
   const totalPosts    = (insights as any)?.totalPosts    ?? (groupDetails as any)?.posts_count ?? 0;
   const newToday      = (insights as any)?.newToday      ?? 0;
   const postsToday    = (insights as any)?.postsToday    ?? 0;
-  const pendingInsightRequests = (insights as any)?.pendingRequests ?? 0;
-  const blockedCount  = (insights as any)?.blockedCount  ?? 0;
+  const pendingInsightRequests = (insights as any)?.pendingRequests ?? joinRequests?.length ?? 0;
+  const blockedCount  = (insights as any)?.blockedCount  ?? blockedUsers?.length ?? 0;
+  const pendingPostsCount = (insights as any)?.pendingPosts ?? pendingPosts?.length ?? 0;
 
   return (
     <div className="min-h-screen bg-gradient-subtle pb-20">
@@ -540,6 +541,10 @@ const GroupAdmin = () => {
                 <p className="text-xs sm:text-sm text-muted-foreground">Pending Requests</p>
               </Card>
               <Card className="p-4 text-center">
+                <p className="text-2xl sm:text-3xl font-bold text-orange-500">{pendingPostsCount}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending Posts</p>
+              </Card>
+              <Card className="p-4 text-center">
                 <p className="text-2xl sm:text-3xl font-bold text-red-500">{blockedCount}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Blocked Users</p>
               </Card>
@@ -549,7 +554,7 @@ const GroupAdmin = () => {
             <Card className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Live Stats</h3>
-                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">Auto-refreshes every 30s</span>
+                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">Live · auto-refresh 15s</span>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
@@ -562,7 +567,7 @@ const GroupAdmin = () => {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
                   <span className="text-sm font-medium">⏳ Awaiting Approval</span>
-                  <span className="text-sm text-yellow-500 font-semibold">{pendingInsightRequests} join requests</span>
+                  <span className="text-sm text-yellow-500 font-semibold">{pendingInsightRequests} join · {pendingPostsCount} posts</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
                   <span className="text-sm font-medium">🚫 Blocked</span>
