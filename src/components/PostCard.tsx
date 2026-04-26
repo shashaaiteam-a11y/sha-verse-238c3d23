@@ -201,11 +201,11 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
       const url = allMedia[0];
       if (isVideo(url)) {
         return (
-          <div className="mb-3 -mx-3 sm:-mx-4">
+          <div className="mb-3 -mx-3 sm:-mx-4 bg-black flex items-center justify-center">
             <video 
               src={url} 
               controls 
-              className="w-full max-h-[500px] object-cover"
+              className="w-full max-h-[55vh] sm:max-h-[500px] object-contain"
               preload="metadata"
             />
           </div>
@@ -229,13 +229,13 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
       }
       return (
         <div 
-          className="mb-3 -mx-3 sm:-mx-4 cursor-pointer"
+          className="mb-3 -mx-3 sm:-mx-4 cursor-pointer bg-black flex items-center justify-center"
           onClick={() => setSelectedMediaIndex(0)}
         >
           <img 
             src={url} 
             alt="Post" 
-            className="w-full max-h-[500px] object-cover"
+            className="w-full max-h-[55vh] sm:max-h-[500px] object-contain"
             loading="lazy"
           />
         </div>
