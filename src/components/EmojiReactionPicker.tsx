@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ThumbsUp, X } from 'lucide-react';
 import {
@@ -152,6 +152,15 @@ export const EmojiReactionPicker = ({
   // Check if user has already reacted (reaction is final)
   const hasReacted = !!currentReaction;
 
+  useEffect(() => {
+    if (!showPicker) return;
+
+    document.body.dataset.swipeNavDisabled = 'true';
+    return () => {
+      delete document.body.dataset.swipeNavDisabled;
+    };
+  }, [showPicker]);
+
   return (
     <>
       {/* Main Button */}
@@ -193,6 +202,9 @@ export const EmojiReactionPicker = ({
       <Dialog open={showPicker} onOpenChange={setShowPicker}>
         <DialogContent
           data-no-swipe-nav="true"
+          onTouchStartCapture={(event) => event.stopPropagation()}
+          onTouchMoveCapture={(event) => event.stopPropagation()}
+          onTouchEndCapture={(event) => event.stopPropagation()}
           className="w-[95vw] max-w-[95vw] sm:max-w-2xl lg:max-w-4xl h-[65vh] sm:h-[75vh] lg:h-[85vh] p-0 rounded-xl overflow-hidden flex flex-col"
         >
           <DialogHeader className="p-3 sm:p-4 pb-2 border-b flex-shrink-0 bg-card z-10">
