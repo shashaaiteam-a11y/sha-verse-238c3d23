@@ -165,53 +165,7 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
     setConfirmPassword('');
   };
 
-  const PrivacySelect = ({ field, label, icon: Icon }: { field: string; label: string; icon: any }) => (
-    <div className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-secondary/60 transition-colors group">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <Icon className="w-3.5 h-3.5 text-primary" />
-        </div>
-        <span className="text-sm font-medium">{label}</span>
-      </div>
-      <Select
-        value={privacySettings[field] || 'public'}
-        onValueChange={(value) => handlePrivacyChange(field, value)}
-      >
-        <SelectTrigger className="w-28 h-8 text-xs border-border bg-secondary rounded-lg">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="public">
-            <div className="flex items-center gap-2">
-              <Globe className="w-3.5 h-3.5 text-green-500" />
-              <span>Public</span>
-            </div>
-          </SelectItem>
-          <SelectItem value="friends">
-            <div className="flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-blue-500" />
-              <span>Friends</span>
-            </div>
-          </SelectItem>
-          <SelectItem value="only_me">
-            <div className="flex items-center gap-2">
-              <Lock className="w-3.5 h-3.5 text-orange-500" />
-              <span>Only Me</span>
-            </div>
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-  );
 
-  const SectionHeader = ({ icon: Icon, title, color = 'text-primary', bg = 'bg-primary/10' }: { icon: any; title: string; color?: string; bg?: string }) => (
-    <div className="flex items-center gap-2.5 mb-3">
-      <div className={`w-7 h-7 rounded-full ${bg} flex items-center justify-center shrink-0`}>
-        <Icon className={`w-3.5 h-3.5 ${color}`} />
-      </div>
-      <span className="font-semibold text-sm">{title}</span>
-    </div>
-  );
 
   const groupedActivities = useMemo(() => {
     const grouped = new Map<string, { label: string; weekStart: Date; items: any[] }>();
