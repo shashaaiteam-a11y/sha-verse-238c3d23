@@ -219,13 +219,6 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .eq('group_id', groupId)
         .eq('status', 'pending');
 
-      // Pending posts awaiting approval
-      const { count: pendingPostsCount } = await supabase
-        .from('group_posts')
-        .select('id', { count: 'exact', head: true })
-        .eq('group_id', groupId)
-        .eq('approval_status', 'pending');
-
       // Blocked count
       const { count: blockedCount } = await supabase
         .from('group_blocked_users')
@@ -238,7 +231,6 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         totalPosts: totalPosts ?? 0,
         postsToday: postsToday ?? 0,
         pendingRequests: pendingRequests ?? 0,
-        pendingPosts: pendingPostsCount ?? 0,
         blockedCount: blockedCount ?? 0,
       };
     },
@@ -578,80 +570,34 @@ export const useGroupAdmin = (groupId: string | undefined) => {
     },
   });
 
-  // Approve post — uses security-definer RPC to bypass RLS
-  // (group_posts UPDATE policy only allows the post owner; admins must go via RPC)
+  // Approve post
   const approvePost = useMutation({
     mutationFn: async (postId: string) => {
-      // Capture author for notification BEFORE the update (post stays in table)
-      const { data: postData } = await supabase
+      const { error } = await supabase
         .from('group_posts')
-        .select('user_id')
-        .eq('id', postId)
-        .single();
-
-      const { error } = await (supabase.rpc as any)('admin_approve_group_post', {
-        p_post_id: postId,
-        p_admin_id: user!.id,
-      });
+        .update({ approval_status: 'approved' })
+        .eq('id', postId);
       if (error) throw error;
-
-      if (postData?.user_id) {
-        const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
-        await sendNotification(
-          postData.user_id,
-          'group_post_approved',
-          'Post Approved ✅',
-          `Your post in "${(grp as any)?.name || 'the group'}" was approved.`,
-          { group_id: groupId, post_id: postId }
-        );
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-pending-posts', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
       toast({ title: 'Post approved!' });
-    },
-    onError: (error: any) => {
-      toast({ title: 'Approve failed', description: error.message, variant: 'destructive' });
     },
   });
 
-  // Reject post — uses security-definer RPC (deletes the rejected post per existing function)
+  // Reject post
   const rejectPost = useMutation({
     mutationFn: async (postId: string) => {
-      // Capture author for notification BEFORE the delete
-      const { data: postData } = await supabase
+      const { error } = await supabase
         .from('group_posts')
-        .select('user_id')
-        .eq('id', postId)
-        .single();
-
-      const { error } = await (supabase.rpc as any)('admin_reject_group_post', {
-        p_post_id: postId,
-        p_admin_id: user!.id,
-      });
+        .update({ approval_status: 'rejected' })
+        .eq('id', postId);
       if (error) throw error;
-
-      if (postData?.user_id) {
-        const { data: grp } = await supabase.from('groups').select('name').eq('id', groupId!).single();
-        await sendNotification(
-          postData.user_id,
-          'group_post_rejected',
-          'Post Declined',
-          `Your post in "${(grp as any)?.name || 'the group'}" was not approved.`,
-          { group_id: groupId }
-        );
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-pending-posts', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-posts', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
       toast({ title: 'Post rejected' });
-    },
-    onError: (error: any) => {
-      toast({ title: 'Reject failed', description: error.message, variant: 'destructive' });
     },
   });
 
