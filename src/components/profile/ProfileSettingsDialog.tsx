@@ -21,8 +21,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Settings, Shield, Lock, Eye, UserX, Smartphone, 
   Clock, AlertTriangle, LogOut, Key, Globe, Users, Trash2,
-  Mail, Phone, Calendar, MapPin, Briefcase, GraduationCap, Heart, UserCheck, Tag
+  Mail, Phone, Calendar, MapPin, Briefcase, GraduationCap, Heart, UserCheck
 } from 'lucide-react';
+
 import { useProfileSettings } from '@/hooks/useProfileSettings';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/components/ui/use-toast';
