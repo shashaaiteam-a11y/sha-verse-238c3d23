@@ -541,6 +541,10 @@ const GroupAdmin = () => {
                 <p className="text-xs sm:text-sm text-muted-foreground">Pending Requests</p>
               </Card>
               <Card className="p-4 text-center">
+                <p className="text-2xl sm:text-3xl font-bold text-orange-500">{pendingInsightPosts}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending Posts</p>
+              </Card>
+              <Card className="p-4 text-center">
                 <p className="text-2xl sm:text-3xl font-bold text-red-500">{blockedCount}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Blocked Users</p>
               </Card>
