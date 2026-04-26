@@ -496,12 +496,12 @@ const Bookshelf = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
                 {renderBooksWithAds(books, 4, "recent-ad")}
               </div>
 
               {isLoading && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 mt-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 mt-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
                     <Card key={i} className="overflow-hidden animate-pulse">
                       <div className="aspect-[2/3] bg-muted" />
@@ -533,7 +533,7 @@ const Bookshelf = () => {
                 <TrendingUp className="w-5 h-5 text-primary" />
                 Trending Books
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
                 {renderBooksWithAds(trendingBooks.slice(0, 12), 4, "trend-ad")}
               </div>
             </section>
@@ -580,7 +580,7 @@ const Bookshelf = () => {
                 Trending Books
               </h2>
               {trendingBooks.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
                   {renderBooksWithAds(trendingBooks, 4, "trending-tab-ad")}
                 </div>
               ) : (
@@ -691,7 +691,7 @@ const Bookshelf = () => {
 
                 <>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3">
 
                     {renderBooksWithAds(savedBooks, 4, "saved-ad")}
 
