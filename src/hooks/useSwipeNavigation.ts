@@ -32,6 +32,10 @@ export function useSwipeNavigation() {
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (!isMainRoute) return;
+    if (document.body.dataset.swipeNavDisabled === "true") {
+      touchStart.current = null;
+      return;
+    }
     if (isInsideHorizontalScroller(e.target)) {
       touchStart.current = null;
       return;
@@ -42,6 +46,10 @@ export function useSwipeNavigation() {
   }, [isMainRoute]);
 
   const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (document.body.dataset.swipeNavDisabled === "true") {
+      touchStart.current = null;
+      return;
+    }
     if (!isMainRoute || !touchStart.current) return;
     const touch = e.changedTouches[0];
     const dx = touch.clientX - touchStart.current.x;
