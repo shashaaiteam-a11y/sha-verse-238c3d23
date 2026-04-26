@@ -266,62 +266,17 @@ export const ProfileSettingsDialog = ({ trigger }: ProfileSettingsDialogProps) =
                 <div className="rounded-2xl border border-border bg-card p-4">
                   <SectionHeader icon={Eye} title="Who can see your info" />
                   <div className="space-y-0.5">
-                    <PrivacySelect field="email" label="Email address" icon={Mail} />
-                    <PrivacySelect field="phone" label="Phone number" icon={Phone} />
-                    <PrivacySelect field="birthdate" label="Birthday" icon={Calendar} />
-                    <PrivacySelect field="location" label="Location" icon={MapPin} />
-                    <PrivacySelect field="work" label="Workplace" icon={Briefcase} />
-                    <PrivacySelect field="education" label="Education" icon={GraduationCap} />
-                    <PrivacySelect field="relationship" label="Relationship status" icon={Heart} />
-                    <PrivacySelect field="friends_list" label="Friends list" icon={UserCheck} />
+                    <PrivacyRow field="email"          label="Email address"       icon={Mail}           value={privacySettings['email']          || 'public'} onChange={handlePrivacyChange} />
+                    <PrivacyRow field="phone"          label="Phone number"        icon={Phone}          value={privacySettings['phone']          || 'public'} onChange={handlePrivacyChange} />
+                    <PrivacyRow field="birthdate"      label="Birthday"            icon={Calendar}       value={privacySettings['birthdate']      || 'public'} onChange={handlePrivacyChange} />
+                    <PrivacyRow field="location"       label="Location"            icon={MapPin}         value={privacySettings['location']       || 'public'} onChange={handlePrivacyChange} />
+                    <PrivacyRow field="work"           label="Workplace"           icon={Briefcase}      value={privacySettings['work']           || 'public'} onChange={handlePrivacyChange} />
+                    <PrivacyRow field="education"      label="Education"           icon={GraduationCap}  value={privacySettings['education']      || 'public'} onChange={handlePrivacyChange} />
+                    <PrivacyRow field="relationship"   label="Relationship status" icon={Heart}          value={privacySettings['relationship']   || 'public'} onChange={handlePrivacyChange} />
+                    <PrivacyRow field="friends_list"   label="Friends list"        icon={UserCheck}      value={privacySettings['friends_list']   || 'public'} onChange={handlePrivacyChange} />
                   </div>
                 </div>
 
-                {/* Timeline & Tagging */}
-                <div className="rounded-2xl border border-border bg-card p-4">
-                  <SectionHeader icon={Tag} title="Timeline & Tagging" />
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <Eye className="w-3.5 h-3.5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Review tags before they appear</p>
-                          <p className="text-xs text-muted-foreground">Approve posts you're tagged in</p>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={privacySettings['review_tags'] !== 'false'}
-                        onCheckedChange={(checked) => handlePrivacyChange('review_tags', checked ? 'true' : 'false')}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-secondary/60 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <Users className="w-3.5 h-3.5 text-primary" />
-                        </div>
-                        <p className="text-sm font-medium">Who can post on your timeline</p>
-                      </div>
-                      <Select
-                        value={privacySettings['timeline_post'] || 'friends'}
-                        onValueChange={(v) => handlePrivacyChange('timeline_post', v)}
-                      >
-                        <SelectTrigger className="w-28 h-8 text-xs border-border bg-secondary rounded-lg">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="friends">
-                            <div className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-blue-500" /><span>Friends</span></div>
-                          </SelectItem>
-                          <SelectItem value="only_me">
-                            <div className="flex items-center gap-2"><Lock className="w-3.5 h-3.5 text-orange-500" /><span>Only Me</span></div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
               </div>
             </ScrollArea>
           </TabsContent>
