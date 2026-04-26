@@ -132,7 +132,8 @@ export const useProfileSettings = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Block user mutation with enhanced functionality
   const blockUser = useMutation({
