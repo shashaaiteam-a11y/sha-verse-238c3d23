@@ -171,24 +171,50 @@ export const useProfileSettings = () => {
   });
 
   // Unblock user mutation with proper handling
+  // Accepts either the user_blocks row id (uuid) OR the blocked user's id (uuid)
   const unblockUser = useMutation({
-    mutationFn: async (blockId: string) => {
-      // First get the blocked user ID before deleting the block
-      const { data: blockData } = await supabase
+    mutationFn: async (idOrBlockedId: string) => {
+      if (!user) throw new Error('Not authenticated');
+      if (!idOrBlockedId) throw new Error('Missing block reference');
+
+      // Try to resolve the row first by id, then by blocked_id (safer fallback)
+      let blockedUserId: string | undefined;
+      const { data: byId } = await supabase
         .from('user_blocks')
-        .select('blocked_id')
-        .eq('id', blockId)
-        .single();
-      
-      const { error } = await supabase
-        .from('user_blocks')
-        .delete()
-        .eq('id', blockId);
-      
-      if (error) throw error;
-      
-      // Return the blocked user ID for potential friend request
-      return blockData?.blocked_id;
+        .select('id, blocked_id')
+        .eq('id', idOrBlockedId)
+        .eq('blocker_id', user.id)
+        .maybeSingle();
+
+      if (byId?.id) {
+        blockedUserId = byId.blocked_id;
+        const { error } = await supabase
+          .from('user_blocks')
+          .delete()
+          .eq('id', byId.id)
+          .eq('blocker_id', user.id);
+        if (error) throw error;
+      } else {
+        // Fallback: treat the argument as the blocked user id
+        const { data: byBlockedId } = await supabase
+          .from('user_blocks')
+          .select('id, blocked_id')
+          .eq('blocker_id', user.id)
+          .eq('blocked_id', idOrBlockedId)
+          .maybeSingle();
+
+        if (!byBlockedId?.id) throw new Error('Block record not found');
+        blockedUserId = byBlockedId.blocked_id;
+
+        const { error } = await supabase
+          .from('user_blocks')
+          .delete()
+          .eq('blocker_id', user.id)
+          .eq('blocked_id', idOrBlockedId);
+        if (error) throw error;
+      }
+
+      return blockedUserId;
     },
     onSuccess: (blockedUserId) => {
       queryClient.invalidateQueries({ queryKey: ['blocked-users'] });
