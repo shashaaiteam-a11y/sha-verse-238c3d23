@@ -1983,13 +1983,22 @@ const Profile = () => {
 
                     {videos.map((video: any) => {
                       const isPostVideo = video.source === 'post';
-                      const targetHref = isPostVideo ? `/post/${video.id}` : `/video/${video.id}`;
+                      const handleClick = () => {
+                        if (isPostVideo) {
+                          // Post-source videos live in the profile feed → jump in-place
+                          jumpToProfilePost(video.id, video.created_at);
+                        } else {
+                          // Channel (Movion) videos open in their dedicated player
+                          navigate(`/video/${video.id}`);
+                        }
+                      };
                       return (
                         <Card
                           key={`${video.source || 'channel'}-${video.id}`}
                           className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                          onClick={() => navigate(targetHref)}
+                          onClick={handleClick}
                         >
+
                           <div className="aspect-video relative bg-black">
                             {video.thumbnail_url ? (
                               <img
