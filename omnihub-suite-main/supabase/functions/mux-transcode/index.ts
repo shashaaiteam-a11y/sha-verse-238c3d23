@@ -106,7 +106,43 @@ serve(async (req) => {
       if (!muxResponse.ok) {
         const errorText = await muxResponse.text();
         console.error('Mux API error:', errorText);
-        throw new Error(`Mux API error: ${errorText}`);
+
+        // Detect Mux free-plan asset limit (or any other Mux limit) and degrade gracefully.
+        // Video is already playable from Supabase Storage; HLS via Mux is just an enhancement.
+        const isAssetLimit =
+          muxResponse.status === 400 &&
+          /limited to \d+ assets|asset limit/i.test(errorText);
+
+        // Mark transcoding as skipped/failed but keep the video playable
+        await supabase
+          .from('transcoding_jobs')
+          .update({
+            status: isAssetLimit ? 'skipped' : 'failed',
+            error_message: errorText.slice(0, 500),
+            completed_at: new Date().toISOString(),
+          })
+          .eq('video_id', videoId);
+
+        // Keep the video as 'ready' so it stays playable (original upload URL works)
+        await supabase
+          .from('videos')
+          .update({ transcoding_status: 'ready' })
+          .eq('id', videoId);
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            fallback: true,
+            reason: isAssetLimit ? 'MUX_ASSET_LIMIT_REACHED' : 'MUX_API_ERROR',
+            message: isAssetLimit
+              ? 'Mux free plan asset limit reached. Video is still playable from original source.'
+              : 'Mux transcoding unavailable. Video is still playable from original source.',
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
 
       const muxData = await muxResponse.json();
