@@ -50,6 +50,7 @@ const Pages = lazy(() => import("./pages/Pages"));
 const PageDetail = lazy(() => import("./pages/PageDetail"));
 const PageAdmin = lazy(() => import("./pages/PageAdmin"));
 const Motion = lazy(() => import("./pages/Motion"));
+const PostDetail = lazy(() => import("./pages/PostDetail"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -132,6 +133,8 @@ const App = () => (
                     <Route path="/pages/:pageId" element={<ProtectedRoute>{withSuspense(PageDetail)}</ProtectedRoute>} />
                     <Route path="/pages/:pageId/admin" element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>} />
                     <Route path="/motion" element={<ProtectedRoute>{withSuspense(Motion)}</ProtectedRoute>} />
+                    <Route path="/post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
+                    <Route path="/group-post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/movion/admin" element={<ProtectedRoute>{withSuspense(MovionAdmin)}</ProtectedRoute>} />
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>

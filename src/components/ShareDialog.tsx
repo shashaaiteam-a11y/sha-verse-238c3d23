@@ -29,6 +29,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { getEntityUrl, handleShare as nativeShare, type ShareEntityType } from "@/lib/deepLinks";
 
 interface ShareDialogProps {
   open: boolean;
@@ -68,19 +69,8 @@ export const ShareDialog = ({
   const [canShare, setCanShare] = useState(true);
   const [shareRestriction, setShareRestriction] = useState<string>('');
 
-  const getPostPath = () => {
-    switch (postType) {
-      case 'video':
-        return `movion/watch/${postId}`;
-      case 'book':
-        return `bookshelf/book/${postId}`;
-      case 'group_post':
-        return `post/${postId}`;
-      default:
-        return `post/${postId}`;
-    }
-  };
-  const postUrl = `${window.location.origin}/${getPostPath()}`;
+  // 🔗 Universal deep link — single source of truth (src/lib/deepLinks.ts)
+  const postUrl = getEntityUrl(postType as ShareEntityType, postId);
 
   // Check share permissions when dialog opens
   useEffect(() => {
@@ -240,12 +230,27 @@ export const ShareDialog = ({
     }
   };
 
-  const handleShareToMessenger = () => {
-    toast({ 
-      title: 'Share via Messenger', 
-      description: 'Open a conversation and paste the link' 
-    });
-    handleCopyLink();
+  const handleNativeShare = async () => {
+    if (postVisibility === 'private') {
+      toast({
+        title: 'Cannot share externally',
+        description: 'Private content cannot be shared outside the app',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const result = await nativeShare(
+      postType as ShareEntityType,
+      postId,
+      postContent?.slice(0, 60) || 'SHA-VERSE',
+      postContent?.slice(0, 140) || 'Check this out on SHA-VERSE'
+    );
+    if (result === 'shared') {
+      toast({ title: 'Shared!' });
+      onOpenChange(false);
+    } else if (result === 'copied') {
+      toast({ title: 'Link copied to clipboard' });
+    }
   };
 
   const handleExternalShare = (platform: 'facebook' | 'twitter' | 'whatsapp' | 'email') => {
@@ -553,7 +558,7 @@ export const ShareDialog = ({
               {/* Share platform buttons */}
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: 'Messenger', icon: MessageCircle, color: 'text-blue-500', bg: 'bg-blue-500/10', action: handleShareToMessenger },
+                  { label: 'Share via…', icon: Send, color: 'text-primary', bg: 'bg-primary/10', action: handleNativeShare },
                   { label: 'WhatsApp', icon: ExternalLink, color: 'text-green-500', bg: 'bg-green-500/10', action: () => handleExternalShare('whatsapp') },
                   { label: 'Facebook', icon: Facebook, color: 'text-blue-600', bg: 'bg-blue-600/10', action: () => handleExternalShare('facebook') },
                   { label: 'Twitter', icon: Twitter, color: 'text-sky-500', bg: 'bg-sky-500/10', action: () => handleExternalShare('twitter') },
