@@ -227,14 +227,46 @@ const BookDetail = () => {
     }
 
     try {
-      // Increment download count
-      await incrementDownload.mutateAsync();
-      toast.success("Download started!");
+      toast.loading("Preparing download...", { id: "book-download" });
 
-      // Open download in new tab/window
-      window.open(book.book_url, "_blank");
-    } catch (error) {
-      toast.error("Failed to download. Please try again.");
+      // Fetch the file as a blob to bypass ad-blockers (ERR_BLOCKED_BY_CLIENT)
+      // that block direct navigation to storage URLs.
+      const response = await fetch(book.book_url, { mode: "cors" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+
+      // Derive a safe filename + extension from the URL
+      const urlPath = new URL(book.book_url).pathname;
+      const extMatch = urlPath.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
+      const ext = extMatch ? extMatch[1] : "pdf";
+      const safeTitle = (book.title || "book").replace(/[^a-zA-Z0-9-_ ]/g, "").trim() || "book";
+      const filename = `${safeTitle}.${ext}`;
+
+      // Trigger download via temporary anchor + object URL
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+
+      // Increment download count after successful download trigger
+      await incrementDownload.mutateAsync();
+
+      toast.dismiss("book-download");
+      toast.success("Download started!");
+    } catch (error: any) {
+      toast.dismiss("book-download");
+      console.error("Download failed:", error);
+      // Fallback: try opening in new tab (may still be blocked by ad-blockers)
+      try {
+        window.open(book.book_url, "_blank", "noopener,noreferrer");
+        toast.message("If download didn't start, please disable your ad-blocker for this site.");
+      } catch {
+        toast.error("Failed to download. Please disable any ad-blocker and try again.");
+      }
     }
   };
 
