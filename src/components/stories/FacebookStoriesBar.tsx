@@ -145,7 +145,7 @@ const FacebookStoriesBar = () => {
               <>
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex flex-col items-center gap-1 flex-shrink-0">
-                    <div className="w-16 h-16 rounded-full bg-muted animate-pulse" />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted animate-pulse" />
                     <div className="w-12 h-3 bg-muted rounded animate-pulse" />
                   </div>
                 ))}

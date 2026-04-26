@@ -23,8 +23,8 @@ export const FriendSuggestions = () => {
         </h3>
         <div className="flex gap-3 overflow-x-auto pb-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex-shrink-0 w-32 animate-pulse">
-              <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-2" />
+            <div key={i} className="flex-shrink-0 w-28 animate-pulse">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted mx-auto mb-2" />
               <div className="h-4 bg-muted rounded w-20 mx-auto mb-1" />
               <div className="h-3 bg-muted rounded w-16 mx-auto" />
             </div>
@@ -47,13 +47,13 @@ export const FriendSuggestions = () => {
       <div className="flex gap-3 overflow-x-auto pb-2">
         {visibleSuggestions.map((suggestion: any, idx: number) => (
           <Fragment key={suggestion.id}>
-            <div className="flex-shrink-0 w-32 text-center">
+            <div className="flex-shrink-0 w-28 text-center">
               <Avatar 
-                className="h-16 w-16 mx-auto mb-2 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                className="h-9 w-9 sm:h-10 sm:w-10 mx-auto mb-2 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                 onClick={() => navigate(`/profile/${suggestion.id}`)}
               >
                 {suggestion.avatar_url && <AvatarImage src={suggestion.avatar_url} />}
-                <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs">
                   {suggestion.display_name?.[0] || 'U'}
                 </AvatarFallback>
               </Avatar>
