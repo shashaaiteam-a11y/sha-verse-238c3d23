@@ -14,8 +14,28 @@ export function useSwipeNavigation() {
   const currentIndex = MAIN_ROUTES.indexOf(location.pathname);
   const isMainRoute = currentIndex !== -1;
 
+  const isInsideHorizontalScroller = (target: EventTarget | null): boolean => {
+    let el = target as HTMLElement | null;
+    while (el && el !== document.body) {
+      // Explicit opt-out marker
+      if (el.dataset && el.dataset.noSwipeNav === "true") return true;
+      const style = window.getComputedStyle(el);
+      const overflowX = style.overflowX;
+      const canScrollX =
+        (overflowX === "auto" || overflowX === "scroll" || overflowX === "overlay") &&
+        el.scrollWidth > el.clientWidth + 1;
+      if (canScrollX) return true;
+      el = el.parentElement;
+    }
+    return false;
+  };
+
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (!isMainRoute) return;
+    if (isInsideHorizontalScroller(e.target)) {
+      touchStart.current = null;
+      return;
+    }
     const touch = e.touches[0];
     touchStart.current = { x: touch.clientX, y: touch.clientY };
     swiping.current = false;
