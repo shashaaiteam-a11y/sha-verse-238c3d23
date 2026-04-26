@@ -92,12 +92,12 @@ const CreateStoryDialog = ({ open, onOpenChange }: CreateStoryDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-w-[calc(100vw-1rem)] w-[calc(100vw-1rem)] sm:w-full p-0 overflow-hidden gap-0 mx-auto max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="p-4 border-b">
+      <DialogContent className="sm:max-w-3xl max-w-[calc(100vw-1rem)] w-[calc(100vw-1rem)] sm:w-full p-0 gap-0 mx-auto max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="p-4 border-b flex-shrink-0">
           <DialogTitle className="text-center">Create Story</DialogTitle>
         </DialogHeader>
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Story Type Tabs */}
           <div className="flex gap-2">
             <Button
