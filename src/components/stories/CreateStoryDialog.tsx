@@ -240,7 +240,7 @@ const CreateStoryDialog = ({ open, onOpenChange }: CreateStoryDialogProps) => {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" sideOffset={4} className="z-[100]">
                     <SelectItem value="public">🌍 Public</SelectItem>
                     <SelectItem value="friends">👥 Friends</SelectItem>
                     <SelectItem value="only_me">🔒 Only Me</SelectItem>
