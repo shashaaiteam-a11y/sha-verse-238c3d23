@@ -86,9 +86,7 @@ export const useProfileSettings = () => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase.channel(
-      `profile-settings-${user.id}-${Math.random().toString(36).slice(2, 10)}`
-    );
+    const channel = supabase.channel(`profile-settings-${user.id}`);
 
     // Subscribe to user_blocks changes (Blocking tab)
     channel
@@ -132,8 +130,7 @@ export const useProfileSettings = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user, queryClient]);
 
   // Block user mutation with enhanced functionality
   const blockUser = useMutation({
