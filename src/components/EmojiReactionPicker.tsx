@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ThumbsUp, X } from 'lucide-react';
+import { lockSwipeNavigation } from '@/lib/swipeNavigationLock';
 import {
   Dialog,
   DialogContent,
@@ -118,6 +119,7 @@ export const EmojiReactionPicker = ({
 }: EmojiReactionPickerProps) => {
   const [showPicker, setShowPicker] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Smileys');
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Normalize reaction counts and current reaction for backward compatibility
   const normalizedCounts = normalizeReactionCounts(reactionCounts);
@@ -155,9 +157,22 @@ export const EmojiReactionPicker = ({
   useEffect(() => {
     if (!showPicker) return;
 
-    document.body.dataset.swipeNavDisabled = 'true';
+    const unlockSwipeNavigation = lockSwipeNavigation();
+    const stopDialogTouch = (event: TouchEvent) => {
+      if (dialogRef.current?.contains(event.target as Node)) {
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener('touchstart', stopDialogTouch, { capture: true, passive: true });
+    document.addEventListener('touchmove', stopDialogTouch, { capture: true, passive: true });
+    document.addEventListener('touchend', stopDialogTouch, { capture: true, passive: true });
+
     return () => {
-      delete document.body.dataset.swipeNavDisabled;
+      document.removeEventListener('touchstart', stopDialogTouch, { capture: true });
+      document.removeEventListener('touchmove', stopDialogTouch, { capture: true });
+      document.removeEventListener('touchend', stopDialogTouch, { capture: true });
+      unlockSwipeNavigation();
     };
   }, [showPicker]);
 
@@ -201,6 +216,7 @@ export const EmojiReactionPicker = ({
       {/* Full Emoji Chart Dialog - Responsive for all devices */}
       <Dialog open={showPicker} onOpenChange={setShowPicker}>
         <DialogContent
+          ref={dialogRef}
           data-no-swipe-nav="true"
           onTouchStartCapture={(event) => event.stopPropagation()}
           onTouchMoveCapture={(event) => event.stopPropagation()}
@@ -218,7 +234,9 @@ export const EmojiReactionPicker = ({
             <div className="border-b flex-shrink-0">
               <div
                 data-no-swipe-nav="true"
+                data-testid="reaction-category-scroll"
                 className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-hide touch-pan-x"
+                style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
               >
                 <div className="px-2 py-1 w-max">
                   <TabsList className="h-auto p-1 bg-transparent inline-flex gap-1 w-max">
@@ -237,7 +255,7 @@ export const EmojiReactionPicker = ({
             </div>
 
             {/* Emoji grid for each category */}
-            <ScrollArea data-no-swipe-nav="true" className="flex-1 min-h-0 p-2 sm:p-3">
+            <ScrollArea data-no-swipe-nav="true" data-testid="reaction-emoji-scroll" className="flex-1 min-h-0 p-2 sm:p-3">
               {Object.entries(emojiCategories).map(([category, emojis]) => (
                 <TabsContent key={category} value={category} className="m-0 mt-0">
                   <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-12 gap-0.5 sm:gap-1">
