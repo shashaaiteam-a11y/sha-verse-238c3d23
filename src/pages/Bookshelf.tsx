@@ -450,15 +450,18 @@ const Bookshelf = () => {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
 
-          <TabsList className="grid grid-cols-4 w-full max-w-md">
+          <TabsList
+            data-no-swipe-nav="true"
+            className="grid grid-cols-4 w-full max-w-md relative z-10"
+          >
 
-            <TabsTrigger value="discover">Discover</TabsTrigger>
+            <TabsTrigger value="discover" data-no-swipe-nav="true">Discover</TabsTrigger>
 
-            <TabsTrigger value="trending">Trending</TabsTrigger>
+            <TabsTrigger value="trending" data-no-swipe-nav="true">Trending</TabsTrigger>
 
-            <TabsTrigger value="subscribed">Subscribed</TabsTrigger>
+            <TabsTrigger value="subscribed" data-no-swipe-nav="true">Subscribed</TabsTrigger>
 
-            <TabsTrigger value="library">Library</TabsTrigger>
+            <TabsTrigger value="library" data-no-swipe-nav="true">Library</TabsTrigger>
 
           </TabsList>
 
