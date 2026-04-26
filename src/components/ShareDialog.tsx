@@ -558,7 +558,7 @@ export const ShareDialog = ({
               {/* Share platform buttons */}
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: 'Messenger', icon: MessageCircle, color: 'text-blue-500', bg: 'bg-blue-500/10', action: handleShareToMessenger },
+                  { label: 'Share via…', icon: Send, color: 'text-primary', bg: 'bg-primary/10', action: handleNativeShare },
                   { label: 'WhatsApp', icon: ExternalLink, color: 'text-green-500', bg: 'bg-green-500/10', action: () => handleExternalShare('whatsapp') },
                   { label: 'Facebook', icon: Facebook, color: 'text-blue-600', bg: 'bg-blue-600/10', action: () => handleExternalShare('facebook') },
                   { label: 'Twitter', icon: Twitter, color: 'text-sky-500', bg: 'bg-sky-500/10', action: () => handleExternalShare('twitter') },
