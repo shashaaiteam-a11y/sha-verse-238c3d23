@@ -567,7 +567,9 @@ const GroupAdmin = () => {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
                   <span className="text-sm font-medium">⏳ Awaiting Approval</span>
-                  <span className="text-sm text-yellow-500 font-semibold">{pendingInsightRequests} join requests</span>
+                  <span className="text-sm text-yellow-500 font-semibold">
+                    {pendingInsightRequests} join · {pendingInsightPosts} posts
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
                   <span className="text-sm font-medium">🚫 Blocked</span>
