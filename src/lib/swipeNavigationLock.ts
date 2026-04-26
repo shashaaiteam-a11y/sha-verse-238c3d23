@@ -7,6 +7,7 @@ type SwipeDebugState = {
 };
 
 let lockCount = 0;
+let removeLockedTouchBlocker: (() => void) | null = null;
 
 const getTargetLabel = (target: EventTarget | null) => {
   if (!(target instanceof HTMLElement)) return "unknown";
@@ -20,10 +21,32 @@ export const lockSwipeNavigation = () => {
   lockCount += 1;
   document.body.dataset.swipeNavDisabled = "true";
 
+  if (!removeLockedTouchBlocker) {
+    const stopLockedTouch = (event: TouchEvent) => {
+      if (!isSwipeNavigationLocked()) return;
+      if ((event.target as HTMLElement | null)?.closest?.('[data-no-swipe-nav="true"]')) {
+        publishSwipeDebug({ status: "blocked", reason: "locked-touch-capture" }, event.target);
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener("touchstart", stopLockedTouch, { capture: true, passive: true });
+    window.addEventListener("touchmove", stopLockedTouch, { capture: true, passive: true });
+    window.addEventListener("touchend", stopLockedTouch, { capture: true, passive: true });
+
+    removeLockedTouchBlocker = () => {
+      window.removeEventListener("touchstart", stopLockedTouch, { capture: true });
+      window.removeEventListener("touchmove", stopLockedTouch, { capture: true });
+      window.removeEventListener("touchend", stopLockedTouch, { capture: true });
+    };
+  }
+
   return () => {
     lockCount = Math.max(0, lockCount - 1);
     if (lockCount === 0) {
       delete document.body.dataset.swipeNavDisabled;
+      removeLockedTouchBlocker?.();
+      removeLockedTouchBlocker = null;
     }
   };
 };
