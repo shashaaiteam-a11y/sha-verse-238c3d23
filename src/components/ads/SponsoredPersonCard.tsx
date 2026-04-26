@@ -65,13 +65,13 @@ const SponsoredPersonCard = ({
   };
 
   return (
-    <div className={cn("flex-shrink-0 w-32 text-center relative", className)}>
+    <div className={cn("flex-shrink-0 w-28 text-center flex flex-col items-center relative", className)}>
       {/* 3-dot hide menu */}
       <div className="absolute top-0 right-0 z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="h-6 w-6 rounded-full bg-background/80 hover:bg-background flex items-center justify-center"
+              className="h-5 w-5 rounded-full bg-background/80 hover:bg-background flex items-center justify-center"
               aria-label="Ad options"
               onClick={(e) => e.stopPropagation()}
             >
@@ -87,29 +87,29 @@ const SponsoredPersonCard = ({
         </DropdownMenu>
       </div>
 
-      {/* Brand "avatar" - rounded square to differentiate from people */}
+      {/* Brand "avatar" - matches PYMK profile avatar size */}
       <div
         onClick={handleClick}
-        className="h-16 w-16 mx-auto mb-2 cursor-pointer hover:ring-2 hover:ring-primary transition-all rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-xl"
+        className="h-9 w-9 sm:h-10 sm:w-10 mb-1.5 cursor-pointer hover:ring-2 hover:ring-primary transition-all rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-xs"
       >
         {brandInitial}
       </div>
 
       <p
-        className="text-sm font-medium truncate cursor-pointer hover:text-primary"
+        className="text-xs font-medium truncate w-full cursor-pointer hover:text-primary leading-tight"
         onClick={handleClick}
       >
         {brandName}
       </p>
 
-      <div className="flex justify-center mb-2 mt-0.5">
+      <div className="flex justify-center leading-tight mt-0.5">
         <TestAdBadge variant="small" />
       </div>
 
       <Button
         size="sm"
         variant="outline"
-        className="w-full mt-1"
+        className="w-full mt-2 h-7 text-xs"
         onClick={handleClick}
       >
         <ExternalLink className="w-3 h-3 mr-1" />

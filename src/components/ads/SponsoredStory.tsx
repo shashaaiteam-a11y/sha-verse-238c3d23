@@ -87,10 +87,10 @@ const SponsoredStory = ({
 
       <button
         onClick={handleClick}
-        className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-blue-500 via-blue-600 to-blue-700 relative"
+        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full p-0.5 bg-gradient-to-tr from-blue-500 via-blue-600 to-blue-700 relative"
         aria-label="Sponsored story"
       >
-        <div className="w-full h-full rounded-full border-2 border-background bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-lg">
+        <div className="w-full h-full rounded-full border-2 border-background bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold text-xs">
           {brandInitial}
         </div>
         {/* Sponsored badge - bottom-left over avatar */}
@@ -99,7 +99,7 @@ const SponsoredStory = ({
         </div>
       </button>
 
-      <span className="text-xs text-muted-foreground truncate max-w-[64px]">
+      <span className="text-[11px] text-muted-foreground truncate max-w-[56px]">
         {brandName}
       </span>
     </div>
