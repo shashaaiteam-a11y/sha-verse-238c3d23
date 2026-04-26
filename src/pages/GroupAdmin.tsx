@@ -148,6 +148,7 @@ const GroupAdmin = () => {
   const newToday      = (insights as any)?.newToday      ?? 0;
   const postsToday    = (insights as any)?.postsToday    ?? 0;
   const pendingInsightRequests = (insights as any)?.pendingRequests ?? 0;
+  const pendingInsightPosts    = (insights as any)?.pendingPosts ?? pendingPosts?.length ?? 0;
   const blockedCount  = (insights as any)?.blockedCount  ?? 0;
 
   return (
@@ -540,6 +541,10 @@ const GroupAdmin = () => {
                 <p className="text-xs sm:text-sm text-muted-foreground">Pending Requests</p>
               </Card>
               <Card className="p-4 text-center">
+                <p className="text-2xl sm:text-3xl font-bold text-orange-500">{pendingInsightPosts}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending Posts</p>
+              </Card>
+              <Card className="p-4 text-center">
                 <p className="text-2xl sm:text-3xl font-bold text-red-500">{blockedCount}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Blocked Users</p>
               </Card>
@@ -562,7 +567,9 @@ const GroupAdmin = () => {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
                   <span className="text-sm font-medium">⏳ Awaiting Approval</span>
-                  <span className="text-sm text-yellow-500 font-semibold">{pendingInsightRequests} join requests</span>
+                  <span className="text-sm text-yellow-500 font-semibold">
+                    {pendingInsightRequests} join · {pendingInsightPosts} posts
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
                   <span className="text-sm font-medium">🚫 Blocked</span>
