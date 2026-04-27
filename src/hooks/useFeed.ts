@@ -425,8 +425,22 @@ export const useFeed = () => {
     enabled: !!user,
   });
 
-  // Flatten all pages into single array
-  const feedItems = data?.pages.flatMap(page => page.items) || [];
+  // Flatten all pages and de-duplicate by composite (type + id) as a final
+  // safety net — cursor pagination already prevents duplicates, but realtime
+  // invalidation + parallel sources can still race.
+  const feedItems = (() => {
+    const seen = new Set<string>();
+    const out: FeedItem[] = [];
+    for (const page of data?.pages || []) {
+      for (const item of page.items) {
+        const key = `${item.type}:${item.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(item);
+      }
+    }
+    return out;
+  })();
 
   // 🚀 OPTIMIZATION: Debounced realtime invalidation to prevent storm
   useEffect(() => {
