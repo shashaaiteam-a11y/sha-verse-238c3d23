@@ -78,6 +78,51 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // Constrain text to max 5 lines, each line max 36 characters.
+  // Auto-wraps to next line once the 36-char limit is reached on a line.
+  const MAX_LINES = 5;
+  const MAX_CHARS_PER_LINE = 36;
+  const constrainBioText = (raw: string): string => {
+    // Split on user-entered newlines first
+    const userLines = raw.replace(/\r\n/g, '\n').split('\n');
+    const outLines: string[] = [];
+
+    for (let i = 0; i < userLines.length; i++) {
+      let remaining = userLines[i];
+      // Wrap any line longer than MAX_CHARS_PER_LINE into chunks
+      if (remaining.length === 0) {
+        outLines.push('');
+      } else {
+        while (remaining.length > 0) {
+          outLines.push(remaining.slice(0, MAX_CHARS_PER_LINE));
+          remaining = remaining.slice(MAX_CHARS_PER_LINE);
+          if (outLines.length >= MAX_LINES) break;
+        }
+      }
+      if (outLines.length >= MAX_LINES) break;
+    }
+
+    // Cap to MAX_LINES; ensure last line doesn't exceed MAX_CHARS_PER_LINE
+    const capped = outLines.slice(0, MAX_LINES).map(l => l.slice(0, MAX_CHARS_PER_LINE));
+    return capped.join('\n');
+  };
+
+  const handleBioChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const constrained = constrainBioText(e.target.value);
+    setFormData(prev => ({ ...prev, [e.target.name]: constrained }));
+  };
+
+  const handleBioKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Block Enter if we're already at 5 lines
+    if (e.key === 'Enter') {
+      const value = (e.target as HTMLTextAreaElement).value;
+      const lines = value.split('\n');
+      if (lines.length >= MAX_LINES) {
+        e.preventDefault();
+      }
+    }
+  };
+
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
