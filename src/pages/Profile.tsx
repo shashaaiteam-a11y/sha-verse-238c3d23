@@ -110,7 +110,7 @@ const Profile = () => {
 
   const { profile, isLoading } = useProfile(userId);
 
-  const [postsPage, setPostsPage] = useState(0);
+  // Posts now use infinite scroll (cursor-based) — no manual page state.
 
   const [photosPage, setPhotosPage] = useState(0);
 
@@ -120,7 +120,13 @@ const Profile = () => {
 
   const { friends: friendsData, friendsHasMore, friendsLoading, sendFriendRequest, removeFriend, acceptFriendRequest, declineFriendRequest, pendingRequests, sentRequests } = useFriends(friendsPage);
 
-  const { posts, hasMore: postsHasMore, isLoading: postsLoading } = useUserPosts(userId || user?.id, postsPage);
+  const {
+    posts,
+    isLoading: postsLoading,
+    fetchNextPage: fetchMorePosts,
+    hasNextPage: hasMorePosts,
+    isFetchingNextPage: isFetchingMorePosts,
+  } = useUserPosts(userId || user?.id);
 
   const { photos, hasMore: photosHasMore, isLoading: photosLoading } = useUserPhotos(userId || user?.id, photosPage);
 
