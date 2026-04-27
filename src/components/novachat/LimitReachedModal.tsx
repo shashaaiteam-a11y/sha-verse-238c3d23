@@ -42,7 +42,7 @@ const LimitReachedModal = ({ open, onOpenChange, used, limit, onUpgrade }: Limit
           </DialogTitle>
           <DialogDescription className="text-center text-base">
             Aapne aaj ki <span className="font-semibold text-foreground">{used} / {limit}</span> free messages use kar li hain.
-            Pro plan se unlimited chat ka maza lijiye.
+            Kal phir se messages bhej sakte hain.
           </DialogDescription>
         </DialogHeader>
 
@@ -53,18 +53,9 @@ const LimitReachedModal = ({ open, onOpenChange, used, limit, onUpgrade }: Limit
         </div>
 
         <div className="flex flex-col gap-2 mt-2">
-          <Button
-            onClick={() => {
-              onOpenChange(false);
-              onUpgrade();
-            }}
-            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 gap-2"
-          >
-            <Crown className="w-4 h-4" />
-            Upgrade to Pro
-          </Button>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full">
-            Maybe later
+          {/* Pro upgrade hidden — coming in a future version */}
+          <Button onClick={() => onOpenChange(false)} className="w-full">
+            Got it
           </Button>
         </div>
       </DialogContent>
