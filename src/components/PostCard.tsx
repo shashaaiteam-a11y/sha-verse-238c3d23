@@ -205,7 +205,7 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
             <video 
               src={url} 
               controls 
-              className="w-full max-h-[55vh] sm:max-h-[500px] object-contain"
+              className="w-full max-h-[42vh] sm:max-h-[500px] object-contain"
               preload="metadata"
             />
           </div>
@@ -235,7 +235,7 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
           <img 
             src={url} 
             alt="Post" 
-            className="w-full max-h-[55vh] sm:max-h-[500px] object-contain"
+            className="w-full max-h-[42vh] sm:max-h-[500px] object-contain"
             loading="lazy"
           />
         </div>
