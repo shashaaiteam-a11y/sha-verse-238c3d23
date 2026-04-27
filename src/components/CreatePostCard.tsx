@@ -87,7 +87,7 @@ export const CreatePostCard = () => {
   const [content, setContent] = useState('');
   const [privacy, setPrivacy] = useState<PostPrivacy>('public');
   const [location, setLocation] = useState<string | null>(null);
-  const [mediaFiles, setMediaFiles] = useState<{ url: string; type: string }[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<{ id: string; url: string; type: string; uploading?: boolean; failed?: boolean }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPollDialog, setShowPollDialog] = useState(false);
