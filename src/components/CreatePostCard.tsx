@@ -259,6 +259,18 @@ export const CreatePostCard = () => {
     if (!content.trim() && mediaFiles.length === 0 && !pollQuestion.trim()) return;
     if (!user) return;
 
+    // Block submit while any media is still uploading in background
+    if (mediaFiles.some(m => m.uploading)) {
+      toast({
+        title: 'Please wait',
+        description: 'Media is still uploading in the background',
+      });
+      return;
+    }
+
+    // Use only successfully uploaded media (skip failed ones)
+    const uploaded = mediaFiles.filter(m => !m.uploading && !m.failed);
+
     setIsSubmitting(true);
     try {
       const metadata: any = {};
@@ -271,8 +283,8 @@ export const CreatePostCard = () => {
         content: content.trim(),
         user_id: user.id,
         visibility: privacy,
-        image_url: mediaFiles[0]?.url || null,
-        media_urls: mediaFiles.slice(1).map(m => m.url),
+        image_url: uploaded[0]?.url || null,
+        media_urls: uploaded.slice(1).map(m => m.url),
         metadata,
         type: hasPoll ? 'poll' : 'text'
       };
