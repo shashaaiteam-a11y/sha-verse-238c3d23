@@ -278,17 +278,40 @@ const GroupDetail = () => {
   const clearMedia = () => {
     setPostImage(undefined); setPostVideo(undefined);
     setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
+    if (localImagePreview) { try { URL.revokeObjectURL(localImagePreview); } catch {} }
+    if (localVideoPreview) { try { URL.revokeObjectURL(localVideoPreview); } catch {} }
+    setLocalImagePreview(null); setLocalVideoPreview(null);
+    uploadPromiseRef.current = null;
   };
 
-  const handleCreatePost = () => {
-    if (!newPost.trim() && !postImage && !postVideo && !postFile) return;
-    const postType = postVideo ? 'video' : postFile ? (postFileType?.startsWith('application/pdf') || postFileType?.includes('document') ? 'document' : 'file') : postImage ? 'image' : 'text';
+  const handleCreatePost = async () => {
+    const hasLocal = !!(localImagePreview || localVideoPreview || postFileName);
+    if (!newPost.trim() && !postImage && !postVideo && !postFile && !hasLocal) return;
+
+    // If background upload still running, wait for it before posting
+    if (isUploading && uploadPromiseRef.current) {
+      toast({ title: 'Finishing upload…', description: 'Posting as soon as upload completes.' });
+      try { await uploadPromiseRef.current; } catch {}
+    }
+
+    // Re-read latest values from state via closure isn't possible here for fresh values;
+    // rely on the fact that upload setters fired before this resolves.
+    const finalImage = postImage;
+    const finalVideo = postVideo;
+    const finalFile = postFile;
+
+    if (!newPost.trim() && !finalImage && !finalVideo && !finalFile) {
+      toast({ title: 'Upload failed', description: 'Cannot post without media.', variant: 'destructive' });
+      return;
+    }
+
+    const postType = finalVideo ? 'video' : finalFile ? (postFileType?.startsWith('application/pdf') || postFileType?.includes('document') ? 'document' : 'file') : finalImage ? 'image' : 'text';
     createPost.mutate(
       {
         content: newPost,
-        imageUrl: postImage,
-        videoUrl: postVideo,
-        fileUrl: postFile,
+        imageUrl: finalImage,
+        videoUrl: finalVideo,
+        fileUrl: finalFile,
         fileName: postFileName,
         fileType: postFileType,
         postType,
