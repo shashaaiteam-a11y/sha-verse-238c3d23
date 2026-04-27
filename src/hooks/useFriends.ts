@@ -103,31 +103,42 @@ export const useFriends = (page: number = 0) => {
     enabled: !!user,
   });
 
-  // Realtime subscription
+  // Realtime subscription — listen to BOTH directions of friendship rows.
+  // Note: Supabase realtime filters do NOT support OR via comma; we need two listeners.
   useEffect(() => {
     if (!user) return;
 
-    const channelId = `friendships-changes-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
-    const channel = supabase
-      .channel(channelId)
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['friends'] });
+      queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['sent-requests'] });
+    };
+
+    const suffix = Math.random().toString(36).slice(2, 8);
+
+    // Channel 1: rows where current user is the sender (user_id)
+    const senderChannel = supabase
+      .channel(`friendships-sender-${user.id}-${suffix}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'friendships',
-          filter: `user_id=eq.${user.id},friend_id=eq.${user.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['friends'] });
-          queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
-          queryClient.invalidateQueries({ queryKey: ['sent-requests'] });
-        }
+        { event: '*', schema: 'public', table: 'friendships', filter: `user_id=eq.${user.id}` },
+        invalidate
+      )
+      .subscribe();
+
+    // Channel 2: rows where current user is the receiver (friend_id)
+    const receiverChannel = supabase
+      .channel(`friendships-receiver-${user.id}-${suffix}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friendships', filter: `friend_id=eq.${user.id}` },
+        invalidate
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(senderChannel);
+      supabase.removeChannel(receiverChannel);
     };
   }, [user, queryClient]);
 
