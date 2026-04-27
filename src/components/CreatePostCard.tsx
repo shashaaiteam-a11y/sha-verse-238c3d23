@@ -386,7 +386,7 @@ export const CreatePostCard = () => {
             'grid-cols-3'
           }`}>
             {mediaFiles.map((media, idx) => (
-              <div key={idx} className="relative rounded-lg overflow-hidden">
+              <div key={media.id ?? idx} className="relative rounded-lg overflow-hidden">
                 {media.type === 'video' ? (
                   <video src={media.url} className="w-full aspect-video object-cover" />
                 ) : media.type === 'pdf' ? (
@@ -397,9 +397,22 @@ export const CreatePostCard = () => {
                 ) : (
                   <img src={media.url} alt="" className="w-full aspect-square object-cover" />
                 )}
+                {media.uploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] pointer-events-none">
+                    <div className="flex items-center gap-2 px-2.5 py-1 bg-black/70 rounded-full text-white text-xs">
+                      <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Uploading…
+                    </div>
+                  </div>
+                )}
+                {media.failed && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-destructive/70 text-white text-xs font-medium pointer-events-none">
+                    Upload failed
+                  </div>
+                )}
                 <button
                   onClick={() => removeMedia(idx)}
-                  className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-black/80"
+                  className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-black/80 z-10"
                 >
                   <X className="w-4 h-4" />
                 </button>
