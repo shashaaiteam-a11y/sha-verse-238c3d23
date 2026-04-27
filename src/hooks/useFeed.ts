@@ -172,7 +172,8 @@ export const useFeed = () => {
           `)
           .or(buildVisibilityFilter())
           .order('created_at', { ascending: false })
-          .range(pageParam * ITEMS_PER_PAGE, (pageParam + 1) * ITEMS_PER_PAGE - 1),
+          .lt('created_at', cursor)
+          .limit(ITEMS_PER_PAGE),
 
         // 2. Group posts from joined/created groups
         allGroupIds.length > 0 ? supabase
@@ -194,7 +195,8 @@ export const useFeed = () => {
           `)
           .in('group_id', allGroupIds)
           .order('created_at', { ascending: false })
-          .range(pageParam * ITEMS_PER_PAGE, (pageParam + 1) * ITEMS_PER_PAGE - 1) : { data: [], error: null },
+          .lt('created_at', cursor)
+          .limit(ITEMS_PER_PAGE) : { data: [], error: null },
 
         // 3. Videos from subscribed channels, own channels, and friends' channels
         supabase
@@ -216,7 +218,8 @@ export const useFeed = () => {
             )
           `)
           .order('created_at', { ascending: false })
-          .range(pageParam * ITEMS_PER_PAGE, (pageParam + 1) * ITEMS_PER_PAGE - 1),
+          .lt('created_at', cursor)
+          .limit(ITEMS_PER_PAGE),
 
         // 4. Books from bookshelf
         supabase
@@ -239,7 +242,8 @@ export const useFeed = () => {
           `)
           .eq('visibility', 'public')
           .order('created_at', { ascending: false })
-          .range(pageParam * ITEMS_PER_PAGE, (pageParam + 1) * ITEMS_PER_PAGE - 1),
+          .lt('created_at', cursor)
+          .limit(ITEMS_PER_PAGE),
 
         // 5. Page posts from followed pages
         followedPageIds.length > 0 ? supabase
@@ -262,7 +266,8 @@ export const useFeed = () => {
           .in('page_id', followedPageIds)
           .eq('is_published', true)
           .order('created_at', { ascending: false })
-          .range(pageParam * ITEMS_PER_PAGE, (pageParam + 1) * ITEMS_PER_PAGE - 1) : { data: [], error: null }
+          .lt('created_at', cursor)
+          .limit(ITEMS_PER_PAGE) : { data: [], error: null }
       ]);
 
       const allItems: FeedItem[] = [];
@@ -403,16 +408,20 @@ export const useFeed = () => {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
-      // Paginate the sorted items
+      // Take the page of merged items
       const paginatedItems = sortedItems.slice(0, ITEMS_PER_PAGE);
 
-      return {
-        items: paginatedItems,
-        nextCursor: paginatedItems.length === ITEMS_PER_PAGE ? pageParam + 1 : null
-      };
+      // Cursor = oldest item's created_at on this page. Next fetch uses
+      // `.lt('created_at', cursor)` so we never re-emit duplicates even if
+      // new posts arrive at the top while the user is scrolling.
+      const oldest = paginatedItems[paginatedItems.length - 1];
+      const nextCursor =
+        paginatedItems.length === ITEMS_PER_PAGE && oldest ? oldest.created_at : null;
+
+      return { items: paginatedItems, nextCursor };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    initialPageParam: 0,
+    initialPageParam: FUTURE_CURSOR as string,
     enabled: !!user,
   });
 
