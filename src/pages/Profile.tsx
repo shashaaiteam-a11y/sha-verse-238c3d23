@@ -34,7 +34,9 @@ import { ProfileImageUpload } from '@/components/ProfileImageUpload';
 
 import { EditProfileDialog } from '@/components/EditProfileDialog';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+
+import { FeedSkeleton } from '@/components/FeedSkeleton';
 
 import { supabase } from '@/integrations/supabase/client';
 
