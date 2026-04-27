@@ -1,24 +1,41 @@
-import { useQuery } from '@tanstack/react-query';
+/**
+ * useUserPosts — cursor-based infinite scroll for a single user's posts.
+ *
+ * Switched from offset pagination (.range) to cursor pagination
+ * (.lt('created_at', cursor)) so that:
+ *   - new posts arriving mid-scroll never cause duplicates
+ *   - removing the manual Prev/Next UI on the Profile module is safe
+ *
+ * Backwards-compatible return shape: `posts` (flat array) + `hasMore` are
+ * preserved; `fetchNextPage`, `hasNextPage`, `isFetchingNextPage` are added
+ * for the new infinite-scroll consumer in Profile.tsx.
+ *
+ * The 2nd `page` arg is intentionally accepted but ignored — kept so any
+ * older caller still type-checks during the rollout.
+ */
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 
 const POSTS_PER_PAGE = 10;
+const FUTURE_CURSOR = '9999-12-31T23:59:59.999Z';
 
-export const useUserPosts = (userId?: string, page: number = 0) => {
+export const useUserPosts = (userId?: string, _legacyPage: number = 0) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
-  const { data: posts, isLoading } = useQuery({
-    queryKey: ['user-posts', userId, page],
-    queryFn: async () => {
-      if (!userId) return { posts: [], hasMore: false };
 
-      // Check if viewing own profile
+  const query = useInfiniteQuery<{ posts: any[]; nextCursor: string | null }>({
+    queryKey: ['user-posts', userId],
+    initialPageParam: FUTURE_CURSOR as string,
+    enabled: !!userId,
+    queryFn: async ({ pageParam }) => {
+      if (!userId) return { posts: [], nextCursor: null };
+      const cursor = (pageParam as string) || FUTURE_CURSOR;
+
       const isOwnProfile = user?.id === userId;
-      
-      let query = supabase
+
+      let q = supabase
         .from('posts')
         .select(`
           *,
@@ -31,75 +48,93 @@ export const useUserPosts = (userId?: string, page: number = 0) => {
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .range(page * POSTS_PER_PAGE, (page + 1) * POSTS_PER_PAGE - 1);
+        .lt('created_at', cursor)
+        .limit(POSTS_PER_PAGE);
 
-      // If not viewing own profile, filter by visibility
+      // Visibility filter — preserved exactly from previous behaviour
       if (!isOwnProfile && user?.id) {
-        // Get friendship status
         const { data: friendship } = await supabase
           .from('friendships')
           .select('id')
           .or(`and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId})`)
           .eq('status', 'accepted')
           .limit(1);
-        
+
         const isFriend = friendship && friendship.length > 0;
-        
         if (isFriend) {
-          // Friends can see public and friends-only posts
-          query = query.or('visibility.eq.public,visibility.eq.friends');
+          q = q.or('visibility.eq.public,visibility.eq.friends');
         } else {
-          // Non-friends can only see public posts
-          query = query.eq('visibility', 'public');
+          q = q.eq('visibility', 'public');
         }
       }
-      // Own profile: show all posts (no visibility filter needed)
 
-      const { data, error, count } = await query;
-      
+      const { data, error } = await q;
       if (error) throw error;
-      
-      const hasMore = data ? data.length === POSTS_PER_PAGE : false;
-      
-      return { posts: data || [], hasMore };
+
+      const rows = data || [];
+      const oldest = rows[rows.length - 1];
+      const nextCursor =
+        rows.length === POSTS_PER_PAGE && oldest ? (oldest as any).created_at : null;
+
+      return { posts: rows, nextCursor };
     },
-    enabled: !!userId,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
 
-  // Realtime subscription for friendship changes affecting post visibility
+  // Flatten + dedupe across pages (safety net; cursor pagination already
+  // prevents duplicates, but a refetch race can still produce overlap).
+  const posts = (() => {
+    const seen = new Set<string>();
+    const out: any[] = [];
+    for (const page of query.data?.pages || []) {
+      for (const p of page.posts) {
+        if (seen.has(p.id)) continue;
+        seen.add(p.id);
+        out.push(p);
+      }
+    }
+    return out;
+  })();
+
+  // Realtime subscription — preserved exactly: friendship changes (visibility)
+  // for other profiles + post INSERT/UPDATE/DELETE for the viewed user.
   useEffect(() => {
     if (!userId || !user) return;
 
     const isOwnProfile = user.id === userId;
-    const channelName = isOwnProfile ? `own-posts-${userId}` : `user-posts-${userId}`;
+    // Unique channel suffix to avoid Supabase realtime "subscribe error"
+    // when multiple instances mount in parallel (e.g. tab swap mid-render).
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const channelName = isOwnProfile
+      ? `own-posts-${userId}-${suffix}`
+      : `user-posts-${userId}-${suffix}`;
     const channel = supabase.channel(channelName);
 
     if (!isOwnProfile) {
-      // When viewing OTHER profiles: listen for friendship changes (affects which posts are visible)
       channel
-        .on('postgres_changes', { 
-          event: 'INSERT', 
-          schema: 'public', 
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
           table: 'friendships',
           filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
-        }, (payload) => {
-          if (payload.new.status === 'accepted') {
+        }, (payload: any) => {
+          if (payload.new?.status === 'accepted') {
             queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
           }
         })
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
           table: 'friendships',
           filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
-        }, (payload) => {
-          if (payload.new.status === 'accepted' || payload.old.status === 'accepted') {
+        }, (payload: any) => {
+          if (payload.new?.status === 'accepted' || payload.old?.status === 'accepted') {
             queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
           }
         })
-        .on('postgres_changes', { 
-          event: 'DELETE', 
-          schema: 'public', 
+        .on('postgres_changes', {
+          event: 'DELETE',
+          schema: 'public',
           table: 'friendships',
           filter: `or(and(user_id.eq.${userId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${userId}))`
         }, () => {
@@ -107,15 +142,13 @@ export const useUserPosts = (userId?: string, page: number = 0) => {
         });
     }
 
-    // Listen for post visibility changes (realtime privacy updates) - applies to both own and others' profiles
     channel
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'posts',
         filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        // When any post field changes (especially visibility), refresh posts
+      }, () => {
         queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
       })
       .on('postgres_changes', {
@@ -124,7 +157,6 @@ export const useUserPosts = (userId?: string, page: number = 0) => {
         table: 'posts',
         filter: `user_id=eq.${userId}`
       }, () => {
-        // New post added, refresh the list
         queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
       })
       .on('postgres_changes', {
@@ -133,7 +165,6 @@ export const useUserPosts = (userId?: string, page: number = 0) => {
         table: 'posts',
         filter: `user_id=eq.${userId}`
       }, () => {
-        // Post deleted, refresh the list
         queryClient.invalidateQueries({ queryKey: ['user-posts', userId] });
       })
       .subscribe();
@@ -143,5 +174,14 @@ export const useUserPosts = (userId?: string, page: number = 0) => {
     };
   }, [userId, user, queryClient]);
 
-  return { posts: posts?.posts || [], hasMore: posts?.hasMore || false, isLoading };
+  return {
+    posts,
+    // Legacy API (still consumed by older code paths)
+    hasMore: !!query.hasNextPage,
+    isLoading: query.isLoading,
+    // New infinite-scroll API
+    fetchNextPage: query.fetchNextPage,
+    hasNextPage: !!query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+  };
 };

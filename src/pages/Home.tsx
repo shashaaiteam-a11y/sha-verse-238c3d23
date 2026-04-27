@@ -38,6 +38,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useShares } from '@/hooks/useShares';
 
 import { FeedCard } from '@/components/FeedCard';
+import { FeedSkeleton } from '@/components/FeedSkeleton';
 
 import { CreatePostCard } from '@/components/CreatePostCard';
 
@@ -375,23 +376,13 @@ const Home = () => {
 
                 {/* Load More Trigger */}
 
-                <div ref={loadMoreRef} className="py-4 flex justify-center">
+                <div ref={loadMoreRef} className="py-4">
 
-                  {isFetchingNextPage && (
-
-                    <div className="flex items-center gap-2 text-muted-foreground">
-
-                      <Loader2 className="w-5 h-5 animate-spin" />
-
-                      <span className="text-sm">Loading more...</span>
-
-                    </div>
-
-                  )}
+                  {isFetchingNextPage && <FeedSkeleton count={2} />}
 
                   {!hasNextPage && feedItems.length > 0 && (
 
-                    <p className="text-sm text-muted-foreground">You've reached the end</p>
+                    <p className="text-center text-sm text-muted-foreground">You've reached the end</p>
 
                   )}
 
