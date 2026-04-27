@@ -208,7 +208,8 @@ const NovaChat = () => {
             onDeleteConversation={(id) => deleteConversation.mutate(id)}
             onRenameConversation={(id, title) => updateTitle.mutate({ id, title })}
             usage={usage}
-            onUpgradeClick={() => setPricingOpen(true)}
+            // Pro upgrade hidden for now — will be re-enabled in a future version
+            // onUpgradeClick={() => setPricingOpen(true)}
           />
         )}
 
