@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS groups_name_unique_ci ON public.groups (lower(name));

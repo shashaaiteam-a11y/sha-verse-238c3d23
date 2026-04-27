@@ -108,11 +108,21 @@ export const useGroups = () => {
         .eq('role', 'admin');
       if ((count || 0) >= 5) throw new Error('You can create a maximum of 5 groups.');
 
+      const trimmedName = payload.name.trim();
+
+      // Pre-check for duplicate name (case-insensitive)
+      const { data: existing } = await (supabase
+        .from('groups') as any)
+        .select('id')
+        .ilike('name', trimmedName)
+        .maybeSingle();
+      if (existing) throw new Error('A group with this name already exists. Please choose a different name.');
+
       const privacyValue = payload.privacy || 'public';
       const { data: group, error: groupError } = await (supabase
         .from('groups') as any)
         .insert({
-          name: payload.name,
+          name: trimmedName,
           description: payload.description,
           is_private: privacyValue !== 'public',
           privacy: privacyValue,
@@ -126,7 +136,12 @@ export const useGroups = () => {
         })
         .select()
         .single();
-      if (groupError) throw groupError;
+      if (groupError) {
+        if (groupError.code === '23505' || /duplicate|unique/i.test(groupError.message || '')) {
+          throw new Error('A group with this name already exists. Please choose a different name.');
+        }
+        throw groupError;
+      }
 
       const { error: memberError } = await supabase
         .from('group_members')
