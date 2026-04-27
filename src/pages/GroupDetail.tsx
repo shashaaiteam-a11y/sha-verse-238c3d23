@@ -508,8 +508,8 @@ const GroupDetail = () => {
               </div>
             )}
 
-            {/* ── Media Previews ── */}
-            {(postImage || postVideo || postFile) && (
+            {/* ── Media Previews (instant local + background upload) ── */}
+            {(postImage || postVideo || postFile || localImagePreview || localVideoPreview || postFileName) && (
               <div className="relative mb-2 rounded-lg overflow-hidden border border-border">
                 <button
                   onClick={clearMedia}
@@ -518,19 +518,19 @@ const GroupDetail = () => {
                   <X className="w-3 h-3" />
                 </button>
 
-                {postImage && (
-                  <img src={postImage} alt="Preview" className="w-full max-h-40 object-cover" />
+                {(postImage || localImagePreview) && (
+                  <img src={postImage || localImagePreview!} alt="Preview" className="w-full max-h-40 object-cover" />
                 )}
 
-                {postVideo && (
+                {(postVideo || localVideoPreview) && (
                   <video
-                    src={postVideo}
+                    src={postVideo || localVideoPreview!}
                     controls
                     className="w-full max-h-40 bg-black"
                   />
                 )}
 
-                {postFile && (
+                {(postFile || postFileName) && !localImagePreview && !localVideoPreview && (
                   <div className="flex items-center gap-2 p-2 bg-secondary/60">
                     <div className="h-8 w-8 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                       <FileText className="w-4 h-4 text-blue-500" />
@@ -543,8 +543,12 @@ const GroupDetail = () => {
                 )}
 
                 {isUploading && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-x-0 bottom-0 bg-black/70 text-white text-[11px] px-2 py-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Uploading {uploadProgress}%
+                    </span>
+                    <span className="opacity-80">You can keep typing</span>
                   </div>
                 )}
               </div>
