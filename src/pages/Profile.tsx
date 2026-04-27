@@ -155,34 +155,25 @@ const Profile = () => {
   const [scrollToPostId, setScrollToPostId] = useState<string | null>(null);
 
   /**
-   * Jumps the Profile view to the Posts tab and scrolls to the specific post.
-   * Computes which paginated page contains the post (POSTS_PER_PAGE = 10) by
-   * counting how many of this user's posts are newer than the target.
+   * Switches to the Posts tab and scrolls to the requested post. With
+   * infinite scroll, if the post hasn't been loaded yet we fetch additional
+   * pages until it appears (or we run out of pages).
    */
-  const jumpToProfilePost = async (postId: string, createdAt?: string) => {
+  const jumpToProfilePost = async (postId: string, _createdAt?: string) => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
-
-    try {
-      let pageIndex = 0;
-      if (createdAt) {
-        const { count } = await supabase
-          .from('posts')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', targetUserId)
-          .gt('created_at', createdAt);
-        const POSTS_PER_PAGE = 10;
-        pageIndex = Math.floor((count || 0) / POSTS_PER_PAGE);
-      }
-      setPostsPage(pageIndex);
-      setScrollToPostId(postId);
-      setActiveTab('posts');
-    } catch (err) {
-      // Fallback: still switch tab + try scroll on current page
-      setScrollToPostId(postId);
-      setActiveTab('posts');
-    }
+    setScrollToPostId(postId);
+    setActiveTab('posts');
   };
+
+  // Auto-load more pages until the target post appears in the rendered list
+  useEffect(() => {
+    if (!scrollToPostId) return;
+    const exists = posts?.some((p: any) => p.id === scrollToPostId);
+    if (!exists && hasMorePosts && !isFetchingMorePosts) {
+      fetchMorePosts();
+    }
+  }, [scrollToPostId, posts, hasMorePosts, isFetchingMorePosts, fetchMorePosts]);
 
   // Scroll to the requested post once the Posts tab has rendered it
   useEffect(() => {
@@ -205,7 +196,33 @@ const Profile = () => {
     // small delay to let the tab content mount
     const t = setTimeout(() => tryScroll(0), 80);
     return () => clearTimeout(t);
-  }, [scrollToPostId, activeTab, postsLoading, postsPage, posts]);
+  }, [scrollToPostId, activeTab, postsLoading, posts]);
+
+  // Infinite-scroll sentinel for the Posts tab — fires when the user
+  // scrolls within ~200px of the bottom of the loaded posts list.
+  const postsLoadMoreRef = useRef<HTMLDivElement | null>(null);
+  const postsObserverRef = useRef<IntersectionObserver | null>(null);
+  const onPostsSentinel = useCallback((entries: IntersectionObserverEntry[]) => {
+    const e = entries[0];
+    if (!e?.isIntersecting) return;
+    if (hasMorePosts && !isFetchingMorePosts) fetchMorePosts();
+  }, [hasMorePosts, isFetchingMorePosts, fetchMorePosts]);
+
+  useEffect(() => {
+    const el = postsLoadMoreRef.current;
+    if (!el) return;
+    if (postsObserverRef.current) postsObserverRef.current.disconnect();
+    postsObserverRef.current = new IntersectionObserver(onPostsSentinel, {
+      root: null,
+      rootMargin: '200px',
+      threshold: 0,
+    });
+    postsObserverRef.current.observe(el);
+    return () => {
+      if (postsObserverRef.current) postsObserverRef.current.disconnect();
+    };
+  }, [onPostsSentinel, posts.length, activeTab]);
+
 
   
 
