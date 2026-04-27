@@ -85,15 +85,16 @@ const NovaChat = () => {
 
   }, [messages]);
 
-  // Speak the latest assistant reply when voice is enabled and streaming has stopped
-  useEffect(() => {
-    if (!settings?.voice_enabled || isStreaming) return;
-    const last = messages[messages.length - 1];
-    if (last?.role === 'assistant' && last.content) {
-      speakText(last.content);
-    }
-    return () => stopSpeaking();
-  }, [isStreaming, settings?.voice_enabled, messages]);
+  // Auto voice-over disabled — was irritating users.
+  // Voice replies will be reintroduced in a future version with explicit per-message playback control.
+  // useEffect(() => {
+  //   if (!settings?.voice_enabled || isStreaming) return;
+  //   const last = messages[messages.length - 1];
+  //   if (last?.role === 'assistant' && last.content) {
+  //     speakText(last.content);
+  //   }
+  //   return () => stopSpeaking();
+  // }, [isStreaming, settings?.voice_enabled, messages]);
 
   // Stop any ongoing TTS on unmount
   useEffect(() => () => stopSpeaking(), []);
@@ -207,7 +208,8 @@ const NovaChat = () => {
             onDeleteConversation={(id) => deleteConversation.mutate(id)}
             onRenameConversation={(id, title) => updateTitle.mutate({ id, title })}
             usage={usage}
-            onUpgradeClick={() => setPricingOpen(true)}
+            // Pro upgrade hidden for now — will be re-enabled in a future version
+            // onUpgradeClick={() => setPricingOpen(true)}
           />
         )}
 
