@@ -86,7 +86,8 @@ export const useProfileSettings = () => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase.channel(`profile-settings-${user.id}`);
+    const channelId = `profile-settings-${user.id}-${Math.random().toString(36).slice(2, 10)}`;
+    const channel = supabase.channel(channelId);
 
     // Subscribe to user_blocks changes (Blocking tab)
     channel
