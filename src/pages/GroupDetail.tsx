@@ -130,6 +130,10 @@ const GroupDetail = () => {
   const [isUploading, setIsUploading]   = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingFileName, setUploadingFileName] = useState('');
+  // Local previews so user sees the media instantly while it uploads in background
+  const [localImagePreview, setLocalImagePreview] = useState<string | null>(null);
+  const [localVideoPreview, setLocalVideoPreview] = useState<string | null>(null);
+  const uploadPromiseRef = useRef<Promise<void> | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
