@@ -1445,48 +1445,14 @@ const Profile = () => {
 
                       </div>
 
-                      {/* Pagination Controls */}
-
-                      <div className="flex justify-center gap-2 mt-6">
-
-                        <Button
-
-                          variant="outline"
-
-                          size="sm"
-
-                          onClick={() => setPostsPage(p => Math.max(0, p - 1))}
-
-                          disabled={postsPage === 0}
-
-                        >
-
-                          Previous
-
-                        </Button>
-
-                        <span className="text-sm text-muted-foreground self-center px-2">
-
-                          Page {postsPage + 1}
-
-                        </span>
-
-                        <Button
-
-                          variant="outline"
-
-                          size="sm"
-
-                          onClick={() => setPostsPage(p => p + 1)}
-
-                          disabled={!postsHasMore}
-
-                        >
-
-                          Next
-
-                        </Button>
-
+                      {/* Infinite scroll sentinel + Facebook-style skeletons */}
+                      <div ref={postsLoadMoreRef} className="py-4">
+                        {isFetchingMorePosts && <FeedSkeleton count={2} />}
+                        {!hasMorePosts && posts.length > 0 && (
+                          <p className="text-center text-sm text-muted-foreground">
+                            You've reached the end
+                          </p>
+                        )}
                       </div>
 
                     </>
