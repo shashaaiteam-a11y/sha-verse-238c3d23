@@ -64,6 +64,7 @@ export const CreateGroupDialog = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (createGroup.isPending) return;
     if (!isNameValid) {
       toast.error('Group name is required');
       setActiveTab('basic');
