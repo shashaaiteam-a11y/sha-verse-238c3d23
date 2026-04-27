@@ -191,7 +191,13 @@ export const CreatePostCard = () => {
   };
 
   const removeMedia = (index: number) => {
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    setMediaFiles(prev => {
+      const target = prev[index];
+      if (target?.uploading && target.url.startsWith('blob:')) {
+        try { URL.revokeObjectURL(target.url); } catch {}
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const addPollOption = () => {
