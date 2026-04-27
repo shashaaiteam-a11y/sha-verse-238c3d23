@@ -26,6 +26,7 @@ export const CreateGroupDialog = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (createGroup.isPending) return;
 
     createGroup.mutate(
       { name, description, privacy, category, country, language, rules },
