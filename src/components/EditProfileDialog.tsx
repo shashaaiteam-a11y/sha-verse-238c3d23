@@ -185,10 +185,34 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="display_name" value={formData.display_name} onChange={handleChange} placeholder="Your name" />
               </FieldRow>
               <FieldRow icon={AtSign} label="Bio">
-                <Textarea name="bio" value={formData.bio} onChange={handleChange} placeholder="Short bio visible on your profile..." rows={2} className="resize-none" />
+                <Textarea
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleBioChange}
+                  onKeyDown={handleBioKeyDown}
+                  placeholder="Short bio visible on your profile..."
+                  rows={5}
+                  maxLength={MAX_LINES * (MAX_CHARS_PER_LINE + 1)}
+                  className="resize-none font-mono"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Max {MAX_LINES} lines · {MAX_CHARS_PER_LINE} characters per line
+                </p>
               </FieldRow>
               <FieldRow icon={AtSign} label="About Me">
-                <Textarea name="about_me" value={formData.about_me} onChange={handleChange} placeholder="Tell people more about yourself..." rows={3} className="resize-none" />
+                <Textarea
+                  name="about_me"
+                  value={formData.about_me}
+                  onChange={handleBioChange}
+                  onKeyDown={handleBioKeyDown}
+                  placeholder="Tell people more about yourself..."
+                  rows={5}
+                  maxLength={MAX_LINES * (MAX_CHARS_PER_LINE + 1)}
+                  className="resize-none font-mono"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Max {MAX_LINES} lines · {MAX_CHARS_PER_LINE} characters per line
+                </p>
               </FieldRow>
             </TabsContent>
 
