@@ -102,56 +102,92 @@ export const CreatePostCard = () => {
   const [activityInput, setActivityInput] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<typeof activitiesOptions[0] | null>(null);
 
+  // Optimistic UI + Background upload — file select hote hi local preview dikha do,
+  // upload background me chalti rahe. User ko wait nahi karna padega.
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: 'photo' | 'video') => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    if (!user) return;
 
-    setIsUploading(true);
-    try {
-      const newMedia: { url: string; type: string }[] = [];
+    const accepted: { file: File; placeholder: { id: string; url: string; type: string; uploading: boolean } }[] = [];
 
-      for (const file of Array.from(files)) {
-        if (file.size > 50 * 1024 * 1024) {
-          toast({
-            title: 'File too large',
-            description: `${file.name} exceeds 50MB limit`,
-            variant: 'destructive'
-          });
-          continue;
-        }
-
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-
-        const { error: uploadError, data } = await supabase.storage
-          .from('post-images')
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from('post-images')
-          .getPublicUrl(fileName);
-
-        newMedia.push({
-          url: urlData.publicUrl,
-          type: mediaType === 'video' ? 'video' : 'image'
+    // Step 1: instantly add local previews to state
+    for (const file of Array.from(files)) {
+      const maxSize = mediaType === 'video' ? 200 * 1024 * 1024 : 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: 'File too large',
+          description: `${file.name} exceeds ${mediaType === 'video' ? '200MB' : '50MB'} limit`,
+          variant: 'destructive'
         });
+        continue;
       }
-
-      setMediaFiles(prev => [...prev, ...newMedia]);
-      toast({ title: `${mediaType === 'video' ? 'Video' : 'Photo'} added!` });
-    } catch (error: any) {
-      toast({
-        title: 'Upload failed',
-        description: error.message,
-        variant: 'destructive'
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const localUrl = URL.createObjectURL(file);
+      accepted.push({
+        file,
+        placeholder: {
+          id,
+          url: localUrl,
+          type: mediaType === 'video' ? 'video' : 'image',
+          uploading: true,
+        },
       });
-    } finally {
-      setIsUploading(false);
+    }
+
+    if (accepted.length === 0) {
       if (photoInputRef.current) photoInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
+      return;
     }
+
+    setMediaFiles(prev => [...prev, ...accepted.map(a => a.placeholder)]);
+    setIsUploading(true);
+    if (photoInputRef.current) photoInputRef.current.value = '';
+    if (videoInputRef.current) videoInputRef.current.value = '';
+
+    // Step 2: kick off uploads in parallel — non-blocking
+    await Promise.all(
+      accepted.map(async ({ file, placeholder }) => {
+        try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from('post-images')
+            .upload(fileName, file, {
+              contentType: file.type || undefined,
+              cacheControl: '3600',
+              upsert: false,
+            });
+          if (uploadError) throw uploadError;
+
+          const { data: urlData } = supabase.storage
+            .from('post-images')
+            .getPublicUrl(fileName);
+
+          setMediaFiles(prev =>
+            prev.map(m =>
+              m.id === placeholder.id
+                ? { ...m, url: urlData.publicUrl, uploading: false }
+                : m
+            )
+          );
+          // free the blob URL
+          try { URL.revokeObjectURL(placeholder.url); } catch {}
+        } catch (err: any) {
+          setMediaFiles(prev =>
+            prev.map(m => (m.id === placeholder.id ? { ...m, uploading: false, failed: true } : m))
+          );
+          toast({
+            title: 'Upload failed',
+            description: err?.message || 'Could not upload file',
+            variant: 'destructive'
+          });
+        }
+      })
+    );
+
+    setIsUploading(false);
   };
 
   const removeMedia = (index: number) => {
