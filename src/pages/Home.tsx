@@ -38,6 +38,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useShares } from '@/hooks/useShares';
 
 import { FeedCard } from '@/components/FeedCard';
+import { FeedSkeleton } from '@/components/FeedSkeleton';
 
 import { CreatePostCard } from '@/components/CreatePostCard';
 
