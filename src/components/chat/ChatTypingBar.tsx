@@ -199,8 +199,17 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                {isUploading && (
+                  <span className="inline-flex items-center gap-1 text-primary">
+                    <span className="inline-block w-2.5 h-2.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    Uploading…
+                  </span>
+                )}
+                {!isUploading && uploadedMedia && (
+                  <span className="text-green-600 dark:text-green-400">✓ Ready</span>
+                )}
               </p>
             </div>
             <Button
