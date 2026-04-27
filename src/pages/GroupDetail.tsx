@@ -601,11 +601,14 @@ const GroupDetail = () => {
               <Button
                 size="sm"
                 onClick={handleCreatePost}
-                disabled={(!newPost.trim() && !postImage && !postVideo && !postFile) || createPost.isPending || isUploading}
+                disabled={
+                  (!newPost.trim() && !postImage && !postVideo && !postFile && !localImagePreview && !localVideoPreview && !postFileName) ||
+                  createPost.isPending
+                }
                 className="bg-gradient-primary shadow-glow text-xs h-7 px-3"
               >
                 <Send className="w-3 h-3 mr-1" />
-                Post
+                {isUploading ? 'Posting…' : 'Post'}
               </Button>
             </div>
 
