@@ -33,6 +33,10 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  // Background-upload state — upload starts the moment a file is picked,
+  // so by the time the user hits Send the URL is usually already ready.
+  const [uploadedMedia, setUploadedMedia] = useState<{ url: string; type: string } | null>(null);
+  const uploadPromiseRef = useRef<Promise<{ url: string; type: string } | null> | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,46 +68,19 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
     if (onTyping) onTyping();
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'file' | 'image' | 'video') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Check file size (max 50MB)
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error('File too large. Maximum size is 50MB');
-      return;
-    }
-
-    setSelectedFile(file);
-    setShowAttachMenu(false);
-
-    // Create preview for images
-    if (type === 'image' || file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => setFilePreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setFilePreview(null);
-    }
-  };
-
-  const clearSelectedFile = () => {
-    setSelectedFile(null);
-    setFilePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (imageInputRef.current) imageInputRef.current.value = '';
-    if (videoInputRef.current) videoInputRef.current.value = '';
-  };
-
   const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
     if (!user) return null;
 
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-    
-    const { data, error } = await supabase.storage
+    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+
+    const { error } = await supabase.storage
       .from('chat-media')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        contentType: file.type || undefined,
+        cacheControl: '3600',
+        upsert: false,
+      });
 
     if (error) {
       console.error('Upload error:', error);
@@ -122,6 +99,51 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
     return { url: publicUrl, type };
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'file' | 'image' | 'video') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Bigger ceiling for videos
+    const isVideo = type === 'video' || file.type.startsWith('video/');
+    const maxSize = isVideo ? 200 * 1024 * 1024 : 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(`File too large. Maximum size is ${isVideo ? '200MB' : '50MB'}`);
+      return;
+    }
+
+    setSelectedFile(file);
+    setShowAttachMenu(false);
+    setUploadedMedia(null);
+
+    // Local preview for images
+    if (type === 'image' || file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setFilePreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
+
+    // Kick off upload immediately in background — non-blocking
+    setIsUploading(true);
+    const promise = uploadFile(file).then((result) => {
+      setIsUploading(false);
+      if (result) setUploadedMedia(result);
+      return result;
+    });
+    uploadPromiseRef.current = promise;
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    setUploadedMedia(null);
+    uploadPromiseRef.current = null;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (videoInputRef.current) videoInputRef.current.value = '';
+  };
+
   const handleSend = async () => {
     if (!message.trim() && !selectedFile) return;
 
@@ -129,10 +151,13 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
     let mediaType: string | undefined;
 
     if (selectedFile) {
-      setIsUploading(true);
-      const result = await uploadFile(selectedFile);
-      setIsUploading(false);
-      
+      // If background upload already finished, send instantly.
+      // Otherwise await the in-flight upload (no double-upload).
+      let result = uploadedMedia;
+      if (!result && uploadPromiseRef.current) {
+        result = await uploadPromiseRef.current;
+      }
+
       if (result) {
         mediaUrl = result.url;
         mediaType = result.type;
