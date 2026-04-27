@@ -166,46 +166,89 @@ const GroupDetail = () => {
   const memberRole = (myGroups as any[])?.find((m: any) => m.groups?.id === groupId)?.role;
   const isAdminOrMod = memberRole === 'admin' || memberRole === 'moderator' || (group as any)?.creator_id === user?.id;
 
-  // ── Upload handlers ────────────────────────────────────────────────────
+  // ── Upload handlers (Optimistic UI + Background Upload) ──────────────────
   const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     if (!user) return;
+    e.target.value = '';
+
+    // Instant local preview
+    const blobUrl = URL.createObjectURL(file);
+    setLocalImagePreview(blobUrl);
+    setLocalVideoPreview(null);
+    setPostImage(undefined); setPostVideo(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
+
     setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
-    try {
-      const url = await uploadToStorage('post-images', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
-      setPostImage(url);
-      // clear other media
-      setPostVideo(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
-    } catch (err: any) { console.error('Image upload error:', err); toast({ title: 'Image upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
+    const promise = (async () => {
+      try {
+        const url = await uploadToStorage('post-images', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
+        setPostImage(url);
+      } catch (err: any) {
+        console.error('Image upload error:', err);
+        toast({ title: 'Image upload failed', description: err?.message, variant: 'destructive' });
+        setLocalImagePreview(null);
+      } finally {
+        setIsUploading(false); setUploadProgress(0); setUploadingFileName('');
+      }
+    })();
+    uploadPromiseRef.current = promise;
   };
 
   const handleVideoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     if (!user) return;
-    if (file.size > 200 * 1024 * 1024) { toast({ title: 'Max video size is 200 MB', variant: 'destructive' }); return; }
+    if (file.size > 200 * 1024 * 1024) { toast({ title: 'Max video size is 200 MB', variant: 'destructive' }); e.target.value = ''; return; }
+    e.target.value = '';
+
+    // Instant local preview
+    const blobUrl = URL.createObjectURL(file);
+    setLocalVideoPreview(blobUrl);
+    setLocalImagePreview(null);
+    setPostImage(undefined); setPostVideo(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
+
     setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
-    try {
-      const url = await uploadToStorage('videos', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
-      setPostVideo(url);
-      setPostImage(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
-    } catch (err: any) { console.error('Video upload error:', err); toast({ title: 'Video upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
+    const promise = (async () => {
+      try {
+        const url = await uploadToStorage('videos', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
+        setPostVideo(url);
+      } catch (err: any) {
+        console.error('Video upload error:', err);
+        toast({ title: 'Video upload failed', description: err?.message, variant: 'destructive' });
+        setLocalVideoPreview(null);
+      } finally {
+        setIsUploading(false); setUploadProgress(0); setUploadingFileName('');
+      }
+    })();
+    uploadPromiseRef.current = promise;
   };
 
   const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     if (!user) return;
-    if (file.size > 50 * 1024 * 1024) { toast({ title: 'Max file size is 50 MB', variant: 'destructive' }); return; }
+    if (file.size > 50 * 1024 * 1024) { toast({ title: 'Max file size is 50 MB', variant: 'destructive' }); e.target.value = ''; return; }
+    e.target.value = '';
+
+    // Show file chip immediately
+    setPostFileName(file.name);
+    setPostFileType(file.type);
+    setPostFile(undefined);
+    setPostImage(undefined); setPostVideo(undefined);
+    setLocalImagePreview(null); setLocalVideoPreview(null);
+
     setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
-    try {
-      const url = await uploadToStorage('post-images', file, user.id, 'group-files/', (p) => setUploadProgress(p));
-      setPostFile(url);
-      setPostFileName(file.name);
-      setPostFileType(file.type);
-      setPostImage(undefined); setPostVideo(undefined);
-    } catch (err: any) { console.error('File upload error:', err); toast({ title: 'File upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
+    const promise = (async () => {
+      try {
+        const url = await uploadToStorage('post-images', file, user.id, 'group-files/', (p) => setUploadProgress(p));
+        setPostFile(url);
+      } catch (err: any) {
+        console.error('File upload error:', err);
+        toast({ title: 'File upload failed', description: err?.message, variant: 'destructive' });
+        setPostFileName(undefined); setPostFileType(undefined);
+      } finally {
+        setIsUploading(false); setUploadProgress(0); setUploadingFileName('');
+      }
+    })();
+    uploadPromiseRef.current = promise;
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
