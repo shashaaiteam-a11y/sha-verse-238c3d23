@@ -130,6 +130,10 @@ const GroupDetail = () => {
   const [isUploading, setIsUploading]   = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadingFileName, setUploadingFileName] = useState('');
+  // Local previews so user sees the media instantly while it uploads in background
+  const [localImagePreview, setLocalImagePreview] = useState<string | null>(null);
+  const [localVideoPreview, setLocalVideoPreview] = useState<string | null>(null);
+  const uploadPromiseRef = useRef<Promise<void> | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -162,46 +166,89 @@ const GroupDetail = () => {
   const memberRole = (myGroups as any[])?.find((m: any) => m.groups?.id === groupId)?.role;
   const isAdminOrMod = memberRole === 'admin' || memberRole === 'moderator' || (group as any)?.creator_id === user?.id;
 
-  // ── Upload handlers ────────────────────────────────────────────────────
+  // ── Upload handlers (Optimistic UI + Background Upload) ──────────────────
   const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     if (!user) return;
+    e.target.value = '';
+
+    // Instant local preview
+    const blobUrl = URL.createObjectURL(file);
+    setLocalImagePreview(blobUrl);
+    setLocalVideoPreview(null);
+    setPostImage(undefined); setPostVideo(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
+
     setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
-    try {
-      const url = await uploadToStorage('post-images', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
-      setPostImage(url);
-      // clear other media
-      setPostVideo(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
-    } catch (err: any) { console.error('Image upload error:', err); toast({ title: 'Image upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
+    const promise = (async () => {
+      try {
+        const url = await uploadToStorage('post-images', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
+        setPostImage(url);
+      } catch (err: any) {
+        console.error('Image upload error:', err);
+        toast({ title: 'Image upload failed', description: err?.message, variant: 'destructive' });
+        setLocalImagePreview(null);
+      } finally {
+        setIsUploading(false); setUploadProgress(0); setUploadingFileName('');
+      }
+    })();
+    uploadPromiseRef.current = promise;
   };
 
   const handleVideoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     if (!user) return;
-    if (file.size > 200 * 1024 * 1024) { toast({ title: 'Max video size is 200 MB', variant: 'destructive' }); return; }
+    if (file.size > 200 * 1024 * 1024) { toast({ title: 'Max video size is 200 MB', variant: 'destructive' }); e.target.value = ''; return; }
+    e.target.value = '';
+
+    // Instant local preview
+    const blobUrl = URL.createObjectURL(file);
+    setLocalVideoPreview(blobUrl);
+    setLocalImagePreview(null);
+    setPostImage(undefined); setPostVideo(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
+
     setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
-    try {
-      const url = await uploadToStorage('videos', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
-      setPostVideo(url);
-      setPostImage(undefined); setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
-    } catch (err: any) { console.error('Video upload error:', err); toast({ title: 'Video upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
+    const promise = (async () => {
+      try {
+        const url = await uploadToStorage('videos', file, user.id, 'group-posts/', (p) => setUploadProgress(p));
+        setPostVideo(url);
+      } catch (err: any) {
+        console.error('Video upload error:', err);
+        toast({ title: 'Video upload failed', description: err?.message, variant: 'destructive' });
+        setLocalVideoPreview(null);
+      } finally {
+        setIsUploading(false); setUploadProgress(0); setUploadingFileName('');
+      }
+    })();
+    uploadPromiseRef.current = promise;
   };
 
   const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     if (!user) return;
-    if (file.size > 50 * 1024 * 1024) { toast({ title: 'Max file size is 50 MB', variant: 'destructive' }); return; }
+    if (file.size > 50 * 1024 * 1024) { toast({ title: 'Max file size is 50 MB', variant: 'destructive' }); e.target.value = ''; return; }
+    e.target.value = '';
+
+    // Show file chip immediately
+    setPostFileName(file.name);
+    setPostFileType(file.type);
+    setPostFile(undefined);
+    setPostImage(undefined); setPostVideo(undefined);
+    setLocalImagePreview(null); setLocalVideoPreview(null);
+
     setIsUploading(true); setUploadProgress(0); setUploadingFileName(file.name);
-    try {
-      const url = await uploadToStorage('post-images', file, user.id, 'group-files/', (p) => setUploadProgress(p));
-      setPostFile(url);
-      setPostFileName(file.name);
-      setPostFileType(file.type);
-      setPostImage(undefined); setPostVideo(undefined);
-    } catch (err: any) { console.error('File upload error:', err); toast({ title: 'File upload failed', description: err?.message, variant: 'destructive' }); }
-    finally { setIsUploading(false); setUploadProgress(0); setUploadingFileName(''); e.target.value = ''; }
+    const promise = (async () => {
+      try {
+        const url = await uploadToStorage('post-images', file, user.id, 'group-files/', (p) => setUploadProgress(p));
+        setPostFile(url);
+      } catch (err: any) {
+        console.error('File upload error:', err);
+        toast({ title: 'File upload failed', description: err?.message, variant: 'destructive' });
+        setPostFileName(undefined); setPostFileType(undefined);
+      } finally {
+        setIsUploading(false); setUploadProgress(0); setUploadingFileName('');
+      }
+    })();
+    uploadPromiseRef.current = promise;
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,17 +278,40 @@ const GroupDetail = () => {
   const clearMedia = () => {
     setPostImage(undefined); setPostVideo(undefined);
     setPostFile(undefined); setPostFileName(undefined); setPostFileType(undefined);
+    if (localImagePreview) { try { URL.revokeObjectURL(localImagePreview); } catch {} }
+    if (localVideoPreview) { try { URL.revokeObjectURL(localVideoPreview); } catch {} }
+    setLocalImagePreview(null); setLocalVideoPreview(null);
+    uploadPromiseRef.current = null;
   };
 
-  const handleCreatePost = () => {
-    if (!newPost.trim() && !postImage && !postVideo && !postFile) return;
-    const postType = postVideo ? 'video' : postFile ? (postFileType?.startsWith('application/pdf') || postFileType?.includes('document') ? 'document' : 'file') : postImage ? 'image' : 'text';
+  const handleCreatePost = async () => {
+    const hasLocal = !!(localImagePreview || localVideoPreview || postFileName);
+    if (!newPost.trim() && !postImage && !postVideo && !postFile && !hasLocal) return;
+
+    // If background upload still running, wait for it before posting
+    if (isUploading && uploadPromiseRef.current) {
+      toast({ title: 'Finishing upload…', description: 'Posting as soon as upload completes.' });
+      try { await uploadPromiseRef.current; } catch {}
+    }
+
+    // Re-read latest values from state via closure isn't possible here for fresh values;
+    // rely on the fact that upload setters fired before this resolves.
+    const finalImage = postImage;
+    const finalVideo = postVideo;
+    const finalFile = postFile;
+
+    if (!newPost.trim() && !finalImage && !finalVideo && !finalFile) {
+      toast({ title: 'Upload failed', description: 'Cannot post without media.', variant: 'destructive' });
+      return;
+    }
+
+    const postType = finalVideo ? 'video' : finalFile ? (postFileType?.startsWith('application/pdf') || postFileType?.includes('document') ? 'document' : 'file') : finalImage ? 'image' : 'text';
     createPost.mutate(
       {
         content: newPost,
-        imageUrl: postImage,
-        videoUrl: postVideo,
-        fileUrl: postFile,
+        imageUrl: finalImage,
+        videoUrl: finalVideo,
+        fileUrl: finalFile,
         fileName: postFileName,
         fileType: postFileType,
         postType,
@@ -438,8 +508,8 @@ const GroupDetail = () => {
               </div>
             )}
 
-            {/* ── Media Previews ── */}
-            {(postImage || postVideo || postFile) && (
+            {/* ── Media Previews (instant local + background upload) ── */}
+            {(postImage || postVideo || postFile || localImagePreview || localVideoPreview || postFileName) && (
               <div className="relative mb-2 rounded-lg overflow-hidden border border-border">
                 <button
                   onClick={clearMedia}
@@ -448,19 +518,19 @@ const GroupDetail = () => {
                   <X className="w-3 h-3" />
                 </button>
 
-                {postImage && (
-                  <img src={postImage} alt="Preview" className="w-full max-h-40 object-cover" />
+                {(postImage || localImagePreview) && (
+                  <img src={postImage || localImagePreview!} alt="Preview" className="w-full max-h-40 object-cover" />
                 )}
 
-                {postVideo && (
+                {(postVideo || localVideoPreview) && (
                   <video
-                    src={postVideo}
+                    src={postVideo || localVideoPreview!}
                     controls
                     className="w-full max-h-40 bg-black"
                   />
                 )}
 
-                {postFile && (
+                {(postFile || postFileName) && !localImagePreview && !localVideoPreview && (
                   <div className="flex items-center gap-2 p-2 bg-secondary/60">
                     <div className="h-8 w-8 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                       <FileText className="w-4 h-4 text-blue-500" />
@@ -473,8 +543,12 @@ const GroupDetail = () => {
                 )}
 
                 {isUploading && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-x-0 bottom-0 bg-black/70 text-white text-[11px] px-2 py-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Uploading {uploadProgress}%
+                    </span>
+                    <span className="opacity-80">You can keep typing</span>
                   </div>
                 )}
               </div>
@@ -527,11 +601,14 @@ const GroupDetail = () => {
               <Button
                 size="sm"
                 onClick={handleCreatePost}
-                disabled={(!newPost.trim() && !postImage && !postVideo && !postFile) || createPost.isPending || isUploading}
+                disabled={
+                  (!newPost.trim() && !postImage && !postVideo && !postFile && !localImagePreview && !localVideoPreview && !postFileName) ||
+                  createPost.isPending
+                }
                 className="bg-gradient-primary shadow-glow text-xs h-7 px-3"
               >
                 <Send className="w-3 h-3 mr-1" />
-                Post
+                {isUploading ? 'Posting…' : 'Post'}
               </Button>
             </div>
 

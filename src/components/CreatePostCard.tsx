@@ -87,7 +87,7 @@ export const CreatePostCard = () => {
   const [content, setContent] = useState('');
   const [privacy, setPrivacy] = useState<PostPrivacy>('public');
   const [location, setLocation] = useState<string | null>(null);
-  const [mediaFiles, setMediaFiles] = useState<{ url: string; type: string }[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<{ id: string; url: string; type: string; uploading?: boolean; failed?: boolean }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPollDialog, setShowPollDialog] = useState(false);
@@ -102,60 +102,102 @@ export const CreatePostCard = () => {
   const [activityInput, setActivityInput] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<typeof activitiesOptions[0] | null>(null);
 
+  // Optimistic UI + Background upload — file select hote hi local preview dikha do,
+  // upload background me chalti rahe. User ko wait nahi karna padega.
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: 'photo' | 'video') => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    if (!user) return;
 
-    setIsUploading(true);
-    try {
-      const newMedia: { url: string; type: string }[] = [];
+    const accepted: { file: File; placeholder: { id: string; url: string; type: string; uploading: boolean } }[] = [];
 
-      for (const file of Array.from(files)) {
-        if (file.size > 50 * 1024 * 1024) {
-          toast({
-            title: 'File too large',
-            description: `${file.name} exceeds 50MB limit`,
-            variant: 'destructive'
-          });
-          continue;
-        }
-
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-
-        const { error: uploadError, data } = await supabase.storage
-          .from('post-images')
-          .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from('post-images')
-          .getPublicUrl(fileName);
-
-        newMedia.push({
-          url: urlData.publicUrl,
-          type: mediaType === 'video' ? 'video' : 'image'
+    // Step 1: instantly add local previews to state
+    for (const file of Array.from(files)) {
+      const maxSize = mediaType === 'video' ? 200 * 1024 * 1024 : 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: 'File too large',
+          description: `${file.name} exceeds ${mediaType === 'video' ? '200MB' : '50MB'} limit`,
+          variant: 'destructive'
         });
+        continue;
       }
-
-      setMediaFiles(prev => [...prev, ...newMedia]);
-      toast({ title: `${mediaType === 'video' ? 'Video' : 'Photo'} added!` });
-    } catch (error: any) {
-      toast({
-        title: 'Upload failed',
-        description: error.message,
-        variant: 'destructive'
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const localUrl = URL.createObjectURL(file);
+      accepted.push({
+        file,
+        placeholder: {
+          id,
+          url: localUrl,
+          type: mediaType === 'video' ? 'video' : 'image',
+          uploading: true,
+        },
       });
-    } finally {
-      setIsUploading(false);
+    }
+
+    if (accepted.length === 0) {
       if (photoInputRef.current) photoInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
+      return;
     }
+
+    setMediaFiles(prev => [...prev, ...accepted.map(a => a.placeholder)]);
+    setIsUploading(true);
+    if (photoInputRef.current) photoInputRef.current.value = '';
+    if (videoInputRef.current) videoInputRef.current.value = '';
+
+    // Step 2: kick off uploads in parallel — non-blocking
+    await Promise.all(
+      accepted.map(async ({ file, placeholder }) => {
+        try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from('post-images')
+            .upload(fileName, file, {
+              contentType: file.type || undefined,
+              cacheControl: '3600',
+              upsert: false,
+            });
+          if (uploadError) throw uploadError;
+
+          const { data: urlData } = supabase.storage
+            .from('post-images')
+            .getPublicUrl(fileName);
+
+          setMediaFiles(prev =>
+            prev.map(m =>
+              m.id === placeholder.id
+                ? { ...m, url: urlData.publicUrl, uploading: false }
+                : m
+            )
+          );
+          // free the blob URL
+          try { URL.revokeObjectURL(placeholder.url); } catch {}
+        } catch (err: any) {
+          setMediaFiles(prev =>
+            prev.map(m => (m.id === placeholder.id ? { ...m, uploading: false, failed: true } : m))
+          );
+          toast({
+            title: 'Upload failed',
+            description: err?.message || 'Could not upload file',
+            variant: 'destructive'
+          });
+        }
+      })
+    );
+
+    setIsUploading(false);
   };
 
   const removeMedia = (index: number) => {
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    setMediaFiles(prev => {
+      const target = prev[index];
+      if (target?.uploading && target.url.startsWith('blob:')) {
+        try { URL.revokeObjectURL(target.url); } catch {}
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const addPollOption = () => {
@@ -217,6 +259,18 @@ export const CreatePostCard = () => {
     if (!content.trim() && mediaFiles.length === 0 && !pollQuestion.trim()) return;
     if (!user) return;
 
+    // Block submit while any media is still uploading in background
+    if (mediaFiles.some(m => m.uploading)) {
+      toast({
+        title: 'Please wait',
+        description: 'Media is still uploading in the background',
+      });
+      return;
+    }
+
+    // Use only successfully uploaded media (skip failed ones)
+    const uploaded = mediaFiles.filter(m => !m.uploading && !m.failed);
+
     setIsSubmitting(true);
     try {
       const metadata: any = {};
@@ -229,8 +283,8 @@ export const CreatePostCard = () => {
         content: content.trim(),
         user_id: user.id,
         visibility: privacy,
-        image_url: mediaFiles[0]?.url || null,
-        media_urls: mediaFiles.slice(1).map(m => m.url),
+        image_url: uploaded[0]?.url || null,
+        media_urls: uploaded.slice(1).map(m => m.url),
         metadata,
         type: hasPoll ? 'poll' : 'text'
       };
@@ -332,7 +386,7 @@ export const CreatePostCard = () => {
             'grid-cols-3'
           }`}>
             {mediaFiles.map((media, idx) => (
-              <div key={idx} className="relative rounded-lg overflow-hidden">
+              <div key={media.id ?? idx} className="relative rounded-lg overflow-hidden">
                 {media.type === 'video' ? (
                   <video src={media.url} className="w-full aspect-video object-cover" />
                 ) : media.type === 'pdf' ? (
@@ -343,9 +397,22 @@ export const CreatePostCard = () => {
                 ) : (
                   <img src={media.url} alt="" className="w-full aspect-square object-cover" />
                 )}
+                {media.uploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] pointer-events-none">
+                    <div className="flex items-center gap-2 px-2.5 py-1 bg-black/70 rounded-full text-white text-xs">
+                      <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Uploading…
+                    </div>
+                  </div>
+                )}
+                {media.failed && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-destructive/70 text-white text-xs font-medium pointer-events-none">
+                    Upload failed
+                  </div>
+                )}
                 <button
                   onClick={() => removeMedia(idx)}
-                  className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-black/80"
+                  className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-black/80 z-10"
                 >
                   <X className="w-4 h-4" />
                 </button>
