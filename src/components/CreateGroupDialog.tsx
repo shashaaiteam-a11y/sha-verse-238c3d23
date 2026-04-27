@@ -63,26 +63,35 @@ export const CreateGroupDialog = () => {
     setActiveTab('basic');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (createGroup.isPending) return;
+    // Bulletproof double-click guard: local state + mutation pending state
+    if (isCreating || createGroup.isPending) return;
     if (!isNameValid) {
       toast.error('Group name is required');
       setActiveTab('basic');
       return;
     }
 
-    createGroup.mutate(
-      { name: name.trim(), description, privacy, category, country, language, rules },
-      {
-        onSuccess: (group: any) => {
-          setOpen(false);
-          resetForm();
-          // Redirect to the newly created group page.
-          if (group?.id) navigate(`/groups/${group.id}`);
-        },
-      }
-    );
+    setIsCreating(true);
+    try {
+      const group: any = await createGroup.mutateAsync({
+        name: name.trim(),
+        description,
+        privacy,
+        category,
+        country,
+        language,
+        rules,
+      });
+      setOpen(false);
+      resetForm();
+      if (group?.id) navigate(`/groups/${group.id}`);
+    } catch (error) {
+      // Error toast already handled by useGroups hook
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
