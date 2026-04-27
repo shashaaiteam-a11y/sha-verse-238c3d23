@@ -206,16 +206,6 @@ export const CreateGroupDialog = () => {
                         <p className="text-xs text-muted-foreground">Only members can see posts. People can request to join.</p>
                       </div>
                     </div>
-                    <div 
-                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${privacy === 'invite_only' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
-                      onClick={() => setPrivacy('invite_only')}
-                    >
-                      <Key className={`w-5 h-5 mt-0.5 ${privacy === 'invite_only' ? 'text-primary' : 'text-muted-foreground'}`} />
-                      <div>
-                        <p className="font-medium text-sm">Invite Only</p>
-                        <p className="text-xs text-muted-foreground">Hidden from search. Members must be invited by admins.</p>
-                      </div>
-                    </div>
                   </div>
                 </div>
 
