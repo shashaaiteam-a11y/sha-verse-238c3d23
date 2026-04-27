@@ -45,6 +45,44 @@ export const useGroupJoinRequests = (groupId?: string) => {
     enabled: !!groupId && !!user,
   });
 
+  // Realtime: invalidate queries when join requests change for this group OR for this user
+  useEffect(() => {
+    if (!user) return;
+    const suffix = Math.random().toString(36).slice(2, 8);
+
+    const invalidate = () => {
+      if (groupId) {
+        queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId] });
+        queryClient.invalidateQueries({ queryKey: ['my-join-request', groupId, user.id] });
+        queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+    };
+
+    const channels: any[] = [];
+
+    if (groupId) {
+      channels.push(
+        supabase
+          .channel(`group-join-requests-${groupId}-${suffix}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'group_join_requests', filter: `group_id=eq.${groupId}` }, invalidate)
+          .subscribe()
+      );
+    }
+
+    // Also listen for the current user's own requests across any group (for instant status updates)
+    channels.push(
+      supabase
+        .channel(`group-join-requests-user-${user.id}-${suffix}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'group_join_requests', filter: `user_id=eq.${user.id}` }, invalidate)
+        .subscribe()
+    );
+
+    return () => {
+      channels.forEach((c) => supabase.removeChannel(c));
+    };
+  }, [groupId, user, queryClient]);
+
   // Helper: send notification to a user
   const sendNotification = async (
     toUserId: string,
