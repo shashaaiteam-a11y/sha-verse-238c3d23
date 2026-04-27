@@ -57,6 +57,10 @@ export interface FeedItem {
 }
 
 const ITEMS_PER_PAGE = 20;
+// Sentinel "infinity" cursor used for the first page so every source query
+// has a uniform `.lt('created_at', cursor)` shape. Far enough in the future
+// to safely include any real created_at value.
+const FUTURE_CURSOR = '9999-12-31T23:59:59.999Z';
 
 export const useFeed = () => {
   const { toast } = useToast();
@@ -69,10 +73,14 @@ export const useFeed = () => {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
-  } = useInfiniteQuery({
+  } = useInfiniteQuery<{ items: FeedItem[]; nextCursor: string | null }>({
     queryKey: ['unified-feed', user?.id],
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam }) => {
       if (!user) return { items: [], nextCursor: null };
+      // Cursor-based pagination (Facebook-style): each page fetches items
+      // strictly OLDER than the previous page's oldest item. Eliminates
+      // duplicates when new posts are inserted while the user scrolls.
+      const cursor = (pageParam as string) || FUTURE_CURSOR;
 
       // 🚀 OPTIMIZATION: Run all metadata queries in parallel
       const [
