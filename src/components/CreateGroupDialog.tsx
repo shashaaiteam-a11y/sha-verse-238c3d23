@@ -33,6 +33,7 @@ export const CreateGroupDialog = () => {
   const [languageOpen, setLanguageOpen] = useState(false);
   const [rules, setRules] = useState(DEFAULT_RULES);
   const [activeTab, setActiveTab] = useState('basic');
+  const [isCreating, setIsCreating] = useState(false);
 
   const { createGroup } = useGroups();
 
