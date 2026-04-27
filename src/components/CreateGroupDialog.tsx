@@ -326,9 +326,9 @@ export const CreateGroupDialog = () => {
                   <Button
                     type="submit"
                     className="bg-gradient-primary shadow-glow min-w-[140px]"
-                    disabled={createGroup.isPending || !isNameValid}
+                    disabled={isCreating || createGroup.isPending || !isNameValid}
                   >
-                    {createGroup.isPending ? (
+                    {(isCreating || createGroup.isPending) ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Creating...
