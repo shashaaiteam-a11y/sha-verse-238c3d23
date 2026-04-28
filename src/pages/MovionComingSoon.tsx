@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Clock, ArrowLeft, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo as MovionLogo } from "@/movion/components/Logo";
 
 const MovionComingSoon = () => {
   const navigate = useNavigate();
@@ -8,9 +9,9 @@ const MovionComingSoon = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
-        <div className="relative mx-auto w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-2xl">
-          <Film className="w-12 h-12 text-primary-foreground" />
-          <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center animate-pulse">
+        <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
+          <MovionLogo size={96} />
+          <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center animate-pulse shadow-lg">
             <Sparkles className="w-4 h-4 text-yellow-900" />
           </div>
         </div>
@@ -18,7 +19,7 @@ const MovionComingSoon = () => {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Movion Coming Soon</h1>
           <p className="text-muted-foreground text-base leading-relaxed">
-            Hum Movion ko aur behtar bana rahe hain! Naye amazing features ke saath bahut jald wapas aa raha hai.
+            We're making Movion even better! Coming back very soon with amazing new features.
           </p>
         </div>
 
