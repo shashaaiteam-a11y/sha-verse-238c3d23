@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { BottomNav } from "./components/BottomNav";
 import { MobileProvider } from "./contexts/MobileContext";
 import { Suspense, lazy } from "react";
@@ -129,14 +130,14 @@ const App = () => (
                     <Route path="/settings" element={<ProtectedRoute>{withSuspense(Settings)}</ProtectedRoute>} />
                     <Route path="/help" element={<ProtectedRoute>{withSuspense(HelpSupport)}</ProtectedRoute>} />
                     <Route path="/privacy-center" element={<ProtectedRoute>{withSuspense(PrivacyCenter)}</ProtectedRoute>} />
-                    <Route path="/admin/seed" element={<ProtectedRoute>{withSuspense(AdminSeed)}</ProtectedRoute>} />
+                    <Route path="/admin/seed" element={<AdminRoute>{withSuspense(AdminSeed)}</AdminRoute>} />
                     <Route path="/pages" element={<ProtectedRoute>{withSuspense(Pages)}</ProtectedRoute>} />
                     <Route path="/pages/:pageId" element={<ProtectedRoute>{withSuspense(PageDetail)}</ProtectedRoute>} />
                     <Route path="/pages/:pageId/admin" element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>} />
                     <Route path="/motion" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
                     <Route path="/post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/group-post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
-                    <Route path="/movion/admin" element={<ProtectedRoute>{withSuspense(MovionAdmin)}</ProtectedRoute>} />
+                    <Route path="/movion/admin" element={<AdminRoute>{withSuspense(MovionAdmin)}</AdminRoute>} />
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>
                 </SwipeWrapper>

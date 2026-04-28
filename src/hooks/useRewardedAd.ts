@@ -48,12 +48,11 @@ export function useRewardedAd({
         ? new Date(Date.now() + config.expires_minutes * 60 * 1000).toISOString()
         : null;
 
-      const { error } = await supabase.from("rewarded_ad_unlocks").insert({
-        user_id: user.id,
-        reward_type: rewardType,
-        reward_value: value,
-        resource_id: resourceId ?? null,
-        expires_at: expiresAt,
+      const { error } = await supabase.rpc("grant_rewarded_ad_unlock" as any, {
+        _reward_type: rewardType,
+        _reward_value: value ?? null,
+        _resource_id: resourceId ?? null,
+        _expires_minutes: config.expires_minutes ?? null,
       });
 
       if (error) throw error;
