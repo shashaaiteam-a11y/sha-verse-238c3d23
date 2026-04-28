@@ -46,6 +46,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/Offline"));
 const AdminSeed = lazy(() => import("./pages/AdminSeed"));
 const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
+const MovionComingSoon = lazy(() => import("./pages/MovionComingSoon"));
 const Pages = lazy(() => import("./pages/Pages"));
 const PageDetail = lazy(() => import("./pages/PageDetail"));
 const PageAdmin = lazy(() => import("./pages/PageAdmin"));
@@ -105,9 +106,9 @@ const App = () => (
                     <Route path="/auth" element={withSuspense(Auth)} />
                     <Route path="/offline" element={withSuspense(OfflinePage)} />
                     <Route path="/" element={<ProtectedRoute>{withSuspense(Home)}</ProtectedRoute>} />
-                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(Movion)}</ProtectedRoute>} />
-                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(VideoWatch)}</ProtectedRoute>} />
-                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(ChannelPage)}</ProtectedRoute>} />
+                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
+                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
+                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
                     <Route path="/novachat" element={<ProtectedRoute>{withSuspense(NovaChat)}</ProtectedRoute>} />
                     <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
                     <Route path="/bookshelf" element={<ProtectedRoute>{withSuspense(Bookshelf)}</ProtectedRoute>} />
@@ -132,7 +133,7 @@ const App = () => (
                     <Route path="/pages" element={<ProtectedRoute>{withSuspense(Pages)}</ProtectedRoute>} />
                     <Route path="/pages/:pageId" element={<ProtectedRoute>{withSuspense(PageDetail)}</ProtectedRoute>} />
                     <Route path="/pages/:pageId/admin" element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>} />
-                    <Route path="/motion" element={<ProtectedRoute>{withSuspense(Motion)}</ProtectedRoute>} />
+                    <Route path="/motion" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
                     <Route path="/post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/group-post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/movion/admin" element={<ProtectedRoute>{withSuspense(MovionAdmin)}</ProtectedRoute>} />
