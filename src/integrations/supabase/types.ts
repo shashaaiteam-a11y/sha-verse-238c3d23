@@ -4268,6 +4268,36 @@ export type Database = {
           },
         ]
       }
+      security_audit_log: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          resource_id: string | null
+          resource_type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          resource_id?: string | null
+          resource_type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          resource_id?: string | null
+          resource_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       shares: {
         Row: {
           comment: string | null
@@ -5861,6 +5891,15 @@ export type Database = {
       is_user_blocked: {
         Args: { _blocked_id: string; _blocker_id: string }
         Returns: boolean
+      }
+      log_security_event: {
+        Args: {
+          _event_type: string
+          _metadata?: Json
+          _resource_id?: string
+          _resource_type: string
+        }
+        Returns: undefined
       }
       log_user_activity: {
         Args: {
