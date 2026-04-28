@@ -2,8 +2,9 @@ import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAds } from "@/contexts/AdContext";
-import { REWARDED_AD_REWARDS, USE_TEST_ADS } from "@/lib/ads/adConfig";
+import { REWARDED_AD_REWARDS } from "@/lib/ads/adConfig";
 import { recordAdImpression, getAdUnitForPlacement } from "@/lib/ads/adAnalytics";
+import { showRewarded } from "@/lib/ads/nativeAdMob";
 import type { RewardType, AdPlacement } from "@/lib/ads/adTypes";
 import { toast } from "sonner";
 
@@ -39,8 +40,14 @@ export function useRewardedAd({
     setIsWatching(true);
 
     try {
-      // Simulate test-ad playback
-      await new Promise((resolve) => setTimeout(resolve, USE_TEST_ADS ? 3000 : 0));
+      const adUnitId = getAdUnitForPlacement(placement);
+
+      // Native: real rewarded video. Web: simulated 3s in test mode.
+      const earned = await showRewarded(adUnitId);
+      if (!earned) {
+        toast.error("Ad was not completed.");
+        return false;
+      }
 
       const config = REWARDED_AD_REWARDS[rewardType];
       const value = customValue ?? config.value;
@@ -54,7 +61,6 @@ export function useRewardedAd({
 
       if (error) throw error;
 
-      const adUnitId = getAdUnitForPlacement(placement);
       await recordAdImpression(user.id, placement, adUnitId);
       registerImpression(adUnitId);
 
