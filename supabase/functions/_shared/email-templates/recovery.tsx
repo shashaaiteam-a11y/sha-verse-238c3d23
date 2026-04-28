@@ -9,7 +9,9 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -17,6 +19,8 @@ interface RecoveryEmailProps {
   siteName: string
   confirmationUrl: string
 }
+
+const LOGO_URL = 'https://plmhjuqedtkiffzhberf.supabase.co/storage/v1/object/public/email-assets/sha-verse-logo.jpeg'
 
 export const RecoveryEmail = ({
   siteName,
@@ -27,14 +31,19 @@ export const RecoveryEmail = ({
     <Preview>Reset your password for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Section style={logoSection}>
+          <Img src={LOGO_URL} width="56" height="56" alt={siteName} style={logo} />
+        </Section>
         <Heading style={h1}>Reset your password</Heading>
         <Text style={text}>
-          We received a request to reset your password for {siteName}. Click
+          We received a request to reset your password for <strong>{siteName}</strong>. Click
           the button below to choose a new password.
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Reset Password
-        </Button>
+        <Section style={{ textAlign: 'center' as const, margin: '30px 0' }}>
+          <Button style={button} href={confirmationUrl}>
+            Reset Password
+          </Button>
+        </Section>
         <Text style={footer}>
           If you didn't request a password reset, you can safely ignore this
           email. Your password will not be changed.
@@ -46,26 +55,31 @@ export const RecoveryEmail = ({
 
 export default RecoveryEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = { backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif' }
+const container = { padding: '32px 28px', maxWidth: '560px' }
+const logoSection = { textAlign: 'center' as const, margin: '0 0 24px' }
+const logo = { borderRadius: '12px', display: 'inline-block' }
 const h1 = {
-  fontSize: '22px',
+  fontSize: '24px',
   fontWeight: 'bold' as const,
-  color: '#000000',
+  color: 'hsl(240, 10%, 10%)',
   margin: '0 0 20px',
+  textAlign: 'center' as const,
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: 'hsl(240, 4%, 46%)',
+  lineHeight: '1.6',
+  margin: '0 0 16px',
 }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: 'hsl(221, 83%, 53%)',
   color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  fontSize: '15px',
+  fontWeight: 'bold' as const,
+  borderRadius: '12px',
+  padding: '14px 28px',
   textDecoration: 'none',
+  display: 'inline-block',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = { fontSize: '12px', color: 'hsl(240, 4%, 60%)', margin: '30px 0 0', textAlign: 'center' as const }

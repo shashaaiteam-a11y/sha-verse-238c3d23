@@ -9,8 +9,10 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -20,6 +22,8 @@ interface EmailChangeEmailProps {
   newEmail: string
   confirmationUrl: string
 }
+
+const LOGO_URL = 'https://plmhjuqedtkiffzhberf.supabase.co/storage/v1/object/public/email-assets/sha-verse-logo.jpeg'
 
 export const EmailChangeEmail = ({
   siteName,
@@ -32,9 +36,12 @@ export const EmailChangeEmail = ({
     <Preview>Confirm your email change for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Section style={logoSection}>
+          <Img src={LOGO_URL} width="56" height="56" alt={siteName} style={logo} />
+        </Section>
         <Heading style={h1}>Confirm your email change</Heading>
         <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
+          You requested to change your email address for <strong>{siteName}</strong> from{' '}
           <Link href={`mailto:${email}`} style={link}>
             {email}
           </Link>{' '}
@@ -44,12 +51,11 @@ export const EmailChangeEmail = ({
           </Link>
           .
         </Text>
-        <Text style={text}>
-          Click the button below to confirm this change:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
+        <Section style={{ textAlign: 'center' as const, margin: '30px 0' }}>
+          <Button style={button} href={confirmationUrl}>
+            Confirm Email Change
+          </Button>
+        </Section>
         <Text style={footer}>
           If you didn't request this change, please secure your account
           immediately.
@@ -61,27 +67,32 @@ export const EmailChangeEmail = ({
 
 export default EmailChangeEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = { backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif' }
+const container = { padding: '32px 28px', maxWidth: '560px' }
+const logoSection = { textAlign: 'center' as const, margin: '0 0 24px' }
+const logo = { borderRadius: '12px', display: 'inline-block' }
 const h1 = {
-  fontSize: '22px',
+  fontSize: '24px',
   fontWeight: 'bold' as const,
-  color: '#000000',
+  color: 'hsl(240, 10%, 10%)',
   margin: '0 0 20px',
+  textAlign: 'center' as const,
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: 'hsl(240, 4%, 46%)',
+  lineHeight: '1.6',
+  margin: '0 0 16px',
 }
-const link = { color: 'inherit', textDecoration: 'underline' }
+const link = { color: 'hsl(221, 83%, 53%)', textDecoration: 'underline' }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: 'hsl(221, 83%, 53%)',
   color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  fontSize: '15px',
+  fontWeight: 'bold' as const,
+  borderRadius: '12px',
+  padding: '14px 28px',
   textDecoration: 'none',
+  display: 'inline-block',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = { fontSize: '12px', color: 'hsl(240, 4%, 60%)', margin: '30px 0 0', textAlign: 'center' as const }
