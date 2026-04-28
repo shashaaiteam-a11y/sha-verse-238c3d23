@@ -457,7 +457,7 @@ export const useFeed = () => {
     };
 
     const channel = supabase
-      .channel('unified-feed-changes')
+      .channel(`unified-feed-changes-${Math.random().toString(36).slice(2, 10)}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
         debouncedInvalidate();
       })
