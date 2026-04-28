@@ -106,9 +106,9 @@ const App = () => (
                     <Route path="/auth" element={withSuspense(Auth)} />
                     <Route path="/offline" element={withSuspense(OfflinePage)} />
                     <Route path="/" element={<ProtectedRoute>{withSuspense(Home)}</ProtectedRoute>} />
-                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(Movion)}</ProtectedRoute>} />
-                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(VideoWatch)}</ProtectedRoute>} />
-                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(ChannelPage)}</ProtectedRoute>} />
+                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
+                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
+                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
                     <Route path="/novachat" element={<ProtectedRoute>{withSuspense(NovaChat)}</ProtectedRoute>} />
                     <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
                     <Route path="/bookshelf" element={<ProtectedRoute>{withSuspense(Bookshelf)}</ProtectedRoute>} />
