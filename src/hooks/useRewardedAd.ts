@@ -44,9 +44,6 @@ export function useRewardedAd({
 
       const config = REWARDED_AD_REWARDS[rewardType];
       const value = customValue ?? config.value;
-      const expiresAt = config.expires_minutes
-        ? new Date(Date.now() + config.expires_minutes * 60 * 1000).toISOString()
-        : null;
 
       const { error } = await supabase.rpc("grant_rewarded_ad_unlock" as any, {
         _reward_type: rewardType,
