@@ -1,148 +1,331 @@
+# SHA-VERSE: Native App + AdMob + Play Store Launch Plan
 
-# NovaChat 3-Phase System — Implementation Plan
-
-## 🎯 Aapka Decision Summary
-- **Phase 1**: Current secure backend (Lovable AI Gateway via `novachat-ai` edge function) **as-is rakhna hai**. Koi backend change nahi.
-- **Phase 2**: Daily limit **10 messages/day** for free users.
-- **Phase 3**: Pro Upgrade UI **+ real Stripe payments enable**.
+Aapka app code-side se kaafi mature hai. Yeh plan 5 phases me divided hai. Har phase me **kya karna hai + example + verification** diya hai.
 
 ---
 
-## 📋 Phase 1 — UI Polish Only (No Backend Touch)
+## CURRENT STATE ANALYSIS (Health Check)
 
-NovaChat ka current UI already polished hai. Sirf chhote refinements karenge taaki "premium ChatGPT competitor" feel aaye:
+**✅ Already Done (Good news):**
+- Capacitor 7 + Android + iOS plugins installed
+- `@capacitor-community/admob` v8 already in dependencies
+- Complete ads infrastructure: 16 ad components (Banner, Native, Rewarded, Pre-roll, Mid-roll, Sponsored, Sticky)
+- `USE_TEST_ADS = true` flag in `src/lib/ads/adConfig.ts` (Google official test IDs in use — ✅ safe)
+- Frequency capping logic: 20 ads/day, 2hr cooldown, new-user reduction
+- DB tables: `ad_impressions`, `user_ad_preferences`, `rewarded_ad_unlocks`
+- 6 modules functional: Home, Movion, NovaChat, Bookshelf, Groups, Profile
+- Realtime: messaging, reactions, stories, notifications (channel-suffix stability rule applied)
+- Security: 0 active issues from last scan, RLS hardened, audit log added
+- PWA manifest + icons present
 
-**Files affected:**
-- `src/components/novachat/ChatInput.tsx` — input box ke focus state, gradient border, smoother animations
-- `src/components/novachat/ChatMessage.tsx` — message bubbles ke spacing/typography refine
-- `src/components/novachat/ChatSidebar.tsx` — "Upgrade to Pro" button add (Phase 3 trigger)
-- `src/components/novachat/WelcomeScreen.tsx` — minor visual polish
+**⚠️ Issues / Missing for Native Launch:**
+1. **No root `capacitor.config.ts`** — only one inside `omnihub-suite-main/` subfolder. Need root config.
+2. **No `android/` or `ios/` folder** — these get generated locally on user's machine after GitHub export (cannot be created in Lovable sandbox).
+3. **AdMob plugin not initialized** in app entry — `AdMob.initialize()` call missing from `src/main.tsx` or `App.tsx`.
+4. **Banner/Native ad components currently render placeholder UI** — not yet wired to real `@capacitor-community/admob` calls (they show "Test Ad" badges but don't call native SDK).
+5. **Real AdMob Unit IDs empty** in `LIVE_AD_IDS` block — must be filled before Play Store.
+6. **`AndroidManifest.xml` AdMob App ID** needs to be added (mandatory by Google or app crashes on launch).
+7. **No splash icon assets generated** for Android (need `@capacitor/assets` run).
+8. **No signed release keystore** instructions documented.
 
-**Constraints respected:**
-- ✅ Edge function `novachat-ai` untouched (LOVABLE_API_KEY safe)
-- ✅ Module isolation — sirf `src/components/novachat/*` aur `src/hooks/useNovaChat.ts` me changes
-- ✅ Dark + Light theme dono support
-- ✅ Mobile-first, no horizontal scroll
-- ✅ Existing chat logic, history, attachments, voice — sab as-is
+**No critical bugs found** in module logic (security scans clean, realtime stable, RLS scoped). Issues are **packaging-level**, not feature-level.
 
 ---
 
-## 📋 Phase 2 — Rate Limiting (10 messages/day for Free users)
+## PHASE 1 — Pre-Native Code Fixes (in Lovable)
 
-### Database (new migration)
-Naya table `novachat_usage` (existing tables touch nahi karenge):
+These changes I will make in the Lovable editor before you export to GitHub.
 
-```sql
-CREATE TABLE public.novachat_usage (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  message_count INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(user_id, usage_date)
-);
+### 1.1 Create root `capacitor.config.ts`
+```ts
+// capacitor.config.ts (root)
+import type { CapacitorConfig } from '@capacitor/cli';
 
-ALTER TABLE public.novachat_usage ENABLE ROW LEVEL SECURITY;
+const config: CapacitorConfig = {
+  appId: 'app.lovable.b16b27b99c4646308c45b59b2b0e9094',
+  appName: 'Sha-Verse',
+  webDir: 'dist',
+  server: {
+    url: 'https://b16b27b9-9c46-4630-8c45-b59b2b0e9094.lovableproject.com?forceHideBadge=true',
+    cleartext: true,
+  },
+  plugins: {
+    SplashScreen: { launchShowDuration: 2000, backgroundColor: '#2563eb' },
+    StatusBar: { style: 'LIGHT', backgroundColor: '#2563eb' },
+    AdMob: {
+      requestTrackingAuthorization: true,
+      testingDevices: [],
+      initializeForTesting: true, // ← flip to false after Play Store launch
+    },
+  },
+  android: { allowMixedContent: true },
+};
+export default config;
+```
+> **Note**: `server.url` is for hot-reload during dev. Before final release build, this block must be **removed** (otherwise app loads from Lovable preview instead of bundled assets). I'll document this clearly.
 
--- User can only read their own usage
-CREATE POLICY "Users read own usage" ON public.novachat_usage
-  FOR SELECT USING (auth.uid() = user_id);
+### 1.2 Initialize AdMob SDK at app boot
+Add to `src/main.tsx`:
+```ts
+import { AdMob } from '@capacitor-community/admob';
+import { Capacitor } from '@capacitor/core';
+
+if (Capacitor.isNativePlatform()) {
+  AdMob.initialize({
+    initializeForTesting: true, // test mode
+    testingDevices: [],
+  }).catch(console.error);
+}
 ```
 
-Add `is_pro` flag to `novachat_settings` (Phase 3 ready):
-```sql
-ALTER TABLE public.novachat_settings 
-  ADD COLUMN IF NOT EXISTS is_pro BOOLEAN DEFAULT false,
-  ADD COLUMN IF NOT EXISTS pro_expires_at TIMESTAMPTZ;
+### 1.3 Wire BannerAd component to real native SDK
+Currently `BannerAd.tsx` shows a placeholder div. Update it to call:
+```ts
+AdMob.showBanner({
+  adId: AD_IDS.banner,
+  adSize: BannerAdSize.ADAPTIVE_BANNER,
+  position: BannerAdPosition.BOTTOM_CENTER,
+  isTesting: USE_TEST_ADS,
+});
+```
+Plus matching wiring for Rewarded (`AdMob.showRewardVideoAd`) and Interstitial (skip — your rule says no interstitials).
+
+### 1.4 Add `.env`-like AdMob App ID placeholder
+Create `src/lib/ads/admobAppId.ts`:
+```ts
+// Replace with real App ID from AdMob console before Play Store
+export const ADMOB_APP_ID_TEST = 'ca-app-pub-3940256099942544~3347511713';
+export const ADMOB_APP_ID_LIVE = ''; // ← paste here on launch day
 ```
 
-RPC function for atomic check + increment (security definer):
-```sql
-CREATE FUNCTION public.check_and_increment_nova_usage(_user_id UUID)
-RETURNS jsonb
--- Returns: { allowed: bool, used: int, limit: int, is_pro: bool }
--- Pro users: always allowed, no increment
--- Free users: check 10/day limit, increment if allowed
-```
+### 1.5 Add `HEALTH_CHECK.md` documenting findings
+Module-by-module status, known limitations, and pre-launch checklist.
 
-### Edge Function (`novachat-ai/index.ts`)
-Edge function ke top me, validation ke baad, RPC call:
-- Pro user → skip limit, proceed
-- Free user → call `check_and_increment_nova_usage`
-- If `allowed: false` → return `429` with `{ error: 'daily_limit_reached', used, limit }`
-
-### Frontend (`useNovaChat.ts`)
-- 429 response handle karke `setLimitReached(true)` state set karna
-- `useNovaUsage()` hook — current day ka usage fetch karna (sidebar me "7/10 messages today" dikhane ke liye)
-
-### UI — Limit Reached Modal
-New file: `src/components/novachat/LimitReachedModal.tsx`
-- Beautiful gradient modal
-- "Aapki aaj ki 10 free messages khatam ho gayi hain"
-- "Upgrade to Pro for Unlimited" CTA → opens Pricing modal (Phase 3)
-- "Reset in: X hours Y minutes" countdown
-- Dark + Light theme
-
-Sidebar me chhota usage indicator: `7 / 10 messages today` (Pro users ko nahi dikhega).
+### 1.6 Add `NATIVE_BUILD_GUIDE.md`
+Step-by-step terminal commands the user will run on their own machine after GitHub export.
 
 ---
 
-## 📋 Phase 3 — Pro Upgrade + Real Stripe Payments
+## PHASE 2 — Export & First Native Build (on YOUR machine)
 
-### Step 1: Pricing Modal UI
-New file: `src/components/novachat/PricingModal.tsx`
-- 2 cards side-by-side:
-  - **Free** — 10 messages/day, ads, basic models
-  - **Pro** — Unlimited messages, no ads, all models (Gemini 2.5 Pro, GPT-5), priority
-- Premium look: gradient borders, checkmarks, "Most Popular" badge on Pro
-- Dark + Light theme
+You cannot run these commands inside Lovable — Capacitor needs Android Studio/Xcode locally.
 
-### Step 2: Enable Stripe Payments (Lovable Built-in)
-**⚠️ Important pre-requisites jo aap ko karne padenge:**
-1. **Pro Lovable plan required** — Payments feature ke liye.
-2. Main `payments--recommend_payment_provider` chalaunga taaki confirm ho NovaChat (digital SaaS) ke liye Stripe eligible hai.
-3. Aapse confirm karunga before enabling.
-4. Phir `payments--enable_stripe_payments` call karunga.
-5. Aap test mode me product create karenge (Pro subscription, monthly/yearly).
-6. Checkout session edge function + webhook handler implement karenge.
+### 2.1 Export project to GitHub
+- Lovable top-right → **GitHub → Push to GitHub** → create new repo `sha-verse`.
 
-### Step 3: Subscription Flow
-- "Upgrade to Pro" button → Pricing modal → Stripe Checkout
-- On successful payment → webhook updates `novachat_settings.is_pro = true`, sets `pro_expires_at`
-- Edge function reads `is_pro` to skip rate limit
-- Account page me "Manage Subscription" → Stripe Customer Portal
+### 2.2 Clone & install on your PC
+```bash
+git clone https://github.com/<your-username>/sha-verse.git
+cd sha-verse
+npm install
+```
+
+### 2.3 Add Android platform
+```bash
+npx cap add android
+npx cap sync android
+```
+This generates the `android/` folder.
+
+### 2.4 Edit `android/app/src/main/AndroidManifest.xml`
+Inside `<application>` tag, add:
+```xml
+<meta-data
+  android:name="com.google.android.gms.ads.APPLICATION_ID"
+  android:value="ca-app-pub-3940256099942544~3347511713"/>
+```
+(test ID — replace with your real App ID before Play Store).
+
+Also add internet permission (usually already there):
+```xml
+<uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+```
+
+### 2.5 Generate icons & splash
+```bash
+npm install --save-dev @capacitor/assets
+# Place 1024x1024 logo.png and 2732x2732 splash.png in resources/
+npx capacitor-assets generate
+```
+
+### 2.6 Run on emulator / device
+```bash
+npx cap run android
+```
+**Real-time example**: If you have a phone connected via USB with developer mode ON, the app installs on it directly. If using Android Studio emulator, start emulator first.
 
 ---
 
-## 🔒 Constraints Strictly Followed
+## PHASE 3 — Testing on Device (Test Ads Phase)
 
-| Constraint | How |
+### 3.1 Smoke-test every module
+| Module | What to test |
 |---|---|
-| Module Isolation | Sirf `src/components/novachat/*`, `src/hooks/useNovaChat.ts`, `supabase/functions/novachat-ai/`, naya migration |
-| No backend exposure | LOVABLE_API_KEY edge function me hi rahega, frontend untouched |
-| Dark + Light theme | Saare new components dono themes me tested |
-| Mobile-first | Modals responsive, no horizontal scroll |
-| No interstitial ads | Limit-reached modal is upgrade prompt, not ad |
-| Existing features untouched | Chat history, attachments, voice, settings — koi change nahi |
-| Realtime stability | No new realtime channels needed for this feature |
+| Auth | Email signup, Google login, phone OTP |
+| Home | Post create, reactions (👍❤️😆😢😡), share, comments, stories |
+| Movion | Video upload, HLS playback, pre-roll test ad shows, mid-roll at 50% on 3min+ video |
+| NovaChat | Send message, get Gemini response, "watch ad for 10 messages" rewarded button |
+| Bookshelf | Open EPUB, page turns, every-20-pages inline ad, premium unlock via rewarded ad |
+| Groups | Join, post, group native ad at 3rd position |
+| Profile | Edit profile, upload cover, friend request, block |
+| Realtime | Two devices: send message, see ticks, see typing, see reactions update live |
+
+### 3.2 Verify Test Ads load
+Open app → look for "🧪 Test Ad" badge on every ad slot. Console must show:
+```
+🧪 TEST ADS MODE ACTIVE — Real ads disabled.
+```
+If real ads load instead of test, **STOP** — you'd risk AdMob ban.
+
+### 3.3 Performance check
+- Memory under 250MB on a mid-range phone
+- No crashes after 30min usage
+- Realtime channels reconnect after airplane-mode toggle
+
+### 3.4 Fix anything broken
+Report back to me with screenshots + console logs. I'll patch in Lovable, you `git pull && npx cap sync android && npx cap run android`.
 
 ---
 
-## 📦 Deliverables Order
+## PHASE 4 — Switch to Real AdMob (Pre-Publish)
 
-1. **Migration**: `novachat_usage` table + RPC + `is_pro` columns
-2. **Edge Function**: `novachat-ai` me rate limit check add
-3. **Hook**: `useNovaUsage` + 429 handling in `useNovaChat`
-4. **Components**: `LimitReachedModal`, `PricingModal`, sidebar usage indicator + Upgrade button
-5. **Stripe enable** (with your confirmation): provider check → enable → product setup → checkout flow → webhook
+### 4.1 Create AdMob account
+1. Go to https://admob.google.com → Sign in with Google.
+2. Add app → choose "Not yet published" → name "Sha-Verse" → Android.
+3. Copy **App ID** (format `ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY`).
+
+### 4.2 Create Ad Units (one per placement)
+Create these 10 ad units in AdMob console:
+- Banner (home feed, sticky)
+- Native (home feed, group, sponsored cards)
+- Rewarded (NovaChat unlock, bookshelf premium, ad-free hour, post boost)
+- Rewarded Interstitial → skip (your rule: no interstitials)
+- Video — pre-roll
+- Video — mid-roll
+- Video — shorts
+
+Copy each Unit ID (format `ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ`).
+
+### 4.3 Paste real IDs in code
+Edit `src/lib/ads/adConfig.ts`:
+```ts
+export const USE_TEST_ADS = false;   // ← FLIP
+
+const LIVE_AD_IDS = {
+  banner: "ca-app-pub-1234.../1111111111",
+  native: "ca-app-pub-1234.../2222222222",
+  rewarded: "ca-app-pub-1234.../3333333333",
+  // ... fill all 10
+};
+```
+And `admobAppId.ts`:
+```ts
+export const ADMOB_APP_ID_LIVE = "ca-app-pub-1234...~5555555555";
+```
+And `AndroidManifest.xml` → replace test App ID with live.
+And `capacitor.config.ts` → `initializeForTesting: false`.
+
+### 4.4 ⚠️ DO NOT click your own ads
+Even one click on a real ad on your own device = permanent AdMob ban. Use a friend's device for final QA, or keep test ads on your own phone forever.
 
 ---
 
-## ❓ Final Confirmations Before Implementation
+## PHASE 5 — Play Store Publishing & Earning
 
-1. **Pro plan check**: Lovable Payments (Stripe) ke liye aap ka workspace **Pro plan** par hona chahiye. Confirm karein ki aap ke paas Pro plan hai?
-2. **Pricing**: Pro tier ka monthly price kya rakhein? (e.g., $4.99/month, $9.99/month)
-3. **Reset window**: Daily limit "midnight UTC" par reset ho ya "user ke local 24h se"? (Default suggestion: midnight UTC, simpler)
+### 5.1 Generate signed release APK/AAB
+```bash
+# In android/ folder, generate keystore (DO THIS ONCE, BACK IT UP)
+keytool -genkey -v -keystore sha-verse.keystore -alias sha-verse \
+  -keyalg RSA -keysize 2048 -validity 10000
+```
+**Store this `.keystore` file safely** — losing it means you can never update your app.
 
-Plan approve karne ke baad main implementation start karunga — order strictly: Migration → Edge function → Frontend hooks → UI components → Stripe (last step).
+In `android/app/build.gradle`:
+```gradle
+signingConfigs {
+  release {
+    storeFile file('../../sha-verse.keystore')
+    storePassword System.getenv("KEYSTORE_PASS")
+    keyAlias 'sha-verse'
+    keyPassword System.getenv("KEY_PASS")
+  }
+}
+buildTypes {
+  release { signingConfig signingConfigs.release }
+}
+```
+
+### 5.2 Remove dev server URL
+In `capacitor.config.ts`, **delete the `server` block** completely so app uses bundled assets:
+```ts
+// REMOVE this for release:
+// server: { url: '...', cleartext: true }
+```
+Then:
+```bash
+npm run build
+npx cap sync android
+cd android
+./gradlew bundleRelease
+# Output: android/app/build/outputs/bundle/release/app-release.aab
+```
+
+### 5.3 Create Play Console account
+- https://play.google.com/console → $25 one-time fee.
+- Create app → fill: name, short description (80 char), full description (4000 char), category (Social).
+- Upload: 512x512 icon, feature graphic 1024x500, 2-8 phone screenshots.
+- Privacy policy URL — host one on your domain `sha-verse.com/privacy`.
+- Content rating questionnaire.
+- Data safety form (declare: collects email, name, photos, location?).
+- Target audience: 13+ (since social features).
+
+### 5.4 Upload AAB
+- Production track → Create new release → Upload `app-release.aab` → Review → Roll out.
+- First review: typically 3–7 days.
+
+### 5.5 Link AdMob ↔ Play Store
+- In AdMob → app → "Link to Play Store" → select your published app. Required for higher fill-rate ads.
+
+### 5.6 Earning timeline (realistic example)
+| Week | Daily Active Users | Daily ad impressions | Daily revenue (est.) |
+|---|---|---|---|
+| 1 | 50 | ~400 | $0.20 – $0.80 |
+| 4 | 500 | ~5,000 | $2 – $10 |
+| 12 | 5,000 | ~60,000 | $30 – $150 |
+| 6 months | 50,000 | ~600,000 | $300 – $1,500 |
+
+eCPM in India: $0.50–$2 typical. Higher in US/EU.
+**Minimum payout**: $100 (AdMob holds money until you cross this; pays via bank transfer).
+
+### 5.7 Growth levers
+- ASO (App Store Optimization): keywords in title + description
+- Share rewarded-unlock features on social media
+- Refer-a-friend (already in your social graph)
+- Push notifications for re-engagement (add `@capacitor/push-notifications` later)
+
+---
+
+## DELIVERABLES (what I will create when you approve)
+
+1. `capacitor.config.ts` — root config with AdMob plugin block
+2. `src/main.tsx` — AdMob.initialize() on native
+3. `src/lib/ads/admobAppId.ts` — App ID constants
+4. `src/components/ads/BannerAd.tsx` — wired to real native banner
+5. `src/components/ads/RewardedAdButton.tsx` — wired to real native rewarded
+6. `src/hooks/useRewardedAd.ts` — call native SDK in production, simulate in test
+7. `HEALTH_CHECK.md` — module-by-module status
+8. `NATIVE_BUILD_GUIDE.md` — every command you'll run on your PC, with expected output
+9. `ADMOB_LAUNCH_CHECKLIST.md` — 30-point pre-publish checklist
+
+**No existing module logic, UI, or features will be changed** — only the ad rendering layer (currently stubs) gets connected to the real native SDK, gated by `Capacitor.isNativePlatform()` so web preview keeps working exactly as today.
+
+---
+
+## QUESTIONS BEFORE I IMPLEMENT
+
+1. **Android only first, or Android + iOS together?** (iOS needs Mac + $99/yr Apple Dev account.)
+2. **AdMob account ready ya pehle test ads pe hi build karein?** (Recommended: test ads first, switch later.)
+3. **App icon + splash screen design ready hai?** Ya placeholder use karein abhi?
+
+Approve karne ke baad I'll execute Phase 1 changes in Lovable, then guide you through Phase 2–5 on your machine.
