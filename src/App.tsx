@@ -46,6 +46,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/Offline"));
 const AdminSeed = lazy(() => import("./pages/AdminSeed"));
 const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
+const MovionComingSoon = lazy(() => import("./pages/MovionComingSoon"));
 const Pages = lazy(() => import("./pages/Pages"));
 const PageDetail = lazy(() => import("./pages/PageDetail"));
 const PageAdmin = lazy(() => import("./pages/PageAdmin"));
