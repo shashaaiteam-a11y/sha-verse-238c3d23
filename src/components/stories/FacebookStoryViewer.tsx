@@ -437,17 +437,16 @@ const FacebookStoryViewer = ({
           </Button>
           {isOwnStory && (
             <>
-              <Sheet open={showViewers} onOpenChange={(open) => { setShowViewers(open); if (open) handleOpenViewers(); }}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
-                    aria-label="View story viewers"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </SheetTrigger>
+              <Sheet open={showViewers} onOpenChange={setShowViewers}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+                  onClick={handleOpenViewers}
+                  aria-label="View story viewers"
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
                 <SheetContent side="bottom" className="h-[60vh]">
                   <SheetHeader>
                     <SheetTitle>Story Viewers ({viewers.length})</SheetTitle>
