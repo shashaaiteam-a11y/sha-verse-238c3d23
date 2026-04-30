@@ -270,18 +270,31 @@ const FacebookStoryViewer = ({
     return null;
   }
 
+  // Refresh viewers + reactions on demand (called when opening viewers sheet)
+  const refreshViewersAndReactions = useCallback(() => {
+    if (isOwnStory && currentStory) {
+      getStoryViewers(currentStory.id).then(setViewers).catch(console.error);
+      getStoryReactions(currentStory.id).then(setReactions).catch(console.error);
+    }
+  }, [isOwnStory, currentStory?.id, getStoryViewers, getStoryReactions]);
+
+  // Auto-refresh viewers list every 5s while own story is open (lightweight realtime feel)
+  useEffect(() => {
+    if (!isOwnStory || !currentStory) return;
+    const interval = setInterval(() => {
+      refreshViewersAndReactions();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
+
+  const handleOpenViewers = () => {
+    setShowViewers(true);
+    setIsPaused(true); // Pause story while viewing list
+    refreshViewersAndReactions();
+  };
+
   const viewer = (
     <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden">
-      {/* Close button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-4 right-4 text-white hover:bg-white/20 z-50"
-        onClick={onClose}
-      >
-        <X className="w-6 h-6" />
-      </Button>
-
       {/* Previous user indicator */}
       {currentGroupIndex > 0 && (
         <div
