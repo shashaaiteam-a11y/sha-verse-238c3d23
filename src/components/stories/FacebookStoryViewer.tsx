@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { StoryGroup, StoryView, StoryReaction } from "@/hooks/useStories";
 import { useStories } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -14,7 +15,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 
 interface FacebookStoryViewerProps {
@@ -266,15 +266,19 @@ const FacebookStoryViewer = ({
     }
   };
 
-  if (!currentStory) {
-    return null;
-  }
-
   // Refresh viewers + reactions on demand (called when opening viewers sheet)
-  const refreshViewersAndReactions = useCallback(() => {
-    if (isOwnStory && currentStory) {
-      getStoryViewers(currentStory.id).then(setViewers).catch(console.error);
-      getStoryReactions(currentStory.id).then(setReactions).catch(console.error);
+  const refreshViewersAndReactions = useCallback(async () => {
+    if (!isOwnStory || !currentStory) return;
+
+    try {
+      const [latestViewers, latestReactions] = await Promise.all([
+        getStoryViewers(currentStory.id),
+        getStoryReactions(currentStory.id),
+      ]);
+      setViewers(latestViewers);
+      setReactions(latestReactions);
+    } catch (error) {
+      console.error(error);
     }
   }, [isOwnStory, currentStory?.id, getStoryViewers, getStoryReactions]);
 
@@ -287,10 +291,46 @@ const FacebookStoryViewer = ({
     return () => clearInterval(interval);
   }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
 
-  const handleOpenViewers = () => {
+  // Open viewers without touching story playback state.
+  const handleOpenViewers = useCallback((event?: MouseEvent<HTMLElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
     setShowViewers(true);
-    refreshViewersAndReactions();
-  };
+    void refreshViewersAndReactions();
+  }, [refreshViewersAndReactions]);
+
+  // True realtime updates while the viewers sheet/story is open; polling above remains a fallback.
+  useEffect(() => {
+    if (!isOwnStory || !currentStory) return;
+
+    const channel = supabase
+      .channel(`story-viewers-${currentStory.id}-${Date.now()}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'story_views',
+        filter: `story_id=eq.${currentStory.id}`,
+      }, () => {
+        void refreshViewersAndReactions();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'story_reactions',
+        filter: `story_id=eq.${currentStory.id}`,
+      }, () => {
+        void refreshViewersAndReactions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
+
+  if (!currentStory) {
+    return null;
+  }
 
   const viewer = (
     <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden">
@@ -397,17 +437,16 @@ const FacebookStoryViewer = ({
           </Button>
           {isOwnStory && (
             <>
-              <Sheet open={showViewers} onOpenChange={(open) => { setShowViewers(open); if (open) handleOpenViewers(); }}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
-                    aria-label="View story viewers"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </SheetTrigger>
+              <Sheet open={showViewers} onOpenChange={setShowViewers}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+                  onClick={handleOpenViewers}
+                  aria-label="View story viewers"
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
                 <SheetContent side="bottom" className="h-[60vh]">
                   <SheetHeader>
                     <SheetTitle>Story Viewers ({viewers.length})</SheetTitle>
