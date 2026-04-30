@@ -289,7 +289,6 @@ const FacebookStoryViewer = ({
 
   const handleOpenViewers = () => {
     setShowViewers(true);
-    setIsPaused(true); // Pause story while viewing list
     refreshViewersAndReactions();
   };
 
