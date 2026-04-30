@@ -350,16 +350,27 @@ const FacebookStoryViewer = ({
           ))}
         </div>
 
-        {/* User info */}
-        <div className="absolute top-8 left-4 right-4 z-40 flex items-center gap-3">
+        {/* Close button - isolated, separated from action icons to avoid mis-taps */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 text-white hover:bg-white/20 z-50 h-10 w-10 rounded-full bg-black/40"
+          onClick={onClose}
+          aria-label="Close story"
+        >
+          <X className="w-6 h-6" />
+        </Button>
+
+        {/* User info - leaves right padding so it never overlaps the close button */}
+        <div className="absolute top-8 left-4 right-14 z-40 flex items-center gap-3">
           <Avatar className="w-10 h-10 border-2 border-white">
             <AvatarImage src={storyGroup.user.avatar_url || ""} />
             <AvatarFallback>
               {storyGroup.user.display_name.charAt(0)}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1">
-            <p className="text-white font-semibold text-sm">
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-semibold text-sm truncate">
               {storyGroup.user.display_name}
             </p>
             <p className="text-white/70 text-xs">
@@ -368,71 +379,76 @@ const FacebookStoryViewer = ({
               })}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              onClick={togglePause}
-            >
-              {isPaused ? (
-                <Play className="w-5 h-5" />
-              ) : (
-                <Pause className="w-5 h-5" />
-              )}
-            </Button>
-            {isOwnStory && (
-              <>
-                <Sheet open={showViewers} onOpenChange={setShowViewers}>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-white hover:bg-white/20"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="bottom" className="h-[60vh]">
-                    <SheetHeader>
-                      <SheetTitle>Story Viewers ({viewers.length})</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-4 space-y-3 overflow-y-auto">
-                      {viewers.map((view) => (
-                        <div key={view.id} className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={view.viewer?.avatar_url || ""} />
-                            <AvatarFallback>
-                              {view.viewer?.display_name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <p className="font-medium">{view.viewer?.display_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(view.viewed_at), { addSuffix: true })}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      {viewers.length === 0 && (
-                        <p className="text-muted-foreground text-center py-8">
-                          No one has viewed this story yet
-                        </p>
-                      )}
-                    </div>
-                  </SheetContent>
-                </Sheet>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:bg-white/20"
-                  onClick={handleDeleteStory}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </Button>
-              </>
+        </div>
+
+        {/* Action icons row - placed BELOW user info with clear separation from close button */}
+        <div className="absolute top-20 right-2 z-40 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+            onClick={togglePause}
+            aria-label={isPaused ? "Play" : "Pause"}
+          >
+            {isPaused ? (
+              <Play className="w-4 h-4" />
+            ) : (
+              <Pause className="w-4 h-4" />
             )}
-          </div>
+          </Button>
+          {isOwnStory && (
+            <>
+              <Sheet open={showViewers} onOpenChange={(open) => { setShowViewers(open); if (open) handleOpenViewers(); }}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+                    aria-label="View story viewers"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[60vh]">
+                  <SheetHeader>
+                    <SheetTitle>Story Viewers ({viewers.length})</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-4 space-y-3 overflow-y-auto">
+                    {viewers.map((view) => (
+                      <div key={view.id} className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={view.viewer?.avatar_url || ""} />
+                          <AvatarFallback>
+                            {view.viewer?.display_name?.charAt(0) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-medium">{view.viewer?.display_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(view.viewed_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {viewers.length === 0 && (
+                      <p className="text-muted-foreground text-center py-8">
+                        No one has viewed this story yet
+                      </p>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+                onClick={handleDeleteStory}
+                aria-label="Delete story"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Loading indicator */}
