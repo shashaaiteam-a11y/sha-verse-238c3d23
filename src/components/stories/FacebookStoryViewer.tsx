@@ -589,12 +589,17 @@ const FacebookStoryViewer = ({
           </div>
         )}
 
-        {/* View count for own stories */}
+        {/* View count for own stories - clickable to open viewers sheet */}
         {isOwnStory && (
-          <div className="absolute bottom-4 left-4 z-40 flex items-center gap-2 text-white">
+          <button
+            type="button"
+            onClick={handleOpenViewers}
+            className="absolute bottom-4 left-4 z-40 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors"
+            aria-label="View story viewers"
+          >
             <Eye className="w-5 h-5" />
-            <span>{currentStory.views_count} views</span>
-          </div>
+            <span className="text-sm font-medium">{viewers.length || currentStory.views_count || 0} views</span>
+          </button>
         )}
       </div>
     </div>
