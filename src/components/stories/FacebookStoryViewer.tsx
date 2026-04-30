@@ -266,15 +266,19 @@ const FacebookStoryViewer = ({
     }
   };
 
-  if (!currentStory) {
-    return null;
-  }
-
   // Refresh viewers + reactions on demand (called when opening viewers sheet)
-  const refreshViewersAndReactions = useCallback(() => {
-    if (isOwnStory && currentStory) {
-      getStoryViewers(currentStory.id).then(setViewers).catch(console.error);
-      getStoryReactions(currentStory.id).then(setReactions).catch(console.error);
+  const refreshViewersAndReactions = useCallback(async () => {
+    if (!isOwnStory || !currentStory) return;
+
+    try {
+      const [latestViewers, latestReactions] = await Promise.all([
+        getStoryViewers(currentStory.id),
+        getStoryReactions(currentStory.id),
+      ]);
+      setViewers(latestViewers);
+      setReactions(latestReactions);
+    } catch (error) {
+      console.error(error);
     }
   }, [isOwnStory, currentStory?.id, getStoryViewers, getStoryReactions]);
 
@@ -287,10 +291,46 @@ const FacebookStoryViewer = ({
     return () => clearInterval(interval);
   }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
 
-  const handleOpenViewers = () => {
+  // Open viewers without touching story playback state.
+  const handleOpenViewers = useCallback((event?: MouseEvent<HTMLElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
     setShowViewers(true);
-    refreshViewersAndReactions();
-  };
+    void refreshViewersAndReactions();
+  }, [refreshViewersAndReactions]);
+
+  // True realtime updates while the viewers sheet/story is open; polling above remains a fallback.
+  useEffect(() => {
+    if (!isOwnStory || !currentStory) return;
+
+    const channel = supabase
+      .channel(`story-viewers-${currentStory.id}-${Date.now()}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'story_views',
+        filter: `story_id=eq.${currentStory.id}`,
+      }, () => {
+        void refreshViewersAndReactions();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'story_reactions',
+        filter: `story_id=eq.${currentStory.id}`,
+      }, () => {
+        void refreshViewersAndReactions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
+
+  if (!currentStory) {
+    return null;
+  }
 
   const viewer = (
     <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden">
