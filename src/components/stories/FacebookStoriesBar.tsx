@@ -45,7 +45,11 @@ const FacebookStoriesBar = () => {
 
     const latestOpenGroup = storyGroups.find((group) => group.user.id === viewingStoryGroup.user.id);
     if (latestOpenGroup) {
-      setViewingStoryGroup(latestOpenGroup);
+      const currentSignature = viewingStoryGroup.stories.map((story) => `${story.id}:${story.views_count}`).join('|');
+      const latestSignature = latestOpenGroup.stories.map((story) => `${story.id}:${story.views_count}`).join('|');
+      if (currentSignature !== latestSignature || viewingStoryGroup.latestStoryTime !== latestOpenGroup.latestStoryTime) {
+        setViewingStoryGroup(latestOpenGroup);
+      }
     } else {
       setViewingStoryGroup(null);
     }
