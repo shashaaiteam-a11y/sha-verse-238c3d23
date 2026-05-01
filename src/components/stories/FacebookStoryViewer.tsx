@@ -289,6 +289,7 @@ const FacebookStoryViewer = ({
         getStoryReactions(currentStory.id),
       ]);
       setViewers(latestViewers);
+      setLiveViewCount(latestViewers.length);
       setReactions(latestReactions);
     } catch (error) {
       console.error(error);
@@ -305,12 +306,21 @@ const FacebookStoryViewer = ({
   }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
 
   // Open viewers without touching story playback state.
-  const handleOpenViewers = useCallback((event?: MouseEvent<HTMLElement>) => {
+  const handleOpenViewers = useCallback((event?: SyntheticEvent<HTMLElement>) => {
+    const wasPaused = isPausedRef.current;
     event?.preventDefault();
     event?.stopPropagation();
     setShowViewers(true);
+    requestAnimationFrame(() => {
+      if (!wasPaused) {
+        setIsPaused(false);
+        if (videoRef.current && currentStory?.media_type === 'video') {
+          videoRef.current.play().catch(console.error);
+        }
+      }
+    });
     void refreshViewersAndReactions();
-  }, [refreshViewersAndReactions]);
+  }, [currentStory?.media_type, refreshViewersAndReactions]);
 
   // True realtime updates while the viewers sheet/story is open; polling above remains a fallback.
   useEffect(() => {
@@ -323,7 +333,10 @@ const FacebookStoryViewer = ({
         schema: 'public',
         table: 'story_views',
         filter: `story_id=eq.${currentStory.id}`,
-      }, () => {
+      }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setLiveViewCount((count) => count + 1);
+        }
         void refreshViewersAndReactions();
       })
       .on('postgres_changes', {
