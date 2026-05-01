@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type MouseEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type SyntheticEvent } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,13 +45,23 @@ const FacebookStoryViewer = ({
   const [viewers, setViewers] = useState<StoryView[]>([]);
   const [reactions, setReactions] = useState<StoryReaction[]>([]);
   const [showViewers, setShowViewers] = useState(false);
+  const [liveViewCount, setLiveViewCount] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isPausedRef = useRef(isPaused);
 
   const currentStory = storyGroup.stories[currentIndex];
   const isOwnStory = storyGroup.user.id === user?.id;
   const currentGroupIndex = allGroups.findIndex(g => g.user.id === storyGroup.user.id);
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
+  useEffect(() => {
+    setLiveViewCount(currentStory?.views_count || 0);
+  }, [currentStory?.id, currentStory?.views_count]);
 
   // Lock body scroll when story viewer is open (like Facebook)
   useEffect(() => {
@@ -77,7 +87,10 @@ const FacebookStoryViewer = ({
   // Load viewers and reactions for own stories
   useEffect(() => {
     if (isOwnStory && currentStory) {
-      getStoryViewers(currentStory.id).then(setViewers).catch(console.error);
+      getStoryViewers(currentStory.id).then((latestViewers) => {
+        setViewers(latestViewers);
+        setLiveViewCount(latestViewers.length);
+      }).catch(console.error);
       getStoryReactions(currentStory.id).then(setReactions).catch(console.error);
     }
   }, [currentStory?.id, isOwnStory]);
@@ -276,6 +289,7 @@ const FacebookStoryViewer = ({
         getStoryReactions(currentStory.id),
       ]);
       setViewers(latestViewers);
+      setLiveViewCount(latestViewers.length);
       setReactions(latestReactions);
     } catch (error) {
       console.error(error);
@@ -292,12 +306,21 @@ const FacebookStoryViewer = ({
   }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
 
   // Open viewers without touching story playback state.
-  const handleOpenViewers = useCallback((event?: MouseEvent<HTMLElement>) => {
+  const handleOpenViewers = useCallback((event?: SyntheticEvent<HTMLElement>) => {
+    const wasPaused = isPausedRef.current;
     event?.preventDefault();
     event?.stopPropagation();
     setShowViewers(true);
+    requestAnimationFrame(() => {
+      if (!wasPaused) {
+        setIsPaused(false);
+        if (videoRef.current && currentStory?.media_type === 'video') {
+          videoRef.current.play().catch(console.error);
+        }
+      }
+    });
     void refreshViewersAndReactions();
-  }, [refreshViewersAndReactions]);
+  }, [currentStory?.media_type, refreshViewersAndReactions]);
 
   // True realtime updates while the viewers sheet/story is open; polling above remains a fallback.
   useEffect(() => {
@@ -310,7 +333,10 @@ const FacebookStoryViewer = ({
         schema: 'public',
         table: 'story_views',
         filter: `story_id=eq.${currentStory.id}`,
-      }, () => {
+      }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setLiveViewCount((count) => count + 1);
+        }
         void refreshViewersAndReactions();
       })
       .on('postgres_changes', {
@@ -394,7 +420,11 @@ const FacebookStoryViewer = ({
           variant="ghost"
           size="icon"
           className="absolute top-2 right-2 text-white hover:bg-white/20 z-50 h-10 w-10 rounded-full bg-black/40"
-          onClick={onClose}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+          }}
           aria-label="Close story"
         >
           <X className="w-6 h-6" />
@@ -421,7 +451,11 @@ const FacebookStoryViewer = ({
         </div>
 
         {/* Action icons row - placed BELOW user info with clear separation from close button */}
-        <div className="absolute top-20 right-2 z-40 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm">
+        <div
+          className="absolute top-20 right-2 z-50 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm pointer-events-auto"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -442,12 +476,18 @@ const FacebookStoryViewer = ({
                   variant="ghost"
                   size="icon"
                   className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={handleOpenViewers}
                   aria-label="View story viewers"
                 >
                   <Eye className="w-4 h-4" />
                 </Button>
-                <SheetContent side="bottom" className="h-[60vh]">
+                <SheetContent
+                  side="bottom"
+                  className="z-[260] h-[60vh]"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <SheetHeader>
                     <SheetTitle>Story Viewers ({viewers.length})</SheetTitle>
                   </SheetHeader>
@@ -631,12 +671,13 @@ const FacebookStoryViewer = ({
         {isOwnStory && (
           <button
             type="button"
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={handleOpenViewers}
-            className="absolute bottom-4 left-4 z-40 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors"
+            className="absolute bottom-4 left-4 z-50 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors pointer-events-auto"
             aria-label="View story viewers"
           >
             <Eye className="w-5 h-5" />
-            <span className="text-sm font-medium">{viewers.length || currentStory.views_count || 0} views</span>
+            <span className="text-sm font-medium">{liveViewCount} views</span>
           </button>
         )}
       </div>
