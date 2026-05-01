@@ -420,7 +420,11 @@ const FacebookStoryViewer = ({
           variant="ghost"
           size="icon"
           className="absolute top-2 right-2 text-white hover:bg-white/20 z-50 h-10 w-10 rounded-full bg-black/40"
-          onClick={onClose}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+          }}
           aria-label="Close story"
         >
           <X className="w-6 h-6" />
@@ -447,7 +451,11 @@ const FacebookStoryViewer = ({
         </div>
 
         {/* Action icons row - placed BELOW user info with clear separation from close button */}
-        <div className="absolute top-20 right-2 z-40 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm">
+        <div
+          className="absolute top-20 right-2 z-50 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm pointer-events-auto"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -468,6 +476,7 @@ const FacebookStoryViewer = ({
                   variant="ghost"
                   size="icon"
                   className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={handleOpenViewers}
                   aria-label="View story viewers"
                 >
@@ -657,12 +666,13 @@ const FacebookStoryViewer = ({
         {isOwnStory && (
           <button
             type="button"
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={handleOpenViewers}
-            className="absolute bottom-4 left-4 z-40 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors"
+            className="absolute bottom-4 left-4 z-50 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors pointer-events-auto"
             aria-label="View story viewers"
           >
             <Eye className="w-5 h-5" />
-            <span className="text-sm font-medium">{viewers.length || currentStory.views_count || 0} views</span>
+            <span className="text-sm font-medium">{liveViewCount} views</span>
           </button>
         )}
       </div>
