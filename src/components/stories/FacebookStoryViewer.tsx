@@ -296,7 +296,7 @@ const FacebookStoryViewer = ({
     }
   }, [isOwnStory, currentStory?.id, getStoryViewers, getStoryReactions]);
 
-  // Auto-refresh viewers list every 5s while own story is open (lightweight realtime feel)
+  // Auto-refresh viewers list every 5s while own story is open (realtime fallback)
   useEffect(() => {
     if (!isOwnStory || !currentStory) return;
     const interval = setInterval(() => {
@@ -322,9 +322,9 @@ const FacebookStoryViewer = ({
     void refreshViewersAndReactions();
   }, [currentStory?.media_type, refreshViewersAndReactions]);
 
-  // True realtime updates while the viewers sheet/story is open; polling above remains a fallback.
+  // True realtime updates while the story is open; polling above remains a fallback.
   useEffect(() => {
-    if (!isOwnStory || !currentStory) return;
+    if (!currentStory) return;
 
     const channel = supabase
       .channel(`story-viewers-${currentStory.id}-${Date.now()}`)
@@ -333,8 +333,12 @@ const FacebookStoryViewer = ({
         schema: 'public',
         table: 'story_views',
         filter: `story_id=eq.${currentStory.id}`,
-      }, () => {
-        void refreshViewersAndReactions();
+      }, (payload) => {
+        if (isOwnStory) {
+          void refreshViewersAndReactions();
+        } else if (payload.eventType === 'INSERT') {
+          setLiveViewCount((count) => count + 1);
+        }
       })
       .on('postgres_changes', {
         event: '*',
@@ -342,7 +346,15 @@ const FacebookStoryViewer = ({
         table: 'story_reactions',
         filter: `story_id=eq.${currentStory.id}`,
       }, () => {
-        void refreshViewersAndReactions();
+        if (isOwnStory) void refreshViewersAndReactions();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'story_replies',
+        filter: `story_id=eq.${currentStory.id}`,
+      }, () => {
+        if (isOwnStory) void refreshViewersAndReactions();
       })
       .subscribe();
 
