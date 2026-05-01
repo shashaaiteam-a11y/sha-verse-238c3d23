@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type MouseEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type SyntheticEvent } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,13 +45,23 @@ const FacebookStoryViewer = ({
   const [viewers, setViewers] = useState<StoryView[]>([]);
   const [reactions, setReactions] = useState<StoryReaction[]>([]);
   const [showViewers, setShowViewers] = useState(false);
+  const [liveViewCount, setLiveViewCount] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isPausedRef = useRef(isPaused);
 
   const currentStory = storyGroup.stories[currentIndex];
   const isOwnStory = storyGroup.user.id === user?.id;
   const currentGroupIndex = allGroups.findIndex(g => g.user.id === storyGroup.user.id);
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
+  useEffect(() => {
+    setLiveViewCount(currentStory?.views_count || 0);
+  }, [currentStory?.id, currentStory?.views_count]);
 
   // Lock body scroll when story viewer is open (like Facebook)
   useEffect(() => {
@@ -77,7 +87,10 @@ const FacebookStoryViewer = ({
   // Load viewers and reactions for own stories
   useEffect(() => {
     if (isOwnStory && currentStory) {
-      getStoryViewers(currentStory.id).then(setViewers).catch(console.error);
+      getStoryViewers(currentStory.id).then((latestViewers) => {
+        setViewers(latestViewers);
+        setLiveViewCount(latestViewers.length);
+      }).catch(console.error);
       getStoryReactions(currentStory.id).then(setReactions).catch(console.error);
     }
   }, [currentStory?.id, isOwnStory]);
