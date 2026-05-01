@@ -359,10 +359,17 @@ export const useStories = () => {
     },
   });
 
-  // View story (mark as seen)
+  // View story (mark as seen) — guarded by in-memory cache (Issue #4 fix)
   const viewStory = useMutation({
     mutationFn: async (storyId: string) => {
       if (!user?.id) return;
+
+      const cacheKey = `${user.id}:${storyId}`;
+      // Skip if we've already recorded this view in the current session.
+      if (viewedStoryCache.has(cacheKey)) return;
+      // Optimistically add to cache BEFORE the network call so concurrent
+      // rapid taps short-circuit immediately. If the request fails, we remove it.
+      viewedStoryCache.add(cacheKey);
 
       const { error } = await supabase
         .from("story_views")
@@ -374,7 +381,11 @@ export const useStories = () => {
           onConflict: 'story_id,viewer_id',
         });
 
-      if (error && !error.message.includes("duplicate")) throw error;
+      if (error && !error.message.includes("duplicate")) {
+        // Roll back cache so a retry can succeed.
+        viewedStoryCache.delete(cacheKey);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["viewed-stories", user?.id] });
