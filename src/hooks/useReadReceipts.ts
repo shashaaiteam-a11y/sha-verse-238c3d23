@@ -63,8 +63,9 @@ export const useUnreadMessageCount = () => {
       }, DEBOUNCE_MS);
     };
 
+    const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`unread-messages-${user.id}`)
+      .channel(`unread-messages-${user.id}-${suffix}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -183,8 +184,9 @@ export const useMarkMessagesDelivered = () => {
 
     void markDelivered();
 
+    const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`message-delivery-${user.id}`)
+      .channel(`message-delivery-${user.id}-${suffix}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
