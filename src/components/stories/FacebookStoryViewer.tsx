@@ -333,10 +333,7 @@ const FacebookStoryViewer = ({
         schema: 'public',
         table: 'story_views',
         filter: `story_id=eq.${currentStory.id}`,
-      }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setLiveViewCount((count) => count + 1);
-        }
+      }, () => {
         void refreshViewersAndReactions();
       })
       .on('postgres_changes', {
@@ -489,7 +486,7 @@ const FacebookStoryViewer = ({
                   onClick={(event) => event.stopPropagation()}
                 >
                   <SheetHeader>
-                    <SheetTitle>Story Viewers ({viewers.length})</SheetTitle>
+                    <SheetTitle>Story Viewers ({liveViewCount})</SheetTitle>
                   </SheetHeader>
                   <div className="mt-4 space-y-3 overflow-y-auto">
                     {viewers.map((view) => (
