@@ -327,9 +327,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <Avatar className="h-10 w-10">
-                {user && <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                  {user.email?.[0]?.toUpperCase() || 'U'}
-                </AvatarFallback>}
+                <AvatarImage src="/sha-verse-logo.jpeg" alt="Sha-Verse" />
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground">S</AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-center gap-2">
