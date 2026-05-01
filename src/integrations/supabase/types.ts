@@ -5932,6 +5932,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      refresh_friend_suggestions_for_active_users: {
+        Args: never
+        Returns: undefined
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       subscribe_to_channel: {
