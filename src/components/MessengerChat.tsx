@@ -653,8 +653,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
             isLoading={messagesLoading}
             emptyState={
               <div className="text-center text-muted-foreground">
-                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Send className="w-10 h-10 text-primary" />
+                <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center mx-auto mb-4 bg-primary/10">
+                  <img src="/sha-verse-logo.jpeg" alt="Sha-Verse" className="w-full h-full object-cover" />
                 </div>
                 <p>No messages yet</p>
                 <p className="text-sm mt-1">Say hello!</p>
@@ -664,8 +664,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         ) : (
           <div className="flex-1 flex items-center justify-center bg-background">
             <div className="text-center">
-              <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Send className="w-12 h-12 text-primary" />
+              <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center mx-auto mb-6 bg-primary/10">
+                <img src="/sha-verse-logo.jpeg" alt="Sha-Verse" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-xl font-semibold mb-2 text-foreground">Sha-Verse Messenger</h3>
               <p className="max-w-sm text-muted-foreground">
