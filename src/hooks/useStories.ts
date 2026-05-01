@@ -172,17 +172,23 @@ export const useStories = () => {
     return new Date(b.latestStoryTime).getTime() - new Date(a.latestStoryTime).getTime();
   });
 
-  // 🚀 OPTIMIZATION: Debounced realtime to prevent storms from views/reactions
+  // Realtime: keep story rings, view counts, reactions, and story replies fresh across open screens.
   useEffect(() => {
     if (!user?.id) return;
 
     let timeoutId: NodeJS.Timeout | null = null;
-    const DEBOUNCE_MS = 2000;
+    const DEBOUNCE_MS = 800;
 
-    const debouncedInvalidate = () => {
+    const invalidateStories = (immediate = false) => {
       if (timeoutId) clearTimeout(timeoutId);
+      if (immediate) {
+        queryClient.invalidateQueries({ queryKey: ['stories', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['viewed-stories', user.id] });
+        return;
+      }
       timeoutId = setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['stories', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['viewed-stories', user.id] });
       }, DEBOUNCE_MS);
     };
 
@@ -195,7 +201,7 @@ export const useStories = () => {
         schema: 'public',
         table: 'stories',
       }, () => {
-        debouncedInvalidate();
+        invalidateStories();
       })
       // Story deleted
       .on('postgres_changes', {
@@ -203,15 +209,15 @@ export const useStories = () => {
         schema: 'public',
         table: 'stories',
       }, () => {
-        debouncedInvalidate();
+        invalidateStories(true);
       })
-      // Story viewed - update view count live (debounced to prevent storms)
+      // Story viewed - update view count live for every open story surface.
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'story_views',
       }, () => {
-        debouncedInvalidate();
+        invalidateStories(true);
       })
       // Story reactions live (debounced)
       .on('postgres_changes', {
@@ -219,7 +225,15 @@ export const useStories = () => {
         schema: 'public',
         table: 'story_reactions',
       }, () => {
-        debouncedInvalidate();
+        invalidateStories(true);
+      })
+      // Story replies/messages live
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'story_replies',
+      }, () => {
+        invalidateStories(true);
       })
       .subscribe();
 

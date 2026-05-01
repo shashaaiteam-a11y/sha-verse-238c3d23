@@ -1,4 +1,4 @@
-import { Fragment, useState, useRef } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,21 @@ const FacebookStoriesBar = () => {
   const handleGroupChange = (group: StoryGroup) => {
     setViewingStoryGroup(group);
   };
+
+  useEffect(() => {
+    if (!viewingStoryGroup) return;
+
+    const latestOpenGroup = storyGroups.find((group) => group.user.id === viewingStoryGroup.user.id);
+    if (latestOpenGroup) {
+      const currentSignature = viewingStoryGroup.stories.map((story) => `${story.id}:${story.views_count}`).join('|');
+      const latestSignature = latestOpenGroup.stories.map((story) => `${story.id}:${story.views_count}`).join('|');
+      if (currentSignature !== latestSignature || viewingStoryGroup.latestStoryTime !== latestOpenGroup.latestStoryTime) {
+        setViewingStoryGroup(latestOpenGroup);
+      }
+    } else {
+      setViewingStoryGroup(null);
+    }
+  }, [storyGroups, viewingStoryGroup?.user.id]);
 
   return (
     <>

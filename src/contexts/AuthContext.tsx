@@ -20,10 +20,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const syncRealtimeAuth = (currentSession: Session | null) => {
+    supabase.realtime.setAuth(currentSession?.access_token ?? null);
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        syncRealtimeAuth(session);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -44,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      syncRealtimeAuth(session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
