@@ -164,12 +164,14 @@ export const useMessagesRealtime = (conversationId: string | null) => {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`
         },
-        (payload) => {
-          if (payload.new?.sender_id !== user?.id) {
-            queryClient.invalidateQueries({
-              queryKey: ['messages-realtime', conversationId]
-            });
-          }
+        () => {
+          queryClient.invalidateQueries({
+            queryKey: ['messages-realtime', conversationId]
+          });
+          queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId, user?.id] });
         }
       )
       .on(
@@ -184,6 +186,10 @@ export const useMessagesRealtime = (conversationId: string | null) => {
           queryClient.invalidateQueries({
             queryKey: ['messages-realtime', conversationId]
           });
+          queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId, user?.id] });
         }
       )
       .subscribe();
