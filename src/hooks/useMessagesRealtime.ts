@@ -151,7 +151,7 @@ export const useMessagesRealtime = (conversationId: string | null) => {
 
   // Real-time subscription for new messages
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !user?.id) return;
 
     const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
@@ -168,10 +168,10 @@ export const useMessagesRealtime = (conversationId: string | null) => {
           queryClient.invalidateQueries({
             queryKey: ['messages-realtime', conversationId]
           });
-          queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
-          queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
-          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user?.id] });
-          queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId, user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId, user.id] });
         }
       )
       .on(
@@ -186,10 +186,10 @@ export const useMessagesRealtime = (conversationId: string | null) => {
           queryClient.invalidateQueries({
             queryKey: ['messages-realtime', conversationId]
           });
-          queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
-          queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
-          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user?.id] });
-          queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId, user?.id] });
+          queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId, user.id] });
         }
       )
       .subscribe();
