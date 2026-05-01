@@ -21,9 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   const syncRealtimeAuth = (currentSession: Session | null) => {
-    if (currentSession?.access_token) {
-      supabase.realtime.setAuth(currentSession.access_token);
-    }
+    supabase.realtime.setAuth(currentSession?.access_token ?? null);
   };
 
   useEffect(() => {
