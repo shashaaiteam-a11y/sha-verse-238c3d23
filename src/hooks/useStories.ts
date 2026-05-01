@@ -140,6 +140,16 @@ export const useStories = () => {
     enabled: !!user?.id,
   });
 
+  // Hydrate the in-memory dedupe cache from server state on every refresh.
+  // This way after a reload or tab switch, we still skip re-inserting views
+  // that already exist in story_views (Issue #4).
+  useEffect(() => {
+    if (!user?.id) return;
+    for (const storyId of viewedStoryIds) {
+      viewedStoryCache.add(`${user.id}:${storyId}`);
+    }
+  }, [user?.id, viewedStoryIds]);
+
   // Group stories by user with viewed status
   const storyGroups: StoryGroup[] = stories.reduce((acc: StoryGroup[], story) => {
     const existingGroup = acc.find((g) => g.user.id === story.user_id);
