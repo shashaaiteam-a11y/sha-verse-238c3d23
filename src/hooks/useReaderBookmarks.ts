@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export interface ReaderBookmark {
   id: string;
@@ -67,6 +68,33 @@ export const useReaderBookmarks = (bookId?: string) => {
     },
     onError: () => toast.error("Failed to remove bookmark"),
   });
+
+  // Realtime: instant multi-device bookmark sync.
+  // Unique channel suffix per user+book+timestamp prevents subscribe collisions.
+  useEffect(() => {
+    if (!user?.id || !bookId) return;
+    const channel = supabase
+      .channel(`reader-bookmarks-${user.id}-${bookId}-${Date.now()}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "reader_bookmarks",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          const row = (payload.new ?? payload.old) as { book_id?: string } | null;
+          if (row && row.book_id !== bookId) return;
+          queryClient.invalidateQueries({ queryKey: ["reader-bookmarks", bookId, user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, bookId, queryClient]);
 
   const isPageBookmarked = (page: number) => {
     return bookmarks.some((b) => b.location?.page === page);

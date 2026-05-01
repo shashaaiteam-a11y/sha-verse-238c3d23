@@ -19,14 +19,29 @@ export interface TocItem {
   subitems?: TocItem[];
 }
 
+// Strong CSS isolation rules: applied inside the EPUB iframe so the book's
+// own stylesheet stays scoped to its document and cannot leak into the host
+// app, and the host app's globals cannot bleed into the book content.
+const ISOLATION_RULES: Record<string, string> = {
+  "html, body": "margin: 0 !important; padding: 0 !important; max-width: 100% !important; overflow-x: hidden !important;",
+  "*": "box-sizing: border-box !important;",
+  // Neutralize fixed/sticky positioning that some EPUBs use which can escape layout
+  "[style*='position: fixed'], [style*='position:fixed']": "position: static !important;",
+  // Prevent book CSS from forcing huge margins / negative offsets
+  "img, svg, video": "max-width: 100% !important; height: auto !important;",
+};
+
 const THEME_STYLES: Record<string, Record<string, string>> = {
   light: {
+    ...ISOLATION_RULES,
     body: "background-color: #fffbf0 !important; color: #1a1a1a !important;",
   },
   dark: {
+    ...ISOLATION_RULES,
     body: "background-color: #1a1a1a !important; color: #e0e0e0 !important;",
   },
   sepia: {
+    ...ISOLATION_RULES,
     body: "background-color: #f4ecd8 !important; color: #5b4636 !important;",
   },
 };
