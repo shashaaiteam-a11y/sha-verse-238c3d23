@@ -1,8 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+
+// Module-level cache: tracks story IDs already marked as viewed in this session.
+// Prevents duplicate INSERTs to story_views when users rapidly swipe through stories
+// (Issue #4: View Marking Race Condition).
+const viewedStoryCache = new Set<string>();
 
 export interface Story {
   id: string;
