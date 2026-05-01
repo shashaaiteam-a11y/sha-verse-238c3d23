@@ -684,9 +684,23 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         onSelectUser={async (selectedUser) => {
           try {
             const conversationId = await startConversation.mutateAsync(selectedUser.id);
-            const newConvo = conversations?.find((c: any) => c.id === conversationId);
-            if (newConvo) {
-              setSelectedConversation(newConvo);
+
+            // Try existing conversation first
+            const existing = conversations?.find((c: any) => c.id === conversationId);
+            if (existing) {
+              setSelectedConversation(existing);
+            } else {
+              // Open chat immediately with a synthetic conversation; the list will refresh in background
+              setSelectedConversation({
+                id: conversationId,
+                otherUser: {
+                  id: selectedUser.id,
+                  display_name: selectedUser.display_name,
+                  username: selectedUser.username,
+                  avatar_url: selectedUser.avatar_url,
+                },
+                last_message_at: new Date().toISOString(),
+              } as any);
             }
             toast.success(`Chat started with ${selectedUser.display_name}`);
           } catch (error) {
