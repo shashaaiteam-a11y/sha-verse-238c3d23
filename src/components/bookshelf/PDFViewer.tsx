@@ -112,15 +112,18 @@ const PDFViewer = ({
         setRetryCount(0);
         setContainerWidth(0);
 
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const arrayBuffer = await response.arrayBuffer();
-        const data = new Uint8Array(arrayBuffer);
-
+        // Use PDF.js native URL loading so the worker streams the file in
+        // small HTTP-range chunks instead of buffering the whole file in memory.
+        // This prevents WebView freezes on large (>50MB) PDFs on mobile.
         const loadingTask = pdfjsLib.getDocument({
-          data,
+          url,
           cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
           cMapPacked: true,
+          // Stream + range requests: chunked progressive load
+          disableStream: false,
+          disableAutoFetch: true, // only fetch ranges as pages are rendered
+          rangeChunkSize: 262144, // 256 KB chunks
+          withCredentials: false,
         });
 
         const pdf = await loadingTask.promise;
