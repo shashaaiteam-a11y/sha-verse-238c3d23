@@ -87,10 +87,11 @@ export const useConversationUnreadBadge = (conversationId?: string) => {
 
   // Real-time updates for this conversation
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !user?.id) return;
 
+    const suffix = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`conversation-unread-${conversationId}`)
+      .channel(`conversation-unread-${conversationId}-${user.id}-${suffix}`)
       .on(
         'postgres_changes',
         {
@@ -99,10 +100,12 @@ export const useConversationUnreadBadge = (conversationId?: string) => {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => {
+        (payload) => {
+          if (payload.eventType === 'INSERT' && payload.new?.sender_id === user.id) return;
           queryClient.invalidateQueries({
-            queryKey: ['conversation-unread-badge', conversationId]
+            queryKey: ['conversation-unread-badge', conversationId, user.id]
           });
+          queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
         }
       )
       .subscribe();
@@ -110,7 +113,7 @@ export const useConversationUnreadBadge = (conversationId?: string) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, queryClient]);
+  }, [conversationId, user?.id, queryClient]);
 
   return unread;
 };
