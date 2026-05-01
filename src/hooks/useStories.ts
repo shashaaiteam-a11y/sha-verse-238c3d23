@@ -188,11 +188,17 @@ export const useStories = () => {
   });
 
   // Realtime: keep story rings, view counts, reactions, and story replies fresh across open screens.
+  // Hardened with setAuth + auto-reconnect on CHANNEL_ERROR / TIMED_OUT (Issue #11).
   useEffect(() => {
     if (!user?.id) return;
 
     let timeoutId: NodeJS.Timeout | null = null;
+    let reconnectTimeoutId: NodeJS.Timeout | null = null;
+    let reconnectAttempts = 0;
+    let activeChannel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
     const DEBOUNCE_MS = 800;
+    const MAX_RECONNECT_DELAY = 30000;
 
     const invalidateStories = (immediate = false) => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -207,54 +213,59 @@ export const useStories = () => {
       }, DEBOUNCE_MS);
     };
 
-    const channelId = `stories-realtime-${user.id}-${Math.random().toString(36).slice(2, 8)}`;
-    const channel = supabase
-      .channel(channelId)
-      // New story posted by anyone
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'stories',
-      }, () => {
-        invalidateStories();
-      })
-      // Story deleted
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'stories',
-      }, () => {
-        invalidateStories(true);
-      })
-      // Story viewed - update view count live for every open story surface.
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'story_views',
-      }, () => {
-        invalidateStories(true);
-      })
-      // Story reactions live (debounced)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'story_reactions',
-      }, () => {
-        invalidateStories(true);
-      })
-      // Story replies/messages live
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'story_replies',
-      }, () => {
-        invalidateStories(true);
-      })
-      .subscribe();
+    const setupChannel = async () => {
+      if (cancelled) return;
+
+      // Refresh realtime auth token before (re)subscribing — avoids JWT expiry
+      // failures after the tab was inactive or network dropped.
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          supabase.realtime.setAuth(session.access_token);
+        }
+      } catch {
+        // Non-fatal: continue with whatever auth state exists.
+      }
+
+      if (cancelled) return;
+
+      const channelId = `stories-realtime-${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const channel = supabase
+        .channel(channelId)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stories' }, () => invalidateStories())
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'stories' }, () => invalidateStories(true))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'story_views' }, () => invalidateStories(true))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'story_reactions' }, () => invalidateStories(true))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'story_replies' }, () => invalidateStories(true))
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            reconnectAttempts = 0;
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            // Exponential backoff reconnect
+            if (cancelled) return;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY);
+            reconnectAttempts += 1;
+            if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId);
+            reconnectTimeoutId = setTimeout(() => {
+              if (cancelled) return;
+              try { supabase.removeChannel(channel); } catch { /* noop */ }
+              setupChannel();
+            }, delay);
+          }
+        });
+
+      activeChannel = channel;
+    };
+
+    setupChannel();
 
     return () => {
+      cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
-      supabase.removeChannel(channel);
+      if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId);
+      if (activeChannel) {
+        try { supabase.removeChannel(activeChannel); } catch { /* noop */ }
+      }
     };
   }, [user?.id, queryClient]);
 
