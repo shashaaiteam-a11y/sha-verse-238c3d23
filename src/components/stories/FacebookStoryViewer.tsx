@@ -482,7 +482,12 @@ const FacebookStoryViewer = ({
                 >
                   <Eye className="w-4 h-4" />
                 </Button>
-                <SheetContent side="bottom" className="h-[60vh]">
+                <SheetContent
+                  side="bottom"
+                  className="z-[260] h-[60vh]"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <SheetHeader>
                     <SheetTitle>Story Viewers ({viewers.length})</SheetTitle>
                   </SheetHeader>
