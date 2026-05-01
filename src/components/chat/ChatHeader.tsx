@@ -204,19 +204,6 @@ export const ChatHeader = ({
 
             <DropdownMenuSeparator />
 
-            {/* Privacy */}
-            <DropdownMenuItem
-              onClick={() => {
-                setShowPrivacyDialog(true);
-                setShowMoreMenu(false);
-              }}
-            >
-              <Lock className="w-4 h-4 mr-2" />
-              <span>Privacy</span>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
             {/* Mute / Unmute - WhatsApp-style single entry */}
             {isMuted ? (
               <DropdownMenuItem
