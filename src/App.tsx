@@ -145,6 +145,10 @@ const App = () => (
                     <Route path="/post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/group-post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/movion/admin" element={<AdminRoute>{withSuspense(MovionAdmin)}</AdminRoute>} />
+                    <Route path="/privacy" element={withSuspense(Privacy)} />
+                    <Route path="/terms" element={withSuspense(Terms)} />
+                    <Route path="/about" element={withSuspense(About)} />
+                    <Route path="/contact" element={withSuspense(Contact)} />
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>
                 </SwipeWrapper>
