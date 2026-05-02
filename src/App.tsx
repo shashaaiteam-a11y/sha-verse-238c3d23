@@ -15,6 +15,9 @@ import { SwipeWrapper } from "./components/SwipeWrapper";
 import { AdProvider } from "./contexts/AdContext";
 import { ChatPresenceBridge } from "./components/chat/ChatPresenceBridge";
 import { GlobalCallHost } from "./modules/chats/components/GlobalCallHost";
+import { AdSenseLoader } from "./components/web/AdSenseLoader";
+import { SiteFooter } from "./components/web/SiteFooter";
+import { CookieConsent } from "./components/web/CookieConsent";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("./modules/home/pages/Home"));
