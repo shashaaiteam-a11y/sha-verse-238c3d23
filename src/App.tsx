@@ -153,6 +153,9 @@ const App = () => (
                   </Routes>
                 </SwipeWrapper>
                 <BottomNav />
+                <SiteFooter />
+                <AdSenseLoader />
+                <CookieConsent />
               </div>
               </GlobalCallHost>
               </AdProvider>
