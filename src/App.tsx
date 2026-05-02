@@ -15,6 +15,9 @@ import { SwipeWrapper } from "./components/SwipeWrapper";
 import { AdProvider } from "./contexts/AdContext";
 import { ChatPresenceBridge } from "./components/chat/ChatPresenceBridge";
 import { GlobalCallHost } from "./modules/chats/components/GlobalCallHost";
+import { AdSenseLoader } from "./components/web/AdSenseLoader";
+import { SiteFooter } from "./components/web/SiteFooter";
+import { CookieConsent } from "./components/web/CookieConsent";
 
 // Lazy load pages for better performance
 const Home = lazy(() => import("./modules/home/pages/Home"));
@@ -50,6 +53,10 @@ const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
 const MovionComingSoon = lazy(() => import("./pages/MovionComingSoon"));
 const Pages = lazy(() => import("./pages/Pages"));
 const PageDetail = lazy(() => import("./pages/PageDetail"));
+const Privacy = lazy(() => import("./pages/legal/Privacy"));
+const Terms = lazy(() => import("./pages/legal/Terms"));
+const About = lazy(() => import("./pages/legal/About"));
+const Contact = lazy(() => import("./pages/legal/Contact"));
 const PageAdmin = lazy(() => import("./pages/PageAdmin"));
 const Motion = lazy(() => import("./pages/Motion"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
@@ -138,10 +145,17 @@ const App = () => (
                     <Route path="/post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/group-post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/movion/admin" element={<AdminRoute>{withSuspense(MovionAdmin)}</AdminRoute>} />
+                    <Route path="/privacy" element={withSuspense(Privacy)} />
+                    <Route path="/terms" element={withSuspense(Terms)} />
+                    <Route path="/about" element={withSuspense(About)} />
+                    <Route path="/contact" element={withSuspense(Contact)} />
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>
                 </SwipeWrapper>
                 <BottomNav />
+                <SiteFooter />
+                <AdSenseLoader />
+                <CookieConsent />
               </div>
               </GlobalCallHost>
               </AdProvider>
