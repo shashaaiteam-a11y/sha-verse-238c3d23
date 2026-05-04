@@ -4,7 +4,8 @@ import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, Me
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StoryGroup, StoryView, StoryReaction } from "@/hooks/useStories";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { StoryGroup, StoryView, StoryReaction, StoryReply } from "@/hooks/useStories";
 import { useStories } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +34,7 @@ const FacebookStoryViewer = ({
   onGroupChange
 }: FacebookStoryViewerProps) => {
   const { user } = useAuth();
-  const { viewStory, deleteStory, reactToStory, replyToStory, getStoryViewers, getStoryReactions } = useStories();
+  const { viewStory, deleteStory, reactToStory, replyToStory, getStoryViewers, getStoryReactions, getStoryReplies } = useStories();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -44,12 +45,15 @@ const FacebookStoryViewer = ({
   const [showReactions, setShowReactions] = useState(false);
   const [viewers, setViewers] = useState<StoryView[]>([]);
   const [reactions, setReactions] = useState<StoryReaction[]>([]);
+  const [replies, setReplies] = useState<StoryReply[]>([]);
   const [showViewers, setShowViewers] = useState(false);
   const [liveViewCount, setLiveViewCount] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isPausedRef = useRef(isPaused);
+  // Remember pause state at the moment the viewers sheet was opened, so closing restores it.
+  const wasPausedBeforeViewersRef = useRef(false);
 
   const currentStory = storyGroup.stories[currentIndex];
   const isOwnStory = storyGroup.user.id === user?.id;
@@ -279,22 +283,24 @@ const FacebookStoryViewer = ({
     }
   };
 
-  // Refresh viewers + reactions on demand (called when opening viewers sheet)
+  // Refresh viewers + reactions + replies on demand (called when opening viewers sheet)
   const refreshViewersAndReactions = useCallback(async () => {
     if (!isOwnStory || !currentStory) return;
 
     try {
-      const [latestViewers, latestReactions] = await Promise.all([
+      const [latestViewers, latestReactions, latestReplies] = await Promise.all([
         getStoryViewers(currentStory.id),
         getStoryReactions(currentStory.id),
+        getStoryReplies(currentStory.id),
       ]);
       setViewers(latestViewers);
       setLiveViewCount(latestViewers.length);
       setReactions(latestReactions);
+      setReplies(latestReplies);
     } catch (error) {
       console.error(error);
     }
-  }, [isOwnStory, currentStory?.id, getStoryViewers, getStoryReactions]);
+  }, [isOwnStory, currentStory?.id, getStoryViewers, getStoryReactions, getStoryReplies]);
 
   // Auto-refresh viewers list every 5s while own story is open (realtime fallback)
   useEffect(() => {
@@ -305,22 +311,32 @@ const FacebookStoryViewer = ({
     return () => clearInterval(interval);
   }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
 
-  // Open viewers without touching story playback state.
+  // Open viewers — auto-pause story while sheet is open (Facebook/Instagram behavior).
   const handleOpenViewers = useCallback((event?: SyntheticEvent<HTMLElement>) => {
-    const wasPaused = isPausedRef.current;
     event?.preventDefault();
     event?.stopPropagation();
+    wasPausedBeforeViewersRef.current = isPausedRef.current;
+    setIsPaused(true);
+    if (videoRef.current && currentStory?.media_type === 'video') {
+      videoRef.current.pause();
+    }
     setShowViewers(true);
-    requestAnimationFrame(() => {
-      if (!wasPaused) {
+    void refreshViewersAndReactions();
+  }, [currentStory?.media_type, refreshViewersAndReactions]);
+
+  // Resume story when viewers sheet closes (unless user had paused manually before opening it).
+  const handleViewersOpenChange = useCallback((open: boolean) => {
+    setShowViewers(open);
+    if (!open) {
+      const shouldResume = !wasPausedBeforeViewersRef.current;
+      if (shouldResume) {
         setIsPaused(false);
         if (videoRef.current && currentStory?.media_type === 'video') {
           videoRef.current.play().catch(console.error);
         }
       }
-    });
-    void refreshViewersAndReactions();
-  }, [currentStory?.media_type, refreshViewersAndReactions]);
+    }
+  }, [currentStory?.media_type]);
 
   // True realtime updates while the story is open; polling above remains a fallback.
   useEffect(() => {
@@ -479,64 +495,125 @@ const FacebookStoryViewer = ({
             )}
           </Button>
           {isOwnStory && (
-            <>
-              <Sheet open={showViewers} onOpenChange={setShowViewers}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onClick={handleOpenViewers}
-                  aria-label="View story viewers"
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
-                <SheetContent
-                  side="bottom"
-                  className="z-[260] h-[60vh]"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <SheetHeader>
-                    <SheetTitle>Story Viewers ({liveViewCount})</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4 space-y-3 overflow-y-auto">
-                    {viewers.map((view) => (
-                      <div key={view.id} className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={view.viewer?.avatar_url || ""} />
-                          <AvatarFallback>
-                            {view.viewer?.display_name?.charAt(0) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <p className="font-medium">{view.viewer?.display_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(view.viewed_at), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {viewers.length === 0 && (
-                      <p className="text-muted-foreground text-center py-8">
-                        No one has viewed this story yet
-                      </p>
-                    )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
-                onClick={handleDeleteStory}
-                aria-label="Delete story"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+              onClick={handleDeleteStory}
+              aria-label="Delete story"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           )}
         </div>
+
+        {/* Story Insights Sheet — opens on bottom-left eye click; auto-pauses story */}
+        {isOwnStory && (
+          <Sheet open={showViewers} onOpenChange={handleViewersOpenChange}>
+            <SheetContent
+              side="bottom"
+              className="z-[260] h-[70vh] flex flex-col"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <SheetHeader>
+                <SheetTitle>Story Insights</SheetTitle>
+              </SheetHeader>
+              <Tabs defaultValue="viewers" className="mt-4 flex-1 flex flex-col min-h-0">
+                <TabsList className="grid grid-cols-3 w-full">
+                  <TabsTrigger value="viewers" className="gap-1.5">
+                    <Eye className="w-4 h-4" />
+                    <span>{liveViewCount}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="reactions" className="gap-1.5">
+                    <Heart className="w-4 h-4" />
+                    <span>{reactions.length}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="replies" className="gap-1.5">
+                    <MessageCircle className="w-4 h-4" />
+                    <span>{replies.length}</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="viewers" className="mt-4 space-y-3 overflow-y-auto flex-1">
+                  {viewers.map((view) => (
+                    <div key={view.id} className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={view.viewer?.avatar_url || ""} />
+                        <AvatarFallback>
+                          {view.viewer?.display_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium">{view.viewer?.display_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(view.viewed_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {viewers.length === 0 && (
+                    <p className="text-muted-foreground text-center py-8">
+                      No one has viewed this story yet
+                    </p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="reactions" className="mt-4 space-y-3 overflow-y-auto flex-1">
+                  {reactions.map((reaction) => (
+                    <div key={reaction.id} className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={reaction.user?.avatar_url || ""} />
+                        <AvatarFallback>
+                          {reaction.user?.display_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium">{reaction.user?.display_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(reaction.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <span className="text-2xl">{reaction.reaction_type}</span>
+                    </div>
+                  ))}
+                  {reactions.length === 0 && (
+                    <p className="text-muted-foreground text-center py-8">
+                      No reactions yet
+                    </p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="replies" className="mt-4 space-y-3 overflow-y-auto flex-1">
+                  {replies.map((reply) => (
+                    <div key={reply.id} className="flex items-start gap-3">
+                      <Avatar>
+                        <AvatarImage src={reply.sender?.avatar_url || ""} />
+                        <AvatarFallback>
+                          {reply.sender?.display_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{reply.sender?.display_name}</p>
+                          <p className="text-xs text-muted-foreground shrink-0">
+                            {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <p className="text-sm break-words">{reply.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {replies.length === 0 && (
+                    <p className="text-muted-foreground text-center py-8">
+                      No replies yet
+                    </p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </SheetContent>
+          </Sheet>
+        )}
 
         {/* Loading indicator */}
         {!mediaLoaded && !mediaError && currentStory.story_type !== 'text' && currentStory.media_type !== 'text' && (

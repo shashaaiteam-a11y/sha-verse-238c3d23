@@ -54,6 +54,20 @@ export interface StoryReaction {
   } | null;
 }
 
+export interface StoryReply {
+  id: string;
+  story_id: string;
+  sender_id: string;
+  recipient_id: string;
+  message: string;
+  created_at: string;
+  sender?: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
 export interface StoryGroup {
   user: {
     id: string;
@@ -523,6 +537,30 @@ export const useStories = () => {
     })) as StoryReaction[];
   };
 
+  // Get story replies (comments) — for story owner only via RLS
+  const getStoryReplies = async (storyId: string): Promise<StoryReply[]> => {
+    const { data, error } = await supabase
+      .from("story_replies")
+      .select("*")
+      .eq("story_id", storyId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const senderIds = (data || []).map((r) => r.sender_id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, display_name, avatar_url")
+      .in("id", senderIds);
+
+    const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+
+    return (data || []).map((reply) => ({
+      ...reply,
+      sender: profileMap.get(reply.sender_id),
+    })) as StoryReply[];
+  };
+
   return {
     stories,
     storyGroups,
@@ -536,5 +574,6 @@ export const useStories = () => {
     replyToStory,
     getStoryViewers,
     getStoryReactions,
+    getStoryReplies,
   };
 };
