@@ -34,7 +34,7 @@ const FacebookStoryViewer = ({
   onGroupChange
 }: FacebookStoryViewerProps) => {
   const { user } = useAuth();
-  const { viewStory, deleteStory, reactToStory, replyToStory, getStoryViewers, getStoryReactions } = useStories();
+  const { viewStory, deleteStory, reactToStory, replyToStory, getStoryViewers, getStoryReactions, getStoryReplies } = useStories();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -45,12 +45,15 @@ const FacebookStoryViewer = ({
   const [showReactions, setShowReactions] = useState(false);
   const [viewers, setViewers] = useState<StoryView[]>([]);
   const [reactions, setReactions] = useState<StoryReaction[]>([]);
+  const [replies, setReplies] = useState<StoryReply[]>([]);
   const [showViewers, setShowViewers] = useState(false);
   const [liveViewCount, setLiveViewCount] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isPausedRef = useRef(isPaused);
+  // Remember pause state at the moment the viewers sheet was opened, so closing restores it.
+  const wasPausedBeforeViewersRef = useRef(false);
 
   const currentStory = storyGroup.stories[currentIndex];
   const isOwnStory = storyGroup.user.id === user?.id;
