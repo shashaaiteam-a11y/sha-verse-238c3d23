@@ -54,6 +54,20 @@ export interface StoryReaction {
   } | null;
 }
 
+export interface StoryReply {
+  id: string;
+  story_id: string;
+  sender_id: string;
+  recipient_id: string;
+  message: string;
+  created_at: string;
+  sender?: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
 export interface StoryGroup {
   user: {
     id: string;
