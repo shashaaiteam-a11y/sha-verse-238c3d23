@@ -17,7 +17,6 @@ export function useAdFrequency(placement: AdPlacement, category: AdCategory = "g
 
   // 🧪 TEST MODE: Bypass frequency control when forceShowAds is true
   if (forceShowAds) {
-    console.log(`[useAdFrequency ${placement}] TEST MODE - bypassing all checks, forcing render`);
     return { shouldRender: true, adUnitId };
   }
 
@@ -25,15 +24,6 @@ export function useAdFrequency(placement: AdPlacement, category: AdCategory = "g
   const inCooldown = isAdInCooldown(adUnitId);
   const catBlocked = isCategoryBlocked(category);
   const shouldRender = canShow && !inCooldown && !catBlocked;
-
-  console.log(`[useAdFrequency ${placement}]`, {
-    canShow,
-    inCooldown,
-    catBlocked,
-    shouldRender,
-    adUnitId,
-    category
-  });
 
   return { shouldRender, adUnitId };
 }

@@ -67,31 +67,41 @@ export function useSmartFeedAds() {
     };
   }, [user]);
 
-  // Live scroll-speed tracking (realtime)
+  // Live scroll-speed tracking (throttled via rAF — prevents re-render storm)
   useEffect(() => {
+    let ticking = false;
+    let lastUpdate = 0;
     const onScroll = () => {
-      const now = Date.now();
-      const y = window.scrollY;
-      const dt = now - lastScrollTs.current;
-      const dy = Math.abs(y - lastScrollY.current);
-      if (dt > 30) {
-        const pxPerSec = (dy / dt) * 1000;
-        // Keep last 6 samples (rolling window)
-        speedSamples.current.push(pxPerSec);
-        if (speedSamples.current.length > 6) speedSamples.current.shift();
-        const avg =
-          speedSamples.current.reduce((a, b) => a + b, 0) /
-          speedSamples.current.length;
-        const next: ScrollSpeed =
-          avg > FAST_SCROLL_PX_PER_SEC
-            ? "fast"
-            : avg < 200
-            ? "slow"
-            : "normal";
-        setScrollSpeed((prev) => (prev === next ? prev : next));
-        lastScrollY.current = y;
-        lastScrollTs.current = now;
-      }
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const now = Date.now();
+        const y = window.scrollY;
+        const dt = now - lastScrollTs.current;
+        const dy = Math.abs(y - lastScrollY.current);
+        if (dt > 100) {
+          const pxPerSec = (dy / dt) * 1000;
+          speedSamples.current.push(pxPerSec);
+          if (speedSamples.current.length > 6) speedSamples.current.shift();
+          lastScrollY.current = y;
+          lastScrollTs.current = now;
+          // Only update React state at most every 500ms — avoids cascading feed re-renders on every scroll tick
+          if (now - lastUpdate > 500) {
+            const avg =
+              speedSamples.current.reduce((a, b) => a + b, 0) /
+              speedSamples.current.length;
+            const next: ScrollSpeed =
+              avg > FAST_SCROLL_PX_PER_SEC
+                ? "fast"
+                : avg < 200
+                ? "slow"
+                : "normal";
+            setScrollSpeed((prev) => (prev === next ? prev : next));
+            lastUpdate = now;
+          }
+        }
+        ticking = false;
+      });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);

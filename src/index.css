@@ -109,7 +109,8 @@ All colors MUST be HSL.
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     touch-action: manipulation;
-    scroll-behavior: smooth;
+    /* native instant scroll — Facebook-style. smooth caused jank when reversing scroll direction */
+    scroll-behavior: auto;
   }
 
   body {
@@ -117,8 +118,9 @@ All colors MUST be HSL.
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overscroll-behavior: none;
+    overscroll-behavior-y: contain;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Global safe-area insets so app content never touches notch / status bar / home indicator / curved edges.
@@ -193,11 +195,12 @@ All colors MUST be HSL.
     @apply transition-all duration-300 ease-out;
   }
 
-  /* Smooth scrolling container */
+  /* Native instant scroll — smooth caused direction-reversal jank */
   .scroll-container {
     @apply overflow-y-auto overflow-x-hidden;
     -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
+    overscroll-behavior-y: contain;
   }
 
   /* Hide scrollbar but keep functionality */

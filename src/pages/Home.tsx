@@ -1,9 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo, memo } from 'react';
 
 import { Button } from "@/components/ui/button";
 
 /** Tiny wrapper: notifies the smart engine when an ad mounts (for session cap). */
-const SmartAdSlot = ({
+const SmartAdSlot = memo(({
   onMount,
   children,
 }: {
@@ -15,7 +15,8 @@ const SmartAdSlot = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return <>{children}</>;
-};
+});
+SmartAdSlot.displayName = 'SmartAdSlot';
 
 import { Card } from "@/components/ui/card";
 
@@ -55,6 +56,34 @@ import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
 
 
+// Memoized row — re-renders only when its specific props change, NOT on every scroll
+type FeedRowProps = {
+  item: any;
+  showAd: boolean;
+  showBanner: boolean;
+  registerAdShown: () => void;
+  onShare: (item: any) => void;
+};
+const FeedRow = memo(({ item, showAd, showBanner, registerAdShown, onShare }: FeedRowProps) => {
+  return (
+    <div>
+      <FeedCard item={item} onShare={() => onShare(item)} />
+      {showAd && (
+        <SmartAdSlot onMount={registerAdShown}>
+          <div className="mt-3 sm:mt-4">
+            <NativeAdCard placement="home_feed" />
+          </div>
+        </SmartAdSlot>
+      )}
+      {showBanner && (
+        <div className="mt-3 sm:mt-4 flex justify-center">
+          <BannerAd placement="home_banner" />
+        </div>
+      )}
+    </div>
+  );
+});
+FeedRow.displayName = 'FeedRow';
 
 const Home = () => {
 
@@ -76,6 +105,13 @@ const Home = () => {
 
   // 🤖 AI Smart Ad Engine — realtime scroll-speed + dynamic frequency
   const { shouldShowAd, registerAdShown } = useSmartFeedAds();
+
+  // Stable share handler — prevents FeedRow re-renders
+  const handleShare = useCallback((item: any) => {
+    if (item.type === 'post' || item.type === 'group_post') {
+      sharePost.mutate({ postId: item.id });
+    }
+  }, [sharePost]);
 
 
   const handleRefresh = async () => {
@@ -321,56 +357,16 @@ const Home = () => {
               <>
 
                 {feedItems.map((item, idx) => (
-
-                  <div key={`${item.type}-${item.id}`}>
-
-                    <FeedCard
-
-                      item={item}
-
-                      onShare={() => {
-
-                        if (item.type === 'post' || item.type === 'group_post') {
-
-                          sharePost.mutate({ postId: item.id });
-
-                        }
-
-                      }}
-
-                    />
-
-                    {/* 🤖 Smart Ad: native card injected by AI engine (skip first 3, dynamic freq) */}
-
-                    {shouldShowAd(idx) && (
-
-                      <SmartAdSlot onMount={registerAdShown}>
-
-                        <div className="mt-3 sm:mt-4">
-
-                          <NativeAdCard placement="home_feed" />
-
-                        </div>
-
-                      </SmartAdSlot>
-
-                    )}
-
-                    {/* 📢 Inline banner — sparingly every ~9 posts after first impression */}
-
-                    {idx >= 5 && (idx + 1) % 9 === 0 && (
-
-                      <div className="mt-3 sm:mt-4 flex justify-center">
-
-                        <BannerAd placement="home_banner" />
-
-                      </div>
-
-                    )}
-
-                  </div>
-
+                  <FeedRow
+                    key={`${item.type}-${item.id}`}
+                    item={item}
+                    showAd={shouldShowAd(idx)}
+                    showBanner={idx >= 5 && (idx + 1) % 9 === 0}
+                    registerAdShown={registerAdShown}
+                    onShare={handleShare}
+                  />
                 ))}
+
 
                 
 
