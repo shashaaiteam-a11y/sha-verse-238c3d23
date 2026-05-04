@@ -495,64 +495,125 @@ const FacebookStoryViewer = ({
             )}
           </Button>
           {isOwnStory && (
-            <>
-              <Sheet open={showViewers} onOpenChange={setShowViewers}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onClick={handleOpenViewers}
-                  aria-label="View story viewers"
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
-                <SheetContent
-                  side="bottom"
-                  className="z-[260] h-[60vh]"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <SheetHeader>
-                    <SheetTitle>Story Viewers ({liveViewCount})</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4 space-y-3 overflow-y-auto">
-                    {viewers.map((view) => (
-                      <div key={view.id} className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={view.viewer?.avatar_url || ""} />
-                          <AvatarFallback>
-                            {view.viewer?.display_name?.charAt(0) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <p className="font-medium">{view.viewer?.display_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(view.viewed_at), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {viewers.length === 0 && (
-                      <p className="text-muted-foreground text-center py-8">
-                        No one has viewed this story yet
-                      </p>
-                    )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
-                onClick={handleDeleteStory}
-                aria-label="Delete story"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20 h-9 w-9 rounded-full"
+              onClick={handleDeleteStory}
+              aria-label="Delete story"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           )}
         </div>
+
+        {/* Story Insights Sheet — opens on bottom-left eye click; auto-pauses story */}
+        {isOwnStory && (
+          <Sheet open={showViewers} onOpenChange={handleViewersOpenChange}>
+            <SheetContent
+              side="bottom"
+              className="z-[260] h-[70vh] flex flex-col"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <SheetHeader>
+                <SheetTitle>Story Insights</SheetTitle>
+              </SheetHeader>
+              <Tabs defaultValue="viewers" className="mt-4 flex-1 flex flex-col min-h-0">
+                <TabsList className="grid grid-cols-3 w-full">
+                  <TabsTrigger value="viewers" className="gap-1.5">
+                    <Eye className="w-4 h-4" />
+                    <span>{liveViewCount}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="reactions" className="gap-1.5">
+                    <Heart className="w-4 h-4" />
+                    <span>{reactions.length}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="replies" className="gap-1.5">
+                    <MessageCircle className="w-4 h-4" />
+                    <span>{replies.length}</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="viewers" className="mt-4 space-y-3 overflow-y-auto flex-1">
+                  {viewers.map((view) => (
+                    <div key={view.id} className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={view.viewer?.avatar_url || ""} />
+                        <AvatarFallback>
+                          {view.viewer?.display_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium">{view.viewer?.display_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(view.viewed_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {viewers.length === 0 && (
+                    <p className="text-muted-foreground text-center py-8">
+                      No one has viewed this story yet
+                    </p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="reactions" className="mt-4 space-y-3 overflow-y-auto flex-1">
+                  {reactions.map((reaction) => (
+                    <div key={reaction.id} className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={reaction.user?.avatar_url || ""} />
+                        <AvatarFallback>
+                          {reaction.user?.display_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium">{reaction.user?.display_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(reaction.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <span className="text-2xl">{reaction.reaction_type}</span>
+                    </div>
+                  ))}
+                  {reactions.length === 0 && (
+                    <p className="text-muted-foreground text-center py-8">
+                      No reactions yet
+                    </p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="replies" className="mt-4 space-y-3 overflow-y-auto flex-1">
+                  {replies.map((reply) => (
+                    <div key={reply.id} className="flex items-start gap-3">
+                      <Avatar>
+                        <AvatarImage src={reply.sender?.avatar_url || ""} />
+                        <AvatarFallback>
+                          {reply.sender?.display_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{reply.sender?.display_name}</p>
+                          <p className="text-xs text-muted-foreground shrink-0">
+                            {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <p className="text-sm break-words">{reply.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {replies.length === 0 && (
+                    <p className="text-muted-foreground text-center py-8">
+                      No replies yet
+                    </p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </SheetContent>
+          </Sheet>
+        )}
 
         {/* Loading indicator */}
         {!mediaLoaded && !mediaError && currentStory.story_type !== 'text' && currentStory.media_type !== 'text' && (
