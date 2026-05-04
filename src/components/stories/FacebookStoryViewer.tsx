@@ -4,7 +4,8 @@ import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, Me
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StoryGroup, StoryView, StoryReaction } from "@/hooks/useStories";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { StoryGroup, StoryView, StoryReaction, StoryReply } from "@/hooks/useStories";
 import { useStories } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
