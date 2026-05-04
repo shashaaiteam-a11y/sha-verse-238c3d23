@@ -290,7 +290,7 @@ const Home = () => {
 
       {/* Main Content */}
 
-      <PullToRefresh onRefresh={handleRefresh} className="h-[calc(100vh-56px)]">
+      <PullToRefresh onRefresh={handleRefresh}>
 
         <div className="max-w-2xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
 
