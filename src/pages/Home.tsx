@@ -3,7 +3,7 @@ import { useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { Button } from "@/components/ui/button";
 
 /** Tiny wrapper: notifies the smart engine when an ad mounts (for session cap). */
-const SmartAdSlot = ({
+const SmartAdSlot = memo(({
   onMount,
   children,
 }: {
@@ -15,7 +15,8 @@ const SmartAdSlot = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return <>{children}</>;
-};
+});
+SmartAdSlot.displayName = 'SmartAdSlot';
 
 import { Card } from "@/components/ui/card";
 
