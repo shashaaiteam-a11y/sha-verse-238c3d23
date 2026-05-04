@@ -283,22 +283,24 @@ const FacebookStoryViewer = ({
     }
   };
 
-  // Refresh viewers + reactions on demand (called when opening viewers sheet)
+  // Refresh viewers + reactions + replies on demand (called when opening viewers sheet)
   const refreshViewersAndReactions = useCallback(async () => {
     if (!isOwnStory || !currentStory) return;
 
     try {
-      const [latestViewers, latestReactions] = await Promise.all([
+      const [latestViewers, latestReactions, latestReplies] = await Promise.all([
         getStoryViewers(currentStory.id),
         getStoryReactions(currentStory.id),
+        getStoryReplies(currentStory.id),
       ]);
       setViewers(latestViewers);
       setLiveViewCount(latestViewers.length);
       setReactions(latestReactions);
+      setReplies(latestReplies);
     } catch (error) {
       console.error(error);
     }
-  }, [isOwnStory, currentStory?.id, getStoryViewers, getStoryReactions]);
+  }, [isOwnStory, currentStory?.id, getStoryViewers, getStoryReactions, getStoryReplies]);
 
   // Auto-refresh viewers list every 5s while own story is open (realtime fallback)
   useEffect(() => {
@@ -309,22 +311,32 @@ const FacebookStoryViewer = ({
     return () => clearInterval(interval);
   }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
 
-  // Open viewers without touching story playback state.
+  // Open viewers — auto-pause story while sheet is open (Facebook/Instagram behavior).
   const handleOpenViewers = useCallback((event?: SyntheticEvent<HTMLElement>) => {
-    const wasPaused = isPausedRef.current;
     event?.preventDefault();
     event?.stopPropagation();
+    wasPausedBeforeViewersRef.current = isPausedRef.current;
+    setIsPaused(true);
+    if (videoRef.current && currentStory?.media_type === 'video') {
+      videoRef.current.pause();
+    }
     setShowViewers(true);
-    requestAnimationFrame(() => {
-      if (!wasPaused) {
+    void refreshViewersAndReactions();
+  }, [currentStory?.media_type, refreshViewersAndReactions]);
+
+  // Resume story when viewers sheet closes (unless user had paused manually before opening it).
+  const handleViewersOpenChange = useCallback((open: boolean) => {
+    setShowViewers(open);
+    if (!open) {
+      const shouldResume = !wasPausedBeforeViewersRef.current;
+      if (shouldResume) {
         setIsPaused(false);
         if (videoRef.current && currentStory?.media_type === 'video') {
           videoRef.current.play().catch(console.error);
         }
       }
-    });
-    void refreshViewersAndReactions();
-  }, [currentStory?.media_type, refreshViewersAndReactions]);
+    }
+  }, [currentStory?.media_type]);
 
   // True realtime updates while the story is open; polling above remains a fallback.
   useEffect(() => {
