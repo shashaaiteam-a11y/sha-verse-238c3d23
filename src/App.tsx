@@ -20,24 +20,32 @@ import { SiteFooter } from "./components/web/SiteFooter";
 import { CookieConsent } from "./components/web/CookieConsent";
 
 // Lazy load pages for better performance
-const Home = lazy(() => import("./modules/home/pages/Home"));
-const Movion = lazy(() => import("./modules/movion/pages/Movion"));
+// Top-level main modules — keep import factory references so we can prefetch them
+const homeImport = () => import("./modules/home/pages/Home");
+const movionImport = () => import("./modules/movion/pages/Movion");
+const novachatImport = () => import("./modules/novachat/pages/NovaChat");
+const bookshelfImport = () => import("./modules/bookshelf/pages/Bookshelf");
+const groupsImport = () => import("./modules/groups/pages/Groups");
+const profileImport = () => import("./modules/profile/pages/Profile");
+
+const Home = lazy(homeImport);
+const Movion = lazy(movionImport);
 const VideoWatch = lazy(() => import("./modules/movion/pages/VideoWatch"));
 const ChannelPage = lazy(() => import("./modules/movion/pages/ChannelPage"));
 const CreatorStudio = lazy(() => import("./modules/movion/pages/CreatorStudio"));
 const MovionLibrary = lazy(() => import("./modules/movion/pages/MovionLibrary"));
-const NovaChat = lazy(() => import("./modules/novachat/pages/NovaChat"));
+const NovaChat = lazy(novachatImport);
 const NovaChatShare = lazy(() => import("./pages/NovaChatShare"));
-const Bookshelf = lazy(() => import("./modules/bookshelf/pages/Bookshelf"));
+const Bookshelf = lazy(bookshelfImport);
 const BookDetail = lazy(() => import("./modules/bookshelf/pages/BookDetail"));
 const EditBook = lazy(() => import("./modules/bookshelf/pages/EditBook"));
 const BookReader = lazy(() => import("./modules/bookshelf/pages/BookReader"));
 const AuthorChannel = lazy(() => import("./modules/bookshelf/pages/AuthorChannel"));
 const EditAuthorChannel = lazy(() => import("./modules/bookshelf/pages/EditAuthorChannel"));
-const Groups = lazy(() => import("./modules/groups/pages/Groups"));
+const Groups = lazy(groupsImport);
 const GroupDetail = lazy(() => import("./modules/groups/pages/GroupDetail"));
 const GroupAdmin = lazy(() => import("./modules/groups/pages/GroupAdmin"));
-const Profile = lazy(() => import("./modules/profile/pages/Profile"));
+const Profile = lazy(profileImport);
 const Friends = lazy(() => import("./modules/profile/pages/Friends"));
 const Auth = lazy(() => import("./pages/Auth"));
 const SavedPosts = lazy(() => import("./modules/home/pages/SavedPosts"));
