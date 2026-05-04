@@ -357,56 +357,16 @@ const Home = () => {
               <>
 
                 {feedItems.map((item, idx) => (
-
-                  <div key={`${item.type}-${item.id}`}>
-
-                    <FeedCard
-
-                      item={item}
-
-                      onShare={() => {
-
-                        if (item.type === 'post' || item.type === 'group_post') {
-
-                          sharePost.mutate({ postId: item.id });
-
-                        }
-
-                      }}
-
-                    />
-
-                    {/* 🤖 Smart Ad: native card injected by AI engine (skip first 3, dynamic freq) */}
-
-                    {shouldShowAd(idx) && (
-
-                      <SmartAdSlot onMount={registerAdShown}>
-
-                        <div className="mt-3 sm:mt-4">
-
-                          <NativeAdCard placement="home_feed" />
-
-                        </div>
-
-                      </SmartAdSlot>
-
-                    )}
-
-                    {/* 📢 Inline banner — sparingly every ~9 posts after first impression */}
-
-                    {idx >= 5 && (idx + 1) % 9 === 0 && (
-
-                      <div className="mt-3 sm:mt-4 flex justify-center">
-
-                        <BannerAd placement="home_banner" />
-
-                      </div>
-
-                    )}
-
-                  </div>
-
+                  <FeedRow
+                    key={`${item.type}-${item.id}`}
+                    item={item}
+                    showAd={shouldShowAd(idx)}
+                    showBanner={idx >= 5 && (idx + 1) % 9 === 0}
+                    registerAdShown={registerAdShown}
+                    onShare={handleShare}
+                  />
                 ))}
+
 
                 
 
