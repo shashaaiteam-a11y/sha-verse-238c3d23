@@ -22,7 +22,12 @@ export const usePullToRefresh = ({
   const { hapticFeedback } = useMobile();
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (containerRef.current?.scrollTop === 0) {
+    // Trigger pull only when at top — supports both inner-container scroll and window scroll
+    const container = containerRef.current;
+    const atTop = container
+      ? (container.scrollTop === 0 && (window.scrollY || document.documentElement.scrollTop) === 0)
+      : true;
+    if (atTop) {
       startY.current = e.touches[0].clientY;
       isPulling.current = true;
     }
