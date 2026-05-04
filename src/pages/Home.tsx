@@ -56,6 +56,34 @@ import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
 
 
+// Memoized row — re-renders only when its specific props change, NOT on every scroll
+type FeedRowProps = {
+  item: any;
+  showAd: boolean;
+  showBanner: boolean;
+  registerAdShown: () => void;
+  onShare: (item: any) => void;
+};
+const FeedRow = memo(({ item, showAd, showBanner, registerAdShown, onShare }: FeedRowProps) => {
+  return (
+    <div>
+      <FeedCard item={item} onShare={() => onShare(item)} />
+      {showAd && (
+        <SmartAdSlot onMount={registerAdShown}>
+          <div className="mt-3 sm:mt-4">
+            <NativeAdCard placement="home_feed" />
+          </div>
+        </SmartAdSlot>
+      )}
+      {showBanner && (
+        <div className="mt-3 sm:mt-4 flex justify-center">
+          <BannerAd placement="home_banner" />
+        </div>
+      )}
+    </div>
+  );
+});
+FeedRow.displayName = 'FeedRow';
 
 const Home = () => {
 
@@ -77,6 +105,13 @@ const Home = () => {
 
   // 🤖 AI Smart Ad Engine — realtime scroll-speed + dynamic frequency
   const { shouldShowAd, registerAdShown } = useSmartFeedAds();
+
+  // Stable share handler — prevents FeedRow re-renders
+  const handleShare = useCallback((item: any) => {
+    if (item.type === 'post' || item.type === 'group_post') {
+      sharePost.mutate({ postId: item.id });
+    }
+  }, [sharePost]);
 
 
   const handleRefresh = async () => {
