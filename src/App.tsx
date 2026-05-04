@@ -8,7 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { BottomNav } from "./components/BottomNav";
 import { MobileProvider } from "./contexts/MobileContext";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import { SwipeWrapper } from "./components/SwipeWrapper";
@@ -103,6 +103,27 @@ const withSuspense = (Component: React.ComponentType) => (
     <Component />
   </Suspense>
 );
+
+// 🚀 Prefetch main module chunks during idle time so module-switching feels instant
+const ModulePrefetcher = () => {
+  useEffect(() => {
+    const ric: any = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 1500));
+    const handle = ric(() => {
+      // Fire-and-forget — vite/browser caches these chunks
+      homeImport().catch(() => {});
+      movionImport().catch(() => {});
+      novachatImport().catch(() => {});
+      bookshelfImport().catch(() => {});
+      groupsImport().catch(() => {});
+      profileImport().catch(() => {});
+    }, { timeout: 4000 });
+    return () => {
+      const cic: any = (window as any).cancelIdleCallback;
+      if (cic && typeof handle === 'number') cic(handle);
+    };
+  }, []);
+  return null;
+};
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
