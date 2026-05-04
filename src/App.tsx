@@ -136,6 +136,7 @@ const App = () => (
             <MobileProvider>
               <AdProvider>
               <ChatPresenceBridge />
+              <ModulePrefetcher />
               <GlobalCallHost>
               <div className="min-h-screen bg-background safe-left safe-right">
                 <SwipeWrapper>
