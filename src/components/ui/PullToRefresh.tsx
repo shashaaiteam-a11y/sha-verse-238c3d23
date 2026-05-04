@@ -17,8 +17,7 @@ export const PullToRefresh = ({ onRefresh, children, className = "" }: PullToRef
   return (
     <div 
       ref={containerRef} 
-      className={`scroll-container relative ${className}`}
-      style={{ overflowY: 'auto', height: '100%' }}
+      className={`relative ${className}`}
     >
       {/* Pull indicator */}
       <div 
