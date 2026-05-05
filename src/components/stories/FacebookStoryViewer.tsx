@@ -338,20 +338,29 @@ const FacebookStoryViewer = ({
     }
   }, [currentStory?.media_type]);
 
+  // Keep latest refresh fn in a ref so the realtime channel doesn't re-subscribe
+  // every render (which would drop events). Functions returned from useStories()
+  // get fresh refs each render, so we cannot use them as effect deps.
+  const refreshRef = useRef(refreshViewersAndReactions);
+  useEffect(() => {
+    refreshRef.current = refreshViewersAndReactions;
+  }, [refreshViewersAndReactions]);
+
   // True realtime updates while the story is open; polling above remains a fallback.
   useEffect(() => {
-    if (!currentStory) return;
+    if (!currentStory?.id) return;
+    const storyId = currentStory.id;
 
     const channel = supabase
-      .channel(`story-viewers-${currentStory.id}-${Date.now()}`)
+      .channel(`story-insights-${storyId}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'story_views',
-        filter: `story_id=eq.${currentStory.id}`,
+        filter: `story_id=eq.${storyId}`,
       }, (payload) => {
         if (isOwnStory) {
-          void refreshViewersAndReactions();
+          void refreshRef.current?.();
         } else if (payload.eventType === 'INSERT') {
           setLiveViewCount((count) => count + 1);
         }
@@ -360,24 +369,24 @@ const FacebookStoryViewer = ({
         event: '*',
         schema: 'public',
         table: 'story_reactions',
-        filter: `story_id=eq.${currentStory.id}`,
+        filter: `story_id=eq.${storyId}`,
       }, () => {
-        if (isOwnStory) void refreshViewersAndReactions();
+        if (isOwnStory) void refreshRef.current?.();
       })
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'story_replies',
-        filter: `story_id=eq.${currentStory.id}`,
+        filter: `story_id=eq.${storyId}`,
       }, () => {
-        if (isOwnStory) void refreshViewersAndReactions();
+        if (isOwnStory) void refreshRef.current?.();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOwnStory, currentStory?.id, refreshViewersAndReactions]);
+  }, [isOwnStory, currentStory?.id]);
 
   if (!currentStory) {
     return null;
