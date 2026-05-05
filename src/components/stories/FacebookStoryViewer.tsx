@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type SyntheticEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type Dispatch, type SetStateAction, type SyntheticEvent } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -358,7 +358,7 @@ const FacebookStoryViewer = ({
 
     const applyCountDelta = (
       eventType: "INSERT" | "UPDATE" | "DELETE",
-      setter: React.Dispatch<React.SetStateAction<number>>
+      setter: Dispatch<SetStateAction<number>>
     ) => {
       if (eventType === 'INSERT') setter((count) => count + 1);
       if (eventType === 'DELETE') setter((count) => Math.max(0, count - 1));
