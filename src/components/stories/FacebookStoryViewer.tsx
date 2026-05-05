@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type SyntheticEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type Dispatch, type SetStateAction, type SyntheticEvent } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight, Pause, Play, Trash2, Eye, Heart, Send, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,6 +45,7 @@ const FacebookStoryViewer = ({
   const [showReactions, setShowReactions] = useState(false);
   const [viewers, setViewers] = useState<StoryView[]>([]);
   const [reactions, setReactions] = useState<StoryReaction[]>([]);
+  const [liveReactionCount, setLiveReactionCount] = useState(0);
   const [replies, setReplies] = useState<StoryReply[]>([]);
   const [showViewers, setShowViewers] = useState(false);
   const [liveViewCount, setLiveViewCount] = useState(0);
@@ -95,7 +96,10 @@ const FacebookStoryViewer = ({
         setViewers(latestViewers);
         setLiveViewCount(latestViewers.length);
       }).catch(console.error);
-      getStoryReactions(currentStory.id).then(setReactions).catch(console.error);
+      getStoryReactions(currentStory.id).then((latestReactions) => {
+        setReactions(latestReactions);
+        setLiveReactionCount(latestReactions.length);
+      }).catch(console.error);
     }
   }, [currentStory?.id, isOwnStory]);
 
@@ -296,6 +300,7 @@ const FacebookStoryViewer = ({
       setViewers(latestViewers);
       setLiveViewCount(latestViewers.length);
       setReactions(latestReactions);
+      setLiveReactionCount(latestReactions.length);
       setReplies(latestReplies);
     } catch (error) {
       console.error(error);
@@ -351,6 +356,14 @@ const FacebookStoryViewer = ({
     if (!currentStory?.id) return;
     const storyId = currentStory.id;
 
+    const applyCountDelta = (
+      eventType: "INSERT" | "UPDATE" | "DELETE",
+      setter: Dispatch<SetStateAction<number>>
+    ) => {
+      if (eventType === 'INSERT') setter((count) => count + 1);
+      if (eventType === 'DELETE') setter((count) => Math.max(0, count - 1));
+    };
+
     const channel = supabase
       .channel(`story-insights-${storyId}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', {
@@ -360,6 +373,7 @@ const FacebookStoryViewer = ({
         filter: `story_id=eq.${storyId}`,
       }, (payload) => {
         if (isOwnStory) {
+          applyCountDelta(payload.eventType, setLiveViewCount);
           void refreshRef.current?.();
         } else if (payload.eventType === 'INSERT') {
           setLiveViewCount((count) => count + 1);
@@ -370,8 +384,20 @@ const FacebookStoryViewer = ({
         schema: 'public',
         table: 'story_reactions',
         filter: `story_id=eq.${storyId}`,
-      }, () => {
-        if (isOwnStory) void refreshRef.current?.();
+      }, (payload) => {
+        if (isOwnStory) {
+          applyCountDelta(payload.eventType, setLiveReactionCount);
+          void refreshRef.current?.();
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'stories',
+        filter: `id=eq.${storyId}`,
+      }, (payload) => {
+        const nextViewCount = (payload.new as { views_count?: number } | null)?.views_count;
+        if (typeof nextViewCount === 'number') setLiveViewCount(nextViewCount);
       })
       .on('postgres_changes', {
         event: '*',
@@ -536,7 +562,7 @@ const FacebookStoryViewer = ({
                   </TabsTrigger>
                   <TabsTrigger value="reactions" className="gap-1.5">
                     <Heart className="w-4 h-4" />
-                    <span>{reactions.length}</span>
+                    <span>{liveReactionCount}</span>
                   </TabsTrigger>
                   <TabsTrigger value="replies" className="gap-1.5">
                     <MessageCircle className="w-4 h-4" />
