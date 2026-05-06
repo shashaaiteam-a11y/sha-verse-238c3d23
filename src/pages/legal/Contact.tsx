@@ -50,10 +50,7 @@ const Contact = () => {
 
   return (
     <LegalPageLayout title="Contact Us">
-      <p>
-        Questions, bug reports, business inquiries, or just want to say hi? We'd love to hear
-        from you.
-      </p>
+      <p>Questions, bug reports, business inquiries, or just want to say hi? We'd love to hear from you.</p>
 
       <div className="not-prose grid gap-3 sm:grid-cols-2 my-6">
         <a
@@ -87,7 +84,10 @@ const Contact = () => {
             <p className="font-medium">Your email client should be open now.</p>
             <p className="text-sm text-muted-foreground">
               If nothing happened, write to us directly at{" "}
-              <a className="text-primary underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+              <a className="text-primary underline" href={`mailto:${SUPPORT_EMAIL}`}>
+                {SUPPORT_EMAIL}
+              </a>
+              .
             </p>
           </div>
         </div>
@@ -120,13 +120,22 @@ const Contact = () => {
 
       <h2 className="mt-10">Follow us</h2>
       <ul>
-        <li><a href="https://twitter.com/" target="_blank" rel="noreferrer">Twitter / X</a></li>
-        <li><a href="https://instagram.com/" target="_blank" rel="noreferrer">Instagram</a></li>
-        <li><a href="https://facebook.com/" target="_blank" rel="noreferrer">Facebook</a></li>
+        <li>
+          <a href="https://twitter.com/" target="_blank" rel="noreferrer">
+            Twitter / X
+          </a>
+        </li>
+        <li>
+          <a href="https://instagram.com/" target="_blank" rel="noreferrer">
+            Instagram
+          </a>
+        </li>
+        <li>
+          <a href="https://facebook.com/" target="_blank" rel="noreferrer">
+            Facebook
+          </a>
+        </li>
       </ul>
-      <p className="text-xs text-muted-foreground">
-        (Replace these with your real social links anytime — they live in <code>src/pages/legal/Contact.tsx</code>.)
-      </p>
     </LegalPageLayout>
   );
 };
