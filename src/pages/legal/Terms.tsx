@@ -108,6 +108,21 @@ const Terms = () => (
       You agree to indemnify and hold harmless Sha-Verse and its team from any claims, damages, or expenses arising from
       your use of the Service or violation of these Terms.
     </p>
+
+    <h2>18. Entire Agreement</h2>
+    <p>
+      These Terms constitute the entire agreement between you and Sha-Verse regarding the use of the Service and
+      supersede any prior agreements.
+    </p>
+
+    <h2>19. Severability</h2>
+    <p>
+      If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions will remain in
+      full force and effect.
+    </p>
+
+    <h2>20. No Waiver</h2>
+    <p>Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.</p>
   </LegalPageLayout>
 );
 
