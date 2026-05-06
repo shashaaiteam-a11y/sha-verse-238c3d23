@@ -101,10 +101,7 @@ const Privacy = () => (
     </p>
 
     <h2>8. Children's Privacy</h2>
-    <p>
-      Sha-Verse is not intended for children under 13. We do not knowingly collect data from children. If you believe a
-      child has provided us data, contact us and we will delete it.
-    </p>
+    <p>Sha-Verse is not intended for children under 13 (or the minimum age required in your country).</p>
 
     <h2>9. International Transfers</h2>
     <p>
