@@ -8,10 +8,7 @@ const Terms = () => (
     </p>
 
     <h2>1. Eligibility</h2>
-    <p>
-      You must be at least 13 years old (16 in EU) to use Sha-Verse. By creating an account, you confirm you meet this
-      age requirement.
-    </p>
+    <p>You must meet the minimum age required by your country (generally 13+, or higher where required by law).</p>
 
     <h2>2. Your Account</h2>
     <ul>
@@ -70,8 +67,9 @@ const Terms = () => (
 
     <h2>10. Governing Law</h2>
     <p>
-      These Terms are governed by the laws of India. Disputes will be resolved in the courts of competent jurisdiction
-      in India, unless your local law requires otherwise.
+      These Terms are governed by the laws of India. However, if you access the Service from outside India, you are
+      responsible for complying with your local laws. Any disputes arising from these Terms will be subject to the
+      jurisdiction of the courts located in Rajasthan, India, unless otherwise required by applicable law.
     </p>
 
     <h2>11. Changes</h2>
