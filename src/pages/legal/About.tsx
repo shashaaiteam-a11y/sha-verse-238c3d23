@@ -51,8 +51,8 @@ const About = () => (
 
     <h2>Built with</h2>
     <p>
-      React, TypeScript, Tailwind, Capacitor for native, and Lovable Cloud (powered by Supabase) for our backend. AI
-      features are powered by Google Gemini via the Lovable AI Gateway.
+      React, TypeScript, Tailwind, Capacitor for native apps, and a cloud backend powered by Supabase. AI features are
+      integrated through secure API services.
     </p>
 
     <h2>Get in touch</h2>
