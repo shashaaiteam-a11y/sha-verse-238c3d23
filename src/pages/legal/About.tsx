@@ -16,7 +16,8 @@ const About = () => (
         <strong>Movion</strong> — long-form videos and short reels with creator monetization.
       </li>
       <li>
-        <strong>NovaChat</strong> — a smart AI assistant powered by Google Gemini.
+        <strong>NovaChat</strong> — NovaChat is Sha-Verse’s AI assistant, powered by advanced language models such as
+        Google Gemini via secure API integrations.
       </li>
       <li>
         <strong>Bookshelf</strong> — read EPUB and PDF books with an immersive zoom reader and bookmarks that sync
@@ -26,10 +27,10 @@ const About = () => (
         <strong>Groups</strong> — communities around the topics you care about.
       </li>
       <li>
-        <strong>Pages</strong> — Facebook-style brand and creator pages.
+        <strong>Pages</strong> — Sha-Verse Creators & Pages.
       </li>
       <li>
-        <strong>Chats</strong> — WhatsApp-style messaging with read receipts and presence.
+        <strong>Chats</strong> — Real-time messaging with read receipts and presence.
       </li>
       <li>
         <strong>Profile</strong> — your home base for friends, photos, and everything you've shared.
@@ -39,7 +40,7 @@ const About = () => (
     <h2>Our mission</h2>
     <p>
       To build a respectful, ad-supported social platform where creators earn fairly, users keep control of their data,
-      and AI makes everyday tasks easier — without locking anyone behind a paywall.
+      and AI makes everyday tasks easier — without locking anyone behind a paywall & subscriptions.
     </p>
 
     <h2>How we make money</h2>
