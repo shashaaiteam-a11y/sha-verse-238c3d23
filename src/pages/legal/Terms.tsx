@@ -96,6 +96,18 @@ const Terms = () => (
       When you delete your account, your profile and content may be permanently removed, except where retention is
       required for legal or security purposes.
     </p>
+
+    <h2>16. Third-Party Services</h2>
+    <p>
+      Our Service may include third-party services such as advertising networks and AI providers. We are not responsible
+      for their content, policies, or practices.
+    </p>
+
+    <h2>17. Indemnification</h2>
+    <p>
+      You agree to indemnify and hold harmless Sha-Verse and its team from any claims, damages, or expenses arising from
+      your use of the Service or violation of these Terms.
+    </p>
   </LegalPageLayout>
 );
 
