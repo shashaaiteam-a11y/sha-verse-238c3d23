@@ -14,8 +14,8 @@ const Privacy = () => (
         <strong>Account data:</strong> name, email, phone, profile picture, date of birth.
       </li>
       <li>
-        <strong>Authentication data:</strong> when you sign in with Google or phone OTP, we receive basic profile
-        information from the provider.
+        <strong>Authentication data:</strong> we receive basic profile information (such as name, email, and profile
+        picture) from the provider.
       </li>
       <li>
         <strong>User content:</strong> posts, comments, reactions, stories, messages, books, videos and other content
@@ -104,10 +104,7 @@ const Privacy = () => (
     <p>Sha-Verse is not intended for children under 13 (or the minimum age required in your country).</p>
 
     <h2>9. International Transfers</h2>
-    <p>
-      Data may be processed in countries other than your own. We rely on standard contractual clauses and provider
-      safeguards for these transfers.
-    </p>
+    <p>We ensure appropriate technical and legal safeguards are in place to protect your data during such transfers.</p>
 
     <h2>10. Changes to This Policy</h2>
     <p>
@@ -131,6 +128,12 @@ const Privacy = () => (
     <h2>13. Consent</h2>
     <p>
       By using Sha-Verse, you consent to the collection and use of your information as described in this Privacy Policy.
+    </p>
+
+    <h2>14. Cookies & Consent</h2>
+    <p>
+      We use cookies and similar technologies to enhance your experience. Where required, we will request your consent
+      before using non-essential cookies. You can control your preferences through your browser settings.
     </p>
   </LegalPageLayout>
 );
