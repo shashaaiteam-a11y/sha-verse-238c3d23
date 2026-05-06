@@ -64,9 +64,9 @@ const Privacy = () => (
 
     <h2>4. AI Features (NovaChat)</h2>
     <p>
-      NovaChat uses AI models (currently Google Gemini via Lovable AI Gateway) to generate responses. Your prompts are
-      sent to the AI provider for processing. Do not share sensitive personal data, passwords, or financial details in
-      NovaChat conversations.
+      NovaChat uses advanced AI technology by Sha-Verse to generate responses. Your inputs may be processed to improve
+      results. Do not share sensitive personal information, passwords, or financial details while using NovaChat. AI
+      responses may not always be accurate.
     </p>
 
     <h2>5. Data Storage & Security</h2>
@@ -120,6 +120,17 @@ const Privacy = () => (
       Email: <a href="mailto:privacy@sha-verse.com">privacy@sha-verse.com</a>
       <br />
       Website: <a href="/contact">/contact</a>
+    </p>
+
+    <h2>12. Data Retention</h2>
+    <p>
+      We retain your data only as long as necessary to provide our services and comply with legal obligations. You may
+      request deletion of your data at any time.
+    </p>
+
+    <h2>13. Consent</h2>
+    <p>
+      By using Sha-Verse, you consent to the collection and use of your information as described in this Privacy Policy.
     </p>
   </LegalPageLayout>
 );
