@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useQuery } from "@tanstack/react-query";
 
-import { Book, Plus, Search, TrendingUp, Clock, Users, Grid, List, BookOpen, Heart } from "lucide-react";
+import { Book, Plus, Search, TrendingUp, Clock, Users, Grid, List, BookOpen, Heart, ChevronDown, ChevronUp, X } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 
@@ -63,6 +63,7 @@ const Bookshelf = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [copyrightOpen, setCopyrightOpen] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState("All");
 
@@ -410,17 +411,31 @@ const Bookshelf = () => {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
 
-        {/* Copyright Warning */}
+        {/* Copyright Warning - Collapsible */}
         <div
           role="alert"
-          className="mb-4 rounded-lg border-2 border-destructive/40 bg-destructive/10 dark:bg-destructive/15 p-3 sm:p-4 shadow-sm"
+          className="mb-4 rounded-lg border-2 border-destructive/40 bg-destructive/10 dark:bg-destructive/15 shadow-sm overflow-hidden"
         >
-          <div className="flex items-start gap-2 sm:gap-3">
-            <span aria-hidden className="text-lg sm:text-xl leading-none mt-0.5">⚠️</span>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-destructive text-sm sm:text-base mb-1">
-                Copyright Warning
-              </h3>
+          <button
+            type="button"
+            onClick={() => setCopyrightOpen((v) => !v)}
+            aria-expanded={copyrightOpen}
+            aria-controls="copyright-warning-body"
+            className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 text-left hover:bg-destructive/5 transition-colors"
+          >
+            <span aria-hidden className="text-lg sm:text-xl leading-none">⚠️</span>
+            <h3 className="flex-1 font-bold text-destructive text-sm sm:text-base">
+              Copyright Warning
+            </h3>
+            <span
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-destructive/20 text-destructive shrink-0"
+              aria-hidden
+            >
+              {copyrightOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </span>
+          </button>
+          {copyrightOpen && (
+            <div id="copyright-warning-body" className="px-3 sm:px-4 pb-3 sm:pb-4 pt-0">
               <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
                 Uploading or sharing copyrighted books without proper authorization is strictly prohibited on{" "}
                 <strong>SHA-VERSE</strong>. Any violation may result in immediate permanent suspension of the account
@@ -428,7 +443,7 @@ const Bookshelf = () => {
                 respective country.
               </p>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Category Tabs */}
