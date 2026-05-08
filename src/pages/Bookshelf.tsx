@@ -410,6 +410,27 @@ const Bookshelf = () => {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
 
+        {/* Copyright Warning */}
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border-2 border-destructive/40 bg-destructive/10 dark:bg-destructive/15 p-3 sm:p-4 shadow-sm"
+        >
+          <div className="flex items-start gap-2 sm:gap-3">
+            <span aria-hidden className="text-lg sm:text-xl leading-none mt-0.5">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-destructive text-sm sm:text-base mb-1">
+                Copyright Warning
+              </h3>
+              <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
+                Uploading or sharing copyrighted books without proper authorization is strictly prohibited on{" "}
+                <strong>SHA-VERSE</strong>. Any violation may result in immediate permanent suspension of the account
+                and legal action in accordance with the copyright laws and regulations applicable in the user's
+                respective country.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Category Tabs */}
 
         <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide mb-4">
