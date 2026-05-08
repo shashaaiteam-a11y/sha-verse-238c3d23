@@ -63,6 +63,7 @@ const Bookshelf = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [copyrightOpen, setCopyrightOpen] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState("All");
 
