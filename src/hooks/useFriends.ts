@@ -11,33 +11,59 @@ export const useFriends = (page: number = 0) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Get all friends (accepted) with pagination
+  // Get all friends (accepted) with pagination — fetch BOTH directions
+  // (rows where current user is sender OR receiver) so accepted friendships
+  // are visible to both users in realtime without needing a reciprocal row.
   const { data: friendsResult, isLoading: friendsLoading } = useQuery({
     queryKey: ['friends', user?.id, page],
     queryFn: async () => {
       if (!user) return { friends: [], hasMore: false };
-      
+
+      const from = page * FRIENDS_PER_PAGE;
+      const to = (page + 1) * FRIENDS_PER_PAGE - 1;
+
       const { data, error } = await supabase
         .from('friendships')
         .select(`
           id,
+          user_id,
           friend_id,
           status,
-          profiles:friend_id (
+          created_at,
+          sender:user_id (
+            id,
+            username,
+            display_name,
+            avatar_url
+          ),
+          receiver:friend_id (
             id,
             username,
             display_name,
             avatar_url
           )
-        `, { count: 'exact' })
-        .eq('user_id', user.id)
+        `)
         .eq('status', 'accepted')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
-        .range(page * FRIENDS_PER_PAGE, (page + 1) * FRIENDS_PER_PAGE - 1);
-      
+        .range(from, to);
+
       if (error) throw error;
-      const hasMore = data ? data.length === FRIENDS_PER_PAGE : false;
-      return { friends: data || [], hasMore };
+
+      // Normalize: always expose the "other" user as `profiles`
+      const normalized = (data || []).map((row: any) => {
+        const isSender = row.user_id === user.id;
+        const other = isSender ? row.receiver : row.sender;
+        return {
+          id: row.id,
+          friend_id: isSender ? row.friend_id : row.user_id,
+          status: row.status,
+          profiles: other,
+        };
+      });
+
+      const hasMore = normalized.length === FRIENDS_PER_PAGE;
+      return { friends: normalized, hasMore };
     },
     enabled: !!user,
   });
