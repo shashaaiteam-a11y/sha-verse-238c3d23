@@ -237,10 +237,10 @@ All colors MUST be HSL.
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
   }
 
-  /* Sticky header with safe area */
+  /* Sticky header with safe area (Facebook/WhatsApp/YouTube pattern) */
   .sticky-header {
     @apply sticky top-0 z-40 bg-card/95 backdrop-blur-lg border-b border-border;
-    padding-top: var(--safe-area-top);
+    padding-top: max(env(safe-area-inset-top, 0px), var(--safe-area-top));
   }
 
   /* Bottom navigation with safe area */
