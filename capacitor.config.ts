@@ -8,6 +8,13 @@ const config: CapacitorConfig = {
     AdMob: {
       initializeForTesting: true,
     },
+    StatusBar: {
+      // App content extends behind the status bar so env(safe-area-inset-top)
+      // returns a real value on Android (matches Facebook / WhatsApp / YouTube behavior).
+      overlaysWebView: true,
+      style: 'DEFAULT',
+      backgroundColor: '#00000000',
+    },
   },
 };
 
