@@ -243,6 +243,14 @@ All colors MUST be HSL.
     padding-top: max(env(safe-area-inset-top, 0px), var(--safe-area-top));
   }
 
+  /* Universal safety net: any top-level <header> that is sticky to the top
+     automatically respects the device status bar / notch. On the web this
+     resolves to 0px so layouts are unchanged; on native (Capacitor + StatusBar
+     overlaysWebView) it pushes the header below the system clock/battery. */
+  header.sticky.top-0 {
+    padding-top: max(env(safe-area-inset-top, 0px), var(--safe-area-top, 0px));
+  }
+
   /* Bottom navigation with safe area */
   .bottom-nav {
     @apply fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border;
