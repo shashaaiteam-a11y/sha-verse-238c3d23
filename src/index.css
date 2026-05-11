@@ -111,6 +111,9 @@ All colors MUST be HSL.
     touch-action: manipulation;
     /* native instant scroll — Facebook-style. smooth caused jank when reversing scroll direction */
     scroll-behavior: auto;
+    /* prevent white flash on overscroll bounce (Chrome/Safari/WebView) */
+    overscroll-behavior-y: none;
+    background-color: hsl(var(--background));
   }
 
   body {
@@ -123,16 +126,19 @@ All colors MUST be HSL.
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Global safe-area insets so app content never touches notch / status bar / home indicator / curved edges.
-     Applied on #root so fixed bars (top header, bottom nav) inherit correct offsets via env() too. */
+  /* Edge-to-edge root (Facebook/WhatsApp pattern). Sticky header & bottom nav
+     handle their own safe-area insets. html/body/#root share theme background
+     so overscroll bounce never shows a white flash on native. */
+  html, body, #root {
+    background-color: hsl(var(--background));
+  }
   #root {
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
     min-height: 100vh;
     min-height: 100dvh;
     box-sizing: border-box;
+    /* Horizontal insets only — top/bottom handled by individual bars */
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 
   /* Safe area padding for iOS notch and home indicator */
