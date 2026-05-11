@@ -111,6 +111,9 @@ All colors MUST be HSL.
     touch-action: manipulation;
     /* native instant scroll — Facebook-style. smooth caused jank when reversing scroll direction */
     scroll-behavior: auto;
+    /* prevent white flash on overscroll bounce (Chrome/Safari/WebView) */
+    overscroll-behavior-y: none;
+    background-color: hsl(var(--background));
   }
 
   body {
