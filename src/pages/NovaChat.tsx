@@ -239,7 +239,10 @@ const NovaChat = () => {
 
         {/* Header */}
 
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header
+          className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+          style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}
+        >
 
           <Button
 

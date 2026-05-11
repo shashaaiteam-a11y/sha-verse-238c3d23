@@ -185,7 +185,10 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
   };
 
   return (
-    <div className="flex-shrink-0 bg-card border-t border-border">
+    <div
+      className="flex-shrink-0 bg-card border-t border-border"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       {/* File Preview */}
       {selectedFile && (
         <div className="p-2 border-b border-border">
