@@ -113,7 +113,7 @@ const ChatSidebar = ({
   return (
     <div className="h-full flex flex-col bg-card">
       {/* Header */}
-      <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 border-b border-border flex-shrink-0">
+      <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 border-b border-border flex-shrink-0" style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))' }}>
         <Button 
           onClick={onNewChat}
           className="w-full justify-start gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground h-9 sm:h-11 text-sm"
