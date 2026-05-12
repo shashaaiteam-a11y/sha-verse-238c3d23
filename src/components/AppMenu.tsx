@@ -82,7 +82,11 @@ const AppMenu = () => {
           <Menu className="w-5 h-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0 overflow-y-auto">
+      <SheetContent
+        side="right"
+        className="w-[300px] sm:w-[350px] p-0 overflow-y-auto [&>button.absolute]:top-[calc(1rem+env(safe-area-inset-top,0px))]"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <SheetHeader className="p-4 pb-2">
           <SheetTitle className="text-left">Menu</SheetTitle>
         </SheetHeader>
