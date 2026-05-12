@@ -320,7 +320,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         selectedConversation && "hidden sm:flex"
       )}>
         {/* Header */}
-        <div className="p-4 border-b border-border">
+        <div className="p-4 border-b border-border" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))' }}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={onClose}>
