@@ -252,7 +252,7 @@ const ChatSidebar = ({
       </ScrollArea>
 
       {/* Footer: Usage + Upgrade + User */}
-      <div className="p-2 sm:p-3 border-t border-border flex-shrink-0 space-y-2">
+      <div className="p-2 sm:p-3 border-t border-border flex-shrink-0 space-y-2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}>
         {/* Usage indicator (free users only) */}
         {usage && !usage.is_pro && (
           <div className="px-2 py-1.5 rounded-lg bg-secondary/40 border border-border/40">
