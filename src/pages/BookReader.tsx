@@ -340,6 +340,7 @@ const BookReader = () => {
           showControls ? "translate-y-0" : "-translate-y-full"
         )}
         onClick={(e) => e.stopPropagation()}
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
@@ -760,6 +761,7 @@ const BookReader = () => {
           showControls ? "translate-y-0" : "translate-y-full"
         )}
         onClick={(e) => e.stopPropagation()}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         {/* Sponsored sticky banner above pagination — height-constrained
             so footer stays a predictable ~96px mobile / ~80px desktop. */}
