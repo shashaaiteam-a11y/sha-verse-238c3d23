@@ -340,6 +340,7 @@ const BookReader = () => {
           showControls ? "translate-y-0" : "-translate-y-full"
         )}
         onClick={(e) => e.stopPropagation()}
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
