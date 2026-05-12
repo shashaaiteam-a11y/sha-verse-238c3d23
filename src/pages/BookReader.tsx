@@ -761,6 +761,7 @@ const BookReader = () => {
           showControls ? "translate-y-0" : "translate-y-full"
         )}
         onClick={(e) => e.stopPropagation()}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         {/* Sponsored sticky banner above pagination — height-constrained
             so footer stays a predictable ~96px mobile / ~80px desktop. */}
