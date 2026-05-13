@@ -235,6 +235,54 @@ export const ChatTypingBar = ({
       className="flex-shrink-0 bg-card border-t border-border"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
+      {/* Reply preview (WhatsApp parity) */}
+      {replyTo && !editing && (
+        <div className="px-3 pt-2">
+          <div className="flex items-stretch gap-2 bg-secondary rounded-lg p-2 border-l-4 border-primary">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-primary truncate">
+                Replying to {replyTo.isOwn ? 'yourself' : replyTo.senderName}
+              </p>
+              <p className="text-sm text-muted-foreground truncate">
+                {replyTo.content || 'Media'}
+              </p>
+            </div>
+            <Button
+              variant="ghost" size="icon"
+              className="rounded-full h-7 w-7 self-center flex-shrink-0"
+              onClick={onCancelReply}
+              aria-label="Cancel reply"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit mode preview */}
+      {editing && (
+        <div className="px-3 pt-2">
+          <div className="flex items-stretch gap-2 bg-secondary rounded-lg p-2 border-l-4 border-amber-500">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 truncate">
+                Editing message
+              </p>
+              <p className="text-sm text-muted-foreground truncate">
+                {editing.content || ''}
+              </p>
+            </div>
+            <Button
+              variant="ghost" size="icon"
+              className="rounded-full h-7 w-7 self-center flex-shrink-0"
+              onClick={() => { setMessage(''); onCancelEdit?.(); }}
+              aria-label="Cancel edit"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* File Preview */}
       {selectedFile && (
         <div className="p-2 border-b border-border">
