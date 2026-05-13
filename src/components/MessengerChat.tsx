@@ -690,14 +690,41 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   {filteredMessages.map((message: any, idx: number) => {
                     if (!message || message.deleted_for_all) return null;
                     const isOwn = message.sender_id === user?.id;
-                    const showDateLabel = !isSearching && (idx === 0 || 
-                      getMessageDateLabel(new Date(filteredMessages[idx - 1]?.created_at)) !== 
+                    const showDateLabel = !isSearching && (idx === 0 ||
+                      getMessageDateLabel(new Date(filteredMessages[idx - 1]?.created_at)) !==
                       getMessageDateLabel(new Date(message.created_at)));
-                    const metadata = message.metadata as { mediaUrl?: string; mediaType?: string } | null;
+                    const metadata = message.metadata as {
+                      mediaUrl?: string;
+                      mediaType?: string;
+                      forwarded?: boolean;
+                      replyTo?: { id: string; senderName: string; content: string | null };
+                    } | null;
                     const tickStatus = getMessageTicks(message);
+                    const isSelected = selectedIds.has(message.id);
+                    const inSelectionMode = selectedIds.size > 0;
+                    // WhatsApp parity: deleted-for-everyone leaves an empty content row
+                    const isDeleted = !message.content && !metadata?.mediaUrl;
+
+                    const handleBubbleClick = () => {
+                      if (inSelectionMode) toggleSelect(message.id);
+                    };
 
                     return (
-                      <div key={message.id || idx}>
+                      <div
+                        key={message.id || idx}
+                        onClick={handleBubbleClick}
+                        onTouchStart={() => startLongPress(message.id)}
+                        onTouchEnd={cancelLongPress}
+                        onTouchMove={cancelLongPress}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          toggleSelect(message.id);
+                        }}
+                        className={cn(
+                          "transition-colors rounded-md",
+                          isSelected && "bg-primary/10"
+                        )}
+                      >
                         {showDateLabel && (
                           <div className="flex justify-center my-4">
                             <span className="px-3 py-1 bg-card rounded-full text-xs text-muted-foreground shadow-sm">
@@ -706,11 +733,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           </div>
                         )}
                         <div className={cn(
-                          "flex group/msg items-center gap-1",
+                          "flex group/msg items-center gap-1 px-1 py-0.5",
                           isOwn ? "justify-end" : "justify-start"
                         )}>
                           {/* Info button on the LEFT of own bubbles (hover/touch) */}
-                          {isOwn && (
+                          {isOwn && !inSelectionMode && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -726,32 +753,57 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
                           <div className={cn(
                             "max-w-[75%] px-3 py-2 rounded-lg shadow-sm",
-                            isOwn 
-                              ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-100 rounded-tr-none" 
-                              : "bg-card text-card-foreground rounded-tl-none"
+                            isOwn
+                              ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-100 rounded-tr-none"
+                              : "bg-card text-card-foreground rounded-tl-none",
+                            isDeleted && "italic opacity-70"
                           )}>
-                            {metadata?.mediaUrl && (
+                            {/* Forwarded label (WhatsApp parity) */}
+                            {metadata?.forwarded && !isDeleted && (
+                              <div className="flex items-center gap-1 text-[11px] text-muted-foreground italic mb-1">
+                                <Forward className="w-3 h-3" />
+                                Forwarded
+                              </div>
+                            )}
+
+                            {/* Reply preview chip inside the bubble */}
+                            {metadata?.replyTo && !isDeleted && (
+                              <div className="mb-1 px-2 py-1 rounded bg-black/5 dark:bg-white/10 border-l-2 border-primary">
+                                <p className="text-[11px] font-semibold text-primary truncate">
+                                  {metadata.replyTo.senderName || 'Reply'}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {metadata.replyTo.content || 'Media'}
+                                </p>
+                              </div>
+                            )}
+
+                            {metadata?.mediaUrl && !isDeleted && (
                               <div className="mb-2">
                                 {metadata.mediaType === 'image' && (
-                                  <img 
-                                    src={metadata.mediaUrl} 
-                                    alt="Shared image" 
+                                  <img
+                                    src={metadata.mediaUrl}
+                                    alt="Shared image"
                                     className="rounded-lg max-w-full cursor-pointer hover:opacity-90"
-                                    onClick={() => window.open(metadata.mediaUrl, '_blank')}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!inSelectionMode) window.open(metadata.mediaUrl, '_blank');
+                                    }}
                                   />
                                 )}
                                 {metadata.mediaType === 'video' && (
-                                  <video 
-                                    src={metadata.mediaUrl} 
-                                    controls 
+                                  <video
+                                    src={metadata.mediaUrl}
+                                    controls
                                     className="rounded-lg max-w-full"
                                   />
                                 )}
                                 {metadata.mediaType === 'file' && (
-                                  <a 
-                                    href={metadata.mediaUrl} 
-                                    target="_blank" 
+                                  <a
+                                    href={metadata.mediaUrl}
+                                    target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={(e) => inSelectionMode && e.preventDefault()}
                                     className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg hover:bg-secondary text-foreground"
                                   >
                                     <FileText className="w-8 h-8 text-primary" />
@@ -760,16 +812,26 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                 )}
                               </div>
                             )}
-                            {message.content && (
+
+                            {isDeleted ? (
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Ban className="w-3.5 h-3.5" />
+                                This message was deleted
+                              </p>
+                            ) : message.content && (
                               <p className="text-sm whitespace-pre-wrap break-words">
                                 {message.content}
                               </p>
                             )}
+
                             <div className="flex items-center justify-end gap-1 mt-1">
+                              {message.edited && !isDeleted && (
+                                <span className="text-[10px] text-muted-foreground italic mr-1">edited</span>
+                              )}
                               <span className="text-[10px] text-muted-foreground">
                                 {format(new Date(message.created_at), 'h:mm a')}
                               </span>
-                              {isOwn && (
+                              {isOwn && !isDeleted && (
                                 <TickIndicator status={tickStatus} />
                               )}
                             </div>
