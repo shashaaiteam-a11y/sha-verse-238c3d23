@@ -19,14 +19,38 @@ import {
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import { Theme as EmojiTheme } from 'emoji-picker-react';
 
+interface ReplyPreview {
+  id: string;
+  senderName: string;
+  content: string | null;
+  isOwn?: boolean;
+}
+
+interface EditingPreview {
+  id: string;
+  content: string;
+}
+
 interface ChatTypingBarProps {
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: string) => void;
   isSending?: boolean;
   onTyping?: () => void;
   onStopTyping?: () => void;
+  /** WhatsApp-style "Replying to" preview chip above the input. */
+  replyTo?: ReplyPreview | null;
+  onCancelReply?: () => void;
+  /** When set, the input is in edit mode for this message id. */
+  editing?: EditingPreview | null;
+  onCancelEdit?: () => void;
+  /** Called when user submits an edit instead of a new message. */
+  onSubmitEdit?: (newContent: string) => void;
 }
 
-export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping }: ChatTypingBarProps) => {
+export const ChatTypingBar = ({
+  onSendMessage, isSending, onTyping, onStopTyping,
+  replyTo, onCancelReply,
+  editing, onCancelEdit, onSubmitEdit,
+}: ChatTypingBarProps) => {
   const { user } = useAuth();
   const { resolvedTheme } = useTheme();
   const [message, setMessage] = useState('');
