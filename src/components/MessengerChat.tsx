@@ -965,6 +965,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         open={!!infoMessage}
         onOpenChange={(o) => !o && setInfoMessage(null)}
         message={infoMessage}
+      />
 
       {/* WhatsApp-style Forward picker */}
       <ForwardDialog
