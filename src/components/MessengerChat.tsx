@@ -355,6 +355,111 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     }
   };
 
+  // ---- Selection action helpers (WhatsApp parity) -----------------------
+  const selectedMessages = (messages || []).filter((m: any) => selectedIds.has(m.id));
+  const selectionCount = selectedMessages.length;
+  const onlyOwnSelected = selectionCount > 0 && selectedMessages.every((m: any) => m.sender_id === user?.id);
+  const singleSelected = selectionCount === 1 ? selectedMessages[0] : null;
+
+  const isWithinMinutes = (iso: string, minutes: number) => {
+    const t = new Date(iso).getTime();
+    return (Date.now() - t) / 60000 <= minutes;
+  };
+
+  const canEdit = !!singleSelected
+    && singleSelected.sender_id === user?.id
+    && !!singleSelected.content
+    && isWithinMinutes(singleSelected.created_at, 15);
+
+  const canDeleteForEveryone = onlyOwnSelected
+    && selectedMessages.every((m: any) => isWithinMinutes(m.created_at, 48 * 60));
+
+  const handleActionReply = () => {
+    if (!singleSelected) return;
+    const senderName = singleSelected.profiles?.display_name
+      || singleSelected.profiles?.username
+      || (singleSelected.sender_id === user?.id ? (user?.email?.split('@')[0] || 'You') : (otherUser?.display_name || 'User'));
+    setReplyTo({
+      id: singleSelected.id,
+      senderName,
+      content: singleSelected.content,
+      isOwn: singleSelected.sender_id === user?.id,
+    });
+    setEditing(null);
+    clearSelection();
+  };
+
+  const handleActionEdit = () => {
+    if (!canEdit || !singleSelected) return;
+    setEditing({ id: singleSelected.id, content: singleSelected.content || '' });
+    setReplyTo(null);
+    clearSelection();
+  };
+
+  const handleActionCopy = async () => {
+    const text = selectedMessages
+      .map((m: any) => m.content || (m.metadata?.mediaUrl ? '[media]' : ''))
+      .filter(Boolean)
+      .join('\n');
+    if (!text) {
+      toast.error('Nothing to copy');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(selectionCount > 1 ? `${selectionCount} messages copied` : 'Message copied');
+    } catch {
+      toast.error('Copy failed');
+    }
+    clearSelection();
+  };
+
+  const handleActionStar = () => {
+    toast.success(selectionCount > 1 ? `${selectionCount} messages starred` : 'Message starred');
+    clearSelection();
+  };
+
+  const handleActionDelete = async () => {
+    if (selectionCount === 0) return;
+    const ids = selectedMessages.map((m: any) => m.id);
+    if (canDeleteForEveryone) {
+      const choice = window.prompt(
+        'Delete message:\n  1 = Delete for me\n  2 = Delete for everyone\n\nType 1 or 2 (Cancel to abort)',
+        '2'
+      );
+      if (choice === null) return;
+      if (choice.trim() === '2') {
+        for (const id of ids) await deleteForEveryone.mutateAsync(id).catch(() => {});
+        toast.success('Deleted for everyone');
+      } else if (choice.trim() === '1') {
+        for (const id of ids) await deleteForMe.mutateAsync(id).catch(() => {});
+        toast.success('Deleted for you');
+      } else {
+        return;
+      }
+    } else {
+      if (!confirm(`Delete ${selectionCount > 1 ? `${selectionCount} messages` : 'this message'} for me?`)) return;
+      for (const id of ids) await deleteForMe.mutateAsync(id).catch(() => {});
+      toast.success('Deleted for you');
+    }
+    clearSelection();
+  };
+
+  const handleActionInfo = () => {
+    if (!singleSelected) return;
+    setInfoMessage(singleSelected);
+    clearSelection();
+  };
+
+  const handleActionForward = () => {
+    if (selectionCount === 0) return;
+    setForwardingMessages(selectedMessages.map((m: any) => ({
+      id: m.id,
+      content: m.content,
+      metadata: m.metadata,
+    })));
+  };
+
   if (!isOpen) return null;
 
   return (
