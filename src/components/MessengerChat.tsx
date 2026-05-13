@@ -56,6 +56,13 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [infoMessage, setInfoMessage] = useState<any | null>(null);
 
+  // WhatsApp-style message selection / action state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [replyTo, setReplyTo] = useState<{ id: string; senderName: string; content: string | null; isOwn?: boolean } | null>(null);
+  const [editing, setEditing] = useState<{ id: string; content: string } | null>(null);
+  const [forwardingMessages, setForwardingMessages] = useState<any[] | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const conversationId = selectedConversation?.id || null;
   const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
   const otherUser = selectedConversation?.otherMembers?.[0] || null;
