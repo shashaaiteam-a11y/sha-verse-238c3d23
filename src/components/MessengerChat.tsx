@@ -3,9 +3,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
+import {
   ArrowLeft, Send, Phone, Video, MoreVertical,
-  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info
+  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info, Forward,
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
