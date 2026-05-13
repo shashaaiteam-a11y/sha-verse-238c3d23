@@ -23,6 +23,8 @@ import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
 import { TickIndicator } from './chat/TickIndicator';
 import { MessageInfoDialog } from './chat/MessageInfoDialog';
+import { MessageActionBar } from './chat/MessageActionBar';
+import { ForwardDialog } from './chat/ForwardDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
