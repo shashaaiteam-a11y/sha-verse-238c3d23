@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
+import {
   ArrowLeft, Send, Phone, Video, MoreVertical,
-  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info
+  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info, Forward,
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
@@ -23,6 +23,8 @@ import { ChatUserSearchDialog } from './ChatUserSearchDialog';
 import { ChatHeader } from './chat/ChatHeader';
 import { TickIndicator } from './chat/TickIndicator';
 import { MessageInfoDialog } from './chat/MessageInfoDialog';
+import { MessageActionBar } from './chat/MessageActionBar';
+import { ForwardDialog } from './chat/ForwardDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -53,6 +55,13 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const [isSearching, setIsSearching] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [infoMessage, setInfoMessage] = useState<any | null>(null);
+
+  // WhatsApp-style message selection / action state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [replyTo, setReplyTo] = useState<{ id: string; senderName: string; content: string | null; isOwn?: boolean } | null>(null);
+  const [editing, setEditing] = useState<{ id: string; content: string } | null>(null);
+  const [forwardingMessages, setForwardingMessages] = useState<any[] | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const conversationId = selectedConversation?.id || null;
   const otherUserId = selectedConversation?.otherMembers?.[0]?.id;
@@ -95,6 +104,42 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, user?.id]);
+
+  // Reset selection / reply / edit state when switching conversations
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setReplyTo(null);
+    setEditing(null);
+  }, [conversationId]);
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  /** Long-press to enter selection mode (WhatsApp parity). */
+  const startLongPress = (id: string) => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+    }, 450);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
 
   // Typing indicator
   const { typingText, isAnyoneTyping, handleUserTyping, stopTyping } = useTypingIndicator(
@@ -310,6 +355,111 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     }
   };
 
+  // ---- Selection action helpers (WhatsApp parity) -----------------------
+  const selectedMessages = (messages || []).filter((m: any) => selectedIds.has(m.id));
+  const selectionCount = selectedMessages.length;
+  const onlyOwnSelected = selectionCount > 0 && selectedMessages.every((m: any) => m.sender_id === user?.id);
+  const singleSelected = selectionCount === 1 ? selectedMessages[0] : null;
+
+  const isWithinMinutes = (iso: string, minutes: number) => {
+    const t = new Date(iso).getTime();
+    return (Date.now() - t) / 60000 <= minutes;
+  };
+
+  const canEdit = !!singleSelected
+    && singleSelected.sender_id === user?.id
+    && !!singleSelected.content
+    && isWithinMinutes(singleSelected.created_at, 15);
+
+  const canDeleteForEveryone = onlyOwnSelected
+    && selectedMessages.every((m: any) => isWithinMinutes(m.created_at, 48 * 60));
+
+  const handleActionReply = () => {
+    if (!singleSelected) return;
+    const senderName = singleSelected.profiles?.display_name
+      || singleSelected.profiles?.username
+      || (singleSelected.sender_id === user?.id ? (user?.email?.split('@')[0] || 'You') : (otherUser?.display_name || 'User'));
+    setReplyTo({
+      id: singleSelected.id,
+      senderName,
+      content: singleSelected.content,
+      isOwn: singleSelected.sender_id === user?.id,
+    });
+    setEditing(null);
+    clearSelection();
+  };
+
+  const handleActionEdit = () => {
+    if (!canEdit || !singleSelected) return;
+    setEditing({ id: singleSelected.id, content: singleSelected.content || '' });
+    setReplyTo(null);
+    clearSelection();
+  };
+
+  const handleActionCopy = async () => {
+    const text = selectedMessages
+      .map((m: any) => m.content || (m.metadata?.mediaUrl ? '[media]' : ''))
+      .filter(Boolean)
+      .join('\n');
+    if (!text) {
+      toast.error('Nothing to copy');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(selectionCount > 1 ? `${selectionCount} messages copied` : 'Message copied');
+    } catch {
+      toast.error('Copy failed');
+    }
+    clearSelection();
+  };
+
+  const handleActionStar = () => {
+    toast.success(selectionCount > 1 ? `${selectionCount} messages starred` : 'Message starred');
+    clearSelection();
+  };
+
+  const handleActionDelete = async () => {
+    if (selectionCount === 0) return;
+    const ids = selectedMessages.map((m: any) => m.id);
+    if (canDeleteForEveryone) {
+      const choice = window.prompt(
+        'Delete message:\n  1 = Delete for me\n  2 = Delete for everyone\n\nType 1 or 2 (Cancel to abort)',
+        '2'
+      );
+      if (choice === null) return;
+      if (choice.trim() === '2') {
+        for (const id of ids) await deleteForEveryone.mutateAsync(id).catch(() => {});
+        toast.success('Deleted for everyone');
+      } else if (choice.trim() === '1') {
+        for (const id of ids) await deleteForMe.mutateAsync(id).catch(() => {});
+        toast.success('Deleted for you');
+      } else {
+        return;
+      }
+    } else {
+      if (!confirm(`Delete ${selectionCount > 1 ? `${selectionCount} messages` : 'this message'} for me?`)) return;
+      for (const id of ids) await deleteForMe.mutateAsync(id).catch(() => {});
+      toast.success('Deleted for you');
+    }
+    clearSelection();
+  };
+
+  const handleActionInfo = () => {
+    if (!singleSelected) return;
+    setInfoMessage(singleSelected);
+    clearSelection();
+  };
+
+  const handleActionForward = () => {
+    if (selectionCount === 0) return;
+    setForwardingMessages(selectedMessages.map((m: any) => ({
+      id: m.id,
+      content: m.content,
+      metadata: m.metadata,
+    })));
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -443,7 +593,23 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         {selectedConversation ? (
           <ChatLayout
             header={
-              isSearching ? (
+              selectionCount > 0 ? (
+                <MessageActionBar
+                  count={selectionCount}
+                  canReply={selectionCount === 1}
+                  canEdit={canEdit}
+                  canDeleteForEveryone={canDeleteForEveryone}
+                  canInfo={selectionCount === 1 && !!singleSelected && singleSelected.sender_id === user?.id}
+                  onCancel={clearSelection}
+                  onReply={handleActionReply}
+                  onForward={handleActionForward}
+                  onEdit={handleActionEdit}
+                  onCopy={handleActionCopy}
+                  onStar={handleActionStar}
+                  onDelete={handleActionDelete}
+                  onInfo={handleActionInfo}
+                />
+              ) : isSearching ? (
                 <div className="flex items-center gap-2 p-3 border-b bg-background sticky top-0 z-40" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
                   <Button
                     variant="ghost"
@@ -524,14 +690,41 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   {filteredMessages.map((message: any, idx: number) => {
                     if (!message || message.deleted_for_all) return null;
                     const isOwn = message.sender_id === user?.id;
-                    const showDateLabel = !isSearching && (idx === 0 || 
-                      getMessageDateLabel(new Date(filteredMessages[idx - 1]?.created_at)) !== 
+                    const showDateLabel = !isSearching && (idx === 0 ||
+                      getMessageDateLabel(new Date(filteredMessages[idx - 1]?.created_at)) !==
                       getMessageDateLabel(new Date(message.created_at)));
-                    const metadata = message.metadata as { mediaUrl?: string; mediaType?: string } | null;
+                    const metadata = message.metadata as {
+                      mediaUrl?: string;
+                      mediaType?: string;
+                      forwarded?: boolean;
+                      replyTo?: { id: string; senderName: string; content: string | null };
+                    } | null;
                     const tickStatus = getMessageTicks(message);
+                    const isSelected = selectedIds.has(message.id);
+                    const inSelectionMode = selectedIds.size > 0;
+                    // WhatsApp parity: deleted-for-everyone leaves an empty content row
+                    const isDeleted = !message.content && !metadata?.mediaUrl;
+
+                    const handleBubbleClick = () => {
+                      if (inSelectionMode) toggleSelect(message.id);
+                    };
 
                     return (
-                      <div key={message.id || idx}>
+                      <div
+                        key={message.id || idx}
+                        onClick={handleBubbleClick}
+                        onTouchStart={() => startLongPress(message.id)}
+                        onTouchEnd={cancelLongPress}
+                        onTouchMove={cancelLongPress}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          toggleSelect(message.id);
+                        }}
+                        className={cn(
+                          "transition-colors rounded-md",
+                          isSelected && "bg-primary/10"
+                        )}
+                      >
                         {showDateLabel && (
                           <div className="flex justify-center my-4">
                             <span className="px-3 py-1 bg-card rounded-full text-xs text-muted-foreground shadow-sm">
@@ -540,11 +733,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           </div>
                         )}
                         <div className={cn(
-                          "flex group/msg items-center gap-1",
+                          "flex group/msg items-center gap-1 px-1 py-0.5",
                           isOwn ? "justify-end" : "justify-start"
                         )}>
                           {/* Info button on the LEFT of own bubbles (hover/touch) */}
-                          {isOwn && (
+                          {isOwn && !inSelectionMode && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -560,32 +753,57 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
                           <div className={cn(
                             "max-w-[75%] px-3 py-2 rounded-lg shadow-sm",
-                            isOwn 
-                              ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-100 rounded-tr-none" 
-                              : "bg-card text-card-foreground rounded-tl-none"
+                            isOwn
+                              ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-100 rounded-tr-none"
+                              : "bg-card text-card-foreground rounded-tl-none",
+                            isDeleted && "italic opacity-70"
                           )}>
-                            {metadata?.mediaUrl && (
+                            {/* Forwarded label (WhatsApp parity) */}
+                            {metadata?.forwarded && !isDeleted && (
+                              <div className="flex items-center gap-1 text-[11px] text-muted-foreground italic mb-1">
+                                <Forward className="w-3 h-3" />
+                                Forwarded
+                              </div>
+                            )}
+
+                            {/* Reply preview chip inside the bubble */}
+                            {metadata?.replyTo && !isDeleted && (
+                              <div className="mb-1 px-2 py-1 rounded bg-black/5 dark:bg-white/10 border-l-2 border-primary">
+                                <p className="text-[11px] font-semibold text-primary truncate">
+                                  {metadata.replyTo.senderName || 'Reply'}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {metadata.replyTo.content || 'Media'}
+                                </p>
+                              </div>
+                            )}
+
+                            {metadata?.mediaUrl && !isDeleted && (
                               <div className="mb-2">
                                 {metadata.mediaType === 'image' && (
-                                  <img 
-                                    src={metadata.mediaUrl} 
-                                    alt="Shared image" 
+                                  <img
+                                    src={metadata.mediaUrl}
+                                    alt="Shared image"
                                     className="rounded-lg max-w-full cursor-pointer hover:opacity-90"
-                                    onClick={() => window.open(metadata.mediaUrl, '_blank')}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!inSelectionMode) window.open(metadata.mediaUrl, '_blank');
+                                    }}
                                   />
                                 )}
                                 {metadata.mediaType === 'video' && (
-                                  <video 
-                                    src={metadata.mediaUrl} 
-                                    controls 
+                                  <video
+                                    src={metadata.mediaUrl}
+                                    controls
                                     className="rounded-lg max-w-full"
                                   />
                                 )}
                                 {metadata.mediaType === 'file' && (
-                                  <a 
-                                    href={metadata.mediaUrl} 
-                                    target="_blank" 
+                                  <a
+                                    href={metadata.mediaUrl}
+                                    target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={(e) => inSelectionMode && e.preventDefault()}
                                     className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg hover:bg-secondary text-foreground"
                                   >
                                     <FileText className="w-8 h-8 text-primary" />
@@ -594,16 +812,26 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                 )}
                               </div>
                             )}
-                            {message.content && (
+
+                            {isDeleted ? (
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Ban className="w-3.5 h-3.5" />
+                                This message was deleted
+                              </p>
+                            ) : message.content && (
                               <p className="text-sm whitespace-pre-wrap break-words">
                                 {message.content}
                               </p>
                             )}
+
                             <div className="flex items-center justify-end gap-1 mt-1">
+                              {message.edited && !isDeleted && (
+                                <span className="text-[10px] text-muted-foreground italic mr-1">edited</span>
+                              )}
                               <span className="text-[10px] text-muted-foreground">
                                 {format(new Date(message.created_at), 'h:mm a')}
                               </span>
-                              {isOwn && (
+                              {isOwn && !isDeleted && (
                                 <TickIndicator status={tickStatus} />
                               )}
                             </div>
@@ -638,14 +866,37 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   </div>
                 </div>
               ) : (
-                <ChatTypingBar 
+                <ChatTypingBar
                   onSendMessage={(content, mediaUrl, mediaType) => {
                     stopTyping(user?.email?.split('@')[0] || 'User');
-                    sendMessage.mutate({ content, mediaUrl, mediaType });
+                    sendMessage.mutate({
+                      content,
+                      mediaUrl,
+                      mediaType,
+                      replyTo: replyTo
+                        ? { id: replyTo.id, senderName: replyTo.senderName, content: replyTo.content }
+                        : null,
+                    });
+                    setReplyTo(null);
                   }}
                   isSending={sendMessage.isPending}
                   onTyping={() => !isBlockedBy && handleUserTyping(user?.email?.split('@')[0] || 'User')}
                   onStopTyping={() => stopTyping(user?.email?.split('@')[0] || 'User')}
+                  replyTo={replyTo}
+                  onCancelReply={() => setReplyTo(null)}
+                  editing={editing}
+                  onCancelEdit={() => setEditing(null)}
+                  onSubmitEdit={(newContent) => {
+                    if (!editing) return;
+                    editMessage.mutate(
+                      { messageId: editing.id, newContent },
+                      {
+                        onSuccess: () => toast.success('Message updated'),
+                        onError: (err: any) => toast.error(err?.message || 'Edit failed'),
+                      }
+                    );
+                    setEditing(null);
+                  }}
                 />
               )
             }
@@ -714,6 +965,19 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         open={!!infoMessage}
         onOpenChange={(o) => !o && setInfoMessage(null)}
         message={infoMessage}
+      />
+
+      {/* WhatsApp-style Forward picker */}
+      <ForwardDialog
+        open={!!forwardingMessages}
+        onOpenChange={(o) => !o && setForwardingMessages(null)}
+        conversations={conversations || []}
+        excludeConversationId={conversationId}
+        messages={forwardingMessages || []}
+        onDone={() => {
+          setForwardingMessages(null);
+          clearSelection();
+        }}
       />
     </div>
   );

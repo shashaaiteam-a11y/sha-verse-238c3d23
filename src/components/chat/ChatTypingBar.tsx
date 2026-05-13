@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -19,14 +19,38 @@ import {
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import { Theme as EmojiTheme } from 'emoji-picker-react';
 
+interface ReplyPreview {
+  id: string;
+  senderName: string;
+  content: string | null;
+  isOwn?: boolean;
+}
+
+interface EditingPreview {
+  id: string;
+  content: string;
+}
+
 interface ChatTypingBarProps {
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: string) => void;
   isSending?: boolean;
   onTyping?: () => void;
   onStopTyping?: () => void;
+  /** WhatsApp-style "Replying to" preview chip above the input. */
+  replyTo?: ReplyPreview | null;
+  onCancelReply?: () => void;
+  /** When set, the input is in edit mode for this message id. */
+  editing?: EditingPreview | null;
+  onCancelEdit?: () => void;
+  /** Called when user submits an edit instead of a new message. */
+  onSubmitEdit?: (newContent: string) => void;
 }
 
-export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping }: ChatTypingBarProps) => {
+export const ChatTypingBar = ({
+  onSendMessage, isSending, onTyping, onStopTyping,
+  replyTo, onCancelReply,
+  editing, onCancelEdit, onSubmitEdit,
+}: ChatTypingBarProps) => {
   const { user } = useAuth();
   const { resolvedTheme } = useTheme();
   const [message, setMessage] = useState('');
@@ -144,7 +168,29 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
     if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
+  // Prefill the input when entering edit mode (WhatsApp parity).
+  useEffect(() => {
+    if (editing) {
+      setMessage(editing.content || '');
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        const len = (editing.content || '').length;
+        inputRef.current?.setSelectionRange(len, len);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing?.id]);
+
   const handleSend = async () => {
+    if (editing) {
+      const text = message.trim();
+      if (!text) return;
+      onSubmitEdit?.(text);
+      setMessage('');
+      onStopTyping?.();
+      return;
+    }
+
     if (!message.trim() && !selectedFile) return;
 
     let mediaUrl: string | undefined;
@@ -189,6 +235,54 @@ export const ChatTypingBar = ({ onSendMessage, isSending, onTyping, onStopTyping
       className="flex-shrink-0 bg-card border-t border-border"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
+      {/* Reply preview (WhatsApp parity) */}
+      {replyTo && !editing && (
+        <div className="px-3 pt-2">
+          <div className="flex items-stretch gap-2 bg-secondary rounded-lg p-2 border-l-4 border-primary">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-primary truncate">
+                Replying to {replyTo.isOwn ? 'yourself' : replyTo.senderName}
+              </p>
+              <p className="text-sm text-muted-foreground truncate">
+                {replyTo.content || 'Media'}
+              </p>
+            </div>
+            <Button
+              variant="ghost" size="icon"
+              className="rounded-full h-7 w-7 self-center flex-shrink-0"
+              onClick={onCancelReply}
+              aria-label="Cancel reply"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit mode preview */}
+      {editing && (
+        <div className="px-3 pt-2">
+          <div className="flex items-stretch gap-2 bg-secondary rounded-lg p-2 border-l-4 border-amber-500">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 truncate">
+                Editing message
+              </p>
+              <p className="text-sm text-muted-foreground truncate">
+                {editing.content || ''}
+              </p>
+            </div>
+            <Button
+              variant="ghost" size="icon"
+              className="rounded-full h-7 w-7 self-center flex-shrink-0"
+              onClick={() => { setMessage(''); onCancelEdit?.(); }}
+              aria-label="Cancel edit"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* File Preview */}
       {selectedFile && (
         <div className="p-2 border-b border-border">
