@@ -866,14 +866,37 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   </div>
                 </div>
               ) : (
-                <ChatTypingBar 
+                <ChatTypingBar
                   onSendMessage={(content, mediaUrl, mediaType) => {
                     stopTyping(user?.email?.split('@')[0] || 'User');
-                    sendMessage.mutate({ content, mediaUrl, mediaType });
+                    sendMessage.mutate({
+                      content,
+                      mediaUrl,
+                      mediaType,
+                      replyTo: replyTo
+                        ? { id: replyTo.id, senderName: replyTo.senderName, content: replyTo.content }
+                        : null,
+                    });
+                    setReplyTo(null);
                   }}
                   isSending={sendMessage.isPending}
                   onTyping={() => !isBlockedBy && handleUserTyping(user?.email?.split('@')[0] || 'User')}
                   onStopTyping={() => stopTyping(user?.email?.split('@')[0] || 'User')}
+                  replyTo={replyTo}
+                  onCancelReply={() => setReplyTo(null)}
+                  editing={editing}
+                  onCancelEdit={() => setEditing(null)}
+                  onSubmitEdit={(newContent) => {
+                    if (!editing) return;
+                    editMessage.mutate(
+                      { messageId: editing.id, newContent },
+                      {
+                        onSuccess: () => toast.success('Message updated'),
+                        onError: (err: any) => toast.error(err?.message || 'Edit failed'),
+                      }
+                    );
+                    setEditing(null);
+                  }}
                 />
               )
             }
