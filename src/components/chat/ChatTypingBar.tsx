@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -168,7 +168,29 @@ export const ChatTypingBar = ({
     if (videoInputRef.current) videoInputRef.current.value = '';
   };
 
+  // Prefill the input when entering edit mode (WhatsApp parity).
+  useEffect(() => {
+    if (editing) {
+      setMessage(editing.content || '');
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        const len = (editing.content || '').length;
+        inputRef.current?.setSelectionRange(len, len);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing?.id]);
+
   const handleSend = async () => {
+    if (editing) {
+      const text = message.trim();
+      if (!text) return;
+      onSubmitEdit?.(text);
+      setMessage('');
+      onStopTyping?.();
+      return;
+    }
+
     if (!message.trim() && !selectedFile) return;
 
     let mediaUrl: string | undefined;
