@@ -965,6 +965,18 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         open={!!infoMessage}
         onOpenChange={(o) => !o && setInfoMessage(null)}
         message={infoMessage}
+
+      {/* WhatsApp-style Forward picker */}
+      <ForwardDialog
+        open={!!forwardingMessages}
+        onOpenChange={(o) => !o && setForwardingMessages(null)}
+        conversations={conversations || []}
+        excludeConversationId={conversationId}
+        messages={forwardingMessages || []}
+        onDone={() => {
+          setForwardingMessages(null);
+          clearSelection();
+        }}
       />
     </div>
   );
