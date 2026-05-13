@@ -593,7 +593,23 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         {selectedConversation ? (
           <ChatLayout
             header={
-              isSearching ? (
+              selectionCount > 0 ? (
+                <MessageActionBar
+                  count={selectionCount}
+                  canReply={selectionCount === 1}
+                  canEdit={canEdit}
+                  canDeleteForEveryone={canDeleteForEveryone}
+                  canInfo={selectionCount === 1 && !!singleSelected && singleSelected.sender_id === user?.id}
+                  onCancel={clearSelection}
+                  onReply={handleActionReply}
+                  onForward={handleActionForward}
+                  onEdit={handleActionEdit}
+                  onCopy={handleActionCopy}
+                  onStar={handleActionStar}
+                  onDelete={handleActionDelete}
+                  onInfo={handleActionInfo}
+                />
+              ) : isSearching ? (
                 <div className="flex items-center gap-2 p-3 border-b bg-background sticky top-0 z-40" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
                   <Button
                     variant="ghost"
