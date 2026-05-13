@@ -89,23 +89,41 @@ export const useMessagesRealtime = (conversationId: string | null) => {
       content,
       mediaUrl,
       mediaType,
+      replyTo,
     }: {
       content: string;
       mediaUrl?: string;
       mediaType?: string;
+      /** Optional reply context — id of the message being replied to. */
+      replyTo?: {
+        id: string;
+        senderName: string;
+        content: string | null;
+      } | null;
     }) => {
       if (!user || !conversationId) throw new Error('Not authenticated');
 
       const clientId = crypto.randomUUID();
-      
-      const metadata = mediaUrl && mediaType ? { mediaUrl, mediaType } : undefined;
+
+      const metadata: Record<string, any> = {};
+      if (mediaUrl && mediaType) {
+        metadata.mediaUrl = mediaUrl;
+        metadata.mediaType = mediaType;
+      }
+      if (replyTo) {
+        metadata.replyTo = {
+          id: replyTo.id,
+          senderName: replyTo.senderName,
+          content: replyTo.content,
+        };
+      }
 
       const message = await RTChatService.message.sendMessage(
         conversationId,
         user.id,
         content,
         clientId,
-        metadata
+        Object.keys(metadata).length > 0 ? metadata : undefined
       );
 
       if (!message) {
