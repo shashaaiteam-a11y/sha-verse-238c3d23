@@ -105,6 +105,42 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, user?.id]);
 
+  // Reset selection / reply / edit state when switching conversations
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setReplyTo(null);
+    setEditing(null);
+  }, [conversationId]);
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  /** Long-press to enter selection mode (WhatsApp parity). */
+  const startLongPress = (id: string) => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+    }, 450);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
   // Typing indicator
   const { typingText, isAnyoneTyping, handleUserTyping, stopTyping } = useTypingIndicator(
     conversationId,
