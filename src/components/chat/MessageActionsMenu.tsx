@@ -42,6 +42,7 @@ export const MessageActionsMenu = ({
   onEdit,
   onDelete,
   onInfo,
+  onSelect,
 }: MessageActionsMenuProps) => {
   if (isDeleted) return null;
 
