@@ -20,6 +20,7 @@ interface MessageActionsMenuProps {
   onEdit: () => void;
   onDelete: () => void;
   onInfo: () => void;
+  onSelect?: () => void;
 }
 
 /**
