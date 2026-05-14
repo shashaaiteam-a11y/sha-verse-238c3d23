@@ -807,6 +807,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   }
                                 }}
                                 onInfo={() => setInfoMessage(message)}
+                                onSelect={() => toggleSelect(message.id)}
                               />
                             )}
                             {/* Forwarded label (WhatsApp parity) */}
