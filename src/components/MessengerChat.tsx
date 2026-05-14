@@ -713,6 +713,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                     return (
                       <div
                         key={message.id || idx}
+                        data-message-id={message.id}
                         onClick={handleBubbleClick}
                         onTouchStart={() => startLongPress(message.id)}
                         onTouchEnd={cancelLongPress}
@@ -722,7 +723,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           toggleSelect(message.id);
                         }}
                         className={cn(
-                          "transition-colors rounded-md",
+                          "transition-colors rounded-md scroll-mt-20",
                           isSelected && "bg-primary/10"
                         )}
                       >
@@ -806,6 +807,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   }
                                 }}
                                 onInfo={() => setInfoMessage(message)}
+                                onSelect={() => toggleSelect(message.id)}
                               />
                             )}
                             {/* Forwarded label (WhatsApp parity) */}
@@ -818,14 +820,29 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
                             {/* Reply preview chip inside the bubble */}
                             {metadata?.replyTo && !isDeleted && (
-                              <div className="mb-1 px-2 py-1 rounded bg-black/5 dark:bg-white/10 border-l-2 border-primary">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const targetId = metadata.replyTo?.id;
+                                  if (!targetId) return;
+                                  const el = document.querySelector<HTMLElement>(`[data-message-id="${targetId}"]`);
+                                  if (!el) { toast.message('Original message not found'); return; }
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  el.classList.add('ring-2', 'ring-primary', 'bg-primary/10');
+                                  window.setTimeout(() => {
+                                    el.classList.remove('ring-2', 'ring-primary', 'bg-primary/10');
+                                  }, 1200);
+                                }}
+                                className="block w-full text-left mb-1 px-2 py-1 rounded bg-black/5 dark:bg-white/10 border-l-2 border-primary hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+                              >
                                 <p className="text-[11px] font-semibold text-primary truncate">
                                   {metadata.replyTo.senderName || 'Reply'}
                                 </p>
                                 <p className="text-xs text-muted-foreground truncate">
                                   {metadata.replyTo.content || 'Media'}
                                 </p>
-                              </div>
+                              </button>
                             )}
 
                             {metadata?.mediaUrl && !isDeleted && (

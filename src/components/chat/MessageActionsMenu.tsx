@@ -1,4 +1,4 @@
-import { ChevronDown, Reply, Forward, Copy, Star, Pencil, Trash2, Info } from 'lucide-react';
+import { ChevronDown, Reply, Forward, Copy, Star, Pencil, Trash2, Info, CheckSquare } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,7 @@ interface MessageActionsMenuProps {
   onEdit: () => void;
   onDelete: () => void;
   onInfo: () => void;
+  onSelect?: () => void;
 }
 
 /**
@@ -41,6 +42,7 @@ export const MessageActionsMenu = ({
   onEdit,
   onDelete,
   onInfo,
+  onSelect,
 }: MessageActionsMenuProps) => {
   if (isDeleted) return null;
 
@@ -79,6 +81,11 @@ export const MessageActionsMenu = ({
         <DropdownMenuItem onSelect={onStar}>
           <Star className="w-4 h-4 mr-3" /> Star
         </DropdownMenuItem>
+        {onSelect && (
+          <DropdownMenuItem onSelect={onSelect}>
+            <CheckSquare className="w-4 h-4 mr-3" /> Select
+          </DropdownMenuItem>
+        )}
         {canEdit && (
           <DropdownMenuItem onSelect={onEdit}>
             <Pencil className="w-4 h-4 mr-3" /> Edit
