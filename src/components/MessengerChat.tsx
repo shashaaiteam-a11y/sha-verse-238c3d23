@@ -713,6 +713,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                     return (
                       <div
                         key={message.id || idx}
+                        data-message-id={message.id}
                         onClick={handleBubbleClick}
                         onTouchStart={() => startLongPress(message.id)}
                         onTouchEnd={cancelLongPress}
@@ -722,7 +723,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           toggleSelect(message.id);
                         }}
                         className={cn(
-                          "transition-colors rounded-md",
+                          "transition-colors rounded-md scroll-mt-20",
                           isSelected && "bg-primary/10"
                         )}
                       >
