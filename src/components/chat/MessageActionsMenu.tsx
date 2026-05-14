@@ -1,4 +1,4 @@
-import { ChevronDown, Reply, Forward, Copy, Star, Pencil, Trash2, Info } from 'lucide-react';
+import { ChevronDown, Reply, Forward, Copy, Star, Pencil, Trash2, Info, CheckSquare } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
