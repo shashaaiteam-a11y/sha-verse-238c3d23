@@ -24,6 +24,7 @@ import { ChatHeader } from './chat/ChatHeader';
 import { TickIndicator } from './chat/TickIndicator';
 import { MessageInfoDialog } from './chat/MessageInfoDialog';
 import { MessageActionBar } from './chat/MessageActionBar';
+import { MessageActionsMenu } from './chat/MessageActionsMenu';
 import { ForwardDialog } from './chat/ForwardDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
