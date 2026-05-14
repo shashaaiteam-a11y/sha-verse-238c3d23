@@ -753,12 +753,61 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                           )}
 
                           <div className={cn(
-                            "max-w-[75%] px-3 py-2 rounded-lg shadow-sm",
+                            "relative max-w-[75%] px-3 py-2 rounded-lg shadow-sm",
                             isOwn
                               ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-100 rounded-tr-none"
                               : "bg-card text-card-foreground rounded-tl-none",
                             isDeleted && "italic opacity-70"
                           )}>
+                            {!inSelectionMode && !isDeleted && (
+                              <MessageActionsMenu
+                                isOwn={isOwn}
+                                canEdit={isOwn && !!message.content && isWithinMinutes(message.created_at, 15)}
+                                canDeleteForEveryone={isOwn && isWithinMinutes(message.created_at, 48 * 60)}
+                                isDeleted={isDeleted}
+                                onReply={() => {
+                                  const senderName = message.profiles?.display_name
+                                    || message.profiles?.username
+                                    || (isOwn ? (user?.email?.split('@')[0] || 'You') : (otherUser?.display_name || 'User'));
+                                  setReplyTo({ id: message.id, senderName, content: message.content, isOwn });
+                                  setEditing(null);
+                                }}
+                                onForward={() => setForwardingMessages([{ id: message.id, content: message.content, metadata: message.metadata }])}
+                                onCopy={async () => {
+                                  const text = message.content || (message.metadata?.mediaUrl ? '[media]' : '');
+                                  if (!text) { toast.error('Nothing to copy'); return; }
+                                  try { await navigator.clipboard.writeText(text); toast.success('Message copied'); }
+                                  catch { toast.error('Copy failed'); }
+                                }}
+                                onStar={() => toast.success('Message starred')}
+                                onEdit={() => {
+                                  setEditing({ id: message.id, content: message.content || '' });
+                                  setReplyTo(null);
+                                }}
+                                onDelete={async () => {
+                                  const canDelAll = isOwn && isWithinMinutes(message.created_at, 48 * 60);
+                                  if (canDelAll) {
+                                    const choice = window.prompt(
+                                      'Delete message:\n  1 = Delete for me\n  2 = Delete for everyone\n\nType 1 or 2 (Cancel to abort)',
+                                      '2'
+                                    );
+                                    if (choice === null) return;
+                                    if (choice.trim() === '2') {
+                                      await deleteForEveryone.mutateAsync(message.id).catch(() => {});
+                                      toast.success('Deleted for everyone');
+                                    } else if (choice.trim() === '1') {
+                                      await deleteForMe.mutateAsync(message.id).catch(() => {});
+                                      toast.success('Deleted for you');
+                                    }
+                                  } else {
+                                    if (!confirm('Delete this message for me?')) return;
+                                    await deleteForMe.mutateAsync(message.id).catch(() => {});
+                                    toast.success('Deleted for you');
+                                  }
+                                }}
+                                onInfo={() => setInfoMessage(message)}
+                              />
+                            )}
                             {/* Forwarded label (WhatsApp parity) */}
                             {metadata?.forwarded && !isDeleted && (
                               <div className="flex items-center gap-1 text-[11px] text-muted-foreground italic mb-1">
