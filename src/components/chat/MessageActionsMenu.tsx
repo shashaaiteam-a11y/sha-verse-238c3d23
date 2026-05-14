@@ -81,6 +81,11 @@ export const MessageActionsMenu = ({
         <DropdownMenuItem onSelect={onStar}>
           <Star className="w-4 h-4 mr-3" /> Star
         </DropdownMenuItem>
+        {onSelect && (
+          <DropdownMenuItem onSelect={onSelect}>
+            <CheckSquare className="w-4 h-4 mr-3" /> Select
+          </DropdownMenuItem>
+        )}
         {canEdit && (
           <DropdownMenuItem onSelect={onEdit}>
             <Pencil className="w-4 h-4 mr-3" /> Edit
