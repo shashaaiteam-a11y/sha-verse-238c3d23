@@ -947,7 +947,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   catch { toast.error('Copy failed'); }
                                 }}
                                 onPin={() => handlePinMessage(message)}
-                                isPinned={pinnedMessage?.id === message.id}
+                                isPinned={pinnedMessages.some((p: any) => p.id === message.id)}
                                 onEdit={() => {
                                   setEditing({ id: message.id, content: message.content || '' });
                                   setReplyTo(null);
