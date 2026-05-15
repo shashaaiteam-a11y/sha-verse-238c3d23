@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical,
   Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info, Forward, Pin,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
@@ -113,36 +114,56 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     setEditing(null);
   }, [conversationId]);
 
-  // ---------- Pin message (WhatsApp 1-to-1 style) ----------
-  // Single pin per conversation, stored in conversations.metadata.pinnedMessage
-  const { data: pinnedRaw, refetch: refetchPin } = useQuery({
-    queryKey: ['conversation-pin', conversationId],
+  // ---------- Pin messages (WhatsApp-style, max 7, LIFO) ----------
+  // Stored as conversations.metadata.pinnedMessages: PinEntry[] (newest first).
+  // Backwards-compatible: legacy single .pinnedMessage is read as a 1-item array.
+  const MAX_PINS = 7;
+  const [currentPinIndex, setCurrentPinIndex] = useState(0);
+
+  const { data: pinnedRawList, refetch: refetchPin } = useQuery({
+    queryKey: ['conversation-pins', conversationId],
     queryFn: async () => {
-      if (!conversationId) return null;
+      if (!conversationId) return [] as any[];
       const { data } = await supabase
         .from('conversations')
         .select('metadata')
         .eq('id', conversationId)
         .maybeSingle();
-      return ((data?.metadata as any)?.pinnedMessage) || null;
+      const meta: any = data?.metadata || {};
+      const list = Array.isArray(meta.pinnedMessages)
+        ? meta.pinnedMessages
+        : meta.pinnedMessage
+          ? [meta.pinnedMessage]
+          : [];
+      return list;
     },
     enabled: !!conversationId,
     refetchInterval: 15000,
   });
 
-  // Auto-expire client-side
-  const pinnedMessage = pinnedRaw && pinnedRaw.expiresAt && new Date(pinnedRaw.expiresAt) < new Date()
-    ? null
-    : pinnedRaw;
+  // Auto-expire client-side (cron-style cleanup also re-syncs on next write).
+  const pinnedMessages: any[] = (pinnedRawList || []).filter(
+    (p: any) => !p?.expiresAt || new Date(p.expiresAt) > new Date()
+  );
 
-  const writePinMetadata = async (next: any) => {
+  // Keep banner index in range.
+  useEffect(() => {
+    if (currentPinIndex >= pinnedMessages.length && pinnedMessages.length > 0) {
+      setCurrentPinIndex(0);
+    }
+  }, [pinnedMessages.length, currentPinIndex]);
+
+  const writePinList = async (next: any[]) => {
     if (!conversationId) return;
     const { data: cur } = await supabase
       .from('conversations')
       .select('metadata')
       .eq('id', conversationId)
       .maybeSingle();
-    const meta = { ...((cur?.metadata as any) || {}), pinnedMessage: next };
+    const prevMeta: any = (cur?.metadata as any) || {};
+    // Drop legacy single field; canonical is array.
+    const { pinnedMessage: _legacy, ...rest } = prevMeta;
+    const meta = { ...rest, pinnedMessages: next };
     const { error } = await supabase
       .from('conversations')
       .update({ metadata: meta } as any)
@@ -153,10 +174,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   const handlePinMessage = async (message: any) => {
     if (!message?.id || !user?.id) return;
-    // If already pinned -> unpin
-    if (pinnedMessage?.id === message.id) {
+    const existing = pinnedMessages.find((p: any) => p.id === message.id);
+    // Toggle: if already pinned -> unpin
+    if (existing) {
       try {
-        await writePinMetadata(null);
+        const next = pinnedMessages.filter((p: any) => p.id !== message.id);
+        await writePinList(next);
         toast.success('Message unpinned');
       } catch { toast.error('Failed to unpin'); }
       return;
@@ -168,29 +191,37 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     if (choice === null) return;
     const days = choice.trim() === '1' ? 1 : choice.trim() === '3' ? 30 : 7;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    const entry = {
+      id: message.id,
+      by: user.id,
+      byName: user.email?.split('@')[0] || 'You',
+      preview: (message.content || (message.metadata?.mediaUrl ? '[media]' : '')).slice(0, 120),
+      pinnedAt: new Date().toISOString(),
+      expiresAt,
+    };
     try {
-      await writePinMetadata({
-        id: message.id,
-        by: user.id,
-        byName: user.email?.split('@')[0] || 'You',
-        preview: (message.content || (message.metadata?.mediaUrl ? '[media]' : '')).slice(0, 120),
-        pinnedAt: new Date().toISOString(),
-        expiresAt,
-      });
-      toast.success('Message pinned');
+      // Newest first; if at capacity, drop the oldest (last item).
+      const merged = [entry, ...pinnedMessages].slice(0, MAX_PINS);
+      await writePinList(merged);
+      setCurrentPinIndex(0);
+      toast.success(pinnedMessages.length >= MAX_PINS ? 'Pinned (oldest pin removed)' : 'Message pinned');
     } catch { toast.error('Failed to pin'); }
   };
 
-  const handleUnpin = async () => {
+  const handleUnpinCurrent = async () => {
+    const target = pinnedMessages[currentPinIndex];
+    if (!target) return;
     try {
-      await writePinMetadata(null);
+      const next = pinnedMessages.filter((p: any) => p.id !== target.id);
+      await writePinList(next);
       toast.success('Message unpinned');
     } catch { toast.error('Failed to unpin'); }
   };
 
   const scrollToPinned = () => {
-    if (!pinnedMessage?.id) return;
-    const el = document.querySelector(`[data-message-id="${pinnedMessage.id}"]`) as HTMLElement | null;
+    const target = pinnedMessages[currentPinIndex];
+    if (!target?.id) return;
+    const el = document.querySelector(`[data-message-id="${target.id}"]`) as HTMLElement | null;
     if (!el) { toast.info('Message not visible'); return; }
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el.classList.add('ring-2', 'ring-primary', 'bg-primary/10');
@@ -773,28 +804,56 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
             messages={
               filteredMessages.length > 0 ? (
                 <div className="space-y-2">
-                  {pinnedMessage && (
-                    <div
-                      onClick={scrollToPinned}
-                      className="sticky top-0 z-20 -mt-2 mb-2 flex items-center gap-2 px-3 py-2 rounded-md bg-muted/80 backdrop-blur border border-border cursor-pointer hover:bg-muted"
-                    >
-                      <Pin className="w-4 h-4 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[11px] text-muted-foreground">
-                          {pinnedMessage.by === user?.id ? 'You' : (otherUser?.display_name || pinnedMessage.byName || 'Pinned')}
-                        </div>
-                        <div className="text-xs truncate">{pinnedMessage.preview || 'Pinned message'}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleUnpin(); }}
-                        aria-label="Unpin"
-                        className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
+                  {pinnedMessages.length > 0 && (() => {
+                    const current = pinnedMessages[Math.min(currentPinIndex, pinnedMessages.length - 1)];
+                    const total = pinnedMessages.length;
+                    return (
+                      <div
+                        onClick={scrollToPinned}
+                        className="sticky top-0 z-20 -mt-2 mb-2 flex items-center gap-2 px-3 py-2 rounded-md bg-muted/80 backdrop-blur border border-border cursor-pointer hover:bg-muted"
                       >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
+                        <Pin className="w-4 h-4 text-primary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <span>Pinned</span>
+                            <span className="opacity-70">[{Math.min(currentPinIndex, total - 1) + 1}/{total}]</span>
+                            <span className="mx-1">·</span>
+                            <span>{current.by === user?.id ? 'You' : (otherUser?.display_name || current.byName || 'Pinned')}</span>
+                          </div>
+                          <div className="text-xs truncate">{current.preview || 'Pinned message'}</div>
+                        </div>
+                        {total > 1 && (
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setCurrentPinIndex((i) => (i - 1 + total) % total); }}
+                              aria-label="Previous pin"
+                              className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setCurrentPinIndex((i) => (i + 1) % total); }}
+                              aria-label="Next pin"
+                              className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleUnpinCurrent(); }}
+                          aria-label="Unpin"
+                          className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })()}
+
                   {filteredMessages.map((message: any, idx: number) => {
                     if (!message || message.deleted_for_all) return null;
                     const isOwn = message.sender_id === user?.id;
@@ -888,7 +947,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   catch { toast.error('Copy failed'); }
                                 }}
                                 onPin={() => handlePinMessage(message)}
-                                isPinned={pinnedMessage?.id === message.id}
+                                isPinned={pinnedMessages.some((p: any) => p.id === message.id)}
                                 onEdit={() => {
                                   setEditing({ id: message.id, content: message.content || '' });
                                   setReplyTo(null);
