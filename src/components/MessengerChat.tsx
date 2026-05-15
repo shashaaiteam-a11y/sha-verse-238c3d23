@@ -780,7 +780,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   try { await navigator.clipboard.writeText(text); toast.success('Message copied'); }
                                   catch { toast.error('Copy failed'); }
                                 }}
-                                onStar={() => toast.success('Message starred')}
+                                onPin={() => handlePinMessage(message)}
+                                isPinned={pinnedMessage?.id === message.id}
                                 onEdit={() => {
                                   setEditing({ id: message.id, content: message.content || '' });
                                   setReplyTo(null);
