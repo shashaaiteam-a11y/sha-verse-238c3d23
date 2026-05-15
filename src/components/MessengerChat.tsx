@@ -113,6 +113,91 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     setEditing(null);
   }, [conversationId]);
 
+  // ---------- Pin message (WhatsApp 1-to-1 style) ----------
+  // Single pin per conversation, stored in conversations.metadata.pinnedMessage
+  const { data: pinnedRaw, refetch: refetchPin } = useQuery({
+    queryKey: ['conversation-pin', conversationId],
+    queryFn: async () => {
+      if (!conversationId) return null;
+      const { data } = await supabase
+        .from('conversations')
+        .select('metadata')
+        .eq('id', conversationId)
+        .maybeSingle();
+      return ((data?.metadata as any)?.pinnedMessage) || null;
+    },
+    enabled: !!conversationId,
+    refetchInterval: 15000,
+  });
+
+  // Auto-expire client-side
+  const pinnedMessage = pinnedRaw && pinnedRaw.expiresAt && new Date(pinnedRaw.expiresAt) < new Date()
+    ? null
+    : pinnedRaw;
+
+  const writePinMetadata = async (next: any) => {
+    if (!conversationId) return;
+    const { data: cur } = await supabase
+      .from('conversations')
+      .select('metadata')
+      .eq('id', conversationId)
+      .maybeSingle();
+    const meta = { ...((cur?.metadata as any) || {}), pinnedMessage: next };
+    const { error } = await supabase
+      .from('conversations')
+      .update({ metadata: meta } as any)
+      .eq('id', conversationId);
+    if (error) throw error;
+    refetchPin();
+  };
+
+  const handlePinMessage = async (message: any) => {
+    if (!message?.id || !user?.id) return;
+    // If already pinned -> unpin
+    if (pinnedMessage?.id === message.id) {
+      try {
+        await writePinMetadata(null);
+        toast.success('Message unpinned');
+      } catch { toast.error('Failed to unpin'); }
+      return;
+    }
+    const choice = window.prompt(
+      'Pin for how long?\n  1 = 24 hours\n  2 = 7 days\n  3 = 30 days\n\nType 1, 2, or 3 (Cancel to abort)',
+      '2'
+    );
+    if (choice === null) return;
+    const days = choice.trim() === '1' ? 1 : choice.trim() === '3' ? 30 : 7;
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    try {
+      await writePinMetadata({
+        id: message.id,
+        by: user.id,
+        byName: user.email?.split('@')[0] || 'You',
+        preview: (message.content || (message.metadata?.mediaUrl ? '[media]' : '')).slice(0, 120),
+        pinnedAt: new Date().toISOString(),
+        expiresAt,
+      });
+      toast.success('Message pinned');
+    } catch { toast.error('Failed to pin'); }
+  };
+
+  const handleUnpin = async () => {
+    try {
+      await writePinMetadata(null);
+      toast.success('Message unpinned');
+    } catch { toast.error('Failed to unpin'); }
+  };
+
+  const scrollToPinned = () => {
+    if (!pinnedMessage?.id) return;
+    const el = document.querySelector(`[data-message-id="${pinnedMessage.id}"]`) as HTMLElement | null;
+    if (!el) { toast.info('Message not visible'); return; }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-primary', 'bg-primary/10');
+    setTimeout(() => el.classList.remove('ring-2', 'ring-primary', 'bg-primary/10'), 1200);
+  };
+
+
   const clearSelection = () => setSelectedIds(new Set());
 
   const toggleSelect = (id: string) => {
