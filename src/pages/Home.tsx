@@ -20,7 +20,7 @@ SmartAdSlot.displayName = 'SmartAdSlot';
 
 import { Card } from "@/components/ui/card";
 
-import { MessageCircle, UserPlus, Bookmark, Loader as Loader2 } from "lucide-react";
+import { MessageCircle, UserPlus, Bookmark, Loader2 } from "lucide-react";
 
 import { useFeed } from '@/hooks/useFeed';
 
@@ -206,7 +206,7 @@ const Home = () => {
 
             <UserSearchDialog />
 
-            <Button
+            <Button 
 
               variant="ghost" 
 
