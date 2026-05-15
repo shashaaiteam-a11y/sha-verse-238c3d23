@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical,
-  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info, Forward,
+  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info, Forward, Pin,
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
