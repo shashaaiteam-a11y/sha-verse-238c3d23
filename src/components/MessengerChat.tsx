@@ -773,6 +773,28 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
             messages={
               filteredMessages.length > 0 ? (
                 <div className="space-y-2">
+                  {pinnedMessage && (
+                    <div
+                      onClick={scrollToPinned}
+                      className="sticky top-0 z-20 -mt-2 mb-2 flex items-center gap-2 px-3 py-2 rounded-md bg-muted/80 backdrop-blur border border-border cursor-pointer hover:bg-muted"
+                    >
+                      <Pin className="w-4 h-4 text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] text-muted-foreground">
+                          {pinnedMessage.by === user?.id ? 'You' : (otherUser?.display_name || pinnedMessage.byName || 'Pinned')}
+                        </div>
+                        <div className="text-xs truncate">{pinnedMessage.preview || 'Pinned message'}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleUnpin(); }}
+                        aria-label="Unpin"
+                        className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                   {filteredMessages.map((message: any, idx: number) => {
                     if (!message || message.deleted_for_all) return null;
                     const isOwn = message.sender_id === user?.id;
