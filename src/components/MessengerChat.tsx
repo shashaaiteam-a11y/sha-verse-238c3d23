@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical,
-  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info, Forward,
+  Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info, Forward, Pin,
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
@@ -112,6 +112,91 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     setReplyTo(null);
     setEditing(null);
   }, [conversationId]);
+
+  // ---------- Pin message (WhatsApp 1-to-1 style) ----------
+  // Single pin per conversation, stored in conversations.metadata.pinnedMessage
+  const { data: pinnedRaw, refetch: refetchPin } = useQuery({
+    queryKey: ['conversation-pin', conversationId],
+    queryFn: async () => {
+      if (!conversationId) return null;
+      const { data } = await supabase
+        .from('conversations')
+        .select('metadata')
+        .eq('id', conversationId)
+        .maybeSingle();
+      return ((data?.metadata as any)?.pinnedMessage) || null;
+    },
+    enabled: !!conversationId,
+    refetchInterval: 15000,
+  });
+
+  // Auto-expire client-side
+  const pinnedMessage = pinnedRaw && pinnedRaw.expiresAt && new Date(pinnedRaw.expiresAt) < new Date()
+    ? null
+    : pinnedRaw;
+
+  const writePinMetadata = async (next: any) => {
+    if (!conversationId) return;
+    const { data: cur } = await supabase
+      .from('conversations')
+      .select('metadata')
+      .eq('id', conversationId)
+      .maybeSingle();
+    const meta = { ...((cur?.metadata as any) || {}), pinnedMessage: next };
+    const { error } = await supabase
+      .from('conversations')
+      .update({ metadata: meta } as any)
+      .eq('id', conversationId);
+    if (error) throw error;
+    refetchPin();
+  };
+
+  const handlePinMessage = async (message: any) => {
+    if (!message?.id || !user?.id) return;
+    // If already pinned -> unpin
+    if (pinnedMessage?.id === message.id) {
+      try {
+        await writePinMetadata(null);
+        toast.success('Message unpinned');
+      } catch { toast.error('Failed to unpin'); }
+      return;
+    }
+    const choice = window.prompt(
+      'Pin for how long?\n  1 = 24 hours\n  2 = 7 days\n  3 = 30 days\n\nType 1, 2, or 3 (Cancel to abort)',
+      '2'
+    );
+    if (choice === null) return;
+    const days = choice.trim() === '1' ? 1 : choice.trim() === '3' ? 30 : 7;
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    try {
+      await writePinMetadata({
+        id: message.id,
+        by: user.id,
+        byName: user.email?.split('@')[0] || 'You',
+        preview: (message.content || (message.metadata?.mediaUrl ? '[media]' : '')).slice(0, 120),
+        pinnedAt: new Date().toISOString(),
+        expiresAt,
+      });
+      toast.success('Message pinned');
+    } catch { toast.error('Failed to pin'); }
+  };
+
+  const handleUnpin = async () => {
+    try {
+      await writePinMetadata(null);
+      toast.success('Message unpinned');
+    } catch { toast.error('Failed to unpin'); }
+  };
+
+  const scrollToPinned = () => {
+    if (!pinnedMessage?.id) return;
+    const el = document.querySelector(`[data-message-id="${pinnedMessage.id}"]`) as HTMLElement | null;
+    if (!el) { toast.info('Message not visible'); return; }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-primary', 'bg-primary/10');
+    setTimeout(() => el.classList.remove('ring-2', 'ring-primary', 'bg-primary/10'), 1200);
+  };
+
 
   const clearSelection = () => setSelectedIds(new Set());
 
@@ -688,6 +773,28 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
             messages={
               filteredMessages.length > 0 ? (
                 <div className="space-y-2">
+                  {pinnedMessage && (
+                    <div
+                      onClick={scrollToPinned}
+                      className="sticky top-0 z-20 -mt-2 mb-2 flex items-center gap-2 px-3 py-2 rounded-md bg-muted/80 backdrop-blur border border-border cursor-pointer hover:bg-muted"
+                    >
+                      <Pin className="w-4 h-4 text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] text-muted-foreground">
+                          {pinnedMessage.by === user?.id ? 'You' : (otherUser?.display_name || pinnedMessage.byName || 'Pinned')}
+                        </div>
+                        <div className="text-xs truncate">{pinnedMessage.preview || 'Pinned message'}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleUnpin(); }}
+                        aria-label="Unpin"
+                        className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                   {filteredMessages.map((message: any, idx: number) => {
                     if (!message || message.deleted_for_all) return null;
                     const isOwn = message.sender_id === user?.id;
@@ -780,7 +887,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   try { await navigator.clipboard.writeText(text); toast.success('Message copied'); }
                                   catch { toast.error('Copy failed'); }
                                 }}
-                                onStar={() => toast.success('Message starred')}
+                                onPin={() => handlePinMessage(message)}
+                                isPinned={pinnedMessage?.id === message.id}
                                 onEdit={() => {
                                   setEditing({ id: message.id, content: message.content || '' });
                                   setReplyTo(null);
