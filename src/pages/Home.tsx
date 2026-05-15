@@ -20,15 +20,13 @@ SmartAdSlot.displayName = 'SmartAdSlot';
 
 import { Card } from "@/components/ui/card";
 
-import { MessageCircle, UserPlus, Bookmark, Loader as Loader2 } from "lucide-react";
+import { MessageCircle, UserPlus, Bookmark, Loader as Loader2, Users } from "lucide-react";
 
 import { useFeed } from '@/hooks/useFeed';
 
 import { useFriends } from '@/hooks/useFriends';
 
 import { useNavigate } from 'react-router-dom';
-
-import { FriendSuggestions } from '@/components/FriendSuggestions';
 
 import { UserSearchDialog } from '@/components/UserSearchDialog';
 
@@ -190,17 +188,33 @@ const Home = () => {
 
         <div className="max-w-2xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between">
 
-          <div className="flex-1">
-
-            <FriendSuggestions />
-
-          </div>
+          <div />
 
           <div className="flex items-center gap-0.5 sm:gap-1">
 
             <UserSearchDialog />
 
-            <Button 
+            <Button
+
+              variant="ghost"
+
+              size="icon"
+
+              onClick={() => navigate('/friends')}
+
+              className="relative h-9 w-9 rounded-full"
+
+              aria-label="People You May Know"
+
+              title="People You May Know"
+
+            >
+
+              <Users className="w-5 h-5" />
+
+            </Button>
+
+            <Button
 
               variant="ghost" 
 
