@@ -16,7 +16,8 @@ interface MessageActionsMenuProps {
   onReply: () => void;
   onForward: () => void;
   onCopy: () => void;
-  onStar: () => void;
+  onPin: () => void;
+  isPinned?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onInfo: () => void;
