@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical,
   Search, Plus, FileText, X, ShieldX, Ban, BellOff, Info, Forward, Pin,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessagesRealtime } from '@/hooks/useMessagesRealtime';
