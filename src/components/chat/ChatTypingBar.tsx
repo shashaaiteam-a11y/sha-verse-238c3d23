@@ -8,6 +8,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { maybeCompressImage } from '@/lib/chat/compressMedia';
 import { useTheme } from 'next-themes';
 import {
   Popover,
@@ -148,9 +149,15 @@ export const ChatTypingBar = ({
       setFilePreview(null);
     }
 
-    // Kick off upload immediately in background — non-blocking
+    // Kick off upload immediately in background — non-blocking.
+    // For images: compress on a separate microtask so UI stays responsive.
     setIsUploading(true);
-    const promise = uploadFile(file).then((result) => {
+    const promise = (async () => {
+      const toUpload = file.type.startsWith('image/')
+        ? await maybeCompressImage(file)
+        : file;
+      return uploadFile(toUpload);
+    })().then((result) => {
       setIsUploading(false);
       if (result) setUploadedMedia(result);
       return result;
