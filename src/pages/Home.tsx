@@ -28,7 +28,7 @@ import { useFriends } from '@/hooks/useFriends';
 
 import { useNavigate } from 'react-router-dom';
 
-import { FriendSuggestions } from '@/components/FriendSuggestions';
+import { FriendSuggestionsPopover } from '@/components/FriendSuggestionsPopover';
 
 import { UserSearchDialog } from '@/components/UserSearchDialog';
 
@@ -194,12 +194,6 @@ const Home = () => {
 
             <img src="/sha-verse-logo.jpeg" alt="Sha-Verse" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover" />
 
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-
-              Sha-Verse
-
-            </h1>
-
           </div>
 
           <div className="flex items-center gap-0.5 sm:gap-1">
@@ -276,6 +270,8 @@ const Home = () => {
 
             </Button>
 
+            <FriendSuggestionsPopover />
+
             <NotificationBell />
 
             <AppMenu />
@@ -298,15 +294,6 @@ const Home = () => {
 
           <FacebookStoriesBar />
 
-
-
-          {/* Friend Suggestions */}
-
-          <div className="mb-3 sm:mb-4">
-
-            <FriendSuggestions />
-
-          </div>
 
 
 
