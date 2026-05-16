@@ -8,6 +8,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { maybeCompressImage } from '@/lib/chat/compressMedia';
 import { useTheme } from 'next-themes';
 import {
   Popover,
