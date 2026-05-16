@@ -28,7 +28,7 @@ import { useFriends } from '@/hooks/useFriends';
 
 import { useNavigate } from 'react-router-dom';
 
-import { FriendSuggestions } from '@/components/FriendSuggestions';
+import { FriendSuggestionsPopover } from '@/components/FriendSuggestionsPopover';
 
 import { UserSearchDialog } from '@/components/UserSearchDialog';
 
