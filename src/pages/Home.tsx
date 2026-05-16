@@ -270,6 +270,8 @@ const Home = () => {
 
             </Button>
 
+            <FriendSuggestionsPopover />
+
             <NotificationBell />
 
             <AppMenu />
