@@ -294,15 +294,6 @@ const Home = () => {
 
 
 
-          {/* Friend Suggestions */}
-
-          <div className="mb-3 sm:mb-4">
-
-            <FriendSuggestions />
-
-          </div>
-
-
 
           {/* Ad: 320x100 banner after friend suggestions */}
 
