@@ -80,35 +80,38 @@ export const useFriendSuggestions = () => {
     staleTime: STALE_WINDOW_MS, // React Query cache aligns with backend freshness
   });
 
-  // If no suggestions from the algorithm, get random users
+  // Fetch ALL non-friend, non-pending users across the entire app so every
+  // unfriended person shows up in PYMK (merged with algorithmic suggestions below).
   const { data: fallbackSuggestions } = useQuery({
     queryKey: ['fallback-suggestions', user?.id],
     queryFn: async () => {
-      if (!user || (suggestions && suggestions.length > 0)) return [];
+      if (!user) return [];
 
-      // Get existing friends and pending requests
+      // Exclude: self, anyone in any friendship row (accepted/pending/blocked, either direction)
       const { data: friendships } = await supabase
         .from('friendships')
         .select('user_id, friend_id')
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
-      const excludeIds = new Set([user.id]);
+      const excludeIds = new Set<string>([user.id]);
       friendships?.forEach(f => {
         excludeIds.add(f.user_id);
         excludeIds.add(f.friend_id);
       });
 
-      // Get users not in friends list
+      const excludeList = Array.from(excludeIds).join(',');
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, username, avatar_url, bio')
-        .not('id', 'in', `(${Array.from(excludeIds).join(',')})`)
-        .limit(10);
+        .not('id', 'in', `(${excludeList})`)
+        .order('created_at', { ascending: false })
+        .limit(1000);
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user && (!suggestions || suggestions.length === 0),
+    enabled: !!user,
+    staleTime: 60 * 1000,
   });
 
   // Send friend request
@@ -137,20 +140,26 @@ export const useFriendSuggestions = () => {
     },
   });
 
-  const allSuggestions = suggestions && suggestions.length > 0 
-    ? suggestions.map(s => {
-        const profile = s.profiles as any;
-        return { 
-          id: profile?.id,
-          display_name: profile?.display_name,
-          username: profile?.username,
-          avatar_url: profile?.avatar_url,
-          bio: profile?.bio,
-          suggestionId: s.id, 
-          mutualCount: (s.reason as any)?.mutual_friends || 0 
-        };
-      })
-    : fallbackSuggestions?.map(p => ({ ...p, suggestionId: null, mutualCount: 0 })) || [];
+  // Merge algorithmic suggestions with full non-friend pool, deduped.
+  const algoMapped = (suggestions || []).map(s => {
+    const profile = s.profiles as any;
+    return profile?.id ? {
+      id: profile.id,
+      display_name: profile.display_name,
+      username: profile.username,
+      avatar_url: profile.avatar_url,
+      bio: profile.bio,
+      suggestionId: s.id,
+      mutualCount: (s.reason as any)?.mutual_friends || 0,
+    } : null;
+  }).filter(Boolean) as any[];
+
+  const seen = new Set<string>(algoMapped.map(s => s.id));
+  const fallbackMapped = (fallbackSuggestions || [])
+    .filter(p => !seen.has(p.id))
+    .map(p => ({ ...p, suggestionId: null, mutualCount: 0 }));
+
+  const allSuggestions = [...algoMapped, ...fallbackMapped];
 
   // Realtime: friend suggestions update when friendships change
   useEffect(() => {
