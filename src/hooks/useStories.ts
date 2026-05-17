@@ -421,6 +421,46 @@ export const useStories = () => {
         viewedStoryCache.delete(cacheKey);
         throw error;
       }
+
+      // After successful view insert, fetch updated view count and broadcast to all viewers
+      try {
+        const { data: countData, error: countError } = await supabase
+          .from("story_views")
+          .select("*", { count: 'exact', head: true });
+
+        if (!countError && countData !== null) {
+          // Get story owner to notify only them of view update
+          const { data: storyData } = await supabase
+            .from("stories")
+            .select("user_id")
+            .eq("id", storyId)
+            .single();
+
+          if (storyData?.user_id) {
+            // Get updated total views count for this specific story
+            const { count: totalViews } = await supabase
+              .from("story_views")
+              .select("*", { count: 'exact', head: true })
+              .eq("story_id", storyId);
+
+            // Broadcast to all viewers of this story
+            supabase
+              .channel(`story_views_${storyId}`)
+              .send('broadcast', {
+                event: 'story_views_updated',
+                payload: {
+                  story_id: storyId,
+                  total_views: totalViews || 0,
+                  viewer_id: user.id,
+                },
+              })
+              .catch(err => console.error('Failed to broadcast story view:', err));
+          }
+        }
+      } catch (error) {
+        // Non-critical: view was inserted successfully even if broadcast fails
+        console.error('Failed to broadcast story view update:', error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["viewed-stories", user?.id] });

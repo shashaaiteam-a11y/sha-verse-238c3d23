@@ -7,6 +7,7 @@ import { StoryGroup } from "@/hooks/useStories";
 import { useStories } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StoryViewerProps {
   storyGroup: StoryGroup;
@@ -227,6 +228,43 @@ const StoryViewer = ({ storyGroup, onClose }: StoryViewerProps) => {
       return () => clearTimeout(timeoutId);
     }
   }, [mediaLoaded, isPaused, startTimer]);
+
+  // Realtime listener for story views updates (only for story owner)
+  useEffect(() => {
+    if (!currentStory || isOwnStory) return;
+
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    try {
+      // Subscribe to story_views_updated event for this story
+      // Channel name is story_{storyId} so all viewers of this story get the update
+      channel = supabase
+        .channel(`story_views_${currentStory.id}`)
+        .on(
+          'broadcast',
+          { event: 'story_views_updated' },
+          (payload: any) => {
+            // Update local view count when new view event arrives
+            if (payload.payload?.total_views !== undefined) {
+              setViewCount(payload.payload.total_views);
+            }
+          }
+        )
+        .subscribe();
+    } catch (error) {
+      console.error('Failed to subscribe to story views realtime:', error);
+    }
+
+    return () => {
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {
+          // noop
+        }
+      }
+    };
+  }, [currentStory?.id, isOwnStory]);
 
   const goToPrevious = () => {
     if (currentIndex > 0) {
