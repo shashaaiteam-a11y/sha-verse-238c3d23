@@ -58,6 +58,7 @@ export const useFriendSuggestions = () => {
 
       // First fetch existing suggestions (fast path — serve cached data instantly)
       let data = await fetchSuggestions();
+      // No stale-recalc forced here; combined query below ensures every non-friend shows.
 
       // Determine if we need to recalculate:
       // - No suggestions exist yet (new user / never computed), OR
