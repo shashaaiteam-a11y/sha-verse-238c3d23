@@ -1,12 +1,16 @@
 import { Fragment, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, UserPlus, ArrowLeft } from 'lucide-react';
+import { Users, UserPlus, ArrowLeft, Check } from 'lucide-react';
 import { useFriendSuggestions } from '@/hooks/useFriendSuggestions';
 import { useNavigate } from 'react-router-dom';
 import { SponsoredPersonCard } from '@/components/ads';
 import { useDiscoveryAds } from '@/hooks/useDiscoveryAds';
 import { createPortal } from 'react-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Header-icon PYMK. Tapping opens a full-screen overlay (between the device's
