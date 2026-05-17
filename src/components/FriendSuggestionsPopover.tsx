@@ -33,6 +33,38 @@ export const FriendSuggestionsPopover = () => {
   const handleAdd = async (targetId: string) => {
     if (!user || pendingIds.has(targetId) || sentIds.has(targetId)) return;
     setPendingIds((s) => new Set(s).add(targetId));
+
+    // Find the suggestion profile for optimistic Sent tab insertion
+    const target = visibleSuggestions.find((s: any) => s.id === targetId);
+    const optimisticSentRow = target
+      ? {
+          id: `optimistic-${targetId}`,
+          friend_id: targetId,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          profiles: {
+            id: target.id,
+            username: target.username,
+            display_name: target.display_name,
+            avatar_url: target.avatar_url,
+          },
+        }
+      : null;
+
+    // Optimistic: mark as sent immediately + prepend to sent-requests cache + remove from suggestions
+    setSentIds((s) => new Set(s).add(targetId));
+    if (optimisticSentRow) {
+      queryClient.setQueriesData({ queryKey: ['sent-requests'] }, (old: any) =>
+        Array.isArray(old) ? [optimisticSentRow, ...old] : old
+      );
+    }
+    queryClient.setQueriesData({ queryKey: ['friend-suggestions'] }, (old: any) =>
+      Array.isArray(old) ? old.filter((s: any) => (s?.profiles?.id ?? s?.suggested_user_id) !== targetId) : old
+    );
+    queryClient.setQueriesData({ queryKey: ['fallback-suggestions'] }, (old: any) =>
+      Array.isArray(old) ? old.filter((s: any) => s?.id !== targetId) : old
+    );
+
     try {
       // Check if any friendship row already exists in either direction
       const { data: existing } = await supabase
@@ -73,6 +105,18 @@ export const FriendSuggestionsPopover = () => {
       queryClient.invalidateQueries({ queryKey: ['fallback-suggestions'] });
       queryClient.invalidateQueries({ queryKey: ['sent-requests'] });
     } catch (e: any) {
+      // Rollback optimistic updates
+      setSentIds((s) => {
+        const next = new Set(s);
+        next.delete(targetId);
+        return next;
+      });
+      queryClient.setQueriesData({ queryKey: ['sent-requests'] }, (old: any) =>
+        Array.isArray(old) ? old.filter((r: any) => r?.id !== `optimistic-${targetId}`) : old
+      );
+      queryClient.invalidateQueries({ queryKey: ['friend-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['fallback-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['sent-requests'] });
       toast({
         title: 'Failed to send request',
         description: e?.message || 'Please try again',
