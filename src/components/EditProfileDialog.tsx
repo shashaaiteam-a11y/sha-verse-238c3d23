@@ -9,7 +9,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Pencil, User, MapPin, Briefcase, Heart, Globe, AtSign, Phone, GraduationCap, Facebook, Instagram, Twitter } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface EditProfileDialogProps {
@@ -72,24 +71,20 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
         birthdate: profile.birthdate || '',
       });
     }
-  }, [open]);
+  }, [open, profile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Constrain text to max 5 lines, each line max 36 characters.
-  // Auto-wraps to next line once the 36-char limit is reached on a line.
   const MAX_LINES = 5;
   const MAX_CHARS_PER_LINE = 36;
   const constrainBioText = (raw: string): string => {
-    // Split on user-entered newlines first
     const userLines = raw.replace(/\r\n/g, '\n').split('\n');
     const outLines: string[] = [];
 
     for (let i = 0; i < userLines.length; i++) {
       let remaining = userLines[i];
-      // Wrap any line longer than MAX_CHARS_PER_LINE into chunks
       if (remaining.length === 0) {
         outLines.push('');
       } else {
@@ -102,7 +97,6 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
       if (outLines.length >= MAX_LINES) break;
     }
 
-    // Cap to MAX_LINES; ensure last line doesn't exceed MAX_CHARS_PER_LINE
     const capped = outLines.slice(0, MAX_LINES).map(l => l.slice(0, MAX_CHARS_PER_LINE));
     return capped.join('\n');
   };
@@ -113,7 +107,6 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
   };
 
   const handleBioKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Block Enter if we're already at 5 lines
     if (e.key === 'Enter') {
       const value = (e.target as HTMLTextAreaElement).value;
       const lines = value.split('\n');
@@ -133,7 +126,6 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Prepare data: convert empty strings to null for date/select fields
       const dataToSave = {
         ...formData,
         birthdate: formData.birthdate && formData.birthdate.trim() ? formData.birthdate : null,
@@ -167,7 +159,6 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg w-full p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Header */}
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-border shrink-0">
           <DialogTitle className="text-lg font-bold flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-gradient-primary flex items-center justify-center">
@@ -177,7 +168,6 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Tabs */}
         <Tabs defaultValue="basic" className="flex flex-col flex-1 overflow-hidden">
           <TabsList className="mx-5 mt-3 mb-0 shrink-0 grid grid-cols-4 bg-secondary rounded-xl h-9">
             <TabsTrigger value="basic" className="rounded-lg text-xs font-medium">Basic</TabsTrigger>
@@ -186,8 +176,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
             <TabsTrigger value="social" className="rounded-lg text-xs font-medium">Social</TabsTrigger>
           </TabsList>
 
-          {/* Basic Info */}
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             <TabsContent value="basic" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={User} label="Display Name">
                 <Input name="display_name" value={formData.display_name} onChange={handleChange} placeholder="Your name" />
@@ -223,10 +212,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 </p>
               </FieldRow>
             </TabsContent>
-          </ScrollArea>
 
-          {/* Personal */}
-          <ScrollArea className="flex-1">
             <TabsContent value="personal" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={User} label="Gender">
                 <Select value={formData.gender || ''} onValueChange={(v) => handleSelectChange('gender', v)}>
@@ -272,10 +258,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="current_city" value={formData.current_city} onChange={handleChange} placeholder="City, Country" />
               </FieldRow>
             </TabsContent>
-          </ScrollArea>
 
-          {/* Contact */}
-          <ScrollArea className="flex-1">
             <TabsContent value="contact" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={Phone} label="Phone">
                 <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 234 567 8900" />
@@ -284,10 +267,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="website" value={formData.website} onChange={handleChange} placeholder="https://example.com" />
               </FieldRow>
             </TabsContent>
-          </ScrollArea>
 
-          {/* Social */}
-          <ScrollArea className="flex-1">
             <TabsContent value="social" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={Facebook} label="Facebook">
                 <Input name="facebook_url" value={formData.facebook_url} onChange={handleChange} placeholder="https://facebook.com/username" />
@@ -299,10 +279,9 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="twitter_url" value={formData.twitter_url} onChange={handleChange} placeholder="https://twitter.com/username" />
               </FieldRow>
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
 
-        {/* Sticky Footer */}
         <div className="px-5 py-3 border-t border-border bg-background flex justify-end gap-2 shrink-0">
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
           <Button onClick={handleSave} disabled={loading} className="bg-gradient-primary min-w-[100px]">
