@@ -133,9 +133,17 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Prepare data: convert empty strings to null for date/select fields
+      const dataToSave = {
+        ...formData,
+        birthdate: formData.birthdate && formData.birthdate.trim() ? formData.birthdate : null,
+        gender: formData.gender || null,
+        relationship_status: formData.relationship_status || null,
+      };
+
       const { error } = await supabase
         .from('profiles')
-        .update(formData)
+        .update(dataToSave)
         .eq('id', user.id);
 
       if (error) throw error;
@@ -219,9 +227,10 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
             {/* Personal */}
             <TabsContent value="personal" className="px-5 py-4 space-y-4 mt-0">
               <FieldRow icon={User} label="Gender">
-                <Select value={formData.gender} onValueChange={(v) => handleSelectChange('gender', v)}>
+                <Select value={formData.gender || ''} onValueChange={(v) => handleSelectChange('gender', v)}>
                   <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">Clear</SelectItem>
                     <SelectItem value="Male">Male</SelectItem>
                     <SelectItem value="Female">Female</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
@@ -233,9 +242,10 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="birthdate" type="date" value={formData.birthdate} onChange={handleChange} />
               </FieldRow>
               <FieldRow icon={Heart} label="Relationship Status">
-                <Select value={formData.relationship_status} onValueChange={(v) => handleSelectChange('relationship_status', v)}>
+                <Select value={formData.relationship_status || ''} onValueChange={(v) => handleSelectChange('relationship_status', v)}>
                   <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="">Clear</SelectItem>
                     <SelectItem value="Single">Single</SelectItem>
                     <SelectItem value="In a relationship">In a relationship</SelectItem>
                     <SelectItem value="Engaged">Engaged</SelectItem>
@@ -265,6 +275,9 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
             <TabsContent value="contact" className="px-5 py-4 space-y-4 mt-0">
               <FieldRow icon={Phone} label="Phone">
                 <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 234 567 8900" />
+              </FieldRow>
+              <FieldRow icon={Globe} label="Website">
+                <Input name="website" value={formData.website} onChange={handleChange} placeholder="https://example.com" />
               </FieldRow>
             </TabsContent>
 
