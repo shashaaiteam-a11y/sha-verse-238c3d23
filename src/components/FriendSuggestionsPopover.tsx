@@ -1,12 +1,16 @@
 import { Fragment, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, UserPlus, ArrowLeft } from 'lucide-react';
+import { Users, UserPlus, ArrowLeft, Check } from 'lucide-react';
 import { useFriendSuggestions } from '@/hooks/useFriendSuggestions';
 import { useNavigate } from 'react-router-dom';
 import { SponsoredPersonCard } from '@/components/ads';
 import { useDiscoveryAds } from '@/hooks/useDiscoveryAds';
 import { createPortal } from 'react-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Header-icon PYMK. Tapping opens a full-screen overlay (between the device's
@@ -14,12 +18,75 @@ import { createPortal } from 'react-dom';
  * working back button. Existing PYMK logic is reused unchanged.
  */
 export const FriendSuggestionsPopover = () => {
-  const { suggestions, isLoading, sendRequest } = useFriendSuggestions();
+  const { suggestions, isLoading } = useFriendSuggestions();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const visibleSuggestions = suggestions?.slice(0, 50) || [];
   const { adPositions } = useDiscoveryAds(visibleSuggestions.length, 'pymk');
   const count = suggestions?.length || 0;
+
+  const handleAdd = async (targetId: string) => {
+    if (!user || pendingIds.has(targetId) || sentIds.has(targetId)) return;
+    setPendingIds((s) => new Set(s).add(targetId));
+    try {
+      // Check if any friendship row already exists in either direction
+      const { data: existing } = await supabase
+        .from('friendships')
+        .select('id, user_id, friend_id, status')
+        .or(
+          `and(user_id.eq.${user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${user.id})`
+        )
+        .limit(1);
+
+      const row = existing?.[0];
+      if (row) {
+        if (row.status === 'accepted') {
+          toast({ title: 'Already friends' });
+          setSentIds((s) => new Set(s).add(targetId));
+        } else if (row.status === 'pending') {
+          toast({ title: 'Request already pending' });
+          setSentIds((s) => new Set(s).add(targetId));
+        } else {
+          // declined / blocked / other — re-issue from current user
+          const { error } = await supabase
+            .from('friendships')
+            .update({ user_id: user.id, friend_id: targetId, status: 'pending' })
+            .eq('id', row.id);
+          if (error) throw error;
+          toast({ title: 'Friend request sent!' });
+          setSentIds((s) => new Set(s).add(targetId));
+        }
+      } else {
+        const { error } = await supabase
+          .from('friendships')
+          .insert({ user_id: user.id, friend_id: targetId, status: 'pending' });
+        if (error) throw error;
+        toast({ title: 'Friend request sent!' });
+        setSentIds((s) => new Set(s).add(targetId));
+      }
+      queryClient.invalidateQueries({ queryKey: ['friend-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['fallback-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['sent-requests'] });
+    } catch (e: any) {
+      toast({
+        title: 'Failed to send request',
+        description: e?.message || 'Please try again',
+        variant: 'destructive',
+      });
+    } finally {
+      setPendingIds((s) => {
+        const next = new Set(s);
+        next.delete(targetId);
+        return next;
+      });
+    }
+  };
+
 
   // Lock body scroll + handle Android/browser back button while overlay is open
   useEffect(() => {
@@ -136,13 +203,16 @@ export const FriendSuggestionsPopover = () => {
                   </div>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant={sentIds.has(suggestion.id) ? 'secondary' : 'outline'}
                     className="h-8 px-3 text-xs flex-shrink-0"
-                    onClick={() => sendRequest.mutate(suggestion.id)}
-                    disabled={sendRequest.isPending}
+                    onClick={() => handleAdd(suggestion.id)}
+                    disabled={pendingIds.has(suggestion.id) || sentIds.has(suggestion.id)}
                   >
-                    <UserPlus className="w-3 h-3 mr-1" />
-                    Add
+                    {sentIds.has(suggestion.id) ? (
+                      <><Check className="w-3 h-3 mr-1" />Sent</>
+                    ) : (
+                      <><UserPlus className="w-3 h-3 mr-1" />{pendingIds.has(suggestion.id) ? '...' : 'Add'}</>
+                    )}
                   </Button>
                 </div>
                 {adPositions.has(idx) && (
