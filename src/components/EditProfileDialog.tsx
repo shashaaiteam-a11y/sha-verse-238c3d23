@@ -186,9 +186,9 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
             <TabsTrigger value="social" className="rounded-lg text-xs font-medium">Social</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="h-[calc(90vh-200px)]">
-            {/* Basic Info */}
-            <TabsContent value="basic" className="px-5 py-4 space-y-4 mt-0">
+          {/* Basic Info */}
+          <ScrollArea className="flex-1">
+            <TabsContent value="basic" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={User} label="Display Name">
                 <Input name="display_name" value={formData.display_name} onChange={handleChange} placeholder="Your name" />
               </FieldRow>
@@ -223,9 +223,11 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 </p>
               </FieldRow>
             </TabsContent>
+          </ScrollArea>
 
-            {/* Personal */}
-            <TabsContent value="personal" className="px-5 py-4 space-y-4 mt-0">
+          {/* Personal */}
+          <ScrollArea className="flex-1">
+            <TabsContent value="personal" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={User} label="Gender">
                 <Select value={formData.gender || ''} onValueChange={(v) => handleSelectChange('gender', v)}>
                   <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
@@ -270,9 +272,11 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="current_city" value={formData.current_city} onChange={handleChange} placeholder="City, Country" />
               </FieldRow>
             </TabsContent>
+          </ScrollArea>
 
-            {/* Contact */}
-            <TabsContent value="contact" className="px-5 py-4 space-y-4 mt-0">
+          {/* Contact */}
+          <ScrollArea className="flex-1">
+            <TabsContent value="contact" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={Phone} label="Phone">
                 <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 234 567 8900" />
               </FieldRow>
@@ -280,9 +284,11 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="website" value={formData.website} onChange={handleChange} placeholder="https://example.com" />
               </FieldRow>
             </TabsContent>
+          </ScrollArea>
 
-            {/* Social */}
-            <TabsContent value="social" className="px-5 py-4 space-y-4 mt-0">
+          {/* Social */}
+          <ScrollArea className="flex-1">
+            <TabsContent value="social" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={Facebook} label="Facebook">
                 <Input name="facebook_url" value={formData.facebook_url} onChange={handleChange} placeholder="https://facebook.com/username" />
               </FieldRow>
