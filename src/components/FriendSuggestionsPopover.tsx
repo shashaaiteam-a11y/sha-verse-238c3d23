@@ -203,13 +203,16 @@ export const FriendSuggestionsPopover = () => {
                   </div>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant={sentIds.has(suggestion.id) ? 'secondary' : 'outline'}
                     className="h-8 px-3 text-xs flex-shrink-0"
-                    onClick={() => sendRequest.mutate(suggestion.id)}
-                    disabled={sendRequest.isPending}
+                    onClick={() => handleAdd(suggestion.id)}
+                    disabled={pendingIds.has(suggestion.id) || sentIds.has(suggestion.id)}
                   >
-                    <UserPlus className="w-3 h-3 mr-1" />
-                    Add
+                    {sentIds.has(suggestion.id) ? (
+                      <><Check className="w-3 h-3 mr-1" />Sent</>
+                    ) : (
+                      <><UserPlus className="w-3 h-3 mr-1" />{pendingIds.has(suggestion.id) ? '...' : 'Add'}</>
+                    )}
                   </Button>
                 </div>
                 {adPositions.has(idx) && (
