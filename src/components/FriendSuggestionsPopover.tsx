@@ -18,12 +18,75 @@ import { useQueryClient } from '@tanstack/react-query';
  * working back button. Existing PYMK logic is reused unchanged.
  */
 export const FriendSuggestionsPopover = () => {
-  const { suggestions, isLoading, sendRequest } = useFriendSuggestions();
+  const { suggestions, isLoading } = useFriendSuggestions();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const visibleSuggestions = suggestions?.slice(0, 50) || [];
   const { adPositions } = useDiscoveryAds(visibleSuggestions.length, 'pymk');
   const count = suggestions?.length || 0;
+
+  const handleAdd = async (targetId: string) => {
+    if (!user || pendingIds.has(targetId) || sentIds.has(targetId)) return;
+    setPendingIds((s) => new Set(s).add(targetId));
+    try {
+      // Check if any friendship row already exists in either direction
+      const { data: existing } = await supabase
+        .from('friendships')
+        .select('id, user_id, friend_id, status')
+        .or(
+          `and(user_id.eq.${user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${user.id})`
+        )
+        .limit(1);
+
+      const row = existing?.[0];
+      if (row) {
+        if (row.status === 'accepted') {
+          toast({ title: 'Already friends' });
+          setSentIds((s) => new Set(s).add(targetId));
+        } else if (row.status === 'pending') {
+          toast({ title: 'Request already pending' });
+          setSentIds((s) => new Set(s).add(targetId));
+        } else {
+          // declined / blocked / other — re-issue from current user
+          const { error } = await supabase
+            .from('friendships')
+            .update({ user_id: user.id, friend_id: targetId, status: 'pending' })
+            .eq('id', row.id);
+          if (error) throw error;
+          toast({ title: 'Friend request sent!' });
+          setSentIds((s) => new Set(s).add(targetId));
+        }
+      } else {
+        const { error } = await supabase
+          .from('friendships')
+          .insert({ user_id: user.id, friend_id: targetId, status: 'pending' });
+        if (error) throw error;
+        toast({ title: 'Friend request sent!' });
+        setSentIds((s) => new Set(s).add(targetId));
+      }
+      queryClient.invalidateQueries({ queryKey: ['friend-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['fallback-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['sent-requests'] });
+    } catch (e: any) {
+      toast({
+        title: 'Failed to send request',
+        description: e?.message || 'Please try again',
+        variant: 'destructive',
+      });
+    } finally {
+      setPendingIds((s) => {
+        const next = new Set(s);
+        next.delete(targetId);
+        return next;
+      });
+    }
+  };
+
 
   // Lock body scroll + handle Android/browser back button while overlay is open
   useEffect(() => {
