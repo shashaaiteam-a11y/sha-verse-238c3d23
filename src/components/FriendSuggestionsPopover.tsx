@@ -105,6 +105,18 @@ export const FriendSuggestionsPopover = () => {
       queryClient.invalidateQueries({ queryKey: ['fallback-suggestions'] });
       queryClient.invalidateQueries({ queryKey: ['sent-requests'] });
     } catch (e: any) {
+      // Rollback optimistic updates
+      setSentIds((s) => {
+        const next = new Set(s);
+        next.delete(targetId);
+        return next;
+      });
+      queryClient.setQueriesData({ queryKey: ['sent-requests'] }, (old: any) =>
+        Array.isArray(old) ? old.filter((r: any) => r?.id !== `optimistic-${targetId}`) : old
+      );
+      queryClient.invalidateQueries({ queryKey: ['friend-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['fallback-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['sent-requests'] });
       toast({
         title: 'Failed to send request',
         description: e?.message || 'Please try again',
