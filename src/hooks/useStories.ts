@@ -446,7 +446,8 @@ export const useStories = () => {
             // Broadcast to all viewers of this story
             supabase
               .channel(`story_views_${storyId}`)
-              .send('broadcast', {
+              .send({
+                type: 'broadcast',
                 event: 'story_views_updated',
                 payload: {
                   story_id: storyId,
