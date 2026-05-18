@@ -1,7 +1,6 @@
-.env
+
 node_modules/
 .vite/
-.env.local
-.env.production
+
 dist
 dist/
