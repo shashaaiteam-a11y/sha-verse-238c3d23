@@ -217,7 +217,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
               <FieldRow icon={User} label="Gender">
                 <Select value={formData.gender || undefined} onValueChange={(v) => handleSelectChange('gender', v === '__clear__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[80]" style={{ zIndex: 80 }}>
                     <SelectItem value="__clear__">Clear</SelectItem>
                     <SelectItem value="Male">Male</SelectItem>
                     <SelectItem value="Female">Female</SelectItem>
@@ -232,7 +232,7 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
               <FieldRow icon={Heart} label="Relationship Status">
                 <Select value={formData.relationship_status || undefined} onValueChange={(v) => handleSelectChange('relationship_status', v === '__clear__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[80]" style={{ zIndex: 80 }}>
                     <SelectItem value="__clear__">Clear</SelectItem>
                     <SelectItem value="Single">Single</SelectItem>
                     <SelectItem value="In a relationship">In a relationship</SelectItem>
