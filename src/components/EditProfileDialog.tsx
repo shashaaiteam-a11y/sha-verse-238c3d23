@@ -215,10 +215,10 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
 
             <TabsContent value="personal" className="px-5 py-4 space-y-4 m-0">
               <FieldRow icon={User} label="Gender">
-                <Select value={formData.gender || ''} onValueChange={(v) => handleSelectChange('gender', v)}>
+                <Select value={formData.gender || undefined} onValueChange={(v) => handleSelectChange('gender', v === '__clear__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Clear</SelectItem>
+                    <SelectItem value="__clear__">Clear</SelectItem>
                     <SelectItem value="Male">Male</SelectItem>
                     <SelectItem value="Female">Female</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
