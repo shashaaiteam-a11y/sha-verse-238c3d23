@@ -230,10 +230,10 @@ export const EditProfileDialog = ({ profile }: EditProfileDialogProps) => {
                 <Input name="birthdate" type="date" value={formData.birthdate} onChange={handleChange} />
               </FieldRow>
               <FieldRow icon={Heart} label="Relationship Status">
-                <Select value={formData.relationship_status || ''} onValueChange={(v) => handleSelectChange('relationship_status', v)}>
+                <Select value={formData.relationship_status || undefined} onValueChange={(v) => handleSelectChange('relationship_status', v === '__clear__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Clear</SelectItem>
+                    <SelectItem value="__clear__">Clear</SelectItem>
                     <SelectItem value="Single">Single</SelectItem>
                     <SelectItem value="In a relationship">In a relationship</SelectItem>
                     <SelectItem value="Engaged">Engaged</SelectItem>
