@@ -332,8 +332,12 @@ export const CreatePostCard = () => {
       setPollQuestion('');
       setPollOptions([{ id: '1', text: '' }, { id: '2', text: '' }]);
       setPollDuration('1d');
-      queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
-      queryClient.invalidateQueries({ queryKey: ['user-posts'] });
+      // REALTIME-FIX: Invalidate all 3 post-related caches with active refetch
+      // so the new post appears instantly in Home feed (useFeed), Profile posts
+      // tab (useUserPosts), and any legacy usePosts consumers — no manual refresh.
+      queryClient.invalidateQueries({ queryKey: ['unified-feed'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['user-posts'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['posts'], refetchType: 'active' });
     } catch (error: any) {
       toast({
         title: 'Error',
