@@ -447,12 +447,15 @@ export const useFeed = () => {
     if (!user) return;
 
     let timeoutId: NodeJS.Timeout | null = null;
-    const DEBOUNCE_MS = 3000; // Wait 3 seconds, then reload once
+    // REALTIME-FIX: Reduced from 3000ms to 500ms so new posts/group_posts/videos
+    // appear in the Home feed within <3s of being created by ANY user, not just
+    // after the original 3s debounce window. Still debounced to coalesce bursts.
+    const DEBOUNCE_MS = 500;
 
     const debouncedInvalidate = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['unified-feed'] });
+        queryClient.invalidateQueries({ queryKey: ['unified-feed'], refetchType: 'active' });
       }, DEBOUNCE_MS);
     };
 
