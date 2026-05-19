@@ -29,7 +29,12 @@ export const SiteFooter = () => {
   if (hiddenPrefixes.some((p) => location.pathname.startsWith(p))) return null;
 
   return (
-    <footer className="mt-8 border-t bg-card/40 pb-20 sm:pb-6">
+    <footer
+      className="mt-8 border-t bg-card/40 sm:pb-6"
+      style={{
+        paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 4.5rem)`,
+      }}
+    >
       <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-muted-foreground">
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
           <Link to="/about" className="hover:text-foreground">About</Link>
