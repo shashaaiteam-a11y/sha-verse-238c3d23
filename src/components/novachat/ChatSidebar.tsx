@@ -38,6 +38,7 @@ interface ChatSidebarProps {
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string, title: string) => void;
+  onPrefetchConversation?: (id: string) => void;
   usage?: { is_pro: boolean; used: number; limit: number };
   onUpgradeClick?: () => void;
 }
