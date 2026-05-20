@@ -37,6 +37,7 @@ const NovaChat = () => {
     updateSettings,
     sendMessage,
     selectConversation,
+    prefetchConversation,
     newChat,
     deleteConversation,
     updateTitle,
@@ -207,6 +208,7 @@ const NovaChat = () => {
             onSelectConversation={selectConversation}
             onDeleteConversation={(id) => deleteConversation.mutate(id)}
             onRenameConversation={(id, title) => updateTitle.mutate({ id, title })}
+            onPrefetchConversation={prefetchConversation}
             usage={usage}
             // Pro upgrade hidden for now — will be re-enabled in a future version
             // onUpgradeClick={() => setPricingOpen(true)}

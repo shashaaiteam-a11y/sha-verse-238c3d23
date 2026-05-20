@@ -303,11 +303,14 @@ export const useNovaChat = () => {
         if (messages[i].role === 'user') { lastUserIdx = i; break; }
       }
       newMessages = messages.slice(0, lastUserIdx + 1);
+      // REALTIME-FIX: Render optimistically first
+      setMessages(newMessages);
     } else {
       newMessages = [...messages, { role: 'user', content: input, attachments }];
-      await saveMessage(conversationId, 'user', input);
+      // REALTIME-FIX: Render user message instantly (<300ms), then persist in background
+      setMessages(newMessages);
+      saveMessage(conversationId, 'user', input).catch((e) => console.error('saveMessage bg', e));
     }
-    setMessages(newMessages);
     setIsStreaming(true);
 
     let assistantContent = '';
@@ -450,6 +453,24 @@ export const useNovaChat = () => {
     setMessages(cached ?? []);
     setCurrentConversationId(id);
   }, [currentConversationId, queryClient]);
+
+  // REALTIME-FIX: Prefetch messages on hover so click opens <300ms
+  const prefetchConversation = useCallback((id: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['ai-messages', id],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('ai_messages')
+          .select('*')
+          .eq('conversation_id', id)
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        return data.map((m: any) => ({ id: m.id, role: m.role, content: m.content })) as Message[];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [queryClient]);
+
   const newChat = useCallback(() => { setCurrentConversationId(null); setMessages([]); }, []);
 
   return {
@@ -463,6 +484,7 @@ export const useNovaChat = () => {
     updateSettings,
     sendMessage,
     selectConversation,
+    prefetchConversation,
     newChat,
     deleteConversation,
     updateTitle,
