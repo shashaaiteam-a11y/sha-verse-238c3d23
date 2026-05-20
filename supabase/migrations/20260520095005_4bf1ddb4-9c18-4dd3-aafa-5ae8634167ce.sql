@@ -1,0 +1,1 @@
+ALTER TABLE public.group_join_requests REPLICA IDENTITY FULL;
