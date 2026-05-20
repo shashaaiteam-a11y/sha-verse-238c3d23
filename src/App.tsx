@@ -184,7 +184,9 @@ const App = () => (
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>
                 </SwipeWrapper>
+                <RealtimeStatus />
                 <BottomNav />
+
                 <SiteFooter />
                 <AdSenseLoader />
                 <CookieConsent />
