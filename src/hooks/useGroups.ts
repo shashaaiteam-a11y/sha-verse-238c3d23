@@ -363,19 +363,19 @@ export const useGroups = () => {
     },
   });
 
-  // 🚀 OPTIMIZATION: Debounced realtime to prevent group update storms
+  // REALTIME-FIX: Faster invalidation (500ms) so join/approve/leave reflect within 3s
   useEffect(() => {
     if (!user?.id) return;
 
     let timeoutId: NodeJS.Timeout | null = null;
-    const DEBOUNCE_MS = 2500;
+    const DEBOUNCE_MS = 500;
 
     const debouncedInvalidate = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['pending-join-requests'] });
+        queryClient.invalidateQueries({ queryKey: ['my-groups', user.id], refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: ['suggested-groups', user.id], refetchType: 'active' });
+        queryClient.invalidateQueries({ queryKey: ['pending-join-requests'], refetchType: 'active' });
       }, DEBOUNCE_MS);
     };
 
@@ -385,8 +385,8 @@ export const useGroups = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `user_id=eq.${user.id}` }, () => {
         debouncedInvalidate();
       })
-      // Admin approved or rejected our join request
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'group_join_requests', filter: `user_id=eq.${user.id}` }, () => {
+      // REALTIME-FIX: react to ALL changes on my join requests (insert/update/delete)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_join_requests', filter: `user_id=eq.${user.id}` }, () => {
         debouncedInvalidate();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'groups' }, () => {
@@ -407,6 +407,7 @@ export const useGroups = () => {
       supabase.removeChannel(channel);
     };
   }, [user?.id, queryClient]);
+
 
   return {
     myGroups,
