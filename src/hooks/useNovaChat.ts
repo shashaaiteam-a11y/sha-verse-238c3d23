@@ -484,6 +484,7 @@ export const useNovaChat = () => {
     updateSettings,
     sendMessage,
     selectConversation,
+    prefetchConversation,
     newChat,
     deleteConversation,
     updateTitle,
