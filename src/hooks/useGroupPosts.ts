@@ -261,20 +261,35 @@ export const useGroupPosts = (groupId?: string) => {
       )
       .subscribe();
 
-    // Subscribe to group_members changes to update member count in real-time
+    // Subscribe to group_members changes to update member count + member list in real-time
+    // REALTIME-FIX: also invalidate ['group-members', groupId] so member list updates instantly
     const memberCountChannel = supabase
-      .channel(`group-member-count-${groupId}`)
+      .channel(`group-member-count-${groupId}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'group_members', filter: `group_id=eq.${groupId}` },
-        () => { queryClient.invalidateQueries({ queryKey: ['group', groupId] }); }
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['group', groupId], refetchType: 'active' });
+          queryClient.invalidateQueries({ queryKey: ['group-members', groupId], refetchType: 'active' });
+        }
       )
       .on(
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'group_members', filter: `group_id=eq.${groupId}` },
-        () => { queryClient.invalidateQueries({ queryKey: ['group', groupId] }); }
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['group', groupId], refetchType: 'active' });
+          queryClient.invalidateQueries({ queryKey: ['group-members', groupId], refetchType: 'active' });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'group_members', filter: `group_id=eq.${groupId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['group-members', groupId], refetchType: 'active' });
+        }
       )
       .subscribe();
+
 
     return () => {
       supabase.removeChannel(groupChannel);

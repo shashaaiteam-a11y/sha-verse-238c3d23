@@ -172,5 +172,25 @@ export const useGroupJoinRequests = (groupId?: string) => {
     onError: (e: any) => toast({ title: 'Failed', description: e.message, variant: 'destructive' }),
   });
 
+  // REALTIME-FIX: subscribe to join requests so admins see new/updated requests <3s without refresh
+  useEffect(() => {
+    if (!groupId) return;
+    const channel = supabase
+      .channel(`group-join-requests-${groupId}-${Math.random().toString(36).slice(2, 8)}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'group_join_requests', filter: `group_id=eq.${groupId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId], refetchType: 'active' });
+          queryClient.invalidateQueries({ queryKey: ['my-join-request', groupId], refetchType: 'active' });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [groupId, queryClient]);
+
   return { joinRequests, isLoading, myRequest, approveRequest, rejectRequest };
 };
+
