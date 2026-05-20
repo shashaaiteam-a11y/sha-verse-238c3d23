@@ -303,11 +303,14 @@ export const useNovaChat = () => {
         if (messages[i].role === 'user') { lastUserIdx = i; break; }
       }
       newMessages = messages.slice(0, lastUserIdx + 1);
+      // REALTIME-FIX: Render optimistically first
+      setMessages(newMessages);
     } else {
       newMessages = [...messages, { role: 'user', content: input, attachments }];
-      await saveMessage(conversationId, 'user', input);
+      // REALTIME-FIX: Render user message instantly (<300ms), then persist in background
+      setMessages(newMessages);
+      saveMessage(conversationId, 'user', input).catch((e) => console.error('saveMessage bg', e));
     }
-    setMessages(newMessages);
     setIsStreaming(true);
 
     let assistantContent = '';
