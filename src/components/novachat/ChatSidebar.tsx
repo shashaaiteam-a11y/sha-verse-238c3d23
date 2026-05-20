@@ -52,6 +52,7 @@ const ChatSidebar = ({
   onSelectConversation,
   onDeleteConversation,
   onRenameConversation,
+  onPrefetchConversation,
   usage,
   onUpgradeClick,
 }: ChatSidebarProps) => {
