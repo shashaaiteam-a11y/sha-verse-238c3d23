@@ -37,6 +37,7 @@ const NovaChat = () => {
     updateSettings,
     sendMessage,
     selectConversation,
+    prefetchConversation,
     newChat,
     deleteConversation,
     updateTitle,
