@@ -136,9 +136,9 @@ const ChatSidebar = ({
         </div>
       </div>
 
-      {/* Conversations List */}
-      <ScrollArea className="flex-1">
-        <div className="px-2 py-2">
+      {/* Conversations List - REALTIME-FIX: overscroll-contain + pan-y to prevent scroll lock */}
+      <ScrollArea className="flex-1 overscroll-contain" style={{ touchAction: 'pan-y' }}>
+        <div className="px-2 py-2" style={{ touchAction: 'pan-y' }}>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
