@@ -164,6 +164,8 @@ const ChatSidebar = ({
                             : "hover:bg-secondary/50"
                         )}
                         onClick={() => editingId !== conv.id && onSelectConversation(conv.id)}
+                        onMouseEnter={() => onPrefetchConversation?.(conv.id)}
+                        onTouchStart={() => onPrefetchConversation?.(conv.id)}
                       >
                         <MessageSquare className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
                         
