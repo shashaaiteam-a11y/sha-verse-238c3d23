@@ -56,7 +56,7 @@ const BookReader = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [fontSize, setFontSize] = useState(16);
+  const [fontSize, setFontSize] = useState(18);
   const [theme, setTheme] = useState<ReaderTheme>("light");
   const [showControls, setShowControls] = useState(true);
   const [showToc, setShowToc] = useState(false);
@@ -705,7 +705,7 @@ const BookReader = () => {
               <button
                 type="button"
                 aria-label="Previous page"
-                className="h-full w-1/4 pointer-events-auto bg-transparent"
+                className="h-full w-[30%] pointer-events-auto bg-transparent"
                 style={{ touchAction: "pan-y" }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -715,7 +715,7 @@ const BookReader = () => {
               <button
                 type="button"
                 aria-label="Toggle controls"
-                className="h-full w-2/4 pointer-events-auto bg-transparent"
+                className="h-full w-[40%] pointer-events-auto bg-transparent"
                 style={{ touchAction: "pan-y" }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -725,7 +725,7 @@ const BookReader = () => {
               <button
                 type="button"
                 aria-label="Next page"
-                className="h-full w-1/4 pointer-events-auto bg-transparent"
+                className="h-full w-[30%] pointer-events-auto bg-transparent"
                 style={{ touchAction: "pan-y" }}
                 onClick={(e) => {
                   e.stopPropagation();
