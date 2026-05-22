@@ -56,7 +56,7 @@ const BookReader = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [fontSize, setFontSize] = useState(16);
+  const [fontSize, setFontSize] = useState(18);
   const [theme, setTheme] = useState<ReaderTheme>("light");
   const [showControls, setShowControls] = useState(true);
   const [showToc, setShowToc] = useState(false);
