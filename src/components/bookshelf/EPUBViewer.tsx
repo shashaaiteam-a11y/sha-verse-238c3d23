@@ -19,30 +19,32 @@ export interface TocItem {
   subitems?: TocItem[];
 }
 
-// Strong CSS isolation rules: applied inside the EPUB iframe so the book's
-// own stylesheet stays scoped to its document and cannot leak into the host
-// app, and the host app's globals cannot bleed into the book content.
+// Strong CSS isolation rules + Google Play Books-style typography baseline.
 const ISOLATION_RULES: Record<string, string> = {
   "html, body": "margin: 0 !important; padding: 0 !important; max-width: 100% !important; overflow-x: hidden !important;",
   "*": "box-sizing: border-box !important;",
-  // Neutralize fixed/sticky positioning that some EPUBs use which can escape layout
   "[style*='position: fixed'], [style*='position:fixed']": "position: static !important;",
-  // Prevent book CSS from forcing huge margins / negative offsets
   "img, svg, video": "max-width: 100% !important; height: auto !important;",
+  // GPB-style readable paragraphs
+  "p": "line-height: 1.65 !important; margin: 0 0 1em 0 !important; text-align: justify !important; text-justify: inter-word !important; hyphens: auto !important; -webkit-hyphens: auto !important;",
+  "p + p": "text-indent: 1.5em !important;",
+  "h1, h2, h3, h4, h5, h6": "font-family: Georgia, 'Times New Roman', serif !important; line-height: 1.3 !important; margin: 1.2em 0 0.6em !important;",
 };
+
+const GPB_BODY = "font-family: Georgia, 'Times New Roman', serif !important; padding: 0 24px !important; -webkit-font-smoothing: antialiased !important; -moz-osx-font-smoothing: grayscale !important; text-rendering: optimizeLegibility !important;";
 
 const THEME_STYLES: Record<string, Record<string, string>> = {
   light: {
     ...ISOLATION_RULES,
-    body: "background-color: #fffbf0 !important; color: #1a1a1a !important;",
+    body: `background-color: #fffbf0 !important; color: #1a1a1a !important; ${GPB_BODY}`,
   },
   dark: {
     ...ISOLATION_RULES,
-    body: "background-color: #1a1a1a !important; color: #e0e0e0 !important;",
+    body: `background-color: #1a1a1a !important; color: #e0e0e0 !important; ${GPB_BODY}`,
   },
   sepia: {
     ...ISOLATION_RULES,
-    body: "background-color: #f4ecd8 !important; color: #5b4636 !important;",
+    body: `background-color: #f4ecd8 !important; color: #5b4636 !important; ${GPB_BODY}`,
   },
 };
 
