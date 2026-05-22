@@ -705,7 +705,7 @@ const BookReader = () => {
               <button
                 type="button"
                 aria-label="Previous page"
-                className="h-full w-1/4 pointer-events-auto bg-transparent"
+                className="h-full w-[30%] pointer-events-auto bg-transparent"
                 style={{ touchAction: "pan-y" }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -715,7 +715,7 @@ const BookReader = () => {
               <button
                 type="button"
                 aria-label="Toggle controls"
-                className="h-full w-2/4 pointer-events-auto bg-transparent"
+                className="h-full w-[40%] pointer-events-auto bg-transparent"
                 style={{ touchAction: "pan-y" }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -725,7 +725,7 @@ const BookReader = () => {
               <button
                 type="button"
                 aria-label="Next page"
-                className="h-full w-1/4 pointer-events-auto bg-transparent"
+                className="h-full w-[30%] pointer-events-auto bg-transparent"
                 style={{ touchAction: "pan-y" }}
                 onClick={(e) => {
                   e.stopPropagation();
