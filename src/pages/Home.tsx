@@ -311,8 +311,6 @@ const Home = () => {
 
 
 
-          <div className="h-[9.25rem] md:hidden" aria-hidden="true" />
-
           <div className="hidden md:block mb-3 sm:mb-4">
 
             <CreatePostCard />
@@ -333,7 +331,7 @@ const Home = () => {
 
           {/* Unified Feed */}
 
-          <div className="space-y-3 sm:space-y-4 pb-[calc(3.5rem+9.25rem+env(safe-area-inset-bottom,0px))] md:pb-4">
+          <div className="space-y-3 sm:space-y-4 pb-[calc(3.5rem_+_9.25rem_+_env(safe-area-inset-bottom,0px))] md:pb-4">
 
             {isLoading ? (
 
@@ -402,11 +400,11 @@ const Home = () => {
       </PullToRefresh>
 
       <div
-        className="fixed left-0 right-0 z-40 px-3 md:hidden pointer-events-none"
+        className="fixed left-0 right-0 z-[45] px-3 md:hidden pointer-events-none"
         style={{ bottom: `calc(${HOME_BOTTOM_NAV_HEIGHT} + ${HOME_COMPOSER_BOTTOM_GAP} + env(safe-area-inset-bottom, 0px))` }}
       >
         <div className="max-w-2xl mx-auto pointer-events-auto">
-          <CreatePostCard className="p-2.5 max-h-[8.75rem] overflow-y-auto" />
+          <CreatePostCard className="p-2 max-h-[8.75rem] overflow-y-auto" />
         </div>
       </div>
 
