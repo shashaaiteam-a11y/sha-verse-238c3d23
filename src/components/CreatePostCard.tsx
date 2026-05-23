@@ -377,7 +377,7 @@ export const CreatePostCard = () => {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="What's on your mind?"
-              className="flex-1 min-h-[60px] resize-none border-0 bg-secondary/50 focus-visible:ring-0 rounded-xl text-sm sm:text-base"
+              className="flex-1 min-h-[44px] resize-none border-0 bg-secondary/50 focus-visible:ring-0 rounded-xl text-sm sm:text-base py-2"
             />
           </div>
         </div>
