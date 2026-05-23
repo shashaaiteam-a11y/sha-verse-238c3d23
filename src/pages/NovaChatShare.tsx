@@ -28,27 +28,16 @@ const NovaChatShare = () => {
     if (!token) return;
     (async () => {
       try {
-        const { data: c, error: cErr } = await supabase
-          .from('ai_conversations')
-          .select('id, title, created_at')
-          .eq('share_token', token)
-          .maybeSingle();
-
-        if (cErr) throw cErr;
-        if (!c) {
+        const { data, error: rpcErr } = await supabase.rpc('get_shared_ai_conversation', { _token: token });
+        if (rpcErr) throw rpcErr;
+        const row: any = Array.isArray(data) ? data[0] : data;
+        if (!row) {
           setError('Shared chat not found or no longer available.');
           setLoading(false);
           return;
         }
-        setConv(c as SharedConv);
-
-        const { data: m, error: mErr } = await supabase
-          .from('ai_messages')
-          .select('id, role, content, created_at')
-          .eq('conversation_id', c.id)
-          .order('created_at', { ascending: true });
-        if (mErr) throw mErr;
-        setMessages((m ?? []) as SharedMsg[]);
+        setConv({ id: row.id, title: row.title, created_at: row.created_at });
+        setMessages(((row.messages ?? []) as SharedMsg[]));
       } catch (e: any) {
         setError(e?.message ?? 'Could not load shared chat');
       } finally {
