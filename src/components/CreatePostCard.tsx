@@ -351,9 +351,9 @@ export const CreatePostCard = () => {
 
   return (
     <>
-      <Card className="p-4 shadow-md hover:shadow-lg transition-shadow">
+      <Card className="p-3 shadow-md hover:shadow-lg transition-shadow">
         {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
+        <div className="flex items-start gap-3 mb-2">
           <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
             {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
             <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm">
@@ -377,7 +377,7 @@ export const CreatePostCard = () => {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="What's on your mind?"
-              className="flex-1 min-h-[60px] resize-none border-0 bg-secondary/50 focus-visible:ring-0 rounded-xl text-sm sm:text-base"
+              className="flex-1 min-h-[44px] resize-none border-0 bg-secondary/50 focus-visible:ring-0 rounded-xl text-sm sm:text-base py-2"
             />
           </div>
         </div>
@@ -455,7 +455,7 @@ export const CreatePostCard = () => {
         )}
 
         {/* Actions Row */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
           <div className="flex items-center gap-1 flex-wrap">
             {/* Photo Input */}
             <input
