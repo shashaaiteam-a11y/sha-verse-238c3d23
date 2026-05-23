@@ -55,6 +55,10 @@ import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 
 import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
 
+const HOME_BOTTOM_NAV_HEIGHT = '3.5rem';
+const HOME_COMPOSER_SAFE_HEIGHT = '9.25rem';
+const HOME_COMPOSER_BOTTOM_GAP = '0.5rem';
+
 
 // Memoized row — re-renders only when its specific props change, NOT on every scroll
 type FeedRowProps = {
@@ -307,9 +311,9 @@ const Home = () => {
 
 
 
-          {/* Create Post */}
+          <div className="h-[9.25rem] md:hidden" aria-hidden="true" />
 
-          <div className="mb-3 sm:mb-4">
+          <div className="hidden md:block mb-3 sm:mb-4">
 
             <CreatePostCard />
 
@@ -329,7 +333,7 @@ const Home = () => {
 
           {/* Unified Feed */}
 
-          <div className="space-y-3 sm:space-y-4 pb-4">
+          <div className="space-y-3 sm:space-y-4 pb-4 md:pb-4" style={{ paddingBottom: `calc(${HOME_BOTTOM_NAV_HEIGHT} + ${HOME_COMPOSER_SAFE_HEIGHT} + env(safe-area-inset-bottom, 0px))` }}>
 
             {isLoading ? (
 
