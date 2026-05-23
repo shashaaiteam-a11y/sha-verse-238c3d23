@@ -603,11 +603,29 @@ const BookReader = () => {
 
       {/* Bookmarks Sidebar */}
       {showBookmarks && (
+        <>
+          {isMobile && (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 animate-in fade-in-0"
+              onClick={() => setShowBookmarks(false)}
+            />
+          )}
         <div
           className={cn(
-            "fixed top-0 right-0 bottom-0 w-72 z-50 border-l shadow-lg",
+            "fixed z-50 shadow-lg flex flex-col",
+            isMobile
+              ? "left-2 right-2 rounded-2xl border animate-in slide-in-from-bottom-4"
+              : "top-0 right-0 bottom-0 w-72 border-l",
             theme === "dark" ? "bg-zinc-800" : theme === "sepia" ? "bg-[#e8dcc8]" : "bg-white"
           )}
+          style={
+            isMobile
+              ? {
+                  bottom: MOBILE_PANEL_BOTTOM_OFFSET,
+                  maxHeight: MOBILE_PANEL_MAX_HEIGHT,
+                }
+              : undefined
+          }
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between p-4 border-b">
@@ -616,7 +634,7 @@ const BookReader = () => {
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <ScrollArea className="h-[calc(100%-60px)]">
+          <ScrollArea className={isMobile ? "flex-1 min-h-0" : "h-[calc(100%-60px)]"}>
             <div className="p-2 space-y-1">
               {bookmarks.length === 0 ? (
                 <p className="text-center text-muted-foreground text-sm py-8">
@@ -654,6 +672,7 @@ const BookReader = () => {
             </div>
           </ScrollArea>
         </div>
+        </>
       )}
 
       {/* Main Content — true edge-to-edge. Always fills 100vh minus
