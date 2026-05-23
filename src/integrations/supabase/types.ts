@@ -5712,6 +5712,10 @@ export type Database = {
         Args: { request_id: string }
         Returns: undefined
       }
+      admin_approve_channel: {
+        Args: { _channel_id: string }
+        Returns: undefined
+      }
       admin_approve_group_post: {
         Args: { p_admin_id: string; p_post_id: string }
         Returns: undefined
@@ -5723,6 +5727,10 @@ export type Database = {
           p_reason?: string
           p_target_user_id: string
         }
+        Returns: undefined
+      }
+      admin_reject_channel: {
+        Args: { _channel_id: string; _reason: string }
         Returns: undefined
       }
       admin_reject_group_post: {
