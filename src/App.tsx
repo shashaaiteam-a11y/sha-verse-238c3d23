@@ -11,7 +11,35 @@ import { RealtimeStatus } from "./components/RealtimeStatus";
 import { GlobalVideoManager } from "./components/GlobalVideoManager";
 
 import { MobileProvider } from "./contexts/MobileContext";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy as reactLazy, useEffect, ComponentType } from "react";
+
+// Wrap React.lazy to auto-recover from stale chunk errors after a new deploy.
+// When the browser still has the old index-*.js cached and tries to fetch a
+// hashed chunk that no longer exists, force a one-time hard reload instead of
+// showing a blank screen.
+const lazy = <T extends ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) =>
+  reactLazy(() =>
+    factory().catch((err) => {
+      const msg = String(err?.message || err);
+      const isChunkError =
+        /Failed to fetch dynamically imported module/i.test(msg) ||
+        /Importing a module script failed/i.test(msg) ||
+        /ChunkLoadError/i.test(msg);
+      if (isChunkError && typeof window !== "undefined") {
+        const key = "__lv_chunk_reload__";
+        if (!sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, "1");
+          window.location.reload();
+          // Return a never-resolving promise so Suspense keeps showing the
+          // loader until the reload happens.
+          return new Promise<{ default: T }>(() => {});
+        }
+      }
+      throw err;
+    })
+  );
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import { SwipeWrapper } from "./components/SwipeWrapper";
