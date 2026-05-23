@@ -20,6 +20,7 @@ import { GlobalCallHost } from "./modules/chats/components/GlobalCallHost";
 import { AdSenseLoader } from "./components/web/AdSenseLoader";
 import { SiteFooter } from "./components/web/SiteFooter";
 import { CookieConsent } from "./components/web/CookieConsent";
+import { useIsMobile } from "./hooks/use-mobile";
 
 // Lazy load pages for better performance
 // Top-level main modules — keep import factory references so we can prefetch them
