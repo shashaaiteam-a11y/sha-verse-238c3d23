@@ -24,6 +24,11 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { StickyBannerAd, BookReaderInlineAd } from "@/components/ads";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+// Mobile panel positioning: sits just above the bottom nav (h-14 = 56px) + 12px gap + safe area.
+const MOBILE_PANEL_BOTTOM_OFFSET = "calc(56px + 12px + env(safe-area-inset-bottom))";
+const MOBILE_PANEL_MAX_HEIGHT = "calc(70vh - 56px - env(safe-area-inset-bottom))";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 
