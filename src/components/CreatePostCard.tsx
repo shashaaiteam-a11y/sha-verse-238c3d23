@@ -33,17 +33,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 
 type PostPrivacy = 'public' | 'friends' | 'private';
 
 interface PollOption {
   id: string;
   text: string;
-}
-
-interface CreatePostCardProps {
-  className?: string;
 }
 
 const privacyOptions = [
@@ -81,7 +76,7 @@ const activitiesOptions = [
   { emoji: '🎂', label: 'Celebrating', placeholder: 'event' },
 ];
 
-export const CreatePostCard = ({ className }: CreatePostCardProps = {}) => {
+export const CreatePostCard = () => {
   const { profile } = useProfile();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -356,7 +351,7 @@ export const CreatePostCard = ({ className }: CreatePostCardProps = {}) => {
 
   return (
     <>
-      <Card className={cn("p-3 shadow-md hover:shadow-lg transition-shadow", className)}>
+      <Card className="p-3 shadow-md hover:shadow-lg transition-shadow">
         {/* Header */}
         <div className="flex items-start gap-3 mb-2">
           <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
