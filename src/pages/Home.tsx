@@ -55,6 +55,10 @@ import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 
 import { useTotalUnreadBadge } from '@/hooks/useBadgeCount';
 
+const HOME_BOTTOM_NAV_HEIGHT = '3.5rem';
+const HOME_COMPOSER_SAFE_HEIGHT = '9.25rem';
+const HOME_COMPOSER_BOTTOM_GAP = '0.5rem';
+
 
 // Memoized row — re-renders only when its specific props change, NOT on every scroll
 type FeedRowProps = {
@@ -307,9 +311,7 @@ const Home = () => {
 
 
 
-          {/* Create Post */}
-
-          <div className="mb-3 sm:mb-4">
+          <div className="hidden md:block mb-3 sm:mb-4">
 
             <CreatePostCard />
 
@@ -329,7 +331,7 @@ const Home = () => {
 
           {/* Unified Feed */}
 
-          <div className="space-y-3 sm:space-y-4 pb-4">
+          <div className="space-y-3 sm:space-y-4 pb-[calc(3.5rem_+_9.25rem_+_env(safe-area-inset-bottom,0px))] md:pb-4">
 
             {isLoading ? (
 
@@ -396,6 +398,15 @@ const Home = () => {
         </div>
 
       </PullToRefresh>
+
+      <div
+        className="fixed left-0 right-0 z-[45] px-3 md:hidden pointer-events-none"
+        style={{ bottom: `calc(${HOME_BOTTOM_NAV_HEIGHT} + ${HOME_COMPOSER_BOTTOM_GAP} + env(safe-area-inset-bottom, 0px))` }}
+      >
+        <div className="max-w-2xl mx-auto pointer-events-auto">
+          <CreatePostCard className="!p-2 max-h-[8.75rem] overflow-y-auto" />
+        </div>
+      </div>
 
       {/* 📢 Sticky bottom banner — continuous low-profile earning slot */}
       <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-30 pointer-events-auto">
