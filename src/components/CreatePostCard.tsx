@@ -351,9 +351,9 @@ export const CreatePostCard = () => {
 
   return (
     <>
-      <Card className="p-4 shadow-md hover:shadow-lg transition-shadow">
+      <Card className="p-3 shadow-md hover:shadow-lg transition-shadow">
         {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
+        <div className="flex items-start gap-3 mb-2">
           <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
             {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
             <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm">
