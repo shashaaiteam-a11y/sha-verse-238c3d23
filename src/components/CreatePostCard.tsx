@@ -455,7 +455,7 @@ export const CreatePostCard = () => {
         )}
 
         {/* Actions Row */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
           <div className="flex items-center gap-1 flex-wrap">
             {/* Photo Input */}
             <input
