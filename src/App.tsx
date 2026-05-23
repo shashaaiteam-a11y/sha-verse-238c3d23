@@ -197,6 +197,7 @@ const App = () => (
                   </Routes>
                 </SwipeWrapper>
                 <RealtimeStatus />
+                <GlobalVideoManager />
                 <BottomNav />
 
                 <SiteFooter />
