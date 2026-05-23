@@ -127,6 +127,16 @@ const ModulePrefetcher = () => {
   return null;
 };
 
+const ResponsiveSonner = () => {
+  const isMobile = useIsMobile();
+  return (
+    <Sonner
+      position={isMobile ? "bottom-center" : "top-center"}
+      offset={isMobile ? "calc(56px + 12px + env(safe-area-inset-bottom))" : undefined}
+    />
+  );
+};
+
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
