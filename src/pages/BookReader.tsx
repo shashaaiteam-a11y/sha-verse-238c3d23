@@ -545,18 +545,31 @@ const BookReader = () => {
       {showToc && (
         <div
           className={cn(
-            "fixed top-0 left-0 bottom-0 w-72 z-50 border-r shadow-lg",
+            "fixed z-50 shadow-lg animate-in",
+            isMobile
+              ? "left-2 right-2 rounded-2xl border slide-in-from-bottom-4"
+              : "top-0 left-0 bottom-0 w-72 border-r slide-in-from-left",
             theme === "dark" ? "bg-zinc-800" : theme === "sepia" ? "bg-[#e8dcc8]" : "bg-white"
           )}
+          style={
+            isMobile
+              ? {
+                  bottom: MOBILE_PANEL_BOTTOM_OFFSET,
+                  maxHeight: MOBILE_PANEL_MAX_HEIGHT,
+                  display: "flex",
+                  flexDirection: "column",
+                }
+              : undefined
+          }
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center justify-between p-4 border-b shrink-0">
             <h2 className="font-semibold">Table of Contents</h2>
             <Button variant="ghost" size="icon" onClick={() => setShowToc(false)}>
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <ScrollArea className="h-[calc(100%-60px)]">
+          <ScrollArea className={isMobile ? "flex-1 min-h-0" : "h-[calc(100%-60px)]"}>
             <div className="p-2">
               {fileType === "epub" && epubToc.length > 0 ? (
                 renderEpubTocItems(epubToc)
