@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { BottomNav } from "./components/BottomNav";
 import { RealtimeStatus } from "./components/RealtimeStatus";
+import { GlobalVideoManager } from "./components/GlobalVideoManager";
 
 import { MobileProvider } from "./contexts/MobileContext";
 import { Suspense, lazy, useEffect } from "react";
