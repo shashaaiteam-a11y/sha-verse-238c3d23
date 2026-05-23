@@ -404,7 +404,7 @@ const Home = () => {
         style={{ bottom: `calc(${HOME_BOTTOM_NAV_HEIGHT} + ${HOME_COMPOSER_BOTTOM_GAP} + env(safe-area-inset-bottom, 0px))` }}
       >
         <div className="max-w-2xl mx-auto pointer-events-auto">
-          <CreatePostCard className="p-2 max-h-[8.75rem] overflow-y-auto" />
+          <CreatePostCard className="!p-2 max-h-[8.75rem] overflow-y-auto" />
         </div>
       </div>
 
