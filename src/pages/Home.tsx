@@ -333,7 +333,7 @@ const Home = () => {
 
           {/* Unified Feed */}
 
-          <div className="space-y-3 sm:space-y-4 pb-4 md:pb-4" style={{ paddingBottom: `calc(${HOME_BOTTOM_NAV_HEIGHT} + ${HOME_COMPOSER_SAFE_HEIGHT} + env(safe-area-inset-bottom, 0px))` }}>
+          <div className="space-y-3 sm:space-y-4 pb-[calc(3.5rem+9.25rem+env(safe-area-inset-bottom,0px))] md:pb-4">
 
             {isLoading ? (
 
@@ -400,6 +400,15 @@ const Home = () => {
         </div>
 
       </PullToRefresh>
+
+      <div
+        className="fixed left-0 right-0 z-40 px-3 md:hidden pointer-events-none"
+        style={{ bottom: `calc(${HOME_BOTTOM_NAV_HEIGHT} + ${HOME_COMPOSER_BOTTOM_GAP} + env(safe-area-inset-bottom, 0px))` }}
+      >
+        <div className="max-w-2xl mx-auto pointer-events-auto">
+          <CreatePostCard className="p-2.5 max-h-[8.75rem] overflow-y-auto" />
+        </div>
+      </div>
 
       {/* 📢 Sticky bottom banner — continuous low-profile earning slot */}
       <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-30 pointer-events-auto">
