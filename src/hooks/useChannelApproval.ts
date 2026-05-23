@@ -190,26 +190,8 @@ export const useRejectChannel = () => {
   return useMutation({
     mutationFn: async ({ channelId, reason }: { channelId: string; reason: string }) => {
       if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('channels')
-        .update({
-          approval_status: 'rejected',
-          rejection_reason: reason,
-        })
-        .eq('id', channelId);
-
+      const { error } = await supabase.rpc('admin_reject_channel' as any, { _channel_id: channelId, _reason: reason });
       if (error) throw error;
-
-      // Log rejection
-      await supabase
-        .from('channel_approval_logs')
-        .insert({
-          channel_id: channelId,
-          action: 'rejected',
-          performed_by: user.id,
-          notes: reason,
-        });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pending-channels'] });
