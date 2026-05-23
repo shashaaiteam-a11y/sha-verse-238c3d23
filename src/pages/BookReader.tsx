@@ -27,8 +27,9 @@ import { StickyBannerAd, BookReaderInlineAd } from "@/components/ads";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 // Mobile panel positioning: sits just above the bottom nav (h-14 = 56px) + 12px gap + safe area.
-const MOBILE_PANEL_BOTTOM_OFFSET = "calc(56px + 12px + env(safe-area-inset-bottom))";
-const MOBILE_PANEL_MAX_HEIGHT = "calc(70vh - 56px - env(safe-area-inset-bottom))";
+// Mobile panel positioning: sits just above the reader's bottom controls + safe area.
+const MOBILE_PANEL_BOTTOM_OFFSET = "calc(112px + env(safe-area-inset-bottom))";
+const MOBILE_PANEL_MAX_HEIGHT = "calc(70vh - env(safe-area-inset-bottom))";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 
