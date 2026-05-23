@@ -397,7 +397,22 @@ const BookReader = () => {
                   <Settings className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent>
+              <SheetContent
+                side={isMobile ? "bottom" : "right"}
+                className={cn(
+                  isMobile &&
+                    "rounded-t-2xl border-t border-x-0 border-b-0 p-4 max-h-[70vh] overflow-y-auto"
+                )}
+                style={
+                  isMobile
+                    ? {
+                        bottom: MOBILE_PANEL_BOTTOM_OFFSET,
+                        top: "auto",
+                        maxHeight: MOBILE_PANEL_MAX_HEIGHT,
+                      }
+                    : undefined
+                }
+              >
                 <SheetHeader>
                   <SheetTitle>Reading Settings</SheetTitle>
                 </SheetHeader>
