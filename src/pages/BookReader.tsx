@@ -56,6 +56,7 @@ const THEME_COLORS: Record<ReaderTheme, { bg: string; text: string; headerBg: st
 const BookReader = () => {
   const { bookId } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const epubRef = useRef<HTMLDivElement>(null);
   const lastSavedProgressRef = useRef<string>("");
 
