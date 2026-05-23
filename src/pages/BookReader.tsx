@@ -672,6 +672,7 @@ const BookReader = () => {
             </div>
           </ScrollArea>
         </div>
+        </>
       )}
 
       {/* Main Content — true edge-to-edge. Always fills 100vh minus
