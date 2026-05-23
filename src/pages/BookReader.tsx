@@ -24,6 +24,12 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { StickyBannerAd, BookReaderInlineAd } from "@/components/ads";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+// Mobile panel positioning: sits just above the bottom nav (h-14 = 56px) + 12px gap + safe area.
+// Mobile panel positioning: sits just above the reader's bottom controls + safe area.
+const MOBILE_PANEL_BOTTOM_OFFSET = "calc(112px + env(safe-area-inset-bottom))";
+const MOBILE_PANEL_MAX_HEIGHT = "calc(70vh - env(safe-area-inset-bottom))";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 
@@ -51,6 +57,7 @@ const THEME_COLORS: Record<ReaderTheme, { bg: string; text: string; headerBg: st
 const BookReader = () => {
   const { bookId } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const epubRef = useRef<HTMLDivElement>(null);
   const lastSavedProgressRef = useRef<string>("");
 
@@ -391,7 +398,22 @@ const BookReader = () => {
                   <Settings className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent>
+              <SheetContent
+                side={isMobile ? "bottom" : "right"}
+                className={cn(
+                  isMobile &&
+                    "rounded-t-2xl border-t border-x-0 border-b-0 p-4 max-h-[70vh] overflow-y-auto"
+                )}
+                style={
+                  isMobile
+                    ? {
+                        bottom: MOBILE_PANEL_BOTTOM_OFFSET,
+                        top: "auto",
+                        maxHeight: MOBILE_PANEL_MAX_HEIGHT,
+                      }
+                    : undefined
+                }
+              >
                 <SheetHeader>
                   <SheetTitle>Reading Settings</SheetTitle>
                 </SheetHeader>
@@ -524,18 +546,31 @@ const BookReader = () => {
       {showToc && (
         <div
           className={cn(
-            "fixed top-0 left-0 bottom-0 w-72 z-50 border-r shadow-lg",
+            "fixed z-50 shadow-lg animate-in",
+            isMobile
+              ? "left-2 right-2 rounded-2xl border slide-in-from-bottom-4"
+              : "top-0 left-0 bottom-0 w-72 border-r slide-in-from-left",
             theme === "dark" ? "bg-zinc-800" : theme === "sepia" ? "bg-[#e8dcc8]" : "bg-white"
           )}
+          style={
+            isMobile
+              ? {
+                  bottom: MOBILE_PANEL_BOTTOM_OFFSET,
+                  maxHeight: MOBILE_PANEL_MAX_HEIGHT,
+                  display: "flex",
+                  flexDirection: "column",
+                }
+              : undefined
+          }
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center justify-between p-4 border-b shrink-0">
             <h2 className="font-semibold">Table of Contents</h2>
             <Button variant="ghost" size="icon" onClick={() => setShowToc(false)}>
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <ScrollArea className="h-[calc(100%-60px)]">
+          <ScrollArea className={isMobile ? "flex-1 min-h-0" : "h-[calc(100%-60px)]"}>
             <div className="p-2">
               {fileType === "epub" && epubToc.length > 0 ? (
                 renderEpubTocItems(epubToc)
