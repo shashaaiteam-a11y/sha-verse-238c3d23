@@ -20,6 +20,7 @@ import { GlobalCallHost } from "./modules/chats/components/GlobalCallHost";
 import { AdSenseLoader } from "./components/web/AdSenseLoader";
 import { SiteFooter } from "./components/web/SiteFooter";
 import { CookieConsent } from "./components/web/CookieConsent";
+import { useIsMobile } from "./hooks/use-mobile";
 
 // Lazy load pages for better performance
 // Top-level main modules — keep import factory references so we can prefetch them
@@ -127,12 +128,22 @@ const ModulePrefetcher = () => {
   return null;
 };
 
+const ResponsiveSonner = () => {
+  const isMobile = useIsMobile();
+  return (
+    <Sonner
+      position={isMobile ? "bottom-center" : "top-center"}
+      offset={isMobile ? "calc(56px + 12px + env(safe-area-inset-bottom))" : undefined}
+    />
+  );
+};
+
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Sonner position="top-center" />
+        <ResponsiveSonner />
         <BrowserRouter>
           <AuthProvider>
             <MobileProvider>
