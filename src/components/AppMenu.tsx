@@ -221,7 +221,7 @@ const AppMenu = () => {
         <Separator className="my-3" />
 
         {/* Logout */}
-        <div className="px-4 pb-8 space-y-2">
+        <div className="px-4 pb-4 space-y-2">
           {user?.email && (
             <p className="text-xs text-muted-foreground px-1 break-all">
               {user.email}
@@ -237,6 +237,26 @@ const AppMenu = () => {
             <span className="text-sm font-medium">Log Out</span>
           </button>
         </div>
+
+        {/* Mobile-only legal links (mirrors SiteFooter shown on web pages) */}
+        <div
+          className="md:hidden px-4 pt-2 text-[10px] text-muted-foreground"
+          style={{ paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)` }}
+        >
+          <nav className="flex items-center justify-center gap-x-3 gap-y-1 flex-wrap leading-tight">
+            <button onClick={() => handleNavigate("/about")} className="hover:text-foreground">About</button>
+            <button onClick={() => handleNavigate("/contact")} className="hover:text-foreground">Contact</button>
+            <button onClick={() => handleNavigate("/privacy")} className="hover:text-foreground">Privacy</button>
+            <button onClick={() => handleNavigate("/terms")} className="hover:text-foreground">Terms</button>
+            <button onClick={() => handleNavigate("/help")} className="hover:text-foreground">Help</button>
+          </nav>
+          <p className="mt-2 text-center opacity-70">
+            © {new Date().getFullYear()} Sha-Verse. All rights reserved.
+          </p>
+        </div>
+
+        {/* Desktop bottom spacer to keep prior padding */}
+        <div className="hidden md:block pb-4" />
       </SheetContent>
     </Sheet>
   );
