@@ -21,8 +21,7 @@ interface VideoThumbProps {
 export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOnly = false }: VideoThumbProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
-  const [generatedPoster, setGeneratedPoster] = useState<string | undefined>(poster);
-  const [seeked, setSeeked] = useState(false);
+  const [generatedPoster] = useState<string | undefined>(poster);
 
   // If no poster provided, seek the video to ~1s so the first painted frame is a real frame, not black.
   useEffect(() => {
@@ -38,13 +37,10 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
         }
       } catch {}
     };
-    const onSeeked = () => setSeeked(true);
 
     v.addEventListener("loadedmetadata", onLoaded);
-    v.addEventListener("seeked", onSeeked);
     return () => {
       v.removeEventListener("loadedmetadata", onLoaded);
-      v.removeEventListener("seeked", onSeeked);
     };
   }, [poster, started, src]);
 
