@@ -333,12 +333,9 @@ export const ProfilePostCard = ({
               return (
                 <div key={idx} className="relative">
                   {isVideo(url) ? (
-                    <video
-                      src={url}
-                      controls
-                      className="w-full h-full object-cover aspect-square"
-                      preload="metadata"
-                    />
+                    <div className="w-full h-full aspect-square">
+                      <VideoThumb src={url} aspect="cover" />
+                    </div>
                   ) : (
                     <img
                       src={url}
