@@ -259,7 +259,7 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
             >
               {isVideo(url) ? (
                 <div className="w-full h-full aspect-square">
-                  <VideoThumb src={url} aspect="cover" />
+                  <VideoThumb src={url} aspect="cover" previewOnly />
                 </div>
               ) : (
                 <img 
