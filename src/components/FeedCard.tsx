@@ -462,12 +462,9 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
             {allMedia.length === 1 && (
               <div className="mb-3 -mx-3 sm:-mx-4">
                 {isVideo(allMedia[0]) ? (
-                  <video 
-                    src={allMedia[0]} 
-                    controls 
-                    className="w-full max-h-[500px] object-cover"
-                    preload="metadata"
-                  />
+                  <div className="w-full max-h-[500px] aspect-video">
+                    <VideoThumb src={allMedia[0]} aspect="contain" />
+                  </div>
                 ) : (
                   <img 
                     src={allMedia[0]} 
