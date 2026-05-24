@@ -60,13 +60,16 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
     });
   };
 
+  const showOverlay = !started;
+  const isPointerThrough = previewOnly;
+
   return (
     <div className={cn("relative bg-black w-full h-full", className)}>
       <video
         ref={videoRef}
         src={src}
         poster={generatedPoster}
-        controls={started}
+        controls={started && !previewOnly}
         playsInline
         preload="metadata"
         muted={!started}
@@ -75,17 +78,20 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
           aspect === "contain" ? "object-contain" : "object-cover"
         )}
       />
-      {!started && (
-        <button
-          type="button"
-          onClick={handlePlay}
+      {showOverlay && (
+        <div
+          onClick={previewOnly ? undefined : handlePlay}
+          className={cn(
+            "absolute inset-0 flex items-center justify-center bg-black/10 transition-colors",
+            isPointerThrough ? "pointer-events-none" : "hover:bg-black/20 cursor-pointer"
+          )}
           aria-label="Play video"
-          className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/20 transition-colors"
+          role={previewOnly ? undefined : "button"}
         >
           <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center shadow-lg">
             <Play className="w-7 h-7 sm:w-8 sm:h-8 text-white fill-white ml-1" />
           </span>
-        </button>
+        </div>
       )}
     </div>
   );
