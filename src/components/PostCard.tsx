@@ -258,11 +258,9 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
               onClick={() => setSelectedMediaIndex(idx)}
             >
               {isVideo(url) ? (
-                <video 
-                  src={url} 
-                  className="w-full h-full object-cover aspect-square"
-                  preload="metadata"
-                />
+                <div className="w-full h-full aspect-square">
+                  <VideoThumb src={url} aspect="cover" />
+                </div>
               ) : (
                 <img 
                   src={url} 
