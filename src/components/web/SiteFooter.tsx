@@ -11,11 +11,9 @@ import { Link, useLocation } from "react-router-dom";
 export const SiteFooter = () => {
   const location = useLocation();
 
-  // Hide on native app
-  if (typeof window !== "undefined") {
-    // @ts-expect-error Capacitor global may exist at runtime
-    if (window.Capacitor?.isNativePlatform?.()) return null;
-  }
+  // Note: previously hidden on native platform. Now shown in native too so
+  // mobile users can reach legal/help links above the BottomNav.
+
 
   const hiddenRoutes = ["/auth", "/messages", "/novachat"];
   const hiddenPrefixes = [
