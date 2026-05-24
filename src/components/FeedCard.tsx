@@ -480,13 +480,9 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
               <div className={`mb-3 -mx-3 sm:-mx-4 grid gap-0.5 grid-cols-2`}>
                 {allMedia.slice(0, 4).map((url, idx) => (
                   isVideo(url) ? (
-                    <video 
-                      key={idx}
-                      src={url} 
-                      controls 
-                      className="w-full object-cover aspect-square"
-                      preload="metadata"
-                    />
+                    <div key={idx} className="w-full aspect-square">
+                      <VideoThumb src={url} aspect="cover" />
+                    </div>
                   ) : (
                     <img 
                       key={idx}
