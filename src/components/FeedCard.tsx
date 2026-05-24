@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { VideoThumb } from "@/components/VideoThumb";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -461,12 +462,9 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
             {allMedia.length === 1 && (
               <div className="mb-3 -mx-3 sm:-mx-4">
                 {isVideo(allMedia[0]) ? (
-                  <video 
-                    src={allMedia[0]} 
-                    controls 
-                    className="w-full max-h-[500px] object-cover"
-                    preload="metadata"
-                  />
+                  <div className="w-full max-h-[500px] aspect-video">
+                    <VideoThumb src={allMedia[0]} aspect="contain" />
+                  </div>
                 ) : (
                   <img 
                     src={allMedia[0]} 
@@ -482,13 +480,9 @@ export const FeedCard = ({ item, onShare }: FeedCardProps) => {
               <div className={`mb-3 -mx-3 sm:-mx-4 grid gap-0.5 grid-cols-2`}>
                 {allMedia.slice(0, 4).map((url, idx) => (
                   isVideo(url) ? (
-                    <video 
-                      key={idx}
-                      src={url} 
-                      controls 
-                      className="w-full object-cover aspect-square"
-                      preload="metadata"
-                    />
+                    <div key={idx} className="w-full aspect-square">
+                      <VideoThumb src={url} aspect="cover" />
+                    </div>
                   ) : (
                     <img 
                       key={idx}

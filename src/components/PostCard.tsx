@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { VideoThumb } from "@/components/VideoThumb";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -202,12 +203,9 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
       if (isVideo(url)) {
         return (
           <div className="mb-3 -mx-3 sm:-mx-4 bg-black flex items-center justify-center">
-            <video 
-              src={url} 
-              controls 
-              className="w-full max-h-[42vh] sm:max-h-[500px] object-contain"
-              preload="metadata"
-            />
+            <div className="w-full max-h-[42vh] sm:max-h-[500px] aspect-video">
+              <VideoThumb src={url} aspect="contain" />
+            </div>
           </div>
         );
       }
@@ -260,11 +258,9 @@ export const PostCard = ({ post, onShare, onPin, onDelete }: PostCardProps) => {
               onClick={() => setSelectedMediaIndex(idx)}
             >
               {isVideo(url) ? (
-                <video 
-                  src={url} 
-                  className="w-full h-full object-cover aspect-square"
-                  preload="metadata"
-                />
+                <div className="w-full h-full aspect-square">
+                  <VideoThumb src={url} aspect="cover" previewOnly />
+                </div>
               ) : (
                 <img 
                   src={url} 

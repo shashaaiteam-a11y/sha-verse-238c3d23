@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { VideoThumb } from "@/components/VideoThumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -306,12 +307,9 @@ export const ProfilePostCard = ({
           if (isVideo(url)) {
             return (
               <div className="bg-black">
-                <video
-                  src={url}
-                  controls
-                  className="w-full max-h-[500px] object-contain"
-                  preload="metadata"
-                />
+                <div className="w-full max-h-[500px] aspect-video">
+                  <VideoThumb src={url} aspect="contain" />
+                </div>
               </div>
             );
           }
@@ -335,12 +333,9 @@ export const ProfilePostCard = ({
               return (
                 <div key={idx} className="relative">
                   {isVideo(url) ? (
-                    <video
-                      src={url}
-                      controls
-                      className="w-full h-full object-cover aspect-square"
-                      preload="metadata"
-                    />
+                    <div className="w-full h-full aspect-square">
+                      <VideoThumb src={url} aspect="cover" />
+                    </div>
                   ) : (
                     <img
                       src={url}
