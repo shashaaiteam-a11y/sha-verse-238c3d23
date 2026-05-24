@@ -307,12 +307,9 @@ export const ProfilePostCard = ({
           if (isVideo(url)) {
             return (
               <div className="bg-black">
-                <video
-                  src={url}
-                  controls
-                  className="w-full max-h-[500px] object-contain"
-                  preload="metadata"
-                />
+                <div className="w-full max-h-[500px] aspect-video">
+                  <VideoThumb src={url} aspect="contain" />
+                </div>
               </div>
             );
           }
