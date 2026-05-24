@@ -7,6 +7,8 @@ interface VideoThumbProps {
   poster?: string;
   className?: string;
   aspect?: "contain" | "cover";
+  /** If true, never plays inline — just shows a thumbnail with play icon (parent handles click) */
+  previewOnly?: boolean;
 }
 
 /**
@@ -16,7 +18,7 @@ interface VideoThumbProps {
  * - On tap: shows native controls and plays
  * Does NOT change upload/storage/playback logic.
  */
-export const VideoThumb = ({ src, poster, className, aspect = "cover" }: VideoThumbProps) => {
+export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOnly = false }: VideoThumbProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
   const [generatedPoster, setGeneratedPoster] = useState<string | undefined>(poster);
