@@ -458,11 +458,21 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     initConversation();
   }, [initialUserId, conversations, initializing]);
 
-  const filteredConversations = conversations?.filter((convo: any) => {
-    const otherUser = convo.otherMembers?.[0];
-    if (!searchQuery) return true;
-    return otherUser?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // WhatsApp parity: sort chat list by latest activity DESC (lastMessage timestamp,
+  // falling back to conversation.updated_at). New incoming messages bump the chat
+  // to the top instantly via realtime invalidation in useConversations().
+  const filteredConversations = conversations
+    ?.filter((convo: any) => {
+      const otherUser = convo.otherMembers?.[0];
+      if (!searchQuery) return true;
+      return otherUser?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    })
+    .slice()
+    .sort((a: any, b: any) => {
+      const ta = new Date(a.lastMessage?.created_at || a.updated_at || a.created_at || 0).getTime();
+      const tb = new Date(b.lastMessage?.created_at || b.updated_at || b.created_at || 0).getTime();
+      return tb - ta;
+    });
 
   const formatMessageTime = (date: Date) => {
     if (isToday(date)) {
