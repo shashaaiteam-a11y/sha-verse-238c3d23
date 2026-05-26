@@ -973,6 +973,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                 }}
                                 onPin={() => handlePinMessage(message)}
                                 isPinned={pinnedMessages.some((p: any) => p.id === message.id)}
+                                canUnpin={(() => {
+                                  const p = pinnedMessages.find((x: any) => x.id === message.id);
+                                  // Owner-only unpin in 1:1 chats.
+                                  return !p || !p.by || p.by === user?.id;
+                                })()}
                                 onEdit={() => {
                                   setEditing({ id: message.id, content: message.content || '' });
                                   setReplyTo(null);
