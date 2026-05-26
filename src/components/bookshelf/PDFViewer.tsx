@@ -357,7 +357,7 @@ const PDFViewer = ({
         <canvas
           ref={canvasRef}
           className={cn(
-            "bg-background max-w-full max-h-full rounded-md",
+            "bg-background rounded-md block",
             isDarkMode ? "filter invert hue-rotate-180" : ""
           )}
           style={{
