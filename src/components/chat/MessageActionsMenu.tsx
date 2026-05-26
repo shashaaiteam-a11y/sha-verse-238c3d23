@@ -86,10 +86,12 @@ export const MessageActionsMenu = ({
         <DropdownMenuItem onSelect={onCopy}>
           <Copy className="w-4 h-4 mr-3" /> Copy
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onPin}>
-          {isPinned ? <PinOff className="w-4 h-4 mr-3" /> : <Pin className="w-4 h-4 mr-3" />}
-          {isPinned ? 'Unpin' : 'Pin'}
-        </DropdownMenuItem>
+        {showPinItem && (
+          <DropdownMenuItem onSelect={onPin}>
+            {isPinned ? <PinOff className="w-4 h-4 mr-3" /> : <Pin className="w-4 h-4 mr-3" />}
+            {isPinned ? 'Unpin' : 'Pin'}
+          </DropdownMenuItem>
+        )}
         {onSelect && (
           <DropdownMenuItem onSelect={onSelect}>
             <CheckSquare className="w-4 h-4 mr-3" /> Select
