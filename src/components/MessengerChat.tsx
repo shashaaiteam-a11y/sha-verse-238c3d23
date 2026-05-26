@@ -545,28 +545,28 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const handleActionDelete = async () => {
     if (selectionCount === 0) return;
     const ids = selectedMessages.map((m: any) => m.id);
-    if (canDeleteForEveryone) {
-      const choice = window.prompt(
-        'Delete message:\n  1 = Delete for me\n  2 = Delete for everyone\n\nType 1 or 2 (Cancel to abort)',
-        '2'
-      );
-      if (choice === null) return;
-      if (choice.trim() === '2') {
-        for (const id of ids) await deleteForEveryone.mutateAsync(id).catch(() => {});
-        toast.success('Deleted for everyone');
-      } else if (choice.trim() === '1') {
-        for (const id of ids) await deleteForMe.mutateAsync(id).catch(() => {});
-        toast.success('Deleted for you');
-      } else {
-        return;
-      }
+    setDeleteSheet({
+      ids,
+      canEveryone: canDeleteForEveryone,
+      count: selectionCount,
+      source: 'selection',
+    });
+  };
+
+  const performDelete = async (mode: 'me' | 'everyone') => {
+    if (!deleteSheet) return;
+    const { ids, source } = deleteSheet;
+    if (mode === 'everyone') {
+      for (const id of ids) await deleteForEveryone.mutateAsync(id).catch(() => {});
+      toast.success('Deleted for everyone');
     } else {
-      if (!confirm(`Delete ${selectionCount > 1 ? `${selectionCount} messages` : 'this message'} for me?`)) return;
       for (const id of ids) await deleteForMe.mutateAsync(id).catch(() => {});
       toast.success('Deleted for you');
     }
-    clearSelection();
+    if (source === 'selection') clearSelection();
+    setDeleteSheet(null);
   };
+
 
   const handleActionInfo = () => {
     if (!singleSelected) return;
