@@ -97,7 +97,16 @@ serve(async (req) => {
       }
 
       const muxAuth = btoa(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`);
-      
+
+      // SECURITY: use the video_url stored on the row, never the client's value.
+      const dbVideoUrl = ownedVideo?.video_url;
+      if (!dbVideoUrl) {
+        return new Response(JSON.stringify({ error: 'Video has no source URL' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       // Create Mux asset
       const muxResponse = await fetch('https://api.mux.com/video/v1/assets', {
         method: 'POST',
@@ -106,7 +115,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          input: [{ url: videoUrl }],
+          input: [{ url: dbVideoUrl }],
           playback_policy: ['public'],
           normalize_audio: true,
         }),
