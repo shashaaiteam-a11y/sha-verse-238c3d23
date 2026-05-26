@@ -751,7 +751,7 @@ const FacebookStoryViewer = ({
                             {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
                           </p>
                         </div>
-                        <p className="text-sm break-words">{reply.message}</p>
+                        <p className="text-sm break-words whitespace-pre-wrap"><LinkifiedText text={reply.message} /></p>
                       </div>
                     </div>
                   ))}
