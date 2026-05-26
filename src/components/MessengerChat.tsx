@@ -27,6 +27,7 @@ import { MessageInfoDialog } from './chat/MessageInfoDialog';
 import { MessageActionBar } from './chat/MessageActionBar';
 import { MessageActionsMenu } from './chat/MessageActionsMenu';
 import { ForwardDialog } from './chat/ForwardDialog';
+import { PinDurationSheet, DeleteMessageSheet } from './chat/MessageActionSheet';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
