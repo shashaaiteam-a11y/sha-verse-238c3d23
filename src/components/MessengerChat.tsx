@@ -27,6 +27,7 @@ import { MessageInfoDialog } from './chat/MessageInfoDialog';
 import { MessageActionBar } from './chat/MessageActionBar';
 import { MessageActionsMenu } from './chat/MessageActionsMenu';
 import { ForwardDialog } from './chat/ForwardDialog';
+import { PinDurationSheet, DeleteMessageSheet } from './chat/MessageActionSheet';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -172,24 +173,15 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     refetchPin();
   };
 
-  const handlePinMessage = async (message: any) => {
+  // Bottom-sheet state for professional pin/delete choosers.
+  const [pinSheetMessage, setPinSheetMessage] = useState<any | null>(null);
+  const [deleteSheet, setDeleteSheet] = useState<
+    | { ids: string[]; canEveryone: boolean; count: number; source: 'selection' | 'menu' }
+    | null
+  >(null);
+
+  const performPin = async (message: any, days: 1 | 7 | 30) => {
     if (!message?.id || !user?.id) return;
-    const existing = pinnedMessages.find((p: any) => p.id === message.id);
-    // Toggle: if already pinned -> unpin
-    if (existing) {
-      try {
-        const next = pinnedMessages.filter((p: any) => p.id !== message.id);
-        await writePinList(next);
-        toast.success('Message unpinned');
-      } catch { toast.error('Failed to unpin'); }
-      return;
-    }
-    const choice = window.prompt(
-      'Pin for how long?\n  1 = 24 hours\n  2 = 7 days\n  3 = 30 days\n\nType 1, 2, or 3 (Cancel to abort)',
-      '2'
-    );
-    if (choice === null) return;
-    const days = choice.trim() === '1' ? 1 : choice.trim() === '3' ? 30 : 7;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     const entry = {
       id: message.id,
@@ -200,13 +192,27 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       expiresAt,
     };
     try {
-      // Newest first; if at capacity, drop the oldest (last item).
       const merged = [entry, ...pinnedMessages].slice(0, MAX_PINS);
       await writePinList(merged);
       setCurrentPinIndex(0);
       toast.success(pinnedMessages.length >= MAX_PINS ? 'Pinned (oldest pin removed)' : 'Message pinned');
     } catch { toast.error('Failed to pin'); }
   };
+
+  const handlePinMessage = async (message: any) => {
+    if (!message?.id || !user?.id) return;
+    const existing = pinnedMessages.find((p: any) => p.id === message.id);
+    if (existing) {
+      try {
+        const next = pinnedMessages.filter((p: any) => p.id !== message.id);
+        await writePinList(next);
+        toast.success('Message unpinned');
+      } catch { toast.error('Failed to unpin'); }
+      return;
+    }
+    setPinSheetMessage(message);
+  };
+
 
   const handleUnpinCurrent = async () => {
     const target = pinnedMessages[currentPinIndex];
@@ -539,28 +545,28 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const handleActionDelete = async () => {
     if (selectionCount === 0) return;
     const ids = selectedMessages.map((m: any) => m.id);
-    if (canDeleteForEveryone) {
-      const choice = window.prompt(
-        'Delete message:\n  1 = Delete for me\n  2 = Delete for everyone\n\nType 1 or 2 (Cancel to abort)',
-        '2'
-      );
-      if (choice === null) return;
-      if (choice.trim() === '2') {
-        for (const id of ids) await deleteForEveryone.mutateAsync(id).catch(() => {});
-        toast.success('Deleted for everyone');
-      } else if (choice.trim() === '1') {
-        for (const id of ids) await deleteForMe.mutateAsync(id).catch(() => {});
-        toast.success('Deleted for you');
-      } else {
-        return;
-      }
+    setDeleteSheet({
+      ids,
+      canEveryone: canDeleteForEveryone,
+      count: selectionCount,
+      source: 'selection',
+    });
+  };
+
+  const performDelete = async (mode: 'me' | 'everyone') => {
+    if (!deleteSheet) return;
+    const { ids, source } = deleteSheet;
+    if (mode === 'everyone') {
+      for (const id of ids) await deleteForEveryone.mutateAsync(id).catch(() => {});
+      toast.success('Deleted for everyone');
     } else {
-      if (!confirm(`Delete ${selectionCount > 1 ? `${selectionCount} messages` : 'this message'} for me?`)) return;
       for (const id of ids) await deleteForMe.mutateAsync(id).catch(() => {});
       toast.success('Deleted for you');
     }
-    clearSelection();
+    if (source === 'selection') clearSelection();
+    setDeleteSheet(null);
   };
+
 
   const handleActionInfo = () => {
     if (!singleSelected) return;
@@ -952,26 +958,14 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   setEditing({ id: message.id, content: message.content || '' });
                                   setReplyTo(null);
                                 }}
-                                onDelete={async () => {
+                                onDelete={() => {
                                   const canDelAll = isOwn && isWithinMinutes(message.created_at, 48 * 60);
-                                  if (canDelAll) {
-                                    const choice = window.prompt(
-                                      'Delete message:\n  1 = Delete for me\n  2 = Delete for everyone\n\nType 1 or 2 (Cancel to abort)',
-                                      '2'
-                                    );
-                                    if (choice === null) return;
-                                    if (choice.trim() === '2') {
-                                      await deleteForEveryone.mutateAsync(message.id).catch(() => {});
-                                      toast.success('Deleted for everyone');
-                                    } else if (choice.trim() === '1') {
-                                      await deleteForMe.mutateAsync(message.id).catch(() => {});
-                                      toast.success('Deleted for you');
-                                    }
-                                  } else {
-                                    if (!confirm('Delete this message for me?')) return;
-                                    await deleteForMe.mutateAsync(message.id).catch(() => {});
-                                    toast.success('Deleted for you');
-                                  }
+                                  setDeleteSheet({
+                                    ids: [message.id],
+                                    canEveryone: canDelAll,
+                                    count: 1,
+                                    source: 'menu',
+                                  });
                                 }}
                                 onInfo={() => setInfoMessage(message)}
                                 onSelect={() => toggleSelect(message.id)}
@@ -1212,6 +1206,26 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
           setForwardingMessages(null);
           clearSelection();
         }}
+      />
+
+      {/* Professional pin-duration chooser */}
+      <PinDurationSheet
+        open={!!pinSheetMessage}
+        onOpenChange={(o) => !o && setPinSheetMessage(null)}
+        onChoose={(days) => {
+          const msg = pinSheetMessage;
+          setPinSheetMessage(null);
+          if (msg) performPin(msg, days);
+        }}
+      />
+
+      {/* Professional delete chooser */}
+      <DeleteMessageSheet
+        open={!!deleteSheet}
+        onOpenChange={(o) => !o && setDeleteSheet(null)}
+        count={deleteSheet?.count ?? 1}
+        canDeleteForEveryone={!!deleteSheet?.canEveryone}
+        onChoose={(mode) => performDelete(mode)}
       />
     </div>
   );
