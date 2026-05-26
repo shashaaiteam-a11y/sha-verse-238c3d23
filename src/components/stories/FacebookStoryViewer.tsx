@@ -857,7 +857,8 @@ const FacebookStoryViewer = ({
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={handleOpenViewers}
-            className="absolute bottom-4 left-4 z-50 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors pointer-events-auto"
+            className="absolute left-4 z-50 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors pointer-events-auto"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
             aria-label="View story viewers"
           >
             <Eye className="w-5 h-5" />
