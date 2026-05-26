@@ -1,64 +1,87 @@
 package com.shaverse.app;
 
 import android.Manifest;
-import android.content.pm.PackageManager;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.net.Uri;
+
+import androidx.core.app.ActivityCompat;
 
 import com.getcapacitor.BridgeActivity;
 
 /**
- * Sha-Verse MainActivity — extends Capacitor's BridgeActivity and bridges
- * Android runtime permissions to the WebView's getUserMedia() requests so
- * voice/video calls work inside the native shell.
+ * Sha-Verse MainActivity
  *
- * Replace android/app/src/main/java/com/shaverse/app/MainActivity.java with
- * this file after `npx cap add android`.
+ * Path: android/app/src/main/java/com/shaverse/app/MainActivity.java
+ *
+ * Fixes:
+ *  - File picker (profile pic, cover, post images/videos, story upload, chat media)
+ *    via WebChromeClient.onShowFileChooser
+ *  - Camera + Mic for voice / video calls via WebChromeClient.onPermissionRequest
+ *  - Runtime permission prompt on first launch
+ *  - Autoplay, DOM storage, mixed content, file access enabled on WebView
+ *
+ * No JS / Lovable code changes required.
  */
 public class MainActivity extends BridgeActivity {
 
-    private static final int PERMISSION_REQUEST_CODE = 4242;
+    private ValueCallback<Uri[]> filePathCallback;
+    private static final int FILE_CHOOSER_CODE = 1001;
+    private static final int PERMISSION_CODE   = 2001;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 1. Ask user for Camera + Mic at app start (Android 6+).
+        // 1. Request runtime permissions on first launch (Android 6+).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            boolean needCam = checkSelfPermission(Manifest.permission.CAMERA)
-                    != PackageManager.PERMISSION_GRANTED;
-            boolean needMic = checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-                    != PackageManager.PERMISSION_GRANTED;
-            if (needCam || needMic) {
-                requestPermissions(new String[]{
-                        Manifest.permission.CAMERA,
-                        Manifest.permission.RECORD_AUDIO,
-                        Manifest.permission.MODIFY_AUDIO_SETTINGS
-                }, PERMISSION_REQUEST_CODE);
+            String[] perms;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+
+                perms = new String[] {
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.MODIFY_AUDIO_SETTINGS,
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.READ_MEDIA_VIDEO,
+                    Manifest.permission.READ_MEDIA_AUDIO
+                };
+            } else {
+                perms = new String[] {
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.MODIFY_AUDIO_SETTINGS,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                };
             }
+            ActivityCompat.requestPermissions(this, perms, PERMISSION_CODE);
         }
 
-        // 2. Enable Chrome DevTools remote debugging for the WebView.
+        // 2. Enable Chrome DevTools remote debugging (chrome://inspect).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             WebView.setWebContentsDebuggingEnabled(true);
         }
 
-        // 3. Configure the Capacitor-owned WebView and bridge permission
-        //    requests from the web layer (getUserMedia) to Android.
+        // 3. Configure the Capacitor WebView and wire up media + file bridges.
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
-            webView.getSettings().setJavaScriptEnabled(true);
-            webView.getSettings().setDomStorageEnabled(true);
-            webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
-            webView.getSettings().setAllowFileAccess(true);
-            webView.getSettings().setAllowContentAccess(true);
+            WebSettings s = webView.getSettings();
+            s.setJavaScriptEnabled(true);
+            s.setDomStorageEnabled(true);
+            s.setAllowFileAccess(true);
+            s.setAllowContentAccess(true);
+            s.setMediaPlaybackRequiresUserGesture(false);
+            s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
-            // Preserve Capacitor's existing WebChromeClient behavior by
-            // delegating onProgressChanged etc., but override permission flow.
             webView.setWebChromeClient(new WebChromeClient() {
+
+                // Camera / Mic — voice & video calls, voice messages
                 @Override
                 public void onPermissionRequest(final PermissionRequest request) {
                     runOnUiThread(() -> {
@@ -67,7 +90,45 @@ public class MainActivity extends BridgeActivity {
                         }
                     });
                 }
+
+                // File picker — profile pic, cover, post media, story, chat
+                @Override
+                public boolean onShowFileChooser(WebView wv,
+                                                 ValueCallback<Uri[]> callback,
+                                                 FileChooserParams params) {
+                    if (filePathCallback != null) {
+                        filePathCallback.onReceiveValue(null);
+                    }
+                    filePathCallback = callback;
+
+                    Intent intent = params.createIntent();
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("*/*");
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    try {
+                        startActivityForResult(
+                            Intent.createChooser(intent, "Select"),
+                            FILE_CHOOSER_CODE
+                        );
+                        return true;
+                    } catch (Exception e) {
+                        filePathCallback = null;
+                        return false;
+                    }
+                }
             });
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == FILE_CHOOSER_CODE && filePathCallback != null) {
+            Uri[] results = WebChromeClient.FileChooserParams
+                .parseResult(resultCode, data);
+            filePathCallback.onReceiveValue(results);
+            filePathCallback = null;
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }
