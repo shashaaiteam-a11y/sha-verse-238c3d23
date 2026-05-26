@@ -459,7 +459,19 @@ const FacebookStoryViewer = ({
   }
 
   const viewer = (
-    <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden">
+    <div
+      className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden"
+      style={{
+        transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+        opacity: dragY > 0 ? Math.max(1 - dragY / (window.innerHeight * 0.8), 0) : 1,
+        transition: dragStartRef.current ? 'none' : 'transform 180ms ease-out, opacity 180ms ease-out',
+        touchAction: 'pan-y',
+      }}
+      onTouchStart={handleSwipeStart}
+      onTouchMove={handleSwipeMove}
+      onTouchEnd={handleSwipeEnd}
+      onTouchCancel={handleSwipeEnd}
+    >
       {/* Previous user indicator */}
       {currentGroupIndex > 0 && (
         <div
