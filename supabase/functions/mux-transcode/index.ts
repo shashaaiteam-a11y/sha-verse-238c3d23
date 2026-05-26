@@ -286,7 +286,7 @@ serve(async (req) => {
         .from('videos')
         .update({ 
           hls_url: hlsUrl,
-          duration: Math.round(duration || 0),
+          duration: Math.round(trustedDuration ?? duration ?? 0),
           transcoding_status: 'completed',
           thumbnail_url: thumbnailUrl, // Auto-generated thumbnail from Mux
         })
