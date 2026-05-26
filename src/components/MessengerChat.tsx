@@ -461,6 +461,30 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     ? (messages || []).filter((m: any) => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
     : (messages || []);
 
+  // Track incoming messages: if user is scrolled up and a new INCOMING message
+  // arrives, bump the green-indicator counter. If they are at the bottom we let
+  // ChatLayout's auto-scroll handle it (no indicator shown).
+  useEffect(() => {
+    if (!filteredMessages.length) {
+      lastSeenMessageIdRef.current = null;
+      return;
+    }
+    const last = filteredMessages[filteredMessages.length - 1];
+    const lastId = last?.id;
+    if (lastSeenMessageIdRef.current === null) {
+      lastSeenMessageIdRef.current = lastId;
+      return;
+    }
+    if (lastId !== lastSeenMessageIdRef.current) {
+      const isIncoming = last?.sender_id && last.sender_id !== user?.id;
+      if (isIncoming && !isAtBottomRef.current) {
+        setPendingNewCount((c) => c + 1);
+      }
+      lastSeenMessageIdRef.current = lastId;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredMessages.length, filteredMessages[filteredMessages.length - 1]?.id]);
+
   // Initialize conversation from URL parameter
   useEffect(() => {
     const initConversation = async () => {
