@@ -496,7 +496,7 @@ const BookReader = () => {
                         <Slider
                           value={[scale * 100]}
                           onValueChange={(v) => setScale(v[0] / 100)}
-                          min={50}
+                          min={100}
                           max={300}
                           step={25}
                         />
