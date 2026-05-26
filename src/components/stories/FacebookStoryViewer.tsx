@@ -55,6 +55,46 @@ const FacebookStoryViewer = ({
   const isPausedRef = useRef(isPaused);
   // Remember pause state at the moment the viewers sheet was opened, so closing restores it.
   const wasPausedBeforeViewersRef = useRef(false);
+  // Swipe-down-to-close gesture state (WhatsApp Status style)
+  const [dragY, setDragY] = useState(0);
+  const dragStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isDraggingRef = useRef(false);
+
+  const handleSwipeStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    dragStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
+    isDraggingRef.current = false;
+  }, []);
+
+  const handleSwipeMove = useCallback((e: React.TouchEvent) => {
+    if (!dragStartRef.current || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dy = t.clientY - dragStartRef.current.y;
+    const dx = Math.abs(t.clientX - dragStartRef.current.x);
+    if (!isDraggingRef.current) {
+      if (dy > 10 && dy > dx) {
+        isDraggingRef.current = true;
+      } else {
+        return;
+      }
+    }
+    if (dy > 0) setDragY(dy);
+  }, []);
+
+  const handleSwipeEnd = useCallback(() => {
+    if (!dragStartRef.current) return;
+    const elapsed = Date.now() - dragStartRef.current.time;
+    const velocity = dragY / Math.max(elapsed, 1);
+    dragStartRef.current = null;
+    isDraggingRef.current = false;
+    if (dragY > 80 || velocity > 0.5) {
+      setDragY(window.innerHeight);
+      setTimeout(() => onClose(), 180);
+    } else {
+      setDragY(0);
+    }
+  }, [dragY, onClose]);
 
   const currentStory = storyGroup.stories[currentIndex];
   const isOwnStory = storyGroup.user.id === user?.id;
