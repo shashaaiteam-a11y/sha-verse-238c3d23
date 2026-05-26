@@ -326,23 +326,51 @@ const FacebookStoryViewer = ({
     }
   };
 
+  // Rapid-click guards (Facebook-style idempotency)
+  const lastReactionRef = useRef<{ key: string; at: number } | null>(null);
+  const lastReplyRef = useRef<{ key: string; at: number } | null>(null);
+
   const handleReaction = async (reaction: string) => {
-    await reactToStory.mutateAsync({
-      storyId: currentStory.id,
-      reactionType: reaction,
-    });
-    setShowReactions(false);
+    const now = Date.now();
+    const key = `${currentStory.id}:${reaction}`;
+    // Throttle: same reaction within 300ms = ignore; any reaction on this story within 300ms = ignore
+    if (lastReactionRef.current && now - lastReactionRef.current.at < 300) return;
+    lastReactionRef.current = { key, at: now };
+    if (reactToStory.isPending) return;
+    try {
+      await reactToStory.mutateAsync({
+        storyId: currentStory.id,
+        reactionType: reaction,
+      });
+    } finally {
+      setShowReactions(false);
+    }
   };
 
   const handleReply = async () => {
-    if (!replyText.trim()) return;
-
-    await replyToStory.mutateAsync({
-      storyId: currentStory.id,
-      recipientId: storyGroup.user.id,
-      message: replyText.trim(),
-    });
+    const trimmed = replyText.trim();
+    if (!trimmed) return;
+    if (replyToStory.isPending) return;
+    const now = Date.now();
+    const key = `${currentStory.id}:${trimmed}`;
+    // Idempotency: same text on same story within 2s = drop
+    if (lastReplyRef.current && lastReplyRef.current.key === key && now - lastReplyRef.current.at < 2000) {
+      return;
+    }
+    lastReplyRef.current = { key, at: now };
     setReplyText("");
+    try {
+      await replyToStory.mutateAsync({
+        storyId: currentStory.id,
+        recipientId: storyGroup.user.id,
+        message: trimmed,
+      });
+    } catch (err) {
+      // Restore text on failure so user can retry
+      setReplyText(trimmed);
+      lastReplyRef.current = null;
+      throw err;
+    }
   };
 
   const togglePause = () => {
