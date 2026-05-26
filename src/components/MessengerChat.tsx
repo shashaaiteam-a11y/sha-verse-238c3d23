@@ -958,26 +958,14 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   setEditing({ id: message.id, content: message.content || '' });
                                   setReplyTo(null);
                                 }}
-                                onDelete={async () => {
+                                onDelete={() => {
                                   const canDelAll = isOwn && isWithinMinutes(message.created_at, 48 * 60);
-                                  if (canDelAll) {
-                                    const choice = window.prompt(
-                                      'Delete message:\n  1 = Delete for me\n  2 = Delete for everyone\n\nType 1 or 2 (Cancel to abort)',
-                                      '2'
-                                    );
-                                    if (choice === null) return;
-                                    if (choice.trim() === '2') {
-                                      await deleteForEveryone.mutateAsync(message.id).catch(() => {});
-                                      toast.success('Deleted for everyone');
-                                    } else if (choice.trim() === '1') {
-                                      await deleteForMe.mutateAsync(message.id).catch(() => {});
-                                      toast.success('Deleted for you');
-                                    }
-                                  } else {
-                                    if (!confirm('Delete this message for me?')) return;
-                                    await deleteForMe.mutateAsync(message.id).catch(() => {});
-                                    toast.success('Deleted for you');
-                                  }
+                                  setDeleteSheet({
+                                    ids: [message.id],
+                                    canEveryone: canDelAll,
+                                    count: 1,
+                                    source: 'menu',
+                                  });
                                 }}
                                 onInfo={() => setInfoMessage(message)}
                                 onSelect={() => toggleSelect(message.id)}
