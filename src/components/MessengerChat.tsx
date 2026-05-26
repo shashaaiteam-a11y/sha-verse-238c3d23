@@ -795,6 +795,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       )}>
         {selectedConversation ? (
           <ChatLayout
+            onViewportReady={(v) => { scrollViewportRef.current = v; }}
+            onScrollPositionChange={handleScrollPositionChange}
             header={
               selectionCount > 0 ? (
                 <MessageActionBar
