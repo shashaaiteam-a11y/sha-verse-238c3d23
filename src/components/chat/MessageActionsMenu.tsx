@@ -18,6 +18,8 @@ interface MessageActionsMenuProps {
   onCopy: () => void;
   onPin: () => void;
   isPinned?: boolean;
+  /** When false and message is already pinned, hide the Unpin menu item completely. */
+  canUnpin?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onInfo: () => void;
