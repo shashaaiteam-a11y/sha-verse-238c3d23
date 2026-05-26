@@ -952,58 +952,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
             messages={
               filteredMessages.length > 0 ? (
                 <div className="space-y-2">
-                  {pinnedMessages.length > 0 && (() => {
-                    const current = pinnedMessages[Math.min(currentPinIndex, pinnedMessages.length - 1)];
-                    const total = pinnedMessages.length;
-                    const canUnpinBanner = !current.by || current.by === user?.id;
-                    return (
-                      <div
-                        onClick={scrollToPinned}
-                        className="sticky top-0 z-20 -mt-2 mb-2 flex items-center gap-2 px-3 py-2 rounded-md bg-muted/80 backdrop-blur border border-border cursor-pointer hover:bg-muted"
-                      >
-                        <Pin className="w-4 h-4 text-primary flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-                            <span>Pinned</span>
-                            <span className="opacity-70">[{Math.min(currentPinIndex, total - 1) + 1}/{total}]</span>
-                            <span className="mx-1">·</span>
-                            <span>{current.by === user?.id ? 'You' : (otherUser?.display_name || current.byName || 'Pinned')}</span>
-                          </div>
-                          <div className="text-xs truncate">{current.preview || 'Pinned message'}</div>
-                        </div>
-                        {total > 1 && (
-                          <div className="flex items-center gap-0.5">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setCurrentPinIndex((i) => (i - 1 + total) % total); }}
-                              aria-label="Previous pin"
-                              className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
-                            >
-                              <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setCurrentPinIndex((i) => (i + 1) % total); }}
-                              aria-label="Next pin"
-                              className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
-                            >
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                        {canUnpinBanner && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); handleUnpinCurrent(); }}
-                            aria-label="Unpin"
-                            className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  {/* Pinned-message banner is rendered via ChatLayout's
+                      `pinnedBanner` prop (outside the scroll viewport) so it
+                      stays visible reliably on mobile WebViews. */}
+
 
                   {filteredMessages.map((message: any, idx: number) => {
                     if (!message || message.deleted_for_all) return null;
