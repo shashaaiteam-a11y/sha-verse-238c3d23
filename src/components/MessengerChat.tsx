@@ -116,6 +116,35 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     setEditing(null);
   }, [conversationId]);
 
+  // ---------- WhatsApp-style scroll tracking + "new message" indicator ----------
+  const scrollViewportRef = useRef<HTMLElement | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const isAtBottomRef = useRef(true);
+  const [pendingNewCount, setPendingNewCount] = useState(0);
+  const lastSeenMessageIdRef = useRef<string | null>(null);
+
+  // Reset indicator state when switching conversation
+  useEffect(() => {
+    setPendingNewCount(0);
+    setIsAtBottom(true);
+    isAtBottomRef.current = true;
+    lastSeenMessageIdRef.current = null;
+  }, [conversationId]);
+
+  const handleScrollPositionChange = (dist: number) => {
+    const atBottom = dist < 50;
+    isAtBottomRef.current = atBottom;
+    setIsAtBottom((prev) => (prev === atBottom ? prev : atBottom));
+    if (atBottom && pendingNewCount > 0) setPendingNewCount(0);
+  };
+
+  const scrollChatToBottom = () => {
+    const v = scrollViewportRef.current;
+    if (!v) return;
+    v.scrollTo({ top: v.scrollHeight, behavior: 'smooth' });
+    setPendingNewCount(0);
+  };
+
   // ---------- Pin messages (WhatsApp-style, max 7, LIFO) ----------
   // Stored as conversations.metadata.pinnedMessages: PinEntry[] (newest first).
   // Backwards-compatible: legacy single .pinnedMessage is read as a 1-item array.
