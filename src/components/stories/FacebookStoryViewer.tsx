@@ -27,6 +27,34 @@ interface FacebookStoryViewerProps {
 
 const REACTIONS = ["❤️", "😂", "😮", "😢", "😡", "🔥"];
 
+// Auto-linkify URLs in plain text (Facebook-style blue link, opens in new tab)
+const URL_REGEX = /(\b(?:https?:\/\/|www\.)[^\s<]+[^\s<.,!?:;'")\]])/gi;
+const LinkifiedText = ({ text }: { text: string }) => {
+  const parts = text.split(URL_REGEX);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (i % 2 === 1) {
+          const href = part.startsWith('http') ? part : `https://${part}`;
+          return (
+            <a
+              key={i}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[#3b82f6] underline break-all hover:opacity-80"
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+};
+
 const FacebookStoryViewer = ({
   storyGroup,
   allGroups,
