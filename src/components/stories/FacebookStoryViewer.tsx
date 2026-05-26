@@ -866,14 +866,20 @@ const FacebookStoryViewer = ({
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder="Reply to story..."
                 className="bg-white/20 border-none text-white placeholder:text-white/70 pr-10"
-                onKeyDown={(e) => e.key === "Enter" && handleReply()}
+                disabled={replyToStory.isPending}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!replyToStory.isPending) handleReply();
+                  }
+                }}
               />
               <Button
                 variant="ghost"
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 text-white h-8 w-8"
                 onClick={handleReply}
-                disabled={!replyText.trim()}
+                disabled={!replyText.trim() || replyToStory.isPending}
               >
                 <Send className="w-4 h-4" />
               </Button>
