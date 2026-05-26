@@ -210,6 +210,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     if (!message?.id || !user?.id) return;
     const existing = pinnedMessages.find((p: any) => p.id === message.id);
     if (existing) {
+      // Only the user who pinned it can unpin (1:1 chats).
+      if (existing.by && existing.by !== user.id) {
+        toast.info('Only the user who pinned this message can unpin it');
+        return;
+      }
       try {
         const next = pinnedMessages.filter((p: any) => p.id !== message.id);
         await writePinList(next);
@@ -224,6 +229,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const handleUnpinCurrent = async () => {
     const target = pinnedMessages[currentPinIndex];
     if (!target) return;
+    if (target.by && target.by !== user?.id) {
+      toast.info('Only the user who pinned this message can unpin it');
+      return;
+    }
     try {
       const next = pinnedMessages.filter((p: any) => p.id !== target.id);
       await writePinList(next);
