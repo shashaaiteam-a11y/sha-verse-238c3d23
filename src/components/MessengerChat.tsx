@@ -1235,6 +1235,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               </div>
             }
           />
+          </>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-background">
             <div className="text-center">
