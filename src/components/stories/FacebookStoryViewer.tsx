@@ -901,8 +901,9 @@ const FacebookStoryViewer = ({
                   {REACTIONS.map((reaction) => (
                     <button
                       key={reaction}
-                      className="text-xl hover:scale-125 transition-transform p-1"
+                      className="text-xl hover:scale-125 transition-transform p-1 disabled:opacity-50"
                       onClick={() => handleReaction(reaction)}
+                      disabled={reactToStory.isPending}
                     >
                       {reaction}
                     </button>
