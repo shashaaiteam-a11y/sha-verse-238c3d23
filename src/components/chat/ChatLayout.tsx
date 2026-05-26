@@ -6,21 +6,21 @@ interface ChatLayoutProps {
   header: ReactNode;
   messages: ReactNode;
   inputBar: ReactNode;
+  /**
+   * Optional fixed banner rendered BETWEEN the header and the scrollable messages area.
+   * Use this for elements (e.g. pinned-message banner) that must stay visible at all
+   * times — `position: sticky` inside the Radix ScrollArea is unreliable on mobile
+   * WebViews, so we render outside the scroll viewport instead.
+   */
+  pinnedBanner?: ReactNode;
   className?: string;
   emptyState?: ReactNode;
   isLoading?: boolean;
   onScrollToBottom?: () => void;
-  /**
-   * Optional callback: fires whenever the user scrolls the messages area.
-   * Provides the live distance (in px) from the bottom. < 50 → considered "at bottom".
-   */
   onScrollPositionChange?: (distanceFromBottom: number) => void;
-  /**
-   * Optional: receive a stable ref to the scroll viewport element so parents
-   * can imperatively scroll to bottom (e.g. when user taps the green indicator).
-   */
   onViewportReady?: (viewport: HTMLElement | null) => void;
 }
+
 
 /**
  * WhatsApp-style chat layout component
