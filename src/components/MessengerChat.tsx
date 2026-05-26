@@ -790,10 +790,16 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
       {/* Chat Area */}
       <div className={cn(
-        "flex-1 h-full overflow-hidden bg-background",
+        "flex-1 h-full overflow-hidden bg-background relative",
         !selectedConversation && "hidden sm:flex"
       )}>
         {selectedConversation ? (
+          <>
+          <NewMessageIndicator
+            visible={!isAtBottom && pendingNewCount > 0}
+            count={pendingNewCount}
+            onClick={scrollChatToBottom}
+          />
           <ChatLayout
             onViewportReady={(v) => { scrollViewportRef.current = v; }}
             onScrollPositionChange={handleScrollPositionChange}
