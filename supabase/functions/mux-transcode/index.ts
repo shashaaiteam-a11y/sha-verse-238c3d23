@@ -167,48 +167,56 @@ serve(async (req) => {
       const asset = muxData.data;
       console.log('Mux asset created:', asset.id);
 
-      // Update transcoding job
+      // Store Mux asset ID server-side so future calls can't be spoofed
       await supabase
         .from('transcoding_jobs')
-        .update({ 
+        .update({
           status: 'processing',
           started_at: new Date().toISOString(),
+          mux_asset_id: asset.id,
         })
         .eq('video_id', videoId);
 
-      // Store Mux asset ID in video metadata for webhook handling
       await supabase
         .from('videos')
-        .update({ 
+        .update({
           transcoding_status: 'processing',
         })
         .eq('id', videoId);
 
-      return new Response(JSON.stringify({ 
-        success: true, 
+      return new Response(JSON.stringify({
+        success: true,
         assetId: asset.id,
-        playbackId: asset.playback_ids?.[0]?.id 
+        playbackId: asset.playback_ids?.[0]?.id
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (action === 'check-status') {
-      // Check Mux asset status - use assetId from the already parsed body
+      // SECURITY: assetId is sourced from the DB (set during create-asset),
+      // never trusted from the client.
       if (!MUX_TOKEN_ID || !MUX_TOKEN_SECRET) {
         throw new Error('Mux credentials not configured');
       }
 
-      if (!assetId) {
-        return new Response(JSON.stringify({ error: 'assetId is required for check-status' }), {
-          status: 400,
+      const { data: job } = await supabase
+        .from('transcoding_jobs')
+        .select('mux_asset_id')
+        .eq('video_id', videoId)
+        .maybeSingle();
+
+      const trustedAssetId = job?.mux_asset_id;
+      if (!trustedAssetId) {
+        return new Response(JSON.stringify({ error: 'No Mux asset found for this video' }), {
+          status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       const muxAuth = btoa(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`);
-      
-      const muxResponse = await fetch(`https://api.mux.com/video/v1/assets/${assetId}`, {
+
+      const muxResponse = await fetch(`https://api.mux.com/video/v1/assets/${trustedAssetId}`, {
         headers: {
           'Authorization': `Basic ${muxAuth}`,
         },
@@ -221,7 +229,7 @@ serve(async (req) => {
       const muxData = await muxResponse.json();
       const asset = muxData.data;
 
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         status: asset.status,
         playbackId: asset.playback_ids?.[0]?.id,
         duration: asset.duration,
@@ -233,18 +241,45 @@ serve(async (req) => {
     }
 
     if (action === 'complete-transcoding') {
-      // Mark transcoding as complete and update video with HLS URL
-      // Use playbackId, duration, assetId from the already parsed body
-      
-      if (!playbackId) {
-        return new Response(JSON.stringify({ error: 'playbackId is required for complete-transcoding' }), {
-          status: 400,
+      // SECURITY: never trust client-supplied playbackId. Look up the assetId
+      // from the DB and fetch the real playbackId from Mux directly.
+      if (!MUX_TOKEN_ID || !MUX_TOKEN_SECRET) {
+        throw new Error('Mux credentials not configured');
+      }
+
+      const { data: job } = await supabase
+        .from('transcoding_jobs')
+        .select('mux_asset_id')
+        .eq('video_id', videoId)
+        .maybeSingle();
+
+      const trustedAssetId = job?.mux_asset_id;
+      if (!trustedAssetId) {
+        return new Response(JSON.stringify({ error: 'No Mux asset found for this video' }), {
+          status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      
-      const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
-      const thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
+
+      const muxAuth = btoa(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`);
+      const assetResp = await fetch(`https://api.mux.com/video/v1/assets/${trustedAssetId}`, {
+        headers: { 'Authorization': `Basic ${muxAuth}` },
+      });
+      if (!assetResp.ok) {
+        throw new Error('Failed to fetch Mux asset for completion');
+      }
+      const assetJson = await assetResp.json();
+      const trustedPlaybackId = assetJson.data?.playback_ids?.[0]?.id;
+      const trustedDuration = assetJson.data?.duration;
+      if (!trustedPlaybackId) {
+        return new Response(JSON.stringify({ error: 'Mux asset is not ready' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const hlsUrl = `https://stream.mux.com/${trustedPlaybackId}.m3u8`;
+      const thumbnailUrl = `https://image.mux.com/${trustedPlaybackId}/thumbnail.jpg`;
 
       // Update video with HLS URL and duration
       await supabase
