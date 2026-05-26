@@ -365,7 +365,7 @@ const BookReader = () => {
           <div className="flex items-center gap-1">
             {fileType === "pdf" && (
               <>
-                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.max(prev - 0.25, 0.5))}>
+                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.max(prev - 0.25, 1))}>
                   <ZoomOut className="w-5 h-5" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.min(prev + 0.25, 3))}>
