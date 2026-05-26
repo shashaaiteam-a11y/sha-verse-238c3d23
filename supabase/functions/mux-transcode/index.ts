@@ -313,7 +313,7 @@ serve(async (req) => {
         await supabase
           .from('video_qualities')
           .update({ 
-            video_url: `https://stream.mux.com/${playbackId}/high.mp4`,
+            video_url: `https://stream.mux.com/${trustedPlaybackId}/high.mp4`,
             status: 'ready',
           })
           .eq('video_id', videoId)
