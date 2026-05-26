@@ -156,6 +156,9 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   const writePinList = async (next: any[]) => {
     if (!conversationId) return;
+    // Optimistic local update so banner + menu re-render instantly,
+    // without waiting for the server round-trip or refetch interval.
+    queryClient.setQueryData(['conversation-pins', conversationId], next);
     const { data: cur } = await supabase
       .from('conversations')
       .select('metadata')
@@ -169,7 +172,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       .from('conversations')
       .update({ metadata: meta } as any)
       .eq('id', conversationId);
-    if (error) throw error;
+    if (error) {
+      // Roll back optimistic update on failure
+      refetchPin();
+      throw error;
+    }
     refetchPin();
   };
 
@@ -203,6 +210,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     if (!message?.id || !user?.id) return;
     const existing = pinnedMessages.find((p: any) => p.id === message.id);
     if (existing) {
+      // Only the user who pinned it can unpin (1:1 chats).
+      if (existing.by && existing.by !== user.id) {
+        toast.info('Only the user who pinned this message can unpin it');
+        return;
+      }
       try {
         const next = pinnedMessages.filter((p: any) => p.id !== message.id);
         await writePinList(next);
@@ -217,6 +229,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   const handleUnpinCurrent = async () => {
     const target = pinnedMessages[currentPinIndex];
     if (!target) return;
+    if (target.by && target.by !== user?.id) {
+      toast.info('Only the user who pinned this message can unpin it');
+      return;
+    }
     try {
       const next = pinnedMessages.filter((p: any) => p.id !== target.id);
       await writePinList(next);
@@ -813,6 +829,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   {pinnedMessages.length > 0 && (() => {
                     const current = pinnedMessages[Math.min(currentPinIndex, pinnedMessages.length - 1)];
                     const total = pinnedMessages.length;
+                    const canUnpinBanner = !current.by || current.by === user?.id;
                     return (
                       <div
                         onClick={scrollToPinned}
@@ -848,14 +865,16 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                             </button>
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleUnpinCurrent(); }}
-                          aria-label="Unpin"
-                          className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        {canUnpinBanner && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleUnpinCurrent(); }}
+                            aria-label="Unpin"
+                            className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     );
                   })()}
@@ -954,6 +973,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                 }}
                                 onPin={() => handlePinMessage(message)}
                                 isPinned={pinnedMessages.some((p: any) => p.id === message.id)}
+                                canUnpin={(() => {
+                                  const p = pinnedMessages.find((x: any) => x.id === message.id);
+                                  // Owner-only unpin in 1:1 chats.
+                                  return !p || !p.by || p.by === user?.id;
+                                })()}
                                 onEdit={() => {
                                   setEditing({ id: message.id, content: message.content || '' });
                                   setReplyTo(null);

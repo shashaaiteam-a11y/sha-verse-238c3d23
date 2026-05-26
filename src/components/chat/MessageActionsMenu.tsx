@@ -18,6 +18,8 @@ interface MessageActionsMenuProps {
   onCopy: () => void;
   onPin: () => void;
   isPinned?: boolean;
+  /** When false and message is already pinned, hide the Unpin menu item completely. */
+  canUnpin?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onInfo: () => void;
@@ -41,12 +43,16 @@ export const MessageActionsMenu = ({
   onCopy,
   onPin,
   isPinned,
+  canUnpin = true,
   onEdit,
   onDelete,
   onInfo,
   onSelect,
 }: MessageActionsMenuProps) => {
   if (isDeleted) return null;
+  // If the message is pinned by someone else (1:1) or by an admin (group),
+  // hide the Unpin entry entirely instead of just disabling it.
+  const showPinItem = isPinned ? canUnpin : true;
 
   return (
     <DropdownMenu>
@@ -80,10 +86,12 @@ export const MessageActionsMenu = ({
         <DropdownMenuItem onSelect={onCopy}>
           <Copy className="w-4 h-4 mr-3" /> Copy
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onPin}>
-          {isPinned ? <PinOff className="w-4 h-4 mr-3" /> : <Pin className="w-4 h-4 mr-3" />}
-          {isPinned ? 'Unpin' : 'Pin'}
-        </DropdownMenuItem>
+        {showPinItem && (
+          <DropdownMenuItem onSelect={onPin}>
+            {isPinned ? <PinOff className="w-4 h-4 mr-3" /> : <Pin className="w-4 h-4 mr-3" />}
+            {isPinned ? 'Unpin' : 'Pin'}
+          </DropdownMenuItem>
+        )}
         {onSelect && (
           <DropdownMenuItem onSelect={onSelect}>
             <CheckSquare className="w-4 h-4 mr-3" /> Select
