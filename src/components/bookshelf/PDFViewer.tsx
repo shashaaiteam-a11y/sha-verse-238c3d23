@@ -242,7 +242,9 @@ const PDFViewer = ({
       const scaleByWidth = availableWidth / originalViewport.width;
       const scaleByHeight = availableHeight > 0 ? availableHeight / originalViewport.height : scaleByWidth;
       const fitScale = Math.min(scaleByWidth, scaleByHeight);
-      const responsiveScale = fitScale * (scale / 1.5);
+      // `scale` is now a zoom factor where 1.0 = fully fit page inside viewport
+      // (both width and height). >1.0 enlarges and allows scroll inside parent.
+      const responsiveScale = Math.max(0.1, fitScale) * scale;
       const viewport = page.getViewport({ scale: responsiveScale });
 
       // Set canvas dimensions
@@ -355,7 +357,7 @@ const PDFViewer = ({
         <canvas
           ref={canvasRef}
           className={cn(
-            "bg-background max-w-full max-h-full rounded-md",
+            "bg-background rounded-md block",
             isDarkMode ? "filter invert hue-rotate-180" : ""
           )}
           style={{

@@ -70,7 +70,9 @@ const BookReader = () => {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [pdfOutline, setPdfOutline] = useState<PDFOutlineItem[]>([]);
   const [epubToc, setEpubToc] = useState<TocItem[]>([]);
-  const [scale, setScale] = useState(1.5);
+  // Zoom factor where 1.0 = fully fit page inside viewport (both width & height).
+  // 1.0 = 100% (default), up to 3.0 = 300%.
+  const [scale, setScale] = useState(1);
   const [epubCfi, setEpubCfi] = useState<string | undefined>();
 
   // 📖 Inline reader-ad state — every 4 pages, skip first 2 + last
@@ -363,7 +365,7 @@ const BookReader = () => {
           <div className="flex items-center gap-1">
             {fileType === "pdf" && (
               <>
-                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.max(prev - 0.25, 0.5))}>
+                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.max(prev - 0.25, 1))}>
                   <ZoomOut className="w-5 h-5" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.min(prev + 0.25, 3))}>
@@ -494,7 +496,7 @@ const BookReader = () => {
                         <Slider
                           value={[scale * 100]}
                           onValueChange={(v) => setScale(v[0] / 100)}
-                          min={50}
+                          min={100}
                           max={300}
                           step={25}
                         />
