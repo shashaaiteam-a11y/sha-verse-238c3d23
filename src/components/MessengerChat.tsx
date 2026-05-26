@@ -173,24 +173,15 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     refetchPin();
   };
 
-  const handlePinMessage = async (message: any) => {
+  // Bottom-sheet state for professional pin/delete choosers.
+  const [pinSheetMessage, setPinSheetMessage] = useState<any | null>(null);
+  const [deleteSheet, setDeleteSheet] = useState<
+    | { ids: string[]; canEveryone: boolean; count: number; source: 'selection' | 'menu' }
+    | null
+  >(null);
+
+  const performPin = async (message: any, days: 1 | 7 | 30) => {
     if (!message?.id || !user?.id) return;
-    const existing = pinnedMessages.find((p: any) => p.id === message.id);
-    // Toggle: if already pinned -> unpin
-    if (existing) {
-      try {
-        const next = pinnedMessages.filter((p: any) => p.id !== message.id);
-        await writePinList(next);
-        toast.success('Message unpinned');
-      } catch { toast.error('Failed to unpin'); }
-      return;
-    }
-    const choice = window.prompt(
-      'Pin for how long?\n  1 = 24 hours\n  2 = 7 days\n  3 = 30 days\n\nType 1, 2, or 3 (Cancel to abort)',
-      '2'
-    );
-    if (choice === null) return;
-    const days = choice.trim() === '1' ? 1 : choice.trim() === '3' ? 30 : 7;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     const entry = {
       id: message.id,
@@ -201,13 +192,27 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       expiresAt,
     };
     try {
-      // Newest first; if at capacity, drop the oldest (last item).
       const merged = [entry, ...pinnedMessages].slice(0, MAX_PINS);
       await writePinList(merged);
       setCurrentPinIndex(0);
       toast.success(pinnedMessages.length >= MAX_PINS ? 'Pinned (oldest pin removed)' : 'Message pinned');
     } catch { toast.error('Failed to pin'); }
   };
+
+  const handlePinMessage = async (message: any) => {
+    if (!message?.id || !user?.id) return;
+    const existing = pinnedMessages.find((p: any) => p.id === message.id);
+    if (existing) {
+      try {
+        const next = pinnedMessages.filter((p: any) => p.id !== message.id);
+        await writePinList(next);
+        toast.success('Message unpinned');
+      } catch { toast.error('Failed to unpin'); }
+      return;
+    }
+    setPinSheetMessage(message);
+  };
+
 
   const handleUnpinCurrent = async () => {
     const target = pinnedMessages[currentPinIndex];
