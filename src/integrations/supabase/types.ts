@@ -5944,6 +5944,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      record_story_view: { Args: { p_story_id: string }; Returns: undefined }
       refresh_friend_suggestions_for_active_users: {
         Args: never
         Returns: undefined
