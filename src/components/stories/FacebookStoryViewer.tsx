@@ -27,6 +27,34 @@ interface FacebookStoryViewerProps {
 
 const REACTIONS = ["❤️", "😂", "😮", "😢", "😡", "🔥"];
 
+// Auto-linkify URLs in plain text (Facebook-style blue link, opens in new tab)
+const URL_REGEX = /(\b(?:https?:\/\/|www\.)[^\s<]+[^\s<.,!?:;'")\]])/gi;
+const LinkifiedText = ({ text }: { text: string }) => {
+  const parts = text.split(URL_REGEX);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (i % 2 === 1) {
+          const href = part.startsWith('http') ? part : `https://${part}`;
+          return (
+            <a
+              key={i}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[#3b82f6] underline break-all hover:opacity-80"
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+};
+
 const FacebookStoryViewer = ({
   storyGroup,
   allGroups,
@@ -298,23 +326,51 @@ const FacebookStoryViewer = ({
     }
   };
 
+  // Rapid-click guards (Facebook-style idempotency)
+  const lastReactionRef = useRef<{ key: string; at: number } | null>(null);
+  const lastReplyRef = useRef<{ key: string; at: number } | null>(null);
+
   const handleReaction = async (reaction: string) => {
-    await reactToStory.mutateAsync({
-      storyId: currentStory.id,
-      reactionType: reaction,
-    });
-    setShowReactions(false);
+    const now = Date.now();
+    const key = `${currentStory.id}:${reaction}`;
+    // Throttle: same reaction within 300ms = ignore; any reaction on this story within 300ms = ignore
+    if (lastReactionRef.current && now - lastReactionRef.current.at < 300) return;
+    lastReactionRef.current = { key, at: now };
+    if (reactToStory.isPending) return;
+    try {
+      await reactToStory.mutateAsync({
+        storyId: currentStory.id,
+        reactionType: reaction,
+      });
+    } finally {
+      setShowReactions(false);
+    }
   };
 
   const handleReply = async () => {
-    if (!replyText.trim()) return;
-
-    await replyToStory.mutateAsync({
-      storyId: currentStory.id,
-      recipientId: storyGroup.user.id,
-      message: replyText.trim(),
-    });
+    const trimmed = replyText.trim();
+    if (!trimmed) return;
+    if (replyToStory.isPending) return;
+    const now = Date.now();
+    const key = `${currentStory.id}:${trimmed}`;
+    // Idempotency: same text on same story within 2s = drop
+    if (lastReplyRef.current && lastReplyRef.current.key === key && now - lastReplyRef.current.at < 2000) {
+      return;
+    }
+    lastReplyRef.current = { key, at: now };
     setReplyText("");
+    try {
+      await replyToStory.mutateAsync({
+        storyId: currentStory.id,
+        recipientId: storyGroup.user.id,
+        message: trimmed,
+      });
+    } catch (err) {
+      // Restore text on failure so user can retry
+      setReplyText(trimmed);
+      lastReplyRef.current = null;
+      throw err;
+    }
   };
 
   const togglePause = () => {
@@ -695,7 +751,7 @@ const FacebookStoryViewer = ({
                             {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
                           </p>
                         </div>
-                        <p className="text-sm break-words">{reply.message}</p>
+                        <p className="text-sm break-words whitespace-pre-wrap"><LinkifiedText text={reply.message} /></p>
                       </div>
                     </div>
                   ))}
@@ -810,14 +866,20 @@ const FacebookStoryViewer = ({
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder="Reply to story..."
                 className="bg-white/20 border-none text-white placeholder:text-white/70 pr-10"
-                onKeyDown={(e) => e.key === "Enter" && handleReply()}
+                disabled={replyToStory.isPending}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!replyToStory.isPending) handleReply();
+                  }
+                }}
               />
               <Button
                 variant="ghost"
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 text-white h-8 w-8"
                 onClick={handleReply}
-                disabled={!replyText.trim()}
+                disabled={!replyText.trim() || replyToStory.isPending}
               >
                 <Send className="w-4 h-4" />
               </Button>
@@ -839,8 +901,9 @@ const FacebookStoryViewer = ({
                   {REACTIONS.map((reaction) => (
                     <button
                       key={reaction}
-                      className="text-xl hover:scale-125 transition-transform p-1"
+                      className="text-xl hover:scale-125 transition-transform p-1 disabled:opacity-50"
                       onClick={() => handleReaction(reaction)}
+                      disabled={reactToStory.isPending}
                     >
                       {reaction}
                     </button>
