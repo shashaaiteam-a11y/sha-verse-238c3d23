@@ -6,21 +6,21 @@ interface ChatLayoutProps {
   header: ReactNode;
   messages: ReactNode;
   inputBar: ReactNode;
+  /**
+   * Optional fixed banner rendered BETWEEN the header and the scrollable messages area.
+   * Use this for elements (e.g. pinned-message banner) that must stay visible at all
+   * times — `position: sticky` inside the Radix ScrollArea is unreliable on mobile
+   * WebViews, so we render outside the scroll viewport instead.
+   */
+  pinnedBanner?: ReactNode;
   className?: string;
   emptyState?: ReactNode;
   isLoading?: boolean;
   onScrollToBottom?: () => void;
-  /**
-   * Optional callback: fires whenever the user scrolls the messages area.
-   * Provides the live distance (in px) from the bottom. < 50 → considered "at bottom".
-   */
   onScrollPositionChange?: (distanceFromBottom: number) => void;
-  /**
-   * Optional: receive a stable ref to the scroll viewport element so parents
-   * can imperatively scroll to bottom (e.g. when user taps the green indicator).
-   */
   onViewportReady?: (viewport: HTMLElement | null) => void;
 }
+
 
 /**
  * WhatsApp-style chat layout component
@@ -38,6 +38,7 @@ export const ChatLayout = ({
   header,
   messages,
   inputBar,
+  pinnedBanner,
   className,
   emptyState,
   isLoading = false,
@@ -47,6 +48,10 @@ export const ChatLayout = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLElement | null>(null);
   const wasNearBottomRef = useRef(true);
+  // Track previous scrollHeight so we ONLY auto-scroll when new content was
+  // actually appended. This prevents the viewport from snapping back to the
+  // bottom on every unrelated parent re-render (the cause of mobile scroll jank).
+  const prevScrollHeightRef = useRef(0);
 
   const getViewport = useCallback((): HTMLElement | null => {
     if (viewportRef.current) return viewportRef.current;
@@ -70,13 +75,20 @@ export const ChatLayout = ({
     return () => v.removeEventListener('scroll', handle);
   }, [getViewport, onScrollPositionChange, onViewportReady]);
 
-  // Auto-scroll on new content ONLY when user was already near bottom
+  // Auto-scroll on new content ONLY when:
+  //   1. scrollHeight actually grew (new message/banner added), AND
+  //   2. user was already near the bottom.
+  // Without the height-diff guard, every parent re-render would snap mobile
+  // touch-scroll back to the bottom — exactly the "atak rahi hai" bug.
   useEffect(() => {
     const v = getViewport();
     if (!v) return;
-    if (wasNearBottomRef.current) {
-      v.scrollTop = v.scrollHeight;
+    const prev = prevScrollHeightRef.current;
+    const curr = v.scrollHeight;
+    if (curr > prev && wasNearBottomRef.current) {
+      v.scrollTop = curr;
     }
+    prevScrollHeightRef.current = curr;
   }, [messages, getViewport]);
 
   return (
@@ -85,6 +97,15 @@ export const ChatLayout = ({
       <div className="flex-shrink-0 z-10 bg-background">
         {header}
       </div>
+
+      {/* Fixed Pinned Banner (rendered OUTSIDE the scroll viewport for reliable
+          mobile visibility — `position: sticky` inside Radix ScrollArea fails on
+          Capacitor WebView / older iOS Safari). */}
+      {pinnedBanner && (
+        <div className="flex-shrink-0 z-10 bg-background">
+          {pinnedBanner}
+        </div>
+      )}
 
       {/* Scrollable Messages Area */}
       <div className="flex-1 min-h-0 overflow-hidden relative bg-background">
@@ -118,6 +139,7 @@ export const ChatLayout = ({
       {/* Fixed Input Bar at Bottom */}
       <div className="flex-shrink-0 z-10 bg-background">
         {inputBar}
+
       </div>
     </div>
   );
