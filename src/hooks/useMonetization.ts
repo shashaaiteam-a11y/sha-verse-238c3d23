@@ -183,36 +183,20 @@ export const useMonetization = (channelId?: string) => {
     onError: () => toast.error('Failed to request payout'),
   });
 
-  // Apply for Partner Program
+  // Apply for Partner Program — server-side enforces eligibility
   const applyForPartner = useMutation({
     mutationFn: async () => {
-      if (!channelId || !isEligible) throw new Error('Not eligible');
-      
-      // Check if monetization record exists
-      const { data: existing } = await supabase
-        .from('channel_monetization')
-        .select('id')
-        .eq('channel_id', channelId)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('channel_monetization')
-          .update({ is_eligible: true })
-          .eq('channel_id', channelId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('channel_monetization')
-          .insert({ channel_id: channelId, is_eligible: true });
-        if (error) throw error;
-      }
+      if (!channelId) throw new Error('No channel');
+      const { error } = await supabase.rpc('apply_for_partner' as any, {
+        _channel_id: channelId,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success('Welcome to the Partner Program!');
       queryClient.invalidateQueries({ queryKey: ['channel-monetization', channelId] });
     },
-    onError: () => toast.error('Failed to apply'),
+    onError: (err: any) => toast.error(err?.message || 'Failed to apply'),
   });
 
   return {
