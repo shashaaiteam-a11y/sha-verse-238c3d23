@@ -43,12 +43,16 @@ export const MessageActionsMenu = ({
   onCopy,
   onPin,
   isPinned,
+  canUnpin = true,
   onEdit,
   onDelete,
   onInfo,
   onSelect,
 }: MessageActionsMenuProps) => {
   if (isDeleted) return null;
+  // If the message is pinned by someone else (1:1) or by an admin (group),
+  // hide the Unpin entry entirely instead of just disabling it.
+  const showPinItem = isPinned ? canUnpin : true;
 
   return (
     <DropdownMenu>
