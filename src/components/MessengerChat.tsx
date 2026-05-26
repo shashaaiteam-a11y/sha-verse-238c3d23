@@ -156,6 +156,9 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
   const writePinList = async (next: any[]) => {
     if (!conversationId) return;
+    // Optimistic local update so banner + menu re-render instantly,
+    // without waiting for the server round-trip or refetch interval.
+    queryClient.setQueryData(['conversation-pins', conversationId], next);
     const { data: cur } = await supabase
       .from('conversations')
       .select('metadata')
@@ -169,7 +172,11 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       .from('conversations')
       .update({ metadata: meta } as any)
       .eq('id', conversationId);
-    if (error) throw error;
+    if (error) {
+      // Roll back optimistic update on failure
+      refetchPin();
+      throw error;
+    }
     refetchPin();
   };
 
