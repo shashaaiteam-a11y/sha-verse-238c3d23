@@ -15,19 +15,19 @@ import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebChromeClient;
 
 /**
- * Sha-Verse MainActivity — COMPLETE MERGED VERSION
+ * Sha-Verse MainActivity — FINAL FIXED VERSION
  *
- * Combines:
- *  - Capacitor BridgeActivity (so all Capacitor plugins keep working)
- *  - Runtime permission requests (Camera, Mic, Storage, Media)
- *  - WebChromeClient.onPermissionRequest  -> unlocks getUserMedia()
- *      (voice/video calls, voice messages)
- *  - WebChromeClient.onShowFileChooser    -> unlocks <input type="file">
- *      (profile picture, cover photo, post images/videos, attachments)
- *  - WebView hardening (DOM storage, mixed content, autoplay, file access)
- *  - Chrome DevTools remote debugging (chrome://inspect)
+ * Fixes:
+ *  - ✅ Gallery select not working   → MIME type "/" was invalid, now "*\/*"
+ *  - ✅ Capacitor plugins breaking   → extends BridgeWebChromeClient
+ *                                       (instead of overwriting it)
+ *  - ✅ Camera / Mic getUserMedia    → onPermissionRequest grants instantly
+ *  - ✅ Runtime permissions          → asked on first launch (Android 6+/13+)
+ *  - ✅ WebView hardening            → DOM storage, autoplay, mixed content
+ *  - ✅ Chrome DevTools debugging    → chrome://inspect works
  *
  * Path: android/app/src/main/java/com/shaverse/app/MainActivity.java
  */
@@ -42,12 +42,10 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 1. Runtime permissions (Android 6+). Asking for everything we may
-        //    ever need so the WebView never silently blocks a feature.
+        // 1) Runtime permissions
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             String[] perms;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Android 13+: granular media permissions
                 perms = new String[]{
                         Manifest.permission.CAMERA,
                         Manifest.permission.RECORD_AUDIO,
@@ -57,7 +55,6 @@ public class MainActivity extends BridgeActivity {
                         Manifest.permission.READ_MEDIA_AUDIO
                 };
             } else {
-                // Android 6–12: legacy storage permission
                 perms = new String[]{
                         Manifest.permission.CAMERA,
                         Manifest.permission.RECORD_AUDIO,
@@ -65,7 +62,6 @@ public class MainActivity extends BridgeActivity {
                         Manifest.permission.READ_EXTERNAL_STORAGE
                 };
             }
-
             boolean needAny = false;
             for (String p : perms) {
                 if (checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) {
@@ -78,13 +74,12 @@ public class MainActivity extends BridgeActivity {
             }
         }
 
-        // 2. Enable Chrome DevTools remote debugging for the WebView.
+        // 2) DevTools remote debugging
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             WebView.setWebContentsDebuggingEnabled(true);
         }
 
-        // 3. Configure the Capacitor-owned WebView and bridge browser APIs
-        //    (getUserMedia + file chooser) to the native layer.
+        // 3) Harden WebView + EXTEND Capacitor's WebChromeClient (don't replace it!)
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
             WebSettings s = webView.getSettings();
@@ -95,9 +90,11 @@ public class MainActivity extends BridgeActivity {
             s.setMediaPlaybackRequiresUserGesture(false);
             s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
-            webView.setWebChromeClient(new WebChromeClient() {
+            // ⚠️ IMPORTANT: extend BridgeWebChromeClient so Capacitor's own
+            // file chooser / permission logic keeps working.
+            webView.setWebChromeClient(new BridgeWebChromeClient(this.bridge) {
 
-                // 🔥 Camera / Mic — video calls, voice messages, getUserMedia
+                // Camera / Mic → unblocks getUserMedia (video calls, voice msg)
                 @Override
                 public void onPermissionRequest(final PermissionRequest request) {
                     runOnUiThread(() -> {
@@ -107,7 +104,7 @@ public class MainActivity extends BridgeActivity {
                     });
                 }
 
-                // 🔥 File picker — profile pic, cover photo, posts, attachments
+                // File picker → profile pic, cover, posts, attachments
                 @Override
                 public boolean onShowFileChooser(WebView wv,
                                                  ValueCallback<Uri[]> callback,
@@ -117,13 +114,24 @@ public class MainActivity extends BridgeActivity {
                     }
                     filePathCallback = callback;
 
-                    Intent intent = params.createIntent();
+                    Intent intent;
+                    try {
+                        intent = params.createIntent();
+                    } catch (Exception e) {
+                        intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    }
                     intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    // Honor what the page asked for (image/*, video/*, etc.)
-                    if (intent.getType() == null) {
+
+                    // ✅ FIX: valid MIME fallback (was "/" which broke everything)
+                    if (intent.getType() == null || intent.getType().isEmpty()
+                            || "/".equals(intent.getType())) {
                         intent.setType("*/*");
                     }
-                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+
+                    // Respect <input multiple> if the page asked for it
+                    if (params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) {
+                        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    }
 
                     try {
                         startActivityForResult(
