@@ -406,17 +406,13 @@ export const useStories = () => {
       // rapid taps short-circuit immediately. If the request fails, we remove it.
       viewedStoryCache.add(cacheKey);
 
-      const { error } = await supabase
-        .from("story_views")
-        .upsert({
-          story_id: storyId,
-          viewer_id: user.id,
-          viewed_at: new Date().toISOString(),
-        }, {
-          onConflict: 'story_id,viewer_id',
-        });
+      // Use SECURITY DEFINER RPC: guarantees viewer_id = auth.uid() server-side,
+      // bypassing any client/server identity mismatch that caused RLS failures.
+      const { error } = await supabase.rpc("record_story_view", {
+        p_story_id: storyId,
+      });
 
-      if (error && !error.message.includes("duplicate")) {
+      if (error) {
         // Roll back cache so a retry can succeed.
         viewedStoryCache.delete(cacheKey);
         throw error;
