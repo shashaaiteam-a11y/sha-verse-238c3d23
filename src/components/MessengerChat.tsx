@@ -1207,6 +1207,26 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
           clearSelection();
         }}
       />
+
+      {/* Professional pin-duration chooser */}
+      <PinDurationSheet
+        open={!!pinSheetMessage}
+        onOpenChange={(o) => !o && setPinSheetMessage(null)}
+        onChoose={(days) => {
+          const msg = pinSheetMessage;
+          setPinSheetMessage(null);
+          if (msg) performPin(msg, days);
+        }}
+      />
+
+      {/* Professional delete chooser */}
+      <DeleteMessageSheet
+        open={!!deleteSheet}
+        onOpenChange={(o) => !o && setDeleteSheet(null)}
+        count={deleteSheet?.count ?? 1}
+        canDeleteForEveryone={!!deleteSheet?.canEveryone}
+        onChoose={(mode) => performDelete(mode)}
+      />
     </div>
   );
 };
