@@ -571,7 +571,8 @@ const FacebookStoryViewer = ({
 
         {/* Action icons row - placed BELOW user info with clear separation from close button */}
         <div
-          className="absolute top-20 right-2 z-50 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm pointer-events-auto"
+          className="absolute right-2 z-50 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm pointer-events-auto"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 5rem)' }}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
