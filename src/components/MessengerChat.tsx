@@ -829,6 +829,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                   {pinnedMessages.length > 0 && (() => {
                     const current = pinnedMessages[Math.min(currentPinIndex, pinnedMessages.length - 1)];
                     const total = pinnedMessages.length;
+                    const canUnpinBanner = !current.by || current.by === user?.id;
                     return (
                       <div
                         onClick={scrollToPinned}
@@ -864,14 +865,16 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                             </button>
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleUnpinCurrent(); }}
-                          aria-label="Unpin"
-                          className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        {canUnpinBanner && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleUnpinCurrent(); }}
+                            aria-label="Unpin"
+                            className="p-1 rounded-full hover:bg-background/50 text-muted-foreground"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     );
                   })()}
