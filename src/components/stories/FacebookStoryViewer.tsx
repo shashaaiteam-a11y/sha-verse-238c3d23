@@ -55,6 +55,46 @@ const FacebookStoryViewer = ({
   const isPausedRef = useRef(isPaused);
   // Remember pause state at the moment the viewers sheet was opened, so closing restores it.
   const wasPausedBeforeViewersRef = useRef(false);
+  // Swipe-down-to-close gesture state (WhatsApp Status style)
+  const [dragY, setDragY] = useState(0);
+  const dragStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isDraggingRef = useRef(false);
+
+  const handleSwipeStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    dragStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
+    isDraggingRef.current = false;
+  }, []);
+
+  const handleSwipeMove = useCallback((e: React.TouchEvent) => {
+    if (!dragStartRef.current || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dy = t.clientY - dragStartRef.current.y;
+    const dx = Math.abs(t.clientX - dragStartRef.current.x);
+    if (!isDraggingRef.current) {
+      if (dy > 10 && dy > dx) {
+        isDraggingRef.current = true;
+      } else {
+        return;
+      }
+    }
+    if (dy > 0) setDragY(dy);
+  }, []);
+
+  const handleSwipeEnd = useCallback(() => {
+    if (!dragStartRef.current) return;
+    const elapsed = Date.now() - dragStartRef.current.time;
+    const velocity = dragY / Math.max(elapsed, 1);
+    dragStartRef.current = null;
+    isDraggingRef.current = false;
+    if (dragY > 80 || velocity > 0.5) {
+      setDragY(window.innerHeight);
+      setTimeout(() => onClose(), 180);
+    } else {
+      setDragY(0);
+    }
+  }, [dragY, onClose]);
 
   const currentStory = storyGroup.stories[currentIndex];
   const isOwnStory = storyGroup.user.id === user?.id;
@@ -419,7 +459,19 @@ const FacebookStoryViewer = ({
   }
 
   const viewer = (
-    <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden">
+    <div
+      className="fixed inset-0 z-[200] bg-black flex items-center justify-center overflow-hidden"
+      style={{
+        transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+        opacity: dragY > 0 ? Math.max(1 - dragY / (window.innerHeight * 0.8), 0) : 1,
+        transition: dragStartRef.current ? 'none' : 'transform 180ms ease-out, opacity 180ms ease-out',
+        touchAction: 'pan-y',
+      }}
+      onTouchStart={handleSwipeStart}
+      onTouchMove={handleSwipeMove}
+      onTouchEnd={handleSwipeEnd}
+      onTouchCancel={handleSwipeEnd}
+    >
       {/* Previous user indicator */}
       {currentGroupIndex > 0 && (
         <div
@@ -452,8 +504,11 @@ const FacebookStoryViewer = ({
 
       {/* Story container - Fullscreen on mobile, 9:16 on desktop/tablet to match Facebook style */}
       <div className="relative w-full h-[100dvh] md:w-auto md:h-[95vh] md:aspect-[9/16] mx-auto flex flex-col bg-black overflow-hidden rounded-none md:rounded-xl shadow-2xl">
-        {/* Progress bars */}
-        <div className="absolute top-4 left-4 right-4 z-40 flex gap-1">
+        {/* Progress bars - pushed below status bar / notch */}
+        <div
+          className="absolute left-4 right-4 z-40 flex gap-1"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+        >
           {storyGroup.stories.map((_, index) => (
             <div
               key={index}
@@ -475,11 +530,12 @@ const FacebookStoryViewer = ({
           ))}
         </div>
 
-        {/* Close button - isolated, separated from action icons to avoid mis-taps */}
+        {/* Close button - pushed below status bar / notch (safe-area aware) */}
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-2 right-2 text-white hover:bg-white/20 z-50 h-10 w-10 rounded-full bg-black/40"
+          className="absolute right-2 text-white hover:bg-white/20 z-50 h-10 w-10 rounded-full bg-black/40"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 1.75rem)' }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -491,7 +547,10 @@ const FacebookStoryViewer = ({
         </Button>
 
         {/* User info - leaves right padding so it never overlaps the close button */}
-        <div className="absolute top-8 left-4 right-14 z-40 flex items-center gap-3">
+        <div
+          className="absolute left-4 right-14 z-40 flex items-center gap-3"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2.25rem)' }}
+        >
           <Avatar className="w-10 h-10 border-2 border-white">
             <AvatarImage src={storyGroup.user.avatar_url || ""} />
             <AvatarFallback>
@@ -512,7 +571,8 @@ const FacebookStoryViewer = ({
 
         {/* Action icons row - placed BELOW user info with clear separation from close button */}
         <div
-          className="absolute top-20 right-2 z-50 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm pointer-events-auto"
+          className="absolute right-2 z-50 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm pointer-events-auto"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 5rem)' }}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
@@ -740,7 +800,10 @@ const FacebookStoryViewer = ({
 
         {/* Reply/React section for others' stories */}
         {!isOwnStory && (
-          <div className="absolute bottom-4 left-4 right-4 z-40 flex items-center gap-2">
+          <div
+            className="absolute left-4 right-4 z-40 flex items-center gap-2"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+          >
             <div className="relative flex-1">
               <Input
                 value={replyText}
@@ -794,7 +857,8 @@ const FacebookStoryViewer = ({
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={handleOpenViewers}
-            className="absolute bottom-4 left-4 z-50 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors pointer-events-auto"
+            className="absolute left-4 z-50 flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-full px-3 py-1.5 transition-colors pointer-events-auto"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
             aria-label="View story viewers"
           >
             <Eye className="w-5 h-5" />
