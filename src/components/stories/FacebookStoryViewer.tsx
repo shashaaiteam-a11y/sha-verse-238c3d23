@@ -504,8 +504,11 @@ const FacebookStoryViewer = ({
 
       {/* Story container - Fullscreen on mobile, 9:16 on desktop/tablet to match Facebook style */}
       <div className="relative w-full h-[100dvh] md:w-auto md:h-[95vh] md:aspect-[9/16] mx-auto flex flex-col bg-black overflow-hidden rounded-none md:rounded-xl shadow-2xl">
-        {/* Progress bars */}
-        <div className="absolute top-4 left-4 right-4 z-40 flex gap-1">
+        {/* Progress bars - pushed below status bar / notch */}
+        <div
+          className="absolute left-4 right-4 z-40 flex gap-1"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+        >
           {storyGroup.stories.map((_, index) => (
             <div
               key={index}
@@ -527,11 +530,12 @@ const FacebookStoryViewer = ({
           ))}
         </div>
 
-        {/* Close button - isolated, separated from action icons to avoid mis-taps */}
+        {/* Close button - pushed below status bar / notch (safe-area aware) */}
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-2 right-2 text-white hover:bg-white/20 z-50 h-10 w-10 rounded-full bg-black/40"
+          className="absolute right-2 text-white hover:bg-white/20 z-50 h-10 w-10 rounded-full bg-black/40"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 1.75rem)' }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -543,7 +547,10 @@ const FacebookStoryViewer = ({
         </Button>
 
         {/* User info - leaves right padding so it never overlaps the close button */}
-        <div className="absolute top-8 left-4 right-14 z-40 flex items-center gap-3">
+        <div
+          className="absolute left-4 right-14 z-40 flex items-center gap-3"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2.25rem)' }}
+        >
           <Avatar className="w-10 h-10 border-2 border-white">
             <AvatarImage src={storyGroup.user.avatar_url || ""} />
             <AvatarFallback>
