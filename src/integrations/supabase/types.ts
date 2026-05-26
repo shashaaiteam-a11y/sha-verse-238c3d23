@@ -4704,6 +4704,7 @@ export type Database = {
           created_at: string | null
           error_message: string | null
           id: string
+          mux_asset_id: string | null
           progress: number | null
           started_at: string | null
           status: string
@@ -4714,6 +4715,7 @@ export type Database = {
           created_at?: string | null
           error_message?: string | null
           id?: string
+          mux_asset_id?: string | null
           progress?: number | null
           started_at?: string | null
           status?: string
@@ -4724,6 +4726,7 @@ export type Database = {
           created_at?: string | null
           error_message?: string | null
           id?: string
+          mux_asset_id?: string | null
           progress?: number | null
           started_at?: string | null
           status?: string
@@ -5754,6 +5757,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_for_partner: { Args: { _channel_id: string }; Returns: undefined }
       approve_group_join_request: {
         Args: { p_admin_id: string; p_request_id: string }
         Returns: undefined
