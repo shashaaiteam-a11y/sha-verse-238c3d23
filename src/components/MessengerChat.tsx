@@ -28,6 +28,7 @@ import { MessageActionBar } from './chat/MessageActionBar';
 import { MessageActionsMenu } from './chat/MessageActionsMenu';
 import { ForwardDialog } from './chat/ForwardDialog';
 import { PinDurationSheet, DeleteMessageSheet } from './chat/MessageActionSheet';
+import { NewMessageIndicator } from './chat/NewMessageIndicator';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -114,6 +115,35 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     setReplyTo(null);
     setEditing(null);
   }, [conversationId]);
+
+  // ---------- WhatsApp-style scroll tracking + "new message" indicator ----------
+  const scrollViewportRef = useRef<HTMLElement | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const isAtBottomRef = useRef(true);
+  const [pendingNewCount, setPendingNewCount] = useState(0);
+  const lastSeenMessageIdRef = useRef<string | null>(null);
+
+  // Reset indicator state when switching conversation
+  useEffect(() => {
+    setPendingNewCount(0);
+    setIsAtBottom(true);
+    isAtBottomRef.current = true;
+    lastSeenMessageIdRef.current = null;
+  }, [conversationId]);
+
+  const handleScrollPositionChange = (dist: number) => {
+    const atBottom = dist < 50;
+    isAtBottomRef.current = atBottom;
+    setIsAtBottom((prev) => (prev === atBottom ? prev : atBottom));
+    if (atBottom && pendingNewCount > 0) setPendingNewCount(0);
+  };
+
+  const scrollChatToBottom = () => {
+    const v = scrollViewportRef.current;
+    if (!v) return;
+    v.scrollTo({ top: v.scrollHeight, behavior: 'smooth' });
+    setPendingNewCount(0);
+  };
 
   // ---------- Pin messages (WhatsApp-style, max 7, LIFO) ----------
   // Stored as conversations.metadata.pinnedMessages: PinEntry[] (newest first).
@@ -431,6 +461,30 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     ? (messages || []).filter((m: any) => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
     : (messages || []);
 
+  // Track incoming messages: if user is scrolled up and a new INCOMING message
+  // arrives, bump the green-indicator counter. If they are at the bottom we let
+  // ChatLayout's auto-scroll handle it (no indicator shown).
+  useEffect(() => {
+    if (!filteredMessages.length) {
+      lastSeenMessageIdRef.current = null;
+      return;
+    }
+    const last = filteredMessages[filteredMessages.length - 1];
+    const lastId = last?.id;
+    if (lastSeenMessageIdRef.current === null) {
+      lastSeenMessageIdRef.current = lastId;
+      return;
+    }
+    if (lastId !== lastSeenMessageIdRef.current) {
+      const isIncoming = last?.sender_id && last.sender_id !== user?.id;
+      if (isIncoming && !isAtBottomRef.current) {
+        setPendingNewCount((c) => c + 1);
+      }
+      lastSeenMessageIdRef.current = lastId;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredMessages.length, filteredMessages[filteredMessages.length - 1]?.id]);
+
   // Initialize conversation from URL parameter
   useEffect(() => {
     const initConversation = async () => {
@@ -458,11 +512,21 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
     initConversation();
   }, [initialUserId, conversations, initializing]);
 
-  const filteredConversations = conversations?.filter((convo: any) => {
-    const otherUser = convo.otherMembers?.[0];
-    if (!searchQuery) return true;
-    return otherUser?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // WhatsApp parity: sort chat list by latest activity DESC (lastMessage timestamp,
+  // falling back to conversation.updated_at). New incoming messages bump the chat
+  // to the top instantly via realtime invalidation in useConversations().
+  const filteredConversations = conversations
+    ?.filter((convo: any) => {
+      const otherUser = convo.otherMembers?.[0];
+      if (!searchQuery) return true;
+      return otherUser?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    })
+    .slice()
+    .sort((a: any, b: any) => {
+      const ta = new Date(a.lastMessage?.created_at || a.updated_at || a.created_at || 0).getTime();
+      const tb = new Date(b.lastMessage?.created_at || b.updated_at || b.created_at || 0).getTime();
+      return tb - ta;
+    });
 
   const formatMessageTime = (date: Date) => {
     if (isToday(date)) {
@@ -726,11 +790,19 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
       {/* Chat Area */}
       <div className={cn(
-        "flex-1 h-full overflow-hidden bg-background",
+        "flex-1 h-full overflow-hidden bg-background relative",
         !selectedConversation && "hidden sm:flex"
       )}>
         {selectedConversation ? (
+          <>
+          <NewMessageIndicator
+            visible={!isAtBottom && pendingNewCount > 0}
+            count={pendingNewCount}
+            onClick={scrollChatToBottom}
+          />
           <ChatLayout
+            onViewportReady={(v) => { scrollViewportRef.current = v; }}
+            onScrollPositionChange={handleScrollPositionChange}
             header={
               selectionCount > 0 ? (
                 <MessageActionBar
@@ -1163,6 +1235,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               </div>
             }
           />
+          </>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-background">
             <div className="text-center">

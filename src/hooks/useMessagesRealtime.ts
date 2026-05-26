@@ -182,7 +182,7 @@ export const useMessagesRealtime = (conversationId: string | null) => {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`
         },
-        () => {
+        async (payload: any) => {
           queryClient.invalidateQueries({
             queryKey: ['messages-realtime', conversationId]
           });
@@ -190,6 +190,17 @@ export const useMessagesRealtime = (conversationId: string | null) => {
           queryClient.invalidateQueries({ queryKey: ['unread-badge', user.id] });
           queryClient.invalidateQueries({ queryKey: ['unread-counts-all', user.id] });
           queryClient.invalidateQueries({ queryKey: ['conversation-unread-badge', conversationId, user.id] });
+
+          // WhatsApp parity: if a new INCOMING message arrives while this chat
+          // is the active open chat, mark conversation as read instantly so the
+          // sender sees blue ticks without needing a re-open.
+          if (payload?.new?.sender_id && payload.new.sender_id !== user.id) {
+            try {
+              await RTChatService.badge.markConversationAsRead(conversationId, user.id);
+            } catch (e) {
+              // best-effort; auto-read on open will retry
+            }
+          }
         }
       )
       .on(

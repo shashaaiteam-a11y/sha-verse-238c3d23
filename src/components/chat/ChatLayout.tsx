@@ -1,4 +1,4 @@
-import { ReactNode, useRef, useEffect } from 'react';
+import { ReactNode, useRef, useEffect, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,16 @@ interface ChatLayoutProps {
   emptyState?: ReactNode;
   isLoading?: boolean;
   onScrollToBottom?: () => void;
+  /**
+   * Optional callback: fires whenever the user scrolls the messages area.
+   * Provides the live distance (in px) from the bottom. < 50 → considered "at bottom".
+   */
+  onScrollPositionChange?: (distanceFromBottom: number) => void;
+  /**
+   * Optional: receive a stable ref to the scroll viewport element so parents
+   * can imperatively scroll to bottom (e.g. when user taps the green indicator).
+   */
+  onViewportReady?: (viewport: HTMLElement | null) => void;
 }
 
 /**
@@ -18,6 +28,11 @@ interface ChatLayoutProps {
  * - Scrollable message area in the middle
  * - Fixed input bar at bottom
  * - Consistent across all chat types (1-to-1, group, dialog, full-page)
+ *
+ * Auto-scroll behavior (WhatsApp parity):
+ *   - If the user is at/near the bottom (within 80px) → auto-scroll on new content.
+ *   - If the user has scrolled UP to read history → do NOT auto-scroll. Parent
+ *     can show a "new messages" indicator via onScrollPositionChange.
  */
 export const ChatLayout = ({
   header,
@@ -26,18 +41,43 @@ export const ChatLayout = ({
   className,
   emptyState,
   isLoading = false,
+  onScrollPositionChange,
+  onViewportReady,
 }: ChatLayoutProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLElement | null>(null);
+  const wasNearBottomRef = useRef(true);
 
-  // Auto-scroll to bottom when messages change
+  const getViewport = useCallback((): HTMLElement | null => {
+    if (viewportRef.current) return viewportRef.current;
+    const v = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+    viewportRef.current = v;
+    return v;
+  }, []);
+
+  // Expose viewport ref to parent and wire scroll listener
   useEffect(() => {
-    if (scrollRef.current) {
-      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
+    const v = getViewport();
+    onViewportReady?.(v);
+    if (!v) return;
+    const handle = () => {
+      const dist = v.scrollHeight - v.scrollTop - v.clientHeight;
+      wasNearBottomRef.current = dist < 80;
+      onScrollPositionChange?.(dist);
+    };
+    handle();
+    v.addEventListener('scroll', handle, { passive: true });
+    return () => v.removeEventListener('scroll', handle);
+  }, [getViewport, onScrollPositionChange, onViewportReady]);
+
+  // Auto-scroll on new content ONLY when user was already near bottom
+  useEffect(() => {
+    const v = getViewport();
+    if (!v) return;
+    if (wasNearBottomRef.current) {
+      v.scrollTop = v.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, getViewport]);
 
   return (
     <div className={cn("flex flex-col h-full overflow-hidden bg-background", className)}>
@@ -53,8 +93,8 @@ export const ChatLayout = ({
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <ScrollArea 
-            ref={scrollRef} 
+          <ScrollArea
+            ref={scrollRef}
             className="h-full w-full bg-background"
           >
             <div className="p-4 min-h-full bg-background">
