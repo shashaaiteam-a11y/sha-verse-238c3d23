@@ -44,21 +44,31 @@ serve(async (req) => {
 
     console.log(`Authenticated user: ${user.id}`);
 
-    // Parse the request body ONCE and reuse the parsed data
+    // Parse the request body ONCE and reuse the parsed data.
+    // NOTE: We deliberately ignore client-supplied videoUrl / assetId / playbackId
+    // for security. All of those are sourced from the database server-side.
     const body = await req.json();
-    const { action, videoId, videoUrl, webhookData, assetId, playbackId, duration } = body;
+    const { action, videoId, webhookData, duration } = body;
     console.log(`Mux transcode action: ${action}, videoId: ${videoId}`);
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Authorization check: Verify user owns the video's channel before any operation
-    if (videoId && (action === 'create-asset' || action === 'complete-transcoding' || action === 'check-status')) {
+    // Authorization: every action MUST be tied to a videoId the caller owns.
+    let ownedVideo: { id: string; video_url: string | null; channel_id: string } | null = null;
+    if (action === 'create-asset' || action === 'complete-transcoding' || action === 'check-status') {
+      if (!videoId) {
+        return new Response(JSON.stringify({ error: 'videoId is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const { data: video, error: videoError } = await supabase
         .from('videos')
-        .select('id, channel_id, channels!inner(user_id)')
+        .select('id, video_url, channel_id, channels!inner(user_id)')
         .eq('id', videoId)
         .single();
-      
+
       if (videoError || !video) {
         console.error('Video not found:', videoId);
         return new Response(JSON.stringify({ error: 'Video not found' }), {
@@ -66,18 +76,17 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      
-      // Check if the authenticated user owns the channel
+
       const channels = video.channels as unknown as { user_id: string };
-      const channelUserId = channels.user_id;
-      if (channelUserId !== user.id) {
+      if (channels.user_id !== user.id) {
         console.error(`Authorization failed: User ${user.id} does not own video ${videoId}`);
         return new Response(JSON.stringify({ error: 'Not authorized to transcode this video' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      
+
+      ownedVideo = { id: video.id, video_url: video.video_url, channel_id: video.channel_id };
       console.log(`Authorization passed: User ${user.id} owns video ${videoId}`);
     }
 
