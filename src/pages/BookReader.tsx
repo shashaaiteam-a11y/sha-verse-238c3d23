@@ -70,7 +70,9 @@ const BookReader = () => {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [pdfOutline, setPdfOutline] = useState<PDFOutlineItem[]>([]);
   const [epubToc, setEpubToc] = useState<TocItem[]>([]);
-  const [scale, setScale] = useState(1.5);
+  // Zoom factor where 1.0 = fully fit page inside viewport (both width & height).
+  // 1.0 = 100% (default), up to 3.0 = 300%.
+  const [scale, setScale] = useState(1);
   const [epubCfi, setEpubCfi] = useState<string | undefined>();
 
   // 📖 Inline reader-ad state — every 4 pages, skip first 2 + last
