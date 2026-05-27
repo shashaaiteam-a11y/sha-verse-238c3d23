@@ -327,6 +327,7 @@ const HelpSupport = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
