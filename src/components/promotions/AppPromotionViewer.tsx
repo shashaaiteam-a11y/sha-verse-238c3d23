@@ -325,6 +325,38 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
           )}
         </div>
       )}
+
+      {/* Paused indicator */}
+      {paused && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <div className="px-3 py-1.5 rounded-full bg-black/50 text-white text-xs backdrop-blur flex items-center gap-1.5">
+            <Pause className="w-3.5 h-3.5" /> Paused
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={confirmDelete} onOpenChange={(o) => { setConfirmDelete(o); if (!o) setPaused(false); }}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this promotion?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the promotion for all users. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePromo.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deletePromo.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletePromo.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>,
     document.body
   );
