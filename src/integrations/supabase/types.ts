@@ -123,6 +123,77 @@ export type Database = {
           },
         ]
       }
+      app_promotion_views: {
+        Row: {
+          id: string
+          promotion_id: string
+          viewed_at: string
+          viewer_id: string
+        }
+        Insert: {
+          id?: string
+          promotion_id: string
+          viewed_at?: string
+          viewer_id: string
+        }
+        Update: {
+          id?: string
+          promotion_id?: string
+          viewed_at?: string
+          viewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_promotion_views_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "app_promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_promotions: {
+        Row: {
+          background_color: string | null
+          caption: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          link_url: string | null
+          media_type: string
+          media_url: string
+          owner_id: string
+          text_content: string | null
+          views_count: number
+        }
+        Insert: {
+          background_color?: string | null
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          link_url?: string | null
+          media_type?: string
+          media_url?: string
+          owner_id: string
+          text_content?: string | null
+          views_count?: number
+        }
+        Update: {
+          background_color?: string | null
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          link_url?: string | null
+          media_type?: string
+          media_url?: string
+          owner_id?: string
+          text_content?: string | null
+          views_count?: number
+        }
+        Relationships: []
+      }
       book_comments: {
         Row: {
           book_id: string
