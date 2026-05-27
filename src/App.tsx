@@ -9,6 +9,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import { BottomNav } from "./components/BottomNav";
 import { RealtimeStatus } from "./components/RealtimeStatus";
 import { GlobalVideoManager } from "./components/GlobalVideoManager";
+import { GlobalRefresh } from "./components/GlobalRefresh";
 
 import { MobileProvider } from "./contexts/MobileContext";
 import { Suspense, lazy as reactLazy, useEffect, ComponentType } from "react";
@@ -227,6 +228,7 @@ const App = () => (
                 <RealtimeStatus />
                 <GlobalVideoManager />
                 <BottomNav />
+                <GlobalRefresh />
 
                 <SiteFooter />
                 <AdSenseLoader />
