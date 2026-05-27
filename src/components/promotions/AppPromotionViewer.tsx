@@ -192,9 +192,6 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      onMouseDown={() => setPaused(true)}
-      onMouseUp={() => setPaused(false)}
-      onMouseLeave={() => setPaused(false)}
     >
       {/* Top progress bars */}
       <div className="absolute top-0 left-0 right-0 z-20 p-2 flex gap-1">
