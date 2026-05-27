@@ -46,6 +46,7 @@ import { CreatePostCard } from '@/components/CreatePostCard';
 import NotificationBell from '@/components/NotificationBell';
 
 import FacebookStoriesBar from '@/components/stories/FacebookStoriesBar';
+import AppLogoStatusRing from '@/components/promotions/AppLogoStatusRing';
 
 import AppMenu from '@/components/AppMenu';
 
@@ -192,7 +193,7 @@ const Home = () => {
 
           <div className="flex items-center gap-2">
 
-            <img src="/sha-verse-logo.jpeg" alt="Sha-Verse" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover" />
+            <AppLogoStatusRing src="/sha-verse-logo.jpeg" alt="Sha-Verse" />
 
           </div>
 
