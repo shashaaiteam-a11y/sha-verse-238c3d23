@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { z } from 'zod';
 import { Loader2, Mail, Phone, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { SEO } from '@/components/seo/SEO';
 
 // Validation schemas
 const emailSchema = z.object({
@@ -212,6 +213,12 @@ const Auth = () => {
   };
 
   return (
+    <>
+      <SEO
+        title="Sign in to Sha-Verse — Email, phone, or Google"
+        description="Sign in or create your Sha-Verse account. Connect with friends, share posts, watch videos, read books, and chat with NovaChat AI."
+        path="/auth"
+      />
     <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4 safe-all">
       <Card className="w-full max-w-md p-5 sm:p-8 shadow-glow">
         <div className="text-center mb-6">
@@ -489,6 +496,7 @@ const Auth = () => {
         )}
       </Card>
     </div>
+    </>
   );
 };
 

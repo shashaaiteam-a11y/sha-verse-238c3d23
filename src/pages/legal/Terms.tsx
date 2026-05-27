@@ -1,7 +1,14 @@
 import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
+import { SEO } from "@/components/seo/SEO";
 
 const Terms = () => (
-  <LegalPageLayout title="Terms of Service" updated="May 2, 2026">
+  <>
+    <SEO
+      title="Terms of Service — Sha-Verse"
+      description="The rules for using Sha-Verse: eligibility, your account, content, prohibited conduct, ads, AI features, and more."
+      path="/terms"
+    />
+    <LegalPageLayout title="Terms of Service" updated="May 2, 2026">
     <p>
       Welcome to Sha-Verse. By using our website (sha-verse.com) or mobile app, you agree to these Terms. Please read
       them carefully.
@@ -124,6 +131,7 @@ const Terms = () => (
     <h2>20. No Waiver</h2>
     <p>Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.</p>
   </LegalPageLayout>
+  </>
 );
 
 export default Terms;

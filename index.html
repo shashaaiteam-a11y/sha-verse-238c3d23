@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Sha-Verse - Your Social Universe</title>
-    <meta name="description" content="Connect, share, and explore with Sha-Verse - a unified platform for social networking, videos, AI chat, books, and communities">
-    <meta name="author" content="Sha-Verse Platform" />
+    <title>Sha-Verse — Your Social Universe</title>
+    <meta name="description" content="Sha-Verse is one app for social feed, videos, AI chat, books, and communities. Connect, share, and explore in a unified social universe." />
+    <meta name="author" content="Sha-Verse" />
 
     <!-- Mobile App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes" />
@@ -37,20 +37,38 @@
     <link rel="apple-touch-startup-image" href="/icons/splash-1668x2224.png" media="(min-device-width: 834px) and (max-device-width: 834px) and (-webkit-device-pixel-ratio: 2)" />
     <link rel="apple-touch-startup-image" href="/icons/splash-2048x2732.png" media="(min-device-width: 1024px) and (max-device-width: 1024px) and (-webkit-device-pixel-ratio: 2)" />
 
-    <!-- Open Graph -->
-    
-    
+    <!-- Open Graph (sitewide fallback for non-JS social crawlers; per-route Helmet overrides these for JS crawlers) -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c5269dc1-7892-4c5a-946c-22ce73e0481d/id-preview-3536a24a--b16b27b9-9c46-4630-8c45-b59b2b0e9094.lovable.app-1779825548837.png">
+    <meta property="og:site_name" content="Sha-Verse" />
+    <meta property="og:url" content="https://www.sha-verse.com/" />
+    <meta property="og:title" content="Sha-Verse — Your Social Universe" />
+    <meta property="og:description" content="One app for social feed, videos, AI chat, books, and communities." />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c5269dc1-7892-4c5a-946c-22ce73e0481d/id-preview-3536a24a--b16b27b9-9c46-4630-8c45-b59b2b0e9094.lovable.app-1779825548837.png">
-    <meta property="og:title" content="Sha-Verse - Your Social Universe">
-  <meta name="twitter:title" content="Sha-Verse - Your Social Universe">
-  <meta property="og:description" content="Connect, share, and explore with Sha-Verse - a unified platform for social networking, videos, AI chat, books, and communities">
-  <meta name="twitter:description" content="Connect, share, and explore with Sha-Verse - a unified platform for social networking, videos, AI chat, books, and communities">
+    <meta name="twitter:title" content="Sha-Verse — Your Social Universe" />
+    <meta name="twitter:description" content="One app for social feed, videos, AI chat, books, and communities." />
+
+    <!-- Sitewide structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Sha-Verse",
+        "url": "https://www.sha-verse.com",
+        "logo": "https://www.sha-verse.com/sha-verse-logo.jpeg",
+        "sameAs": []
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Sha-Verse",
+        "url": "https://www.sha-verse.com",
+        "description": "A unified social platform for feed, videos, AI chat, books, and communities."
+      }
+    </script>
 </head>
 
   <body class="overscroll-none">
