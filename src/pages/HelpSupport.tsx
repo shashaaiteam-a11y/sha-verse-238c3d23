@@ -13,6 +13,54 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { SEO } from "@/components/seo/SEO";
+
+const FAQ_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "How do I create a Sha-Verse account?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Open the app or visit /auth and sign up with email, phone (OTP), or Google. Verify your contact and you're in.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How do I reset my password?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "On the sign-in screen, choose 'Forgot password' and follow the email link to set a new one.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How do I block or report another user?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Open the user's profile, tap the menu (three dots), and choose Block or Report.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How do I delete my account?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Go to Settings → Privacy → Delete account. Your profile and content will be permanently removed.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Is Sha-Verse free?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. Sha-Verse is free to use and supported by ads (Google AdMob in-app and AdSense on the web).",
+      },
+    },
+  ],
+};
 
 const HelpSupport = () => {
   const navigate = useNavigate();
@@ -151,6 +199,13 @@ const HelpSupport = () => {
   };
 
   return (
+    <>
+      <SEO
+        title="Help &amp; Support — Sha-Verse"
+        description="Get help with your Sha-Verse account, privacy, messages, videos, books, and more. Find answers or contact support."
+        path="/help"
+        jsonLd={FAQ_JSONLD}
+      />
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center gap-3" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
