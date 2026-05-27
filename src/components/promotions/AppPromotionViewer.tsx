@@ -192,9 +192,6 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      onMouseDown={() => setPaused(true)}
-      onMouseUp={() => setPaused(false)}
-      onMouseLeave={() => setPaused(false)}
     >
       {/* Top progress bars */}
       <div className="absolute top-0 left-0 right-0 z-20 p-2 flex gap-1">
@@ -211,8 +208,16 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       </div>
 
       {/* Top-right action buttons */}
-      <div className="absolute top-4 right-3 z-30 flex items-center gap-2">
+      <div
+        className="absolute top-4 right-3 z-30 flex items-center gap-2"
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); setPaused((p) => !p); }}
           className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center"
           aria-label={paused ? 'Play' : 'Pause'}
@@ -221,6 +226,7 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
         </button>
         {isOwner && (
           <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); setPaused(true); setConfirmDelete(true); }}
             className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-red-600/70 transition-colors"
             aria-label="Delete promotion"
@@ -229,7 +235,8 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
           </button>
         )}
         <button
-          onClick={onClose}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
           className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center"
           aria-label="Close"
         >
