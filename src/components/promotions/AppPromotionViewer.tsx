@@ -123,21 +123,32 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
     };
   }, [loaded, paused, duration, goNext]);
 
-  // Swipe down to close
+  // Swipe down to close + long-press to pause
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const dragging = useRef(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHold = () => {
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  };
 
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
     dragStart.current = { x: t.clientX, y: t.clientY };
     dragging.current = false;
+    clearHold();
+    holdTimer.current = setTimeout(() => setPaused(true), 200);
   };
   const onTouchMove = (e: React.TouchEvent) => {
     if (!dragStart.current) return;
     const t = e.touches[0];
     const dy = t.clientY - dragStart.current.y;
     const dx = Math.abs(t.clientX - dragStart.current.x);
+    if (Math.abs(dy) > 6 || dx > 6) clearHold();
     if (!dragging.current) {
       if (dy > 10 && dy > dx) dragging.current = true;
       else return;
@@ -145,6 +156,8 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
     if (dy > 0) setDragY(dy);
   };
   const onTouchEnd = () => {
+    clearHold();
+    setPaused(false);
     if (dragY > 80) {
       setDragY(window.innerHeight);
       setTimeout(onClose, 180);
