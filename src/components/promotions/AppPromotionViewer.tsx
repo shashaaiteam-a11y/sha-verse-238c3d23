@@ -210,14 +210,32 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
         ))}
       </div>
 
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-3 z-30 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center"
-        aria-label="Close"
-      >
-        <X className="w-5 h-5" />
-      </button>
+      {/* Top-right action buttons */}
+      <div className="absolute top-4 right-3 z-30 flex items-center gap-2">
+        <button
+          onClick={(e) => { e.stopPropagation(); setPaused((p) => !p); }}
+          className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center"
+          aria-label={paused ? 'Play' : 'Pause'}
+        >
+          {paused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+        </button>
+        {isOwner && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setPaused(true); setConfirmDelete(true); }}
+            className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-red-600/70 transition-colors"
+            aria-label="Delete promotion"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
       {/* Promo badge */}
       <div className="absolute top-4 left-3 z-20 px-2 py-1 rounded-full bg-white/15 text-white text-[10px] font-semibold tracking-wide backdrop-blur">
