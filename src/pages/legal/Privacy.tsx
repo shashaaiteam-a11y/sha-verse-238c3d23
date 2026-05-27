@@ -1,7 +1,14 @@
 import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
+import { SEO } from "@/components/seo/SEO";
 
 const Privacy = () => (
-  <LegalPageLayout title="Privacy Policy" updated="May 2, 2026">
+  <>
+    <SEO
+      title="Privacy Policy — Sha-Verse"
+      description="How Sha-Verse collects, uses, stores, and protects your data — including account info, content, ads, AI features, and your rights."
+      path="/privacy"
+    />
+    <LegalPageLayout title="Privacy Policy" updated="May 2, 2026">
     <p>
       Sha-Verse ("we", "us", "our") operates the website <strong>sha-verse.com</strong> and the Sha-Verse mobile
       application (collectively, the "Service"). This Privacy Policy explains what data we collect, how we use it, and
@@ -136,6 +143,7 @@ const Privacy = () => (
       before using non-essential cookies. You can control your preferences through your browser settings.
     </p>
   </LegalPageLayout>
+  </>
 );
 
 export default Privacy;
