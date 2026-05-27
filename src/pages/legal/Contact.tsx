@@ -2,6 +2,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { Mail, Send, CheckCircle2 } from "lucide-react";
 import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
+import { SEO } from "@/components/seo/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
