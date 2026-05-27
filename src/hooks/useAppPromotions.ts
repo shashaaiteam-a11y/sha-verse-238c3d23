@@ -151,3 +151,18 @@ export const useCreatePromotion = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['app-promotions-active'] }),
   });
 };
+
+/** Delete a promotion (owner/admin only — enforced by RLS). */
+export const useDeletePromotion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (promotionId: string) => {
+      const { error } = await supabase
+        .from('app_promotions')
+        .delete()
+        .eq('id', promotionId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['app-promotions-active'] }),
+  });
+};
