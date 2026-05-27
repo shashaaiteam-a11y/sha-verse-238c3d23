@@ -228,6 +228,7 @@ const App = () => (
                 <RealtimeStatus />
                 <GlobalVideoManager />
                 <BottomNav />
+                <GlobalRefresh />
 
                 <SiteFooter />
                 <AdSenseLoader />
