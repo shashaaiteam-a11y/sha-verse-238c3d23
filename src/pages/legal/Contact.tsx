@@ -49,6 +49,12 @@ const Contact = () => {
   };
 
   return (
+    <>
+      <SEO
+        title="Contact Sha-Verse — Support &amp; inquiries"
+        description="Get in touch with the Sha-Verse team for support, bug reports, or business inquiries."
+        path="/contact"
+      />
     <LegalPageLayout title="Contact Us">
       <p>Questions, bug reports, business inquiries, or just want to say hi? We'd love to hear from you.</p>
 
@@ -137,6 +143,7 @@ const Contact = () => {
         </li>
       </ul>
     </LegalPageLayout>
+    </>
   );
 };
 
