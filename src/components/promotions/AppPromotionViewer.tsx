@@ -46,6 +46,32 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
   const current = promotions[index];
   const recordView = useRecordPromotionView();
   const liveViews = usePromotionLiveViews(current?.id ?? null, current?.views_count ?? 0);
+  const { data: isOwner = false } = useIsAppOwner();
+  const deletePromo = useDeletePromotion();
+  const { toast } = useToast();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Keep video element in sync with paused state
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (paused) v.pause();
+    else v.play().catch(() => undefined);
+  }, [paused, current?.id]);
+
+  const handleDelete = async () => {
+    if (!current) return;
+    try {
+      await deletePromo.mutateAsync(current.id);
+      toast({ title: 'Promotion deleted' });
+      setConfirmDelete(false);
+      // If this was the last one, close; otherwise stay on same index (next slides in)
+      if (promotions.length <= 1) onClose();
+      else if (index >= promotions.length - 1) setIndex(Math.max(0, index - 1));
+    } catch (err: any) {
+      toast({ title: 'Delete failed', description: err?.message, variant: 'destructive' });
+    }
+  };
 
   const goNext = useCallback(() => {
     if (index < promotions.length - 1) setIndex(index + 1);
