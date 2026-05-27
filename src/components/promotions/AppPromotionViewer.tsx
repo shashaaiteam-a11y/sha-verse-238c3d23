@@ -1,12 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Eye, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { X, Eye, ChevronLeft, ChevronRight, ExternalLink, Pause, Play, Trash2, Loader2 } from 'lucide-react';
 import {
   type AppPromotion,
   useRecordPromotionView,
   usePromotionLiveViews,
+  useDeletePromotion,
+  useIsAppOwner,
 } from '@/hooks/useAppPromotions';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Props {
   promotions: AppPromotion[];
