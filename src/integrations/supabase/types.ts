@@ -5813,6 +5813,7 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      get_book_file_hash: { Args: { _book_id: string }; Returns: string }
       get_conversation_unread_counts: {
         Args: never
         Returns: {
