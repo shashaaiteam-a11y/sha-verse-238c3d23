@@ -1,0 +1,18 @@
+# Sha-Verse
+
+> Sha-Verse is a unified social universe — one mobile-first app that combines a social feed, long and short videos (Movion), an AI assistant (NovaChat), an EPUB/PDF reader (Bookshelf), and communities (Groups & Pages).
+
+Sha-Verse brings together the social, video, AI, reading, and community experiences that usually live in five different apps. Most of the product is behind sign-in; the pages listed below are public.
+
+## Pages
+
+- [Home](/): Marketing / app entry point.
+- [Sign in](/auth): Create an account or log in (email, phone OTP, or Google).
+- [About](/about): What Sha-Verse is and what's inside it.
+- [Contact](/contact): How to reach the Sha-Verse team.
+- [Help & Support](/help): FAQs, common issues, and support form.
+
+## Optional
+
+- [Privacy Policy](/privacy): How user data is collected, used, and protected.
+- [Terms of Service](/terms): Rules for using Sha-Verse.
