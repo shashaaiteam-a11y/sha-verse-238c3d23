@@ -9,16 +9,6 @@ import {
   useIsAppOwner,
 } from '@/hooks/useAppPromotions';
 import { cn } from '@/lib/utils';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
 
 interface Props {
@@ -49,7 +39,14 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
   const { data: isOwner = false } = useIsAppOwner();
   const deletePromo = useDeletePromotion();
   const { toast } = useToast();
-  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const isControlEvent = (target: EventTarget | null) =>
+    target instanceof HTMLElement && !!target.closest('[data-promo-controls="true"]');
+
+  const stopControls = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   // Keep video element in sync with paused state
   useEffect(() => {
@@ -61,15 +58,17 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
 
   const handleDelete = async () => {
     if (!current) return;
+    setPaused(true);
     try {
       await deletePromo.mutateAsync(current.id);
       toast({ title: 'Promotion deleted' });
-      setConfirmDelete(false);
-      // If this was the last one, close; otherwise stay on same index (next slides in)
+      // Existing Sha-Verse story delete behavior: close if last, otherwise move away immediately.
       if (promotions.length <= 1) onClose();
       else if (index >= promotions.length - 1) setIndex(Math.max(0, index - 1));
+      else goNext();
     } catch (err: any) {
       toast({ title: 'Delete failed', description: err?.message, variant: 'destructive' });
+      setPaused(false);
     }
   };
 
