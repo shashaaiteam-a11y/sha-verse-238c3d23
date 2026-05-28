@@ -73,8 +73,11 @@ const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }:
   const handleSubmit = async () => {
     if (!file) return;
     try {
-      await create.mutateAsync({ file, caption: caption.trim(), linkUrl: linkUrl.trim() });
-      toast({ title: 'Promotion published', description: 'Live for 24 hours.' });
+      await create.mutateAsync({ file, caption: caption.trim(), linkUrl: linkUrl.trim(), expiresAt });
+      toast({
+        title: 'Promotion published',
+        description: durationLabel ? `Live for ${durationLabel}.` : 'Live for 24 hours.',
+      });
       reset();
       onOpenChange(false);
     } catch (err: any) {
@@ -85,6 +88,7 @@ const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }:
       });
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
