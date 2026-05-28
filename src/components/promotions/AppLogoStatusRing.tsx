@@ -8,6 +8,7 @@ import {
 } from '@/hooks/useAppPromotions';
 import AppPromotionViewer from './AppPromotionViewer';
 import CreatePromotionDialog from './CreatePromotionDialog';
+import PromotionDurationSheet from './PromotionDurationSheet';
 
 interface Props {
   /** Path to the logo image (e.g. /sha-verse-logo.jpeg) */
@@ -30,7 +31,9 @@ const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
   const { data: promotions = [] } = useActiveAppPromotions();
   const { data: isOwner = false } = useIsAppOwner();
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [durationOpen, setDurationOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [pendingExpiry, setPendingExpiry] = useState<{ expiresAt: string; label: string } | null>(null);
 
   const hasActive = promotions.length > 0;
 
@@ -98,7 +101,7 @@ const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setUploadOpen(true);
+              setDurationOpen(true);
             }}
             className={cn(
               'absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full',
@@ -121,8 +124,31 @@ const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
         />
       )}
 
+      {durationOpen && (
+        <PromotionDurationSheet
+          open={durationOpen}
+          onOpenChange={setDurationOpen}
+          onContinue={({ expiresAt, value, unit }) => {
+            setPendingExpiry({
+              expiresAt,
+              label: `${value} ${unit === 'hours' ? (value === 1 ? 'hour' : 'hours') : value === 1 ? 'day' : 'days'}`,
+            });
+            setDurationOpen(false);
+            setUploadOpen(true);
+          }}
+        />
+      )}
+
       {uploadOpen && (
-        <CreatePromotionDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+        <CreatePromotionDialog
+          open={uploadOpen}
+          onOpenChange={(v) => {
+            setUploadOpen(v);
+            if (!v) setPendingExpiry(null);
+          }}
+          expiresAt={pendingExpiry?.expiresAt}
+          durationLabel={pendingExpiry?.label}
+        />
       )}
     </>
   );

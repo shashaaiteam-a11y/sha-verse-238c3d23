@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,13 +11,17 @@ import { useToast } from '@/components/ui/use-toast';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pre-selected expiry from duration sheet. Required for owner uploads. */
+  expiresAt?: string;
+  durationLabel?: string;
 }
+
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
 const MAX_VIDEO_DURATION = 30; // seconds
 
-const CreatePromotionDialog = ({ open, onOpenChange }: Props) => {
+const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
@@ -69,8 +73,11 @@ const CreatePromotionDialog = ({ open, onOpenChange }: Props) => {
   const handleSubmit = async () => {
     if (!file) return;
     try {
-      await create.mutateAsync({ file, caption: caption.trim(), linkUrl: linkUrl.trim() });
-      toast({ title: 'Promotion published', description: 'Live for 24 hours.' });
+      await create.mutateAsync({ file, caption: caption.trim(), linkUrl: linkUrl.trim(), expiresAt });
+      toast({
+        title: 'Promotion published',
+        description: durationLabel ? `Live for ${durationLabel}.` : 'Live for 24 hours.',
+      });
       reset();
       onOpenChange(false);
     } catch (err: any) {
@@ -82,14 +89,17 @@ const CreatePromotionDialog = ({ open, onOpenChange }: Props) => {
     }
   };
 
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>New App Promotion</DialogTitle>
           <DialogDescription>
-            Owner-only paid promotion shown as a status on the Sha-Verse logo for 24 hours.
+            Owner-only paid promotion shown as a status on the Sha-Verse logo
+            {durationLabel ? ` for ${durationLabel}.` : ' for 24 hours.'}
           </DialogDescription>
+
         </DialogHeader>
 
         <div className="space-y-3">

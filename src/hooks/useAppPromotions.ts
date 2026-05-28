@@ -127,7 +127,7 @@ export const useCreatePromotion = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ file, caption, linkUrl }: { file: File; caption?: string; linkUrl?: string }) => {
+    mutationFn: async ({ file, caption, linkUrl, expiresAt }: { file: File; caption?: string; linkUrl?: string; expiresAt?: string }) => {
       if (!user?.id) throw new Error('Not authenticated');
 
       const isVideo = file.type.startsWith('video/');
@@ -139,15 +139,19 @@ export const useCreatePromotion = () => {
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
 
-      const { error } = await supabase.from('app_promotions').insert({
+      const payload: Record<string, unknown> = {
         owner_id: user.id,
         media_url: pub.publicUrl,
         media_type: isVideo ? 'video' : 'image',
         caption: caption || null,
         link_url: linkUrl || null,
-      });
+      };
+      if (expiresAt) payload.expires_at = expiresAt;
+
+      const { error } = await supabase.from('app_promotions').insert(payload as never);
       if (error) throw error;
     },
+
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['app-promotions-active'] }),
   });
 };
