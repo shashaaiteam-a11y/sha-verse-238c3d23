@@ -124,8 +124,31 @@ const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
         />
       )}
 
+      {durationOpen && (
+        <PromotionDurationSheet
+          open={durationOpen}
+          onOpenChange={setDurationOpen}
+          onContinue={({ expiresAt, value, unit }) => {
+            setPendingExpiry({
+              expiresAt,
+              label: `${value} ${unit === 'hours' ? (value === 1 ? 'hour' : 'hours') : value === 1 ? 'day' : 'days'}`,
+            });
+            setDurationOpen(false);
+            setUploadOpen(true);
+          }}
+        />
+      )}
+
       {uploadOpen && (
-        <CreatePromotionDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+        <CreatePromotionDialog
+          open={uploadOpen}
+          onOpenChange={(v) => {
+            setUploadOpen(v);
+            if (!v) setPendingExpiry(null);
+          }}
+          expiresAt={pendingExpiry?.expiresAt}
+          durationLabel={pendingExpiry?.label}
+        />
       )}
     </>
   );
