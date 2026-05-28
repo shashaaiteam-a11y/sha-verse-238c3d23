@@ -136,6 +136,7 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
+    if (isControlEvent(e.target)) return;
     const t = e.touches[0];
     dragStart.current = { x: t.clientX, y: t.clientY };
     dragging.current = false;
@@ -143,6 +144,7 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
     holdTimer.current = setTimeout(() => setPaused(true), 200);
   };
   const onTouchMove = (e: React.TouchEvent) => {
+    if (isControlEvent(e.target)) return;
     if (!dragStart.current) return;
     const t = e.touches[0];
     const dy = t.clientY - dragStart.current.y;
@@ -154,7 +156,8 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
     }
     if (dy > 0) setDragY(dy);
   };
-  const onTouchEnd = () => {
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (isControlEvent(e.target)) return;
     clearHold();
     setPaused(false);
     if (dragY > 80) {
