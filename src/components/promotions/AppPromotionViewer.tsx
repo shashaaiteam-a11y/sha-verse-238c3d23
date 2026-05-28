@@ -66,8 +66,9 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       if (promotions.length <= 1) onClose();
       else if (index >= promotions.length - 1) setIndex(Math.max(0, index - 1));
       else goNext();
-    } catch (err: any) {
-      toast({ title: 'Delete failed', description: err?.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      const description = err instanceof Error ? err.message : 'Please try again.';
+      toast({ title: 'Delete failed', description, variant: 'destructive' });
       setPaused(false);
     }
   };
