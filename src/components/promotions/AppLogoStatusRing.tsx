@@ -31,7 +31,9 @@ const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
   const { data: promotions = [] } = useActiveAppPromotions();
   const { data: isOwner = false } = useIsAppOwner();
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [durationOpen, setDurationOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [pendingExpiry, setPendingExpiry] = useState<{ expiresAt: string; label: string } | null>(null);
 
   const hasActive = promotions.length > 0;
 
