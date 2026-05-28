@@ -101,7 +101,7 @@ const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setUploadOpen(true);
+              setDurationOpen(true);
             }}
             className={cn(
               'absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full',
