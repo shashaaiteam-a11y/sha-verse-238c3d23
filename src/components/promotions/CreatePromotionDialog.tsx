@@ -96,8 +96,10 @@ const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }:
         <DialogHeader>
           <DialogTitle>New App Promotion</DialogTitle>
           <DialogDescription>
-            Owner-only paid promotion shown as a status on the Sha-Verse logo for 24 hours.
+            Owner-only paid promotion shown as a status on the Sha-Verse logo
+            {durationLabel ? ` for ${durationLabel}.` : ' for 24 hours.'}
           </DialogDescription>
+
         </DialogHeader>
 
         <div className="space-y-3">
