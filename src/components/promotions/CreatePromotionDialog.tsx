@@ -21,7 +21,7 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
 const MAX_VIDEO_DURATION = 30; // seconds
 
-const CreatePromotionDialog = ({ open, onOpenChange }: Props) => {
+const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
