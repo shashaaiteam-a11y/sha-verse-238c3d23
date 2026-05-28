@@ -9,16 +9,6 @@ import {
   useIsAppOwner,
 } from '@/hooks/useAppPromotions';
 import { cn } from '@/lib/utils';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
 
 interface Props {
@@ -49,7 +39,14 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
   const { data: isOwner = false } = useIsAppOwner();
   const deletePromo = useDeletePromotion();
   const { toast } = useToast();
-  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const isControlEvent = (target: EventTarget | null) =>
+    target instanceof HTMLElement && !!target.closest('[data-promo-controls="true"]');
+
+  const stopControls = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   // Keep video element in sync with paused state
   useEffect(() => {
@@ -61,15 +58,18 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
 
   const handleDelete = async () => {
     if (!current) return;
+    setPaused(true);
     try {
       await deletePromo.mutateAsync(current.id);
       toast({ title: 'Promotion deleted' });
-      setConfirmDelete(false);
-      // If this was the last one, close; otherwise stay on same index (next slides in)
+      // Existing Sha-Verse story delete behavior: close if last, otherwise move away immediately.
       if (promotions.length <= 1) onClose();
       else if (index >= promotions.length - 1) setIndex(Math.max(0, index - 1));
-    } catch (err: any) {
-      toast({ title: 'Delete failed', description: err?.message, variant: 'destructive' });
+      else goNext();
+    } catch (err: unknown) {
+      const description = err instanceof Error ? err.message : 'Please try again.';
+      toast({ title: 'Delete failed', description, variant: 'destructive' });
+      setPaused(false);
     }
   };
 
@@ -137,6 +137,7 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
+    if (isControlEvent(e.target)) return;
     const t = e.touches[0];
     dragStart.current = { x: t.clientX, y: t.clientY };
     dragging.current = false;
@@ -144,6 +145,7 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
     holdTimer.current = setTimeout(() => setPaused(true), 200);
   };
   const onTouchMove = (e: React.TouchEvent) => {
+    if (isControlEvent(e.target)) return;
     if (!dragStart.current) return;
     const t = e.touches[0];
     const dy = t.clientY - dragStart.current.y;
@@ -155,7 +157,8 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
     }
     if (dy > 0) setDragY(dy);
   };
-  const onTouchEnd = () => {
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (isControlEvent(e.target)) return;
     clearHold();
     setPaused(false);
     if (dragY > 80) {
@@ -209,16 +212,18 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
 
       {/* Top-right action buttons */}
       <div
+        data-promo-controls="true"
         className="absolute top-4 right-3 z-30 flex items-center gap-2"
-        onPointerDown={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        onTouchEnd={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={stopControls}
+        onMouseDown={stopControls}
+        onTouchStart={stopControls}
+        onTouchEnd={stopControls}
+        onClick={stopControls}
       >
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); setPaused((p) => !p); }}
+          onPointerUp={(e) => { stopControls(e); setPaused((p) => !p); }}
+          onClick={stopControls}
           className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center"
           aria-label={paused ? 'Play' : 'Pause'}
         >
@@ -227,16 +232,19 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
         {isOwner && (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setPaused(true); setConfirmDelete(true); }}
+            onPointerUp={(e) => { stopControls(e); void handleDelete(); }}
+            onClick={stopControls}
+            disabled={deletePromo.isPending}
             className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-red-600/70 transition-colors"
             aria-label="Delete promotion"
           >
-            <Trash2 className="w-5 h-5" />
+            {deletePromo.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
           </button>
         )}
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          onPointerUp={(e) => { stopControls(e); onClose(); }}
+          onClick={stopControls}
           className="w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center"
           aria-label="Close"
         >
@@ -342,28 +350,6 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
         </div>
       )}
 
-      {/* Delete confirmation */}
-      <AlertDialog open={confirmDelete} onOpenChange={(o) => { setConfirmDelete(o); if (!o) setPaused(false); }}>
-        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this promotion?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the promotion for all users. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletePromo.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deletePromo.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deletePromo.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>,
     document.body
   );
