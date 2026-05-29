@@ -45,7 +45,7 @@ const usdRows: PriceRow[] = Array.from({ length: 24 }, (_, i) => {
 });
 
 const trustItems = [
-  { icon: ShieldCheck, text: '100% Secure Payment (Razorpay & Stripe)' },
+  { icon: ShieldCheck, text: '100% Secure Payment' },
   { icon: Zap, text: 'Instant Approval in 30 mins' },
   { icon: Users, text: '50,000+ Active Users' },
   { icon: BadgeCheck, text: 'Money-back if not delivered' },
