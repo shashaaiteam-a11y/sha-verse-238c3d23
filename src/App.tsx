@@ -101,6 +101,7 @@ const Contact = lazy(() => import("./pages/legal/Contact"));
 const PageAdmin = lazy(() => import("./pages/PageAdmin"));
 const Motion = lazy(() => import("./pages/Motion"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
+const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
