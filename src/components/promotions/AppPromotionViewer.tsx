@@ -11,6 +11,21 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 
+/**
+ * Normalize a user-entered URL and open it in the external/system browser.
+ * Without a scheme, an <a href> / router would treat it as a relative path
+ * (e.g. "amazon.com" -> sha-verse.com/amazon.com), so we force https:// and
+ * open in a new top-level context which Capacitor routes to the system browser.
+ */
+const openExternalLink = (raw: string) => {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return;
+  const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+
+
 interface Props {
   promotions: AppPromotion[];
   startIndex?: number;
