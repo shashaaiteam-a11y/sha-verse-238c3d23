@@ -4,15 +4,18 @@ const config: CapacitorConfig = {
   appId: 'com.shaverse.app',
   appName: 'Sha-Verse',
   webDir: 'dist',
-  // ⚡ HOT-RELOAD (sirf development ke liye):
-  // Jab tak ye `server.url` yahan hai, installed app live Lovable preview se
-  // load hoti hai — UI changes turant dikhte hain, baar baar build nahi karna padta.
-  // ⚠️ PLAY STORE / PRODUCTION release se PEHLE poora `server` block HATA dena,
-  //    warna app store ki jagah preview URL load karegi.
-  server: {
-    url: 'https://b16b27b9-9c46-4630-8c45-b59b2b0e9094.lovableproject.com?forceHideBadge=true',
-    cleartext: true,
-  },
+  // ⚡ HOT-RELOAD (sirf development ke liye) — DISABLED for standalone/native build.
+  // Niche wala `server` block jab tak commented hai, app apni LOCAL `dist/`
+  // build use karegi (standalone app), Lovable preview/Chrome se load NAHI hogi.
+  //
+  // Agar tumhe wapas live hot-reload chahiye (sirf testing ke liye), to
+  // niche wale block ko uncomment kar lena. PLAY STORE release ke liye ise
+  // ALWAYS commented/HATA hi rakhna.
+  //
+  // server: {
+  //   url: 'https://b16b27b9-9c46-4630-8c45-b59b2b0e9094.lovableproject.com?forceHideBadge=true',
+  //   cleartext: true,
+  // },
   // Native WebView background matches app theme so overscroll bounce
   // never shows a white flash (Facebook / WhatsApp / YouTube pattern).
   backgroundColor: '#0F172A',
