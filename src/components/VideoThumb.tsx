@@ -21,14 +21,19 @@ interface VideoThumbProps {
  * - On tap: shows native controls and plays
  * Does NOT change upload/storage/playback logic.
  */
-export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOnly = false }: VideoThumbProps) => {
+export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOnly = false, autoPlay = true }: VideoThumbProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
   const [generatedPoster] = useState<string | undefined>(poster);
 
+  // Scroll auto-play (muted). Disabled for preview-only thumbnails (navigation tiles).
+  const autoPlayEnabled = autoPlay && !previewOnly;
+  useVideoAutoPlay(videoRef, { autoPlay: autoPlayEnabled });
+
   // If no poster provided, seek the video to ~1s so the first painted frame is a real frame, not black.
+  // Skip when auto-play is enabled — the video will paint a real frame on play.
   useEffect(() => {
-    if (poster || started) return;
+    if (poster || started || autoPlayEnabled) return;
     const v = videoRef.current;
     if (!v) return;
 
