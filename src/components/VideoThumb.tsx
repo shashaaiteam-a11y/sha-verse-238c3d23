@@ -50,7 +50,7 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
     return () => {
       v.removeEventListener("loadedmetadata", onLoaded);
     };
-  }, [poster, started, src]);
+  }, [poster, started, src, autoPlayEnabled]);
 
   const handlePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -58,6 +58,9 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
     requestAnimationFrame(() => {
       const v = videoRef.current;
       if (v) {
+        // Mark as user-engaged so auto-play won't force-mute it again.
+        v.dataset.engaged = "true";
+        v.muted = false;
         v.currentTime = 0;
         v.play().catch(() => {});
       }
