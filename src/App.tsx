@@ -48,7 +48,6 @@ import { AdProvider } from "./contexts/AdContext";
 import { ChatPresenceBridge } from "./components/chat/ChatPresenceBridge";
 import { GlobalCallHost } from "./modules/chats/components/GlobalCallHost";
 import { AdSenseLoader } from "./components/web/AdSenseLoader";
-import { PromoteEntryButton } from "./components/promote/PromoteEntryButton";
 import { SiteFooter } from "./components/web/SiteFooter";
 import { CookieConsent } from "./components/web/CookieConsent";
 import { useIsMobile } from "./hooks/use-mobile";
@@ -229,7 +228,6 @@ const App = () => (
                 <RealtimeStatus />
                 <GlobalVideoManager />
                 <BottomNav />
-                <PromoteEntryButton />
                 <GlobalRefresh />
 
                 <SiteFooter />
