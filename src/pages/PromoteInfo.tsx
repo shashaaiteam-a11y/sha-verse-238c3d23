@@ -8,7 +8,7 @@ import {
   BadgeCheck,
   Headphones,
   Mail,
-  MessageCircle,
+  
   Megaphone,
   Image as ImageIcon,
   CreditCard,
