@@ -197,7 +197,10 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       onTouchEnd={onTouchEnd}
     >
       {/* Top progress bars */}
-      <div className="absolute top-0 left-0 right-0 z-20 p-2 flex gap-1">
+      <div
+        className="absolute top-0 left-0 right-0 z-20 p-2 flex gap-1"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}
+      >
         {promotions.map((_, i) => (
           <div key={i} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
             <div
@@ -213,7 +216,8 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       {/* Top-right action buttons */}
       <div
         data-promo-controls="true"
-        className="absolute top-4 right-3 z-30 flex items-center gap-2"
+        className="absolute right-3 z-30 flex items-center gap-2"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
         onPointerDown={stopControls}
         onMouseDown={stopControls}
         onTouchStart={stopControls}
@@ -253,7 +257,10 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       </div>
 
       {/* Promo badge */}
-      <div className="absolute top-4 left-3 z-20 px-2 py-1 rounded-full bg-white/15 text-white text-[10px] font-semibold tracking-wide backdrop-blur">
+      <div
+        className="absolute left-3 z-20 px-2 py-1 rounded-full bg-white/15 text-white text-[10px] font-semibold tracking-wide backdrop-blur"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+      >
         SPONSORED
       </div>
 
