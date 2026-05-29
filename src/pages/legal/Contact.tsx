@@ -124,27 +124,6 @@ const Contact = () => {
           </Button>
         </form>
       )}
-
-      <h2 className="mt-10">Follow us</h2>
-      <ul>
-        <li>
-          <a href="https://twitter.com/" target="_blank" rel="noreferrer">
-            Twitter / X
-          </a>
-        </li>
-        <li>
-          <a href="https://instagram.com/" target="_blank" rel="noreferrer">
-            Instagram
-          </a>
-        </li>
-        <li>
-          <a href="https://facebook.com/" target="_blank" rel="noreferrer">
-            Facebook
-          </a>
-        </li>
-      </ul>
-    </LegalPageLayout>
-    </>
   );
 };
 
