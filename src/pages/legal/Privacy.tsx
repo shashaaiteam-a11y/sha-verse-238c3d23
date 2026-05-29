@@ -49,24 +49,12 @@ const Privacy = () => (
 
     <h2>3. Advertising</h2>
     <p>
-      We use <strong>Google AdMob</strong> on our mobile app and <strong>Google AdSense</strong> on our website. These
-      services may use cookies, advertising IDs, and similar identifiers to serve personalized ads. Google's use of
-      advertising data is governed by the{" "}
-      <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noreferrer">
-        Google Advertising Policy
-      </a>
-      .
+      We use <bold>Mediation setup</bold> on our mobile app and website. These
+      services may use cookies, advertising IDs, and similar identifiers to serve personalized ads.
     </p>
     <p>You can opt out of personalized ads:</p>
     <ul>
-      <li>
-        Web:{" "}
-        <a href="https://adssettings.google.com" target="_blank" rel="noreferrer">
-          adssettings.google.com
         </a>
-      </li>
-      <li>Android: Settings → Google → Ads → Reset advertising ID / Opt out of Ads Personalization</li>
-      <li>iOS: Settings → Privacy → Apple Advertising</li>
     </ul>
 
     <h2>4. AI Features (NovaChat)</h2>
