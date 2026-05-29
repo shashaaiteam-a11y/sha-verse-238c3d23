@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   ArrowLeft,
   ShieldCheck,
@@ -97,19 +98,30 @@ const PriceTable = ({ title, subtitle, rows }: { title: string; subtitle: string
 
 const PromoteInfo = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
+
+  // On native mobile webviews env(safe-area-inset-*) can resolve to 0, letting
+  // content slip under the status / gesture bars. Guarantee a minimum clearance
+  // on mobile only — desktop keeps its exact original spacing.
+  const safeTop = isMobile
+    ? 'max(env(safe-area-inset-top, 0px), 16px)'
+    : 'env(safe-area-inset-top, 0px)';
+  const safeBottom = isMobile
+    ? 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 24px)'
+    : 'calc(env(safe-area-inset-bottom, 0px) + 24px)';
 
   return (
     <div
       className="min-h-screen bg-background overflow-y-auto"
       style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+        paddingTop: safeTop,
+        paddingBottom: safeBottom,
       }}
     >
       {/* Standalone header with own back button */}
       <header className="sticky top-0 z-10 flex items-center gap-3 px-4 h-14 bg-background/95 backdrop-blur border-b border-border"
-        style={{ top: 'env(safe-area-inset-top, 0px)' }}
+        style={{ top: safeTop }}
       >
         <button
           type="button"
