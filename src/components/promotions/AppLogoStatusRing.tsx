@@ -29,6 +29,7 @@ interface Props {
  * an admin, this renders an unstyled <img> visually identical to the original.
  */
 const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
+  const navigate = useNavigate();
   const { data: promotions = [] } = useActiveAppPromotions();
   const { data: isOwner = false } = useIsAppOwner();
   const [viewerOpen, setViewerOpen] = useState(false);
