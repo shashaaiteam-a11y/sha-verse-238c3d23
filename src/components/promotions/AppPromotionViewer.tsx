@@ -20,7 +20,24 @@ import { useToast } from '@/components/ui/use-toast';
 const openExternalLink = (raw: string) => {
   const trimmed = (raw || '').trim();
   if (!trimmed) return;
-  const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  // The stored link can contain share copy, e.g.
+  // "I've shared a brand store on amazon with you. https://amzn.to/abc".
+  // Extract only the real URL so we never open a broken, text-encoded path.
+  let url = '';
+  const httpMatch = trimmed.match(/https?:\/\/[^\s]+/i);
+  if (httpMatch) {
+    url = httpMatch[0];
+  } else {
+    // No scheme present — find the first token that looks like a domain.
+    const domainMatch = trimmed.match(/[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i);
+    url = domainMatch ? `https://${domainMatch[0]}` : `https://${trimmed.split(/\s+/)[0]}`;
+  }
+
+  // Strip trailing punctuation that often follows a pasted URL.
+  url = url.replace(/[)\].,;!?]+$/, '');
+  if (!url) return;
+
   window.open(url, '_blank', 'noopener,noreferrer');
 };
 
