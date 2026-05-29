@@ -4002,6 +4002,78 @@ export type Database = {
         }
         Relationships: []
       }
+      promotions: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          business_name: string
+          caption: string | null
+          country: string | null
+          created_at: string
+          currency: string
+          duration: number
+          email: string | null
+          id: string
+          media_type: string
+          media_url: string
+          payment_gateway: string
+          payment_id: string | null
+          payment_status: string
+          status: string
+          target_link: string | null
+          type: string
+          updated_at: string
+          user_id: string
+          whatsapp: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          business_name: string
+          caption?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string
+          duration: number
+          email?: string | null
+          id?: string
+          media_type: string
+          media_url: string
+          payment_gateway?: string
+          payment_id?: string | null
+          payment_status?: string
+          status?: string
+          target_link?: string | null
+          type?: string
+          updated_at?: string
+          user_id: string
+          whatsapp: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          business_name?: string
+          caption?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string
+          duration?: number
+          email?: string | null
+          id?: string
+          media_type?: string
+          media_url?: string
+          payment_gateway?: string
+          payment_id?: string | null
+          payment_status?: string
+          status?: string
+          target_link?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       reader_bookmarks: {
         Row: {
           book_id: string
