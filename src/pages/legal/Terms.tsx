@@ -43,9 +43,9 @@ const Terms = () => (
 
       <h2>5. Ads & Monetization</h2>
       <p>
-        Sha-Verse displays ads served by <strong>Mediation setup (Mltiple ADS PlateForm)</strong> on both mobile and web.
+        Sha-Verse displays ads served by <bold>Mediation setup (Mltiple ADS PlateForm)</bold> on both mobile and web.
         Clicking ads in a manipulative manner (self-clicks, click farms, incentivized clicks) violates both these Terms
-        and Google's policies and may result in account termination.
+        and policies and may result in account termination.
       </p>
 
       <h2>6. AI Features</h2>
