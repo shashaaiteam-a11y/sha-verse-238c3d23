@@ -325,28 +325,35 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       </button>
 
       {/* Bottom-left realtime view count */}
-      <div className="absolute bottom-4 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 text-white text-xs backdrop-blur">
+      <div
+        className="absolute left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 text-white text-xs backdrop-blur"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+      >
         <Eye className="w-3.5 h-3.5" />
         <span className="tabular-nums font-medium">{liveViews}</span>
       </div>
 
       {/* Caption + link */}
       {(current.caption || current.link_url) && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 max-w-[80%] flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 text-white text-sm backdrop-blur">
+        <div
+          data-promo-controls="true"
+          className="absolute left-1/2 -translate-x-1/2 z-30 max-w-[80%] flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 text-white text-sm backdrop-blur"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+        >
           {current.caption && <span className="truncate">{current.caption}</span>}
           {current.link_url && (
-            <a
-              href={current.link_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
+            <button
+              type="button"
+              onPointerUp={(e) => { stopControls(e); openExternalLink(current.link_url!); }}
+              onClick={stopControls}
               className={cn('inline-flex items-center gap-1 text-[#7dd3fc] underline')}
             >
               Visit <ExternalLink className="w-3 h-3" />
-            </a>
+            </button>
           )}
         </div>
       )}
+
 
       {/* Paused indicator */}
       {paused && (
