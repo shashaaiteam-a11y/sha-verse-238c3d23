@@ -8,7 +8,7 @@ import {
   BadgeCheck,
   Headphones,
   Mail,
-  MessageCircle,
+  
   Megaphone,
   Image as ImageIcon,
   CreditCard,
@@ -45,7 +45,7 @@ const usdRows: PriceRow[] = Array.from({ length: 24 }, (_, i) => {
 });
 
 const trustItems = [
-  { icon: ShieldCheck, text: '100% Secure Payment (Razorpay & Stripe)' },
+  { icon: ShieldCheck, text: '100% Secure Payment' },
   { icon: Zap, text: 'Instant Approval in 30 mins' },
   { icon: Users, text: '50,000+ Active Users' },
   { icon: BadgeCheck, text: 'Money-back if not delivered' },
@@ -210,9 +210,12 @@ const PromoteInfo = () => {
             Ready to promote? Reach out and our team will set you up within 30 minutes.
           </p>
           <div className="grid gap-2">
-            <a
-              href={`mailto:${CONTACT_EMAIL}?subject=Promotion%20on%20Sha-Verse`}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 hover:bg-muted/60 transition-colors"
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = `mailto:${CONTACT_EMAIL}?subject=Promotion%20on%20Sha-Verse`;
+              }}
+              className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-3 text-left hover:bg-muted/60 transition-colors"
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary shrink-0">
                 <Mail className="w-5 h-5" />
@@ -221,21 +224,7 @@ const PromoteInfo = () => {
                 <p className="text-sm font-semibold text-foreground">Email us instantly</p>
                 <p className="text-xs text-muted-foreground truncate">{CONTACT_EMAIL}</p>
               </div>
-            </a>
-            <a
-              href="https://wa.me/?text=Hi%20Sha-Verse%20team%2C%20I%20want%20to%20promote%20on%20your%20app."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 hover:bg-muted/60 transition-colors"
-            >
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-500/10 text-green-600 shrink-0">
-                <MessageCircle className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">Chat on WhatsApp</p>
-                <p className="text-xs text-muted-foreground truncate">Quick replies, instant setup</p>
-              </div>
-            </a>
+            </button>
           </div>
         </section>
 
