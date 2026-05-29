@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -28,6 +29,7 @@ interface Props {
  * an admin, this renders an unstyled <img> visually identical to the original.
  */
 const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
+  const navigate = useNavigate();
   const { data: promotions = [] } = useActiveAppPromotions();
   const { data: isOwner = false } = useIsAppOwner();
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -95,25 +97,25 @@ const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
           <img src={src} alt={alt} className="w-full h-full object-cover" draggable={false} />
         </button>
 
-        {/* Owner-only "+" badge */}
-        {isOwner && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDurationOpen(true);
-            }}
-            className={cn(
-              'absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full',
-              'bg-primary text-primary-foreground border-2 border-background',
-              'flex items-center justify-center shadow-sm',
-              'hover:scale-110 transition-transform z-10'
-            )}
-            aria-label="Create app promotion"
-          >
-            <Plus className="w-3 h-3" strokeWidth={3} />
-          </button>
-        )}
+        {/* "+" badge — visible to all logged-in users.
+            Owner -> upload flow. Non-owner -> promotion info/pricing page. */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isOwner) setDurationOpen(true);
+            else navigate('/promote/info');
+          }}
+          className={cn(
+            'absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full',
+            'bg-primary text-primary-foreground border-2 border-background',
+            'flex items-center justify-center shadow-sm',
+            'hover:scale-110 transition-transform z-10'
+          )}
+          aria-label={isOwner ? 'Create app promotion' : 'Promote on Sha-Verse'}
+        >
+          <Plus className="w-3 h-3" strokeWidth={3} />
+        </button>
       </div>
 
       {viewerOpen && hasActive && (

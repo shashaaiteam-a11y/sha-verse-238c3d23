@@ -11,6 +11,21 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 
+/**
+ * Normalize a user-entered URL and open it in the external/system browser.
+ * Without a scheme, an <a href> / router would treat it as a relative path
+ * (e.g. "amazon.com" -> sha-verse.com/amazon.com), so we force https:// and
+ * open in a new top-level context which Capacitor routes to the system browser.
+ */
+const openExternalLink = (raw: string) => {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return;
+  const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+
+
 interface Props {
   promotions: AppPromotion[];
   startIndex?: number;
@@ -197,7 +212,10 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       onTouchEnd={onTouchEnd}
     >
       {/* Top progress bars */}
-      <div className="absolute top-0 left-0 right-0 z-20 p-2 flex gap-1">
+      <div
+        className="absolute top-0 left-0 right-0 z-20 p-2 flex gap-1"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}
+      >
         {promotions.map((_, i) => (
           <div key={i} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
             <div
@@ -213,7 +231,8 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       {/* Top-right action buttons */}
       <div
         data-promo-controls="true"
-        className="absolute top-4 right-3 z-30 flex items-center gap-2"
+        className="absolute right-3 z-30 flex items-center gap-2"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
         onPointerDown={stopControls}
         onMouseDown={stopControls}
         onTouchStart={stopControls}
@@ -253,7 +272,10 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       </div>
 
       {/* Promo badge */}
-      <div className="absolute top-4 left-3 z-20 px-2 py-1 rounded-full bg-white/15 text-white text-[10px] font-semibold tracking-wide backdrop-blur">
+      <div
+        className="absolute left-3 z-20 px-2 py-1 rounded-full bg-white/15 text-white text-[10px] font-semibold tracking-wide backdrop-blur"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+      >
         SPONSORED
       </div>
 
@@ -318,28 +340,35 @@ const AppPromotionViewer = ({ promotions, startIndex = 0, onClose }: Props) => {
       </button>
 
       {/* Bottom-left realtime view count */}
-      <div className="absolute bottom-4 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 text-white text-xs backdrop-blur">
+      <div
+        className="absolute left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 text-white text-xs backdrop-blur"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+      >
         <Eye className="w-3.5 h-3.5" />
         <span className="tabular-nums font-medium">{liveViews}</span>
       </div>
 
       {/* Caption + link */}
       {(current.caption || current.link_url) && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 max-w-[80%] flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 text-white text-sm backdrop-blur">
+        <div
+          data-promo-controls="true"
+          className="absolute left-1/2 -translate-x-1/2 z-30 max-w-[80%] flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 text-white text-sm backdrop-blur"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+        >
           {current.caption && <span className="truncate">{current.caption}</span>}
           {current.link_url && (
-            <a
-              href={current.link_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
+            <button
+              type="button"
+              onPointerUp={(e) => { stopControls(e); openExternalLink(current.link_url!); }}
+              onClick={stopControls}
               className={cn('inline-flex items-center gap-1 text-[#7dd3fc] underline')}
             >
               Visit <ExternalLink className="w-3 h-3" />
-            </a>
+            </button>
           )}
         </div>
       )}
+
 
       {/* Paused indicator */}
       {paused && (

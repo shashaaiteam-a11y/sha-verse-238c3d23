@@ -14,13 +14,14 @@ const navItems = [
 export const BottomNav = () => {
   const location = useLocation();
   
-  // Hide bottom nav on auth page, messages page, video watch page, movion pages (has own nav), and book reader
+  // Hide bottom nav on auth page, messages page, video watch page, movion pages (has own nav), book reader, and promote info page
   if (
     location.pathname === '/auth' || 
     location.pathname === '/messages' ||
     location.pathname.includes('/watch/') ||
     location.pathname.startsWith('/movion') ||
-    location.pathname.startsWith('/bookshelf/read/')
+    location.pathname.startsWith('/bookshelf/read/') ||
+    location.pathname.startsWith('/promote')
   ) {
     return null;
   }

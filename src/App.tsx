@@ -101,6 +101,7 @@ const Contact = lazy(() => import("./pages/legal/Contact"));
 const PageAdmin = lazy(() => import("./pages/PageAdmin"));
 const Motion = lazy(() => import("./pages/Motion"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
+const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -222,6 +223,7 @@ const App = () => (
                     <Route path="/terms" element={withSuspense(Terms)} />
                     <Route path="/about" element={withSuspense(About)} />
                     <Route path="/contact" element={withSuspense(Contact)} />
+                    <Route path="/promote/info" element={<ProtectedRoute>{withSuspense(PromoteInfo)}</ProtectedRoute>} />
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>
                 </SwipeWrapper>

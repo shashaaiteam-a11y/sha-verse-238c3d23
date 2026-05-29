@@ -18,8 +18,9 @@ interface Props {
 
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
-const MAX_VIDEO_DURATION = 30; // seconds
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200MB (allows up to 5 min)
+const MIN_VIDEO_DURATION = 15; // seconds
+const MAX_VIDEO_DURATION = 300; // seconds (5 minutes)
 
 const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }: Props) => {
   const [file, setFile] = useState<File | null>(null);
@@ -45,24 +46,28 @@ const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }:
       return;
     }
     if (isVideo && f.size > MAX_VIDEO_BYTES) {
-      toast({ title: 'Video must be under 50MB', variant: 'destructive' });
+      toast({ title: 'Video must be under 200MB', variant: 'destructive' });
       return;
     }
     if (!isVideo && f.size > MAX_IMAGE_BYTES) {
       toast({ title: 'Image must be under 8MB', variant: 'destructive' });
       return;
     }
-    // Validate video duration ≤ 30s
+    // Validate video duration: 15 sec – 5 min
     if (isVideo) {
-      const ok = await new Promise<boolean>((resolve) => {
+      const duration = await new Promise<number>((resolve) => {
         const v = document.createElement('video');
         v.preload = 'metadata';
-        v.onloadedmetadata = () => resolve(v.duration <= MAX_VIDEO_DURATION);
-        v.onerror = () => resolve(false);
+        v.onloadedmetadata = () => resolve(v.duration);
+        v.onerror = () => resolve(NaN);
         v.src = URL.createObjectURL(f);
       });
-      if (!ok) {
-        toast({ title: 'Video must be ≤ 30 seconds', variant: 'destructive' });
+      if (!isFinite(duration) || duration < MIN_VIDEO_DURATION || duration > MAX_VIDEO_DURATION) {
+        toast({
+          title: 'Invalid video length',
+          description: 'Owner can upload 15 sec to 5 min videos.',
+          variant: 'destructive',
+        });
         return;
       }
     }
@@ -110,7 +115,7 @@ const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }:
               className="w-full aspect-video rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-colors"
             >
               <Upload className="w-8 h-8 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Upload image or video (≤30s)</span>
+              <span className="text-sm text-muted-foreground">Upload image or video (15 sec – 5 min)</span>
             </button>
           ) : (
             <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
