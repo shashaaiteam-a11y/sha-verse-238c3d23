@@ -46,24 +46,28 @@ const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }:
       return;
     }
     if (isVideo && f.size > MAX_VIDEO_BYTES) {
-      toast({ title: 'Video must be under 50MB', variant: 'destructive' });
+      toast({ title: 'Video must be under 200MB', variant: 'destructive' });
       return;
     }
     if (!isVideo && f.size > MAX_IMAGE_BYTES) {
       toast({ title: 'Image must be under 8MB', variant: 'destructive' });
       return;
     }
-    // Validate video duration ≤ 30s
+    // Validate video duration: 15 sec – 5 min
     if (isVideo) {
-      const ok = await new Promise<boolean>((resolve) => {
+      const duration = await new Promise<number>((resolve) => {
         const v = document.createElement('video');
         v.preload = 'metadata';
-        v.onloadedmetadata = () => resolve(v.duration <= MAX_VIDEO_DURATION);
-        v.onerror = () => resolve(false);
+        v.onloadedmetadata = () => resolve(v.duration);
+        v.onerror = () => resolve(NaN);
         v.src = URL.createObjectURL(f);
       });
-      if (!ok) {
-        toast({ title: 'Video must be ≤ 30 seconds', variant: 'destructive' });
+      if (!isFinite(duration) || duration < MIN_VIDEO_DURATION || duration > MAX_VIDEO_DURATION) {
+        toast({
+          title: 'Invalid video length',
+          description: 'Owner can upload 15 sec to 5 min videos.',
+          variant: 'destructive',
+        });
         return;
       }
     }
