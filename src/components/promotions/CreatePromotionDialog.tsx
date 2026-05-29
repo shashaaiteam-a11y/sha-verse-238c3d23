@@ -115,7 +115,7 @@ const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }:
               className="w-full aspect-video rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-colors"
             >
               <Upload className="w-8 h-8 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Upload image or video (≤30s)</span>
+              <span className="text-sm text-muted-foreground">Upload image or video (15 sec – 5 min)</span>
             </button>
           ) : (
             <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
