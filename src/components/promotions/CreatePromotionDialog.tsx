@@ -18,8 +18,9 @@ interface Props {
 
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
-const MAX_VIDEO_DURATION = 30; // seconds
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200MB (allows up to 5 min)
+const MIN_VIDEO_DURATION = 15; // seconds
+const MAX_VIDEO_DURATION = 300; // seconds (5 minutes)
 
 const CreatePromotionDialog = ({ open, onOpenChange, expiresAt, durationLabel }: Props) => {
   const [file, setFile] = useState<File | null>(null);
