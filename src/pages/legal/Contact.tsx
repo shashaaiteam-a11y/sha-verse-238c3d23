@@ -124,6 +124,8 @@ const Contact = () => {
           </Button>
         </form>
       )}
+    </LegalPageLayout>
+    </>
   );
 };
 
