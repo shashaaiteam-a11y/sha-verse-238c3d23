@@ -52,10 +52,7 @@ const Privacy = () => (
       We use <bold>Mediation setup</bold> on our mobile app and website. These
       services may use cookies, advertising IDs, and similar identifiers to serve personalized ads.
     </p>
-    <p>You can opt out of personalized ads:</p>
-    <ul>
-        </a>
-    </ul>
+    <p>You can opt out of personalized ads through your device or browser settings.</p>
 
     <h2>4. AI Features (NovaChat)</h2>
     <p>
