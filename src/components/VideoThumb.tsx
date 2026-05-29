@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useVideoAutoPlay } from "@/hooks/useVideoAutoPlay";
 
 interface VideoThumbProps {
   src: string;
@@ -9,6 +10,8 @@ interface VideoThumbProps {
   aspect?: "contain" | "cover";
   /** If true, never plays inline — just shows a thumbnail with play icon (parent handles click) */
   previewOnly?: boolean;
+  /** Scroll auto-play (muted). Defaults to true; ignored when previewOnly. */
+  autoPlay?: boolean;
 }
 
 /**
