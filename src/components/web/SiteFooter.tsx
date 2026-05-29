@@ -21,6 +21,7 @@ export const SiteFooter = () => {
     "/bookshelf/read/",
     "/video/",
     "/motion",
+    "/promote",
   ];
 
   if (hiddenRoutes.includes(location.pathname)) return null;
