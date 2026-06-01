@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerImageCompression } from '@/lib/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -333,6 +334,7 @@ export const useGroups = () => {
         if (upErr) throw upErr;
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
         updates.avatar_url = publicUrl;
+        triggerImageCompression('avatars', path); // background WebP variants, silent
       }
 
       // Upload cover if provided
@@ -343,6 +345,7 @@ export const useGroups = () => {
         if (upErr) throw upErr;
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
         updates.cover_url = publicUrl;
+        triggerImageCompression('avatars', path); // background WebP variants, silent
       }
 
       const { error } = await supabase

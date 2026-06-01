@@ -1,6 +1,7 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { triggerImageCompression } from "@/lib/compressImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useBookFeed, useTrendingBooks } from "./useBookFeeds";
@@ -137,6 +138,8 @@ export const useBooks = (options: {
           .getPublicUrl(coverName);
 
         coverUrl = coverData.publicUrl;
+        // Background: generate optimized WebP variants for the cover (silent)
+        triggerImageCompression("books", coverName);
       }
 
       // Upload book file to books bucket

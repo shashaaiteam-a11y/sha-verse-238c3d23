@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerImageCompression } from '@/lib/compressImage';
 import { Button } from '@/components/ui/button';
 import { Camera, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -40,6 +41,9 @@ export const ProfileImageUpload = ({ type, onUpload, onRemove, hasImage = false,
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
+
+      // Background: generate optimized WebP variants (fire-and-forget, silent)
+      triggerImageCompression('avatars', fileName);
 
       const { data } = supabase.storage
         .from('avatars')

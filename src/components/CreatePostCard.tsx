@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerImageCompression } from '@/lib/compressImage';
 import { useToast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -160,6 +161,9 @@ export const CreatePostCard = () => {
               upsert: false,
             });
           if (uploadError) throw uploadError;
+
+          // Background: generate optimized WebP variants (fire-and-forget, silent)
+          triggerImageCompression('post-images', fileName);
 
           const { data: urlData } = supabase.storage
             .from('post-images')

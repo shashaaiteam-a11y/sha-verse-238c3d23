@@ -6,6 +6,7 @@ import {
   FileText, X, File
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerImageCompression } from '@/lib/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { maybeCompressImage } from '@/lib/chat/compressMedia';
@@ -120,6 +121,9 @@ export const ChatTypingBar = ({
     let type = 'file';
     if (file.type.startsWith('image/')) type = 'image';
     else if (file.type.startsWith('video/')) type = 'video';
+
+    // Background: only images get optimized WebP variants (fire-and-forget, silent)
+    if (type === 'image') triggerImageCompression('chat-media', fileName);
 
     return { url: publicUrl, type };
   };

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { triggerImageCompression } from "@/lib/compressImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -138,6 +139,8 @@ const EditBook = () => {
           .getPublicUrl(coverName);
 
         finalCoverUrl = coverData.publicUrl;
+        // Background: generate optimized WebP variants for the cover (silent)
+        triggerImageCompression("books", coverName);
       }
 
       const { error } = await supabase
