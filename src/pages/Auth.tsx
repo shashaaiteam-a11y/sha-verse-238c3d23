@@ -224,7 +224,7 @@ const Auth = () => {
       <Card className="w-full max-w-md p-5 sm:p-8 shadow-glow">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <img src="/sha-verse-logo.jpeg" alt="Sha-Verse" className="w-10 h-10 rounded-full object-cover" />
+            <AppLogoStatusRing src="/sha-verse-logo.jpeg" alt="Sha-Verse" size="w-10 h-10" showPlus={false} />
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Sha-Verse
             </h1>

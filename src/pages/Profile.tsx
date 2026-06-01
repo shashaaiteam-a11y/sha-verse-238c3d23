@@ -943,7 +943,7 @@ const Profile = () => {
 
             )}
 
-            <img src="/sha-verse-logo.jpeg" alt="Sha-Verse" className="w-8 h-8 rounded-full object-cover" />
+            <AppLogoStatusRing src="/sha-verse-logo.jpeg" alt="Sha-Verse" size="w-8 h-8" />
 
             <h1 className="text-lg sm:text-xl font-bold truncate max-w-[200px]">
 
