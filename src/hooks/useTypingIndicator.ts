@@ -49,6 +49,7 @@ export const useTypingIndicator = (
       setTypingUsers({});
       isTypingRef.current = false;
       clearTypingTimeout();
+      clearStartDebounce();
       return;
     }
 
