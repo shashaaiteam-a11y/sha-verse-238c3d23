@@ -90,7 +90,7 @@ const AppLogoStatusRing = ({ src, alt = 'App Logo', className, size = 'w-8 h-8 s
           onClick={handleLogoClick}
           className={cn(
             'relative rounded-full overflow-hidden block',
-            'w-8 h-8 sm:w-9 sm:h-9',
+            size,
             hasActive ? 'cursor-pointer' : 'cursor-default',
             // Inset the logo slightly when ring is showing so the ring is visible
             hasActive && 'm-[3px]'
