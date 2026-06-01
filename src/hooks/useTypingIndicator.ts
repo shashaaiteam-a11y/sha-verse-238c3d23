@@ -112,23 +112,28 @@ export const useTypingIndicator = (
     });
   }, [conversationId, disabled, user?.id]);
 
-  // Smart typing handler - auto sends stop after 3 seconds of inactivity
+  // Smart typing handler - 300ms debounce on start, auto stop after 3s inactivity
   const handleUserTyping = useCallback((displayName: string) => {
     if (disabled || !displayName.trim()) return;
 
-    if (!isTypingRef.current) {
-      isTypingRef.current = true;
-      void sendTypingEvent(true, displayName);
+    // Broadcast "typing" only once, debounced by 300ms to avoid per-keystroke storms
+    if (!isTypingRef.current && !startDebounceRef.current) {
+      startDebounceRef.current = setTimeout(() => {
+        startDebounceRef.current = null;
+        isTypingRef.current = true;
+        void sendTypingEvent(true, displayName);
+      }, 300);
     }
 
     // Reset inactivity timer
     clearTypingTimeout();
 
     typingTimeoutRef.current = setTimeout(() => {
+      clearStartDebounce();
       isTypingRef.current = false;
       void sendTypingEvent(false, displayName);
     }, 3000);
-  }, [disabled, sendTypingEvent, clearTypingTimeout]);
+  }, [disabled, sendTypingEvent, clearTypingTimeout, clearStartDebounce]);
 
   const stopTyping = useCallback((displayName: string) => {
     if (disabled || !displayName.trim()) return;
