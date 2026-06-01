@@ -307,7 +307,16 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         queryClient.invalidateQueries({ queryKey: ['my-groups'] });
         queryClient.invalidateQueries({ queryKey: ['suggested-groups'] });
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Fallback: if realtime fails to connect, do a single manual refetch
+        // so insights/data are not left stale (replaces removed 15s polling).
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          queryClient.invalidateQueries({ queryKey: ['group-insights', groupId] });
+          queryClient.invalidateQueries({ queryKey: ['group-members-admin', groupId] });
+          queryClient.invalidateQueries({ queryKey: ['group-pending-posts', groupId] });
+          queryClient.invalidateQueries({ queryKey: ['group-join-requests', groupId] });
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
