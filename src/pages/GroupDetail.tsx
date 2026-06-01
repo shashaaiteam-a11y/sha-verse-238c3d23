@@ -15,6 +15,7 @@ import { useGroupAdmin } from '@/hooks/useGroupAdmin';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerImageCompression } from '@/lib/compressImage';
 import { formatDistanceToNow } from 'date-fns';
 import { PostComments } from '@/components/PostComments';
 import { useShares } from '@/hooks/useShares';
@@ -96,6 +97,10 @@ async function uploadToStorage(
   });
 
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  // Background: optimized WebP variants for image uploads only (fire-and-forget, silent)
+  if (file.type.startsWith('image/') && (bucket === 'post-images' || bucket === 'avatars')) {
+    triggerImageCompression(bucket, path);
+  }
   return data.publicUrl;
 }
 
