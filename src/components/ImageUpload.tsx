@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerImageCompression } from '@/lib/compressImage';
 import { Button } from '@/components/ui/button';
 import { ImagePlus, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -36,6 +37,9 @@ export const ImageUpload = ({ bucket, onUpload, currentImage, onRemove }: ImageU
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
+
+      // Background: generate optimized WebP variants (fire-and-forget, silent)
+      triggerImageCompression(bucket, fileName);
 
       const { data } = supabase.storage
         .from(bucket)
