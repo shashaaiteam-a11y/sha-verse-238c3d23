@@ -79,6 +79,8 @@ export const useUserPresence = (targetUserId?: string) => {
     }
 
     let isActive = true;
+    // Holds the 4 realtime channels while subscribed; empty when torn down.
+    let channels: ReturnType<typeof supabase.channel>[] = [];
 
     const syncPresence = async () => {
       // Server-side privacy enforcement — no need to pass settings from client
@@ -95,72 +97,73 @@ export const useUserPresence = (targetUserId?: string) => {
       }
     };
 
+    const subscribe = () => {
+      if (channels.length > 0) return; // already subscribed — avoid duplicates
+      const suffix = Math.random().toString(36).slice(2, 10);
+
+      // 1) Live updates when target's presence row changes (online/offline/last_seen)
+      const presenceChannel = supabase
+        .channel(`user-presence-${targetUserId}-${user.id}-${suffix}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'user_presence', filter: `user_id=eq.${targetUserId}` },
+          () => { void syncPresence(); }
+        )
+        .subscribe();
+
+      // 2) Live updates when TARGET changes their privacy (last_seen / online_status visibility)
+      const targetSettingsChannel = supabase
+        .channel(`user-settings-target-${targetUserId}-${user.id}-${suffix}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'user_settings', filter: `user_id=eq.${targetUserId}` },
+          () => { void syncPresence(); }
+        )
+        .subscribe();
+
+      // 3) Live updates when VIEWER changes their own privacy (Give-and-Take rule)
+      const viewerSettingsChannel = supabase
+        .channel(`user-settings-viewer-${user.id}-${targetUserId}-${suffix}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'user_settings', filter: `user_id=eq.${user.id}` },
+          () => { void syncPresence(); }
+        )
+        .subscribe();
+
+      // 4) Live updates when block status changes between the two users
+      const blocksChannel = supabase
+        .channel(`user-blocks-${user.id}-${targetUserId}-${suffix}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'user_blocks' },
+          () => { void syncPresence(); }
+        )
+        .subscribe();
+
+      channels = [presenceChannel, targetSettingsChannel, viewerSettingsChannel, blocksChannel];
+    };
+
+    const unsubscribe = () => {
+      channels.forEach((ch) => supabase.removeChannel(ch));
+      channels = [];
+    };
+
+    // Initial sync + subscribe (only when screen is active/visible)
     void syncPresence();
+    if (!document.hidden) subscribe();
 
-    const suffix = Math.random().toString(36).slice(2, 10);
-
-    // 1) Live updates when target's presence row changes (online/offline/last_seen)
-    const presenceChannel = supabase
-      .channel(`user-presence-${targetUserId}-${user.id}-${suffix}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_presence',
-          filter: `user_id=eq.${targetUserId}`,
-        },
-        () => {
-          void syncPresence();
-        }
-      )
-      .subscribe();
-
-    // 2) Live updates when TARGET changes their privacy (last_seen / online_status visibility)
-    const targetSettingsChannel = supabase
-      .channel(`user-settings-target-${targetUserId}-${user.id}-${suffix}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_settings',
-          filter: `user_id=eq.${targetUserId}`,
-        },
-        () => {
-          void syncPresence();
-        }
-      )
-      .subscribe();
-
-    // 3) Live updates when VIEWER changes their own privacy (Give-and-Take rule)
-    const viewerSettingsChannel = supabase
-      .channel(`user-settings-viewer-${user.id}-${targetUserId}-${suffix}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_settings',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          void syncPresence();
-        }
-      )
-      .subscribe();
-
-    // 4) Live updates when block status changes between the two users
-    const blocksChannel = supabase
-      .channel(`user-blocks-${user.id}-${targetUserId}-${suffix}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_blocks' },
-        () => {
-          void syncPresence();
-        }
-      )
-      .subscribe();
+    // 🚀 Unsubscribe realtime channels when the chat screen is left/backgrounded,
+    // and re-subscribe + resync when it becomes active again.
+    const handleVisibility = () => {
+      if (document.hidden) {
+        unsubscribe();
+      } else {
+        void syncPresence();
+        subscribe();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     // Light polling fallback (every 30s) to cover the case where the target's
     // tab dies without writing offline — the server-side last_seen will still
@@ -172,10 +175,8 @@ export const useUserPresence = (targetUserId?: string) => {
     return () => {
       isActive = false;
       window.clearInterval(pollId);
-      supabase.removeChannel(presenceChannel);
-      supabase.removeChannel(targetSettingsChannel);
-      supabase.removeChannel(viewerSettingsChannel);
-      supabase.removeChannel(blocksChannel);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      unsubscribe();
     };
   }, [user?.id, targetUserId]);
 
