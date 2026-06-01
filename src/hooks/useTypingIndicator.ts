@@ -90,6 +90,7 @@ export const useTypingIndicator = (
         });
       }
       clearTypingTimeout();
+      clearStartDebounce();
       setTypingUsers({});
       isTypingRef.current = false;
       supabase.removeChannel(channel);
