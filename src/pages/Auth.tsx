@@ -32,6 +32,10 @@ const signupSchema = emailSchema.extend({
 
 type AuthMethod = 'email' | 'phone' | 'otp-verify';
 
+// Toggle "Login with mobile no" (Phone OTP) visibility.
+// Set to true to re-enable the Phone tab when requested.
+const SHOW_PHONE_LOGIN = false;
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [authMethod, setAuthMethod] = useState<AuthMethod>('email');
