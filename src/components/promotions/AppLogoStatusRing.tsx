@@ -16,6 +16,10 @@ interface Props {
   src: string;
   alt?: string;
   className?: string;
+  /** Tailwind size classes for the logo image. Defaults to the HomeFeed size. */
+  size?: string;
+  /** Whether to show the "+" promote badge. Defaults to true. */
+  showPlus?: boolean;
 }
 
 /**
