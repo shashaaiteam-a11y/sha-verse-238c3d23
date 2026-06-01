@@ -96,7 +96,7 @@ export const useTypingIndicator = (
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [conversationId, disabled, user?.id, clearTypingTimeout]);
+  }, [conversationId, disabled, user?.id, clearTypingTimeout, clearStartDebounce]);
 
   // Call this when user starts/stops typing
   const sendTypingEvent = useCallback(async (isTyping: boolean, displayName: string) => {
