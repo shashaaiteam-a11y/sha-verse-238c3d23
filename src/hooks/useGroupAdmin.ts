@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerImageCompression } from '@/lib/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -360,6 +361,9 @@ export const useGroupAdmin = (groupId: string | undefined) => {
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
+
+      // Background: generate optimized WebP variants (fire-and-forget, silent)
+      triggerImageCompression('avatars', filePath);
 
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
