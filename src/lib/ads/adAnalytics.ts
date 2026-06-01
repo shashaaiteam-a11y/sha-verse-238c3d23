@@ -3,8 +3,64 @@ import { AD_IDS } from "./adConfig";
 import type { AdPlacement, AdCategory } from "./adTypes";
 
 /**
+ * 🚀 Bulk analytics insert.
+ * Ad impressions are buffered client-side and flushed to the database in a
+ * single batched insert (up to 100 rows at a time). This drastically cuts the
+ * number of network/DB writes vs. one insert per impression.
+ *
+ * - Flushes immediately once the buffer reaches BATCH_SIZE (100).
+ * - Otherwise flushes after FLUSH_INTERVAL_MS so low-volume events still land.
+ * - Also flushes when the tab is hidden / unloaded so nothing is lost.
+ * - Fully silent on failure — ads/analytics must never break the UI.
+ */
+interface ImpressionRow {
+  user_id: string;
+  ad_unit_id: string;
+  placement: AdPlacement;
+  ad_category: AdCategory;
+}
+
+const BATCH_SIZE = 100;
+const FLUSH_INTERVAL_MS = 15_000;
+
+const impressionBuffer: ImpressionRow[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function flushImpressions(): Promise<void> {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  if (impressionBuffer.length === 0) return;
+  // Drain the buffer into a single batch
+  const batch = impressionBuffer.splice(0, impressionBuffer.length);
+  try {
+    await supabase.from("ad_impressions").insert(batch);
+  } catch {
+    // Silent — never block UI. Events in this batch are dropped on failure.
+  }
+}
+
+function scheduleFlush(): void {
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    void flushImpressions();
+  }, FLUSH_INTERVAL_MS);
+}
+
+// Flush remaining buffered events when the user leaves / backgrounds the app.
+if (typeof window !== "undefined") {
+  const flushOnLeave = () => {
+    if (document.hidden) void flushImpressions();
+  };
+  document.addEventListener("visibilitychange", flushOnLeave);
+  window.addEventListener("pagehide", () => void flushImpressions());
+}
+
+/**
  * Records an ad impression for frequency-control + analytics.
- * Silent failure — ads should never break the UI.
+ * Buffered + batched. Silent failure — ads should never break the UI.
  */
 export async function recordAdImpression(
   userId: string | undefined,
@@ -13,15 +69,17 @@ export async function recordAdImpression(
   category?: AdCategory
 ): Promise<void> {
   if (!userId) return;
-  try {
-    await supabase.from("ad_impressions").insert({
-      user_id: userId,
-      ad_unit_id: adUnitId,
-      placement,
-      ad_category: category ?? "general",
-    });
-  } catch (e) {
-    // Silent — never block UI
+  impressionBuffer.push({
+    user_id: userId,
+    ad_unit_id: adUnitId,
+    placement,
+    ad_category: category ?? "general",
+  });
+
+  if (impressionBuffer.length >= BATCH_SIZE) {
+    void flushImpressions();
+  } else {
+    scheduleFlush();
   }
 }
 
