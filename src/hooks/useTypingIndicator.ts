@@ -25,6 +25,8 @@ export const useTypingIndicator = (
   const { disabled = false } = options ?? {};
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({}); // user_id -> display_name
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 🚀 300ms debounce: coalesces fast keystrokes into a single "typing" broadcast
+  const startDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
   const channelRef = useRef<any>(null);
 
@@ -35,11 +37,19 @@ export const useTypingIndicator = (
     }
   }, []);
 
+  const clearStartDebounce = useCallback(() => {
+    if (startDebounceRef.current) {
+      clearTimeout(startDebounceRef.current);
+      startDebounceRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     if (!conversationId || !user?.id || disabled) {
       setTypingUsers({});
       isTypingRef.current = false;
       clearTypingTimeout();
+      clearStartDebounce();
       return;
     }
 
@@ -80,12 +90,13 @@ export const useTypingIndicator = (
         });
       }
       clearTypingTimeout();
+      clearStartDebounce();
       setTypingUsers({});
       isTypingRef.current = false;
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [conversationId, disabled, user?.id, clearTypingTimeout]);
+  }, [conversationId, disabled, user?.id, clearTypingTimeout, clearStartDebounce]);
 
   // Call this when user starts/stops typing
   const sendTypingEvent = useCallback(async (isTyping: boolean, displayName: string) => {
@@ -103,40 +114,48 @@ export const useTypingIndicator = (
     });
   }, [conversationId, disabled, user?.id]);
 
-  // Smart typing handler - auto sends stop after 3 seconds of inactivity
+  // Smart typing handler - 300ms debounce on start, auto stop after 3s inactivity
   const handleUserTyping = useCallback((displayName: string) => {
     if (disabled || !displayName.trim()) return;
 
-    if (!isTypingRef.current) {
-      isTypingRef.current = true;
-      void sendTypingEvent(true, displayName);
+    // Broadcast "typing" only once, debounced by 300ms to avoid per-keystroke storms
+    if (!isTypingRef.current && !startDebounceRef.current) {
+      startDebounceRef.current = setTimeout(() => {
+        startDebounceRef.current = null;
+        isTypingRef.current = true;
+        void sendTypingEvent(true, displayName);
+      }, 300);
     }
 
     // Reset inactivity timer
     clearTypingTimeout();
 
     typingTimeoutRef.current = setTimeout(() => {
+      clearStartDebounce();
       isTypingRef.current = false;
       void sendTypingEvent(false, displayName);
     }, 3000);
-  }, [disabled, sendTypingEvent, clearTypingTimeout]);
+  }, [disabled, sendTypingEvent, clearTypingTimeout, clearStartDebounce]);
 
   const stopTyping = useCallback((displayName: string) => {
     if (disabled || !displayName.trim()) return;
 
     clearTypingTimeout();
+    // Cancel any pending debounced "typing" start so it doesn't fire after stop
+    clearStartDebounce();
 
     if (!isTypingRef.current) return;
 
     isTypingRef.current = false;
     void sendTypingEvent(false, displayName);
-  }, [disabled, sendTypingEvent, clearTypingTimeout]);
+  }, [disabled, sendTypingEvent, clearTypingTimeout, clearStartDebounce]);
 
   useEffect(() => {
     return () => {
       clearTypingTimeout();
+      clearStartDebounce();
     };
-  }, [clearTypingTimeout]);
+  }, [clearTypingTimeout, clearStartDebounce]);
 
   // Build display text: "Suhail is typing..." or "Suhail and Rahul are typing..."
   const typingText = (() => {

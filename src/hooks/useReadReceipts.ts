@@ -19,7 +19,7 @@ export const useMarkMessagesRead = (conversationId: string | null) => {
   useEffect(() => {
     if (!conversationId || !user?.id) return;
 
-    // Mark all messages in this conversation as read
+    // Mark all unread messages in this conversation as read in a SINGLE batch UPDATE
     const markRead = async () => {
       const { error } = await supabase
         .from('messages')
@@ -36,7 +36,21 @@ export const useMarkMessagesRead = (conversationId: string | null) => {
       queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
     };
 
+    // Run once when the chat opens
     void markRead();
+
+    // 🚀 Re-run a single batch UPDATE when the screen/tab regains focus, so any
+    // messages received while the user was away get marked read in one batch.
+    const handleFocus = () => {
+      if (!document.hidden) void markRead();
+    };
+    document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [conversationId, user?.id, queryClient]);
 };
 
