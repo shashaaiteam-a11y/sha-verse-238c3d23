@@ -95,6 +95,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { NativeAdCard } from '@/components/ads';
+import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 
 

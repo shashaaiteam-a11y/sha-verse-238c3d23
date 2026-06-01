@@ -39,6 +39,7 @@ import { formatDistanceToNow } from "date-fns";
 import { BOOK_CATEGORIES } from "@/lib/constants/bookshelf";
 
 import { SponsoredBookCard } from "@/components/ads";
+import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 
 

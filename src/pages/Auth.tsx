@@ -13,6 +13,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { z } from 'zod';
 import { Loader2, Mail, Phone, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { SEO } from '@/components/seo/SEO';
+import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 // Validation schemas
 const emailSchema = z.object({

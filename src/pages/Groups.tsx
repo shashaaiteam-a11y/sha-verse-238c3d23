@@ -75,6 +75,7 @@ const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, 
 import { GROUP_CATEGORIES } from "@/lib/constants/groupCategories";
 
 import { SponsoredGroupCard, BannerAd, GroupNativeAd } from "@/components/ads";
+import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 
 
