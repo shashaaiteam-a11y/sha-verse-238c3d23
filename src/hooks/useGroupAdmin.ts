@@ -244,7 +244,8 @@ export const useGroupAdmin = (groupId: string | undefined) => {
       };
     },
     enabled: !!groupId && isModerator,
-    refetchInterval: 15000, // auto-refresh every 15s
+    // Realtime-driven updates (see subscription below) replace the old 15s polling.
+    staleTime: 10_000,
   });
 
   // ── Realtime subscriptions ───────────────────────────────────────────
