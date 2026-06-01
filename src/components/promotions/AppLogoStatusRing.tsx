@@ -32,7 +32,7 @@ interface Props {
  * derived purely from data; when no active promotion exists and the user is not
  * an admin, this renders an unstyled <img> visually identical to the original.
  */
-const AppLogoStatusRing = ({ src, alt = 'App Logo', className }: Props) => {
+const AppLogoStatusRing = ({ src, alt = 'App Logo', className, size = 'w-8 h-8 sm:w-9 sm:h-9', showPlus = true }: Props) => {
   const navigate = useNavigate();
   const { data: promotions = [] } = useActiveAppPromotions();
   const { data: isOwner = false } = useIsAppOwner();
