@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
+import { triggerImageCompression } from '@/lib/compressImage';
 import { usePage } from '@/hooks/usePages';
 import { toast } from 'sonner';
 
@@ -55,6 +56,9 @@ const CreatePagePost = ({ pageId }: CreatePagePostProps) => {
           .upload(fileName, imageFile);
 
         if (uploadError) throw uploadError;
+
+        // Background: generate optimized WebP variants (fire-and-forget, silent)
+        triggerImageCompression('post-images', fileName);
 
         const { data: { publicUrl } } = supabase.storage
           .from('post-images')
