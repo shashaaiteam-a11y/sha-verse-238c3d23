@@ -39,6 +39,7 @@ import { formatDistanceToNow } from "date-fns";
 import { BOOK_CATEGORIES } from "@/lib/constants/bookshelf";
 
 import { SponsoredBookCard } from "@/components/ads";
+import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 
 
@@ -255,15 +256,12 @@ const Bookshelf = () => {
 
             <div className="flex items-center gap-2">
 
-              <img
-
+              <AppLogoStatusRing
                 src="/sha-verse-logo.jpeg"
-
                 alt="Sha-Verse"
-
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
-
+                size="w-7 h-7 sm:w-8 sm:h-8"
               />
+
 
               <h1 className="text-xl sm:text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
 

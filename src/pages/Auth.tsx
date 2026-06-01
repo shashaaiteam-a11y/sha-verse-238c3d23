@@ -13,6 +13,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { z } from 'zod';
 import { Loader2, Mail, Phone, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { SEO } from '@/components/seo/SEO';
+import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 // Validation schemas
 const emailSchema = z.object({
@@ -30,6 +31,10 @@ const signupSchema = emailSchema.extend({
 });
 
 type AuthMethod = 'email' | 'phone' | 'otp-verify';
+
+// Toggle "Login with mobile no" (Phone OTP) visibility.
+// Set to true to re-enable the Phone tab when requested.
+const SHOW_PHONE_LOGIN = false;
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -223,7 +228,7 @@ const Auth = () => {
       <Card className="w-full max-w-md p-5 sm:p-8 shadow-glow">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <img src="/sha-verse-logo.jpeg" alt="Sha-Verse" className="w-10 h-10 rounded-full object-cover" />
+            <AppLogoStatusRing src="/sha-verse-logo.jpeg" alt="Sha-Verse" size="w-10 h-10" showPlus={false} />
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Sha-Verse
             </h1>
@@ -303,16 +308,18 @@ const Auth = () => {
           <>
             {/* Auth Method Tabs */}
             <Tabs value={authMethod} onValueChange={(v) => setAuthMethod(v as AuthMethod)} className="mb-6">
-              <TabsList className="grid w-full grid-cols-2 h-11">
-                <TabsTrigger value="email" className="flex items-center gap-2 touch-target">
-                  <Mail className="w-4 h-4" />
-                  <span>Email</span>
-                </TabsTrigger>
-                <TabsTrigger value="phone" className="flex items-center gap-2 touch-target">
-                  <Phone className="w-4 h-4" />
-                  <span>Phone</span>
-                </TabsTrigger>
-              </TabsList>
+              {SHOW_PHONE_LOGIN && (
+                <TabsList className="grid w-full grid-cols-2 h-11">
+                  <TabsTrigger value="email" className="flex items-center gap-2 touch-target">
+                    <Mail className="w-4 h-4" />
+                    <span>Email</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="phone" className="flex items-center gap-2 touch-target">
+                    <Phone className="w-4 h-4" />
+                    <span>Phone</span>
+                  </TabsTrigger>
+                </TabsList>
+              )}
 
               {/* Email Tab */}
               <TabsContent value="email" className="mt-4">
@@ -408,42 +415,44 @@ const Auth = () => {
               </TabsContent>
 
               {/* Phone Tab */}
-              <TabsContent value="phone" className="mt-4">
-                <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      required
-                      className="input-mobile bg-secondary"
-                      placeholder="+1234567890"
-                      autoComplete="tel"
-                    />
-                    <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US, +91 for India)</p>
-                  </div>
+              {SHOW_PHONE_LOGIN && (
+                <TabsContent value="phone" className="mt-4">
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        required
+                        className="input-mobile bg-secondary"
+                        placeholder="+1234567890"
+                        autoComplete="tel"
+                      />
+                      <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US, +91 for India)</p>
+                    </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-primary shadow-glow touch-target-lg h-12"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Sending OTP...
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="w-5 h-5 mr-2" />
-                        Continue with Phone
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-gradient-primary shadow-glow touch-target-lg h-12"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Sending OTP...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="w-5 h-5 mr-2" />
+                          Continue with Phone
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+              )}
             </Tabs>
 
             {/* Divider */}

@@ -75,6 +75,7 @@ const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, 
 import { GROUP_CATEGORIES } from "@/lib/constants/groupCategories";
 
 import { SponsoredGroupCard, BannerAd, GroupNativeAd } from "@/components/ads";
+import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 
 
@@ -820,7 +821,7 @@ const Groups = () => {
 
           <div className="flex items-center gap-2 flex-shrink-0">
 
-            <img src="/sha-verse-logo.jpeg" alt="Sha-Verse" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover" />
+            <AppLogoStatusRing src="/sha-verse-logo.jpeg" alt="Sha-Verse" size="w-7 h-7 sm:w-8 sm:h-8" />
 
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
 
