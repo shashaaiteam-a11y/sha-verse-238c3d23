@@ -308,16 +308,18 @@ const Auth = () => {
           <>
             {/* Auth Method Tabs */}
             <Tabs value={authMethod} onValueChange={(v) => setAuthMethod(v as AuthMethod)} className="mb-6">
-              <TabsList className="grid w-full grid-cols-2 h-11">
-                <TabsTrigger value="email" className="flex items-center gap-2 touch-target">
-                  <Mail className="w-4 h-4" />
-                  <span>Email</span>
-                </TabsTrigger>
-                <TabsTrigger value="phone" className="flex items-center gap-2 touch-target">
-                  <Phone className="w-4 h-4" />
-                  <span>Phone</span>
-                </TabsTrigger>
-              </TabsList>
+              {SHOW_PHONE_LOGIN && (
+                <TabsList className="grid w-full grid-cols-2 h-11">
+                  <TabsTrigger value="email" className="flex items-center gap-2 touch-target">
+                    <Mail className="w-4 h-4" />
+                    <span>Email</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="phone" className="flex items-center gap-2 touch-target">
+                    <Phone className="w-4 h-4" />
+                    <span>Phone</span>
+                  </TabsTrigger>
+                </TabsList>
+              )}
 
               {/* Email Tab */}
               <TabsContent value="email" className="mt-4">
