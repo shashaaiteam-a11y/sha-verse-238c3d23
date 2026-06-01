@@ -139,12 +139,14 @@ export const useTypingIndicator = (
     if (disabled || !displayName.trim()) return;
 
     clearTypingTimeout();
+    // Cancel any pending debounced "typing" start so it doesn't fire after stop
+    clearStartDebounce();
 
     if (!isTypingRef.current) return;
 
     isTypingRef.current = false;
     void sendTypingEvent(false, displayName);
-  }, [disabled, sendTypingEvent, clearTypingTimeout]);
+  }, [disabled, sendTypingEvent, clearTypingTimeout, clearStartDebounce]);
 
   useEffect(() => {
     return () => {
