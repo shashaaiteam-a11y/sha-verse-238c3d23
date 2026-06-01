@@ -151,8 +151,9 @@ export const useTypingIndicator = (
   useEffect(() => {
     return () => {
       clearTypingTimeout();
+      clearStartDebounce();
     };
-  }, [clearTypingTimeout]);
+  }, [clearTypingTimeout, clearStartDebounce]);
 
   // Build display text: "Suhail is typing..." or "Suhail and Rahul are typing..."
   const typingText = (() => {
