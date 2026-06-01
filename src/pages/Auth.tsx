@@ -415,42 +415,44 @@ const Auth = () => {
               </TabsContent>
 
               {/* Phone Tab */}
-              <TabsContent value="phone" className="mt-4">
-                <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      required
-                      className="input-mobile bg-secondary"
-                      placeholder="+1234567890"
-                      autoComplete="tel"
-                    />
-                    <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US, +91 for India)</p>
-                  </div>
+              {SHOW_PHONE_LOGIN && (
+                <TabsContent value="phone" className="mt-4">
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        required
+                        className="input-mobile bg-secondary"
+                        placeholder="+1234567890"
+                        autoComplete="tel"
+                      />
+                      <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US, +91 for India)</p>
+                    </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-primary shadow-glow touch-target-lg h-12"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Sending OTP...
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="w-5 h-5 mr-2" />
-                        Continue with Phone
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-gradient-primary shadow-glow touch-target-lg h-12"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Sending OTP...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="w-5 h-5 mr-2" />
+                          Continue with Phone
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </TabsContent>
+              )}
             </Tabs>
 
             {/* Divider */}
