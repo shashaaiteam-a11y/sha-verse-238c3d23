@@ -25,6 +25,8 @@ export const useTypingIndicator = (
   const { disabled = false } = options ?? {};
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({}); // user_id -> display_name
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 🚀 300ms debounce: coalesces fast keystrokes into a single "typing" broadcast
+  const startDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
   const channelRef = useRef<any>(null);
 
@@ -32,6 +34,13 @@ export const useTypingIndicator = (
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearStartDebounce = useCallback(() => {
+    if (startDebounceRef.current) {
+      clearTimeout(startDebounceRef.current);
+      startDebounceRef.current = null;
     }
   }, []);
 
