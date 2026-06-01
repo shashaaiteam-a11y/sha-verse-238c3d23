@@ -242,9 +242,17 @@ Deno.serve(async (req) => {
       systemContent += `\n\n## Persistent memory about this user\n${memoryFacts.trim().slice(0, 4000)}`;
     }
 
+    // 🚀 CONTEXT TRIM (token saving): only send the most recent messages to the
+    // model. This does NOT change what is stored or shown — the client keeps the
+    // full conversation; we just limit how much context the model receives.
+    const CONTEXT_WINDOW = 10;
+    const trimmedHistory = v.data.length > CONTEXT_WINDOW
+      ? v.data.slice(-CONTEXT_WINDOW)
+      : v.data;
+
     const payload: any = {
       model,
-      messages: [{ role: "system", content: systemContent }, ...v.data],
+      messages: [{ role: "system", content: systemContent }, ...trimmedHistory],
       stream: true,
     };
 
