@@ -76,6 +76,22 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // 🔒 AUTH GATE: only authenticated users may invoke this function.
+  // The frontend already sends the user's JWT automatically via
+  // supabase.functions.invoke(), so existing flows are unaffected.
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return unauthorized();
+  }
+  const token = authHeader.replace('Bearer ', '');
+  const authClient = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
+  if (claimsErr || !claimsData?.claims) {
+    return unauthorized();
+  }
+
   try {
     const { bucket, path } = await req.json().catch(() => ({}));
 
@@ -85,6 +101,7 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
 
     // 1) Download the original
     const { data: file, error: dlErr } = await supabase.storage.from(bucket).download(path);
