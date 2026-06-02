@@ -88,7 +88,8 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
-  if (claimsErr || !claimsData?.claims) {
+  const claims = claimsData?.claims as { role?: string; sub?: string } | undefined;
+  if (claimsErr || !claims || claims.role !== 'authenticated' || !claims.sub) {
     return unauthorized();
   }
 
