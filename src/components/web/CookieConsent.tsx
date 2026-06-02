@@ -30,7 +30,7 @@ export const CookieConsent = () => {
     <div
       role="dialog"
       aria-live="polite"
-      className="fixed inset-x-2 z-[60] mx-auto max-w-3xl rounded-lg border bg-card text-card-foreground shadow-lg p-4 sm:p-5 bottom-[calc(3.5rem+var(--safe-area-bottom,0px)+0.5rem)] sm:bottom-[calc(4rem+var(--safe-area-bottom,0px)+0.5rem)]"
+      className="fixed inset-x-2 bottom-2 z-[60] mx-auto max-w-3xl rounded-lg border bg-card text-card-foreground shadow-lg p-4 sm:p-5"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm leading-relaxed">
