@@ -22,6 +22,7 @@ import resize from 'npm:@jsquash/resize@2.0.0';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 type Variant = { suffix: string; width: number | null; quality: number };
 
@@ -35,6 +36,13 @@ function ok(body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     status: 200,
+  });
+}
+
+function unauthorized() {
+  return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 401,
   });
 }
 
@@ -68,6 +76,22 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // 🔒 AUTH GATE: only authenticated users may invoke this function.
+  // The frontend already sends the user's JWT automatically via
+  // supabase.functions.invoke(), so existing flows are unaffected.
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return unauthorized();
+  }
+  const token = authHeader.replace('Bearer ', '');
+  const authClient = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
+  if (claimsErr || !claimsData?.claims) {
+    return unauthorized();
+  }
+
   try {
     const { bucket, path } = await req.json().catch(() => ({}));
 
@@ -77,6 +101,7 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
 
     // 1) Download the original
     const { data: file, error: dlErr } = await supabase.storage.from(bucket).download(path);
