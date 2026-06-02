@@ -39,6 +39,13 @@ function ok(body: Record<string, unknown>) {
   });
 }
 
+function unauthorized() {
+  return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 401,
+  });
+}
+
 // Decode any common raster image into ImageData based on magic bytes.
 async function decodeImage(bytes: Uint8Array): Promise<ImageData> {
   const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
