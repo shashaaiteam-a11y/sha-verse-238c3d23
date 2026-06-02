@@ -34,22 +34,16 @@ const MovionComingSoon = () => {
           </div>
           <div className="flex items-center gap-3">
             <Film className="w-5 h-5 text-primary flex-shrink-0" />
-            <span className="text-sm font-medium">Shorts, channels, monetization & more</span>
+            <span className="text-sm font-medium">Shorts, channels & more</span>
           </div>
         </div>
 
-        <Button
-          onClick={() => navigate("/")}
-          size="lg"
-          className="w-full gap-2"
-        >
+        <Button onClick={() => navigate("/")} size="lg" className="w-full gap-2">
           <ArrowLeft className="w-4 h-4" />
           Back to Home
         </Button>
 
-        <p className="text-xs text-muted-foreground">
-          Thanks for your patience 💙
-        </p>
+        <p className="text-xs text-muted-foreground">Thanks for your patience 💙</p>
       </div>
     </div>
   );
