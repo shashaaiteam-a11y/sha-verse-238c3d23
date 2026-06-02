@@ -130,6 +130,7 @@ const pollTranscodingStatus = async (videoId: string, assetId: string, playbackI
       const { data, error } = await supabase.functions.invoke('mux-transcode', {
         body: {
           action: 'check-status',
+          videoId,
           assetId,
         },
       });
