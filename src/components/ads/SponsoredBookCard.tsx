@@ -15,6 +15,7 @@ import { useAdFrequency } from "@/hooks/useAdFrequency";
 import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression, recordAdClick } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
+import { ADS_HIDDEN } from "@/lib/ads/adConfig";
 
 /**
  * 📚 SponsoredBookCard
@@ -61,7 +62,13 @@ const SAMPLE_BOOKS = [
   },
 ];
 
-const SponsoredBookCard = ({ className }: SponsoredBookCardProps) => {
+const SponsoredBookCard = (props: SponsoredBookCardProps) => {
+  // 🙈 GLOBAL SWITCH: hide this ad when ads are turned off.
+  if (ADS_HIDDEN) return null;
+  return <SponsoredBookCardInner {...props} />;
+};
+
+const SponsoredBookCardInner = ({ className }: SponsoredBookCardProps) => {
   const { user } = useAuth();
   const { registerImpression, hideAd } = useAds();
   const { category } = useAdTargeting();

@@ -8,6 +8,7 @@ import { useAdFrequency } from "@/hooks/useAdFrequency";
 import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
+import { ADS_HIDDEN } from "@/lib/ads/adConfig";
 
 interface VideoPreRollAdProps {
   onComplete: () => void;
