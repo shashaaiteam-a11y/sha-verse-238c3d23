@@ -16,6 +16,7 @@ import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression } from "@/lib/ads/adAnalytics";
 import type { AdPlacement } from "@/lib/ads/adTypes";
 import { cn } from "@/lib/utils";
+import { ADS_HIDDEN } from "@/lib/ads/adConfig";
 
 interface NativeAdCardProps {
   placement: AdPlacement;
@@ -85,7 +86,8 @@ const NativeAdCard = ({ placement, className, compact, _forceShow = true }: Nati
   }, []);
 
   // 🧪 TEST MODE: Force render if _forceShow is true
-  const effectiveShouldRender = _forceShow ? true : shouldRender;
+  // 🙈 GLOBAL SWITCH: ADS_HIDDEN overrides everything so no ad renders.
+  const effectiveShouldRender = ADS_HIDDEN ? false : (_forceShow ? true : shouldRender);
   
   if (!effectiveShouldRender || dismissed) {
     console.log(`[NativeAdCard ${placement}] Returning NULL - effectiveShouldRender:`, effectiveShouldRender, "dismissed:", dismissed);

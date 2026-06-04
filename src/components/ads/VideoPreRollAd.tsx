@@ -8,6 +8,7 @@ import { useAdFrequency } from "@/hooks/useAdFrequency";
 import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
+import { ADS_HIDDEN } from "@/lib/ads/adConfig";
 
 interface VideoPreRollAdProps {
   onComplete: () => void;
@@ -28,7 +29,9 @@ const VideoPreRollAd = ({ onComplete, className, forceShow }: VideoPreRollAdProp
   const [secondsLeft, setSecondsLeft] = useState(5);
   const [completed, setCompleted] = useState(false);
 
-  const active = forceShow || shouldRender;
+  // 🙈 GLOBAL SWITCH: when ads are hidden, skip the pre-roll entirely.
+  // active=false makes the effect call onComplete(), so video playback is NOT broken.
+  const active = ADS_HIDDEN ? false : (forceShow || shouldRender);
 
   useEffect(() => {
     if (!active) {

@@ -15,6 +15,7 @@ import { useAdFrequency } from "@/hooks/useAdFrequency";
 import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression, recordAdClick } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
+import { ADS_HIDDEN } from "@/lib/ads/adConfig";
 
 /**
  * 📖 BookReader Inline Ad
@@ -65,7 +66,13 @@ const THEME_STYLES: Record<string, { bg: string; border: string; text: string; m
   sepia: { bg: "bg-[#efe4cf]", border: "border-[#d8c8a8]", text: "text-[#5b4636]", muted: "text-[#8a7c66]" },
 };
 
-const BookReaderInlineAd = ({
+const BookReaderInlineAd = (props: BookReaderInlineAdProps) => {
+  // 🙈 GLOBAL SWITCH: hide this ad when ads are turned off.
+  if (ADS_HIDDEN) return null;
+  return <BookReaderInlineAdInner {...props} />;
+};
+
+const BookReaderInlineAdInner = ({
   variant = "inline",
   theme = "light",
   className,
