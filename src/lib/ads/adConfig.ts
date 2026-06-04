@@ -15,6 +15,18 @@
 
 export const USE_TEST_ADS = true;
 
+/**
+ * 🙈 GLOBAL ADS VISIBILITY SWITCH
+ *
+ * Set to `true`  → ALL ads are hidden everywhere (nothing renders).
+ * Set to `false` → ads behave exactly as before (fully restored).
+ *
+ * This ONLY controls visibility. No ad code, placements, IDs, frequency
+ * rules, or components are removed — flipping this back to `false` brings
+ * everything back exactly as it is now.
+ */
+export const ADS_HIDDEN = true;
+
 // ✅ Google official test IDs — safe to click, no ban risk
 const TEST_AD_IDS = {
   banner: "ca-app-pub-3940256099942544/6300978111",
