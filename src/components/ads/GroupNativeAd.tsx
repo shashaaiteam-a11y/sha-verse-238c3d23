@@ -52,6 +52,9 @@ const GroupNativeAd = ({ variant = "list", className }: GroupNativeAdProps) => {
   const { registerImpression } = useAds();
   const [dismissed, setDismissed] = useState(false);
 
+  // 🙈 GLOBAL SWITCH: hide this ad when ads are turned off.
+  if (ADS_HIDDEN) return null;
+
   const sample = useMemo(() => POOL[Math.floor(Math.random() * POOL.length)], []);
 
   const placement = "group_list" as const;
