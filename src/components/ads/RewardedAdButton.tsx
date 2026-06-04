@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Gift, Loader2 } from "lucide-react";
 import TestAdBadge from "./TestAdBadge";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
+import { ADS_HIDDEN } from "@/lib/ads/adConfig";
 import type { RewardType, AdPlacement } from "@/lib/ads/adTypes";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +18,13 @@ interface RewardedAdButtonProps {
   fullWidth?: boolean;
 }
 
-const RewardedAdButton = ({
+const RewardedAdButton = (props: RewardedAdButtonProps) => {
+  // 🙈 GLOBAL SWITCH: hide this ad button when ads are turned off.
+  if (ADS_HIDDEN) return null;
+  return <RewardedAdButtonInner {...props} />;
+};
+
+const RewardedAdButtonInner = ({
   rewardType,
   placement,
   resourceId,

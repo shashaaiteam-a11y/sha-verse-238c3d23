@@ -1,12 +1,15 @@
 // 🧪 ULTRA SIMPLE TEST AD - No hooks, no logic, just renders
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ADS_HIDDEN } from "@/lib/ads/adConfig";
 
 interface TestAdSimpleProps {
   placement?: string;
 }
 
 export const TestAdSimple = ({ placement = "test" }: TestAdSimpleProps) => {
+  // 🙈 GLOBAL SWITCH: hide this ad when ads are turned off.
+  if (ADS_HIDDEN) return null;
   console.log(`[TestAdSimple ${placement}] RENDERING - this should always show!`);
   
   return (
