@@ -1,79 +1,34 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { BOOKS, C, playfair, inter } from "../theme";
-import { BookCover } from "../components/BookCover";
-import { Logo } from "../components/Logo";
+import { C, inter, playfair, PROMO_BG, GRADIENT_PRIMARY } from "../theme";
+import { BookOpen } from "lucide-react";
 
 export const Scene7CTA = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-
-  // fanned-out books behind
-  const fanO = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: "clamp" });
-  const fan = [
-    { b: BOOKS[1], rot: -22, x: -340, y: 40 },
-    { b: BOOKS[6], rot: -10, x: -180, y: -30 },
-    { b: BOOKS[2], rot: 0, x: 0, y: -60 },
-    { b: BOOKS[3], rot: 10, x: 180, y: -30 },
-    { b: BOOKS[0], rot: 22, x: 340, y: 40 },
-  ];
-
-  const ctaS = spring({ frame: frame - 40, fps, config: { damping: 14, stiffness: 150 } });
-  const ctaScale = interpolate(ctaS, [0, 1], [0.7, 1]);
-  const ctaO = interpolate(frame - 40, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  const urlO = interpolate(frame, [70, 90], [0, 1], { extrapolateRight: "clamp" });
-  const glow = 0.6 + Math.sin(frame / 14) * 0.4;
+  const s = spring({ frame, fps, config: { damping: 13, stiffness: 120 } });
+  const scale = interpolate(s, [0, 1], [0.5, 1]);
+  const tO = interpolate(frame, [16, 32], [0, 1], { extrapolateRight: "clamp" });
+  const tY = interpolate(frame, [16, 34], [40, 0], { extrapolateRight: "clamp" });
+  const urlO = interpolate(frame, [40, 56], [0, 1], { extrapolateRight: "clamp" });
 
   return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
-      {/* fanned books */}
-      <div style={{ position: "absolute", top: 360, display: "flex", justifyContent: "center", opacity: fanO * 0.9 }}>
-        {fan.map((f, i) => {
-          const s = spring({ frame: frame - i * 4, fps, config: { damping: 16 } });
-          return (
-            <div
-              key={i}
-              style={{
-                position: "absolute",
-                transform: `translate(${f.x}px, ${f.y}px) rotate(${f.rot * s}deg) scale(${interpolate(s, [0, 1], [0.6, 1])})`,
-              }}
-            >
-              <BookCover title={f.b.title} author={f.b.author} g={f.b.g} w={240} />
-            </div>
-          );
-        })}
+    <AbsoluteFill style={{ background: PROMO_BG, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "absolute", top: -180, right: -140, width: 560, height: 560, borderRadius: "50%", background: "rgba(91,141,239,0.3)", filter: "blur(50px)" }} />
+      <div style={{ position: "absolute", bottom: -200, left: -140, width: 540, height: 540, borderRadius: "50%", background: "rgba(255,90,31,0.18)", filter: "blur(50px)" }} />
+
+      <div style={{ transform: `scale(${scale})`, width: 180, height: 180, borderRadius: "40px", background: GRADIENT_PRIMARY, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 24px 60px rgba(37,99,235,0.5)" }}>
+        <BookOpen size={92} color="#fff" strokeWidth={2.2} />
       </div>
 
-      <div style={{ marginTop: 360, transform: `scale(${ctaScale})`, opacity: ctaO, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <Logo size={1.1} delay={40} />
-
-        <div style={{ fontFamily: playfair, fontWeight: 800, fontSize: 92, color: C.white, marginTop: 60, textAlign: "center", lineHeight: 1.05 }}>
-          Start reading
-          <br />
-          <span style={{ color: C.orangeGlow }}>today.</span>
+      <div style={{ opacity: tO, transform: `translateY(${tY}px)`, marginTop: 50, textAlign: "center" }}>
+        <div style={{ fontFamily: playfair, fontWeight: 900, fontSize: 88, color: "#fff" }}>Sha-Verse</div>
+        <div style={{ fontFamily: inter, fontWeight: 600, fontSize: 40, color: "rgba(255,255,255,0.85)", marginTop: 8 }}>
+          Read. Discover. Publish.
         </div>
+      </div>
 
-        <div
-          style={{
-            opacity: urlO,
-            marginTop: 56,
-            padding: "30px 70px",
-            borderRadius: 70,
-            background: `linear-gradient(135deg, ${C.blue}, ${C.blueGlow})`,
-            boxShadow: `0 0 ${40 * glow}px ${C.blue}, 0 18px 40px ${C.blue}66`,
-            fontFamily: inter,
-            fontWeight: 800,
-            fontSize: 48,
-            color: "#fff",
-            letterSpacing: 1,
-          }}
-        >
-          sha-verse.com
-        </div>
-
-        <div style={{ opacity: urlO, marginTop: 34, fontFamily: inter, fontWeight: 500, fontSize: 34, color: C.mute }}>
-          Read · Write · Share — all in one universe
-        </div>
+      <div style={{ opacity: urlO, marginTop: 56, padding: "22px 56px", borderRadius: 999, background: GRADIENT_PRIMARY, fontFamily: inter, fontWeight: 800, fontSize: 46, color: "#fff", boxShadow: "0 16px 40px rgba(37,99,235,0.45)" }}>
+        sha-verse.com
       </div>
     </AbsoluteFill>
   );
