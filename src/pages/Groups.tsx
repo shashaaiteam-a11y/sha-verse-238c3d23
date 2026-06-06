@@ -814,6 +814,19 @@ const Groups = () => {
 
     <div className="min-h-screen bg-gradient-subtle pb-20">
 
+      <SEO
+        title="Groups & Communities — Connect on Sha-Verse"
+        description="Discover and join groups and communities on Sha-Verse. Share posts, start discussions, and connect with people who share your interests."
+        path="/groups"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Sha-Verse Groups",
+          description: "Discover and join groups and communities on Sha-Verse.",
+          url: "https://www.sha-verse.com/groups",
+        }}
+      />
+
       {/* Header */}
 
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b border-border shadow-sm">
