@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { SEO } from "@/components/seo/SEO";
 
 import { useQuery } from "@tanstack/react-query";
 
