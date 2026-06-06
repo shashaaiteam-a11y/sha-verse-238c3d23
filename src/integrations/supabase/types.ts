@@ -5922,6 +5922,15 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Json
       }
+      check_book_duplicate: {
+        Args: { _author?: string; _file_hash?: string; _title?: string }
+        Returns: {
+          author: string
+          id: string
+          match_type: string
+          title: string
+        }[]
+      }
       check_rate_limit: {
         Args: { p_attempt_type: string; p_identifier: string }
         Returns: boolean
