@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEO } from "@/components/seo/SEO";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -335,6 +336,24 @@ const BookDetail = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      <SEO
+        title={`${book.title}${book.author ? ` by ${book.author}` : ""} — Sha-Verse`}
+        description={(book.description || `Read ${book.title}${book.author ? ` by ${book.author}` : ""} on Sha-Verse.`).slice(0, 160)}
+        path={`/bookshelf/book/${book.id}`}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Book",
+          name: book.title,
+          ...(book.author ? { author: { "@type": "Person", name: book.author } } : {}),
+          ...(book.cover_url ? { image: book.cover_url } : {}),
+          ...(book.description ? { description: book.description } : {}),
+          workExample: {
+            "@type": "Book",
+            bookFormat: "https://schema.org/EBook",
+            url: `https://www.sha-verse.com/bookshelf/book/${book.id}`,
+          },
+        }}
+      />
       {/* Header */}
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">

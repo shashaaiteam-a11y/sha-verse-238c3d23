@@ -231,6 +231,7 @@ const Auth = () => {
             <AppLogoStatusRing src="/sha-verse-logo.jpeg" alt="Sha-Verse" size="w-10 h-10" showPlus={false} />
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Sha-Verse
+              <span className="sr-only"> — Sign in to your Unified Social Universe</span>
             </h1>
           </div>
           <p className="text-sm sm:text-base text-muted-foreground">

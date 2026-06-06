@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEO } from "@/components/seo/SEO";
 
 import { useNavigate } from "react-router-dom";
 
@@ -245,6 +246,19 @@ const Bookshelf = () => {
   return (
 
     <div className="min-h-screen bg-gradient-subtle pb-20">
+
+      <SEO
+        title="Bookshelf — Read & Discover Books on Sha-Verse"
+        description="Browse, read, and discover books across every category on Sha-Verse. Follow author channels and enjoy an immersive in-app reader for EPUB and PDF."
+        path="/bookshelf"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Sha-Verse Bookshelf",
+          description: "Read and discover books across every category on Sha-Verse.",
+          url: "https://www.sha-verse.com/bookshelf",
+        }}
+      />
 
       {/* Header */}
 
