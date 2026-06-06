@@ -186,6 +186,14 @@ const Home = () => {
 
     <div className="min-h-screen bg-gradient-subtle page-content">
 
+      <SEO
+        title="Sha-Verse — Your Unified Social Universe"
+        description="Sha-Verse brings your feed, videos, books, groups, and NovaChat AI into one app. Connect with friends, share posts, watch and read, all in one place."
+        path="/"
+      />
+
+      <h1 className="sr-only">Sha-Verse — Your Unified Social Universe</h1>
+
       {/* Header */}
 
       <header className="sticky-header">
