@@ -246,6 +246,8 @@ const Home = () => {
 
               onClick={() => navigate('/saved')}
 
+              aria-label="Saved"
+
               className="h-9 w-9 rounded-full"
 
             >
