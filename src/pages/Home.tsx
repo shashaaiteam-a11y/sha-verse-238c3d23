@@ -264,6 +264,8 @@ const Home = () => {
 
               onClick={() => navigate('/friends')}
 
+              aria-label="Friends"
+
               className="relative h-9 w-9 rounded-full"
 
             >
