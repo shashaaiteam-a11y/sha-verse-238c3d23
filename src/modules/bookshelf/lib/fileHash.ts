@@ -40,37 +40,26 @@ export async function checkBookDuplicate(params: {
 }): Promise<DuplicateCheckResult> {
   const { fileHash, title, author } = params;
 
-  // 1. File-hash match (strongest signal)
-  if (fileHash) {
-    const { data, error } = await (supabase as any)
-      .from("books")
-      .select("id, title, author")
-      .eq("file_hash", fileHash)
-      .maybeSingle();
-    if (!error && data) {
-      return {
-        isDuplicate: true,
-        matchType: "file",
-        existingBook: data,
-      };
-    }
-  }
+  // Duplicate detection runs through a SECURITY DEFINER function so the
+  // private `file_hash` column never has to be exposed to the client API.
+  // It returns the strongest match (exact file first, then title+author).
+  const { data, error } = await (supabase as any).rpc("check_book_duplicate", {
+    _file_hash: fileHash ?? null,
+    _title: title?.trim() ?? null,
+    _author: author?.trim() ?? null,
+  });
 
-  // 2. Metadata match (title + author, case-insensitive)
-  if (title && author) {
-    const { data, error } = await (supabase as any)
-      .from("books")
-      .select("id, title, author")
-      .ilike("title", title.trim())
-      .ilike("author", author.trim())
-      .maybeSingle();
-    if (!error && data) {
-      return {
-        isDuplicate: true,
-        matchType: "metadata",
-        existingBook: data,
-      };
-    }
+  if (!error && Array.isArray(data) && data.length > 0) {
+    const match = data[0];
+    return {
+      isDuplicate: true,
+      matchType: match.match_type === "file" ? "file" : "metadata",
+      existingBook: {
+        id: match.id,
+        title: match.title,
+        author: match.author,
+      },
+    };
   }
 
   return { isDuplicate: false };
