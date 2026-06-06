@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useMemo, memo } from 'react';
 
 import { Button } from "@/components/ui/button";
+import { SEO } from "@/components/seo/SEO";
 
 /** Tiny wrapper: notifies the smart engine when an ad mounts (for session cap). */
 const SmartAdSlot = memo(({
