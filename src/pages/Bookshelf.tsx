@@ -247,6 +247,19 @@ const Bookshelf = () => {
 
     <div className="min-h-screen bg-gradient-subtle pb-20">
 
+      <SEO
+        title="Bookshelf — Read & Discover Books on Sha-Verse"
+        description="Browse, read, and discover books across every category on Sha-Verse. Follow author channels and enjoy an immersive in-app reader for EPUB and PDF."
+        path="/bookshelf"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Sha-Verse Bookshelf",
+          description: "Read and discover books across every category on Sha-Verse.",
+          url: "https://www.sha-verse.com/bookshelf",
+        }}
+      />
+
       {/* Header */}
 
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b border-border shadow-sm">
