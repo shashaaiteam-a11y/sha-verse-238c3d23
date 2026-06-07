@@ -5978,10 +5978,6 @@ export type Database = {
         Returns: string
       }
       get_nova_usage_today: { Args: { _user_id: string }; Returns: Json }
-      get_profile_private_fields: {
-        Args: { _profile_id: string }
-        Returns: Json
-      }
       get_shared_ai_conversation: {
         Args: { _token: string }
         Returns: {
