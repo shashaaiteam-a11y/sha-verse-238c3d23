@@ -13,14 +13,28 @@ export const useProfile = (userId?: string) => {
     queryFn: async () => {
       if (!targetUserId) return null;
       
+      // Sensitive fields (relationship_status, phone, gender, birthdate, phone_number)
+      // are not directly readable for privacy reasons; they come from a gated RPC.
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(SAFE_PROFILE_COLUMNS)
         .eq('id', targetUserId)
         .single();
       
       if (error) throw error;
-      return data;
+
+      let merged: any = data;
+      try {
+        const { data: priv } = await (supabase as any).rpc('get_profile_private_fields', {
+          _profile_id: targetUserId,
+        });
+        if (priv && typeof priv === 'object') {
+          merged = { ...(data as any), ...priv };
+        }
+      } catch {
+        // If the gated fields can't be loaded, keep the rest of the profile intact.
+      }
+      return merged;
     },
     enabled: !!targetUserId,
     // Keep profile data fresh with realtime updates
