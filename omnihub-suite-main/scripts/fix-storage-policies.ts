@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 
-const SUPABASE_URL = "https://plmhjuqedtkiffzhberf.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbWhqdXFlZHRraWZmemhiZXJmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDQxMjE1NiwiZXhwIjoyMDc5OTg4MTU2fQ.zZiScj1Gm-6bMHPDT7FiXMXVHO-FmvVPF3hLCwPFXEc";
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error(
+    "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables. " +
+    "Set them before running this local maintenance script — never hardcode credentials."
+  );
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
