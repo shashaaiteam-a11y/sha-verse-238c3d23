@@ -12,15 +12,31 @@ export const useProfile = (userId?: string) => {
     queryKey: ['profile', targetUserId],
     queryFn: async () => {
       if (!targetUserId) return null;
-      
+
+      // Sensitive PII columns (phone, birthdate, gender, relationship_status,
+      // phone_number) are protected at the column level. They are fetched
+      // separately through a privacy-aware function so they are only revealed
+      // to the owner or to users allowed by the profile's privacy settings.
+      const NON_SENSITIVE_COLUMNS =
+        'id, username, display_name, bio, avatar_url, cover_url, location, website, created_at, updated_at, work, education, hometown, current_city, facebook_url, instagram_url, twitter_url, hobbies, about_me, privacy, provider, last_login, is_verified, is_deactivated, deactivated_at';
+
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(NON_SENSITIVE_COLUMNS)
         .eq('id', targetUserId)
         .single();
-      
+
       if (error) throw error;
-      return data;
+
+      let privateFields: Record<string, any> = {};
+      const { data: priv } = await supabase.rpc('get_profile_private_fields', {
+        _profile_id: targetUserId,
+      });
+      if (priv && typeof priv === 'object') {
+        privateFields = priv as Record<string, any>;
+      }
+
+      return { ...(data as Record<string, any>), ...privateFields };
     },
     enabled: !!targetUserId,
     // Keep profile data fresh with realtime updates
