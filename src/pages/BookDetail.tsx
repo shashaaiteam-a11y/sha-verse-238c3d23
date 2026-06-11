@@ -50,7 +50,7 @@ const BookDetail = () => {
   const { data: book, isLoading, isError, error } = useQuery({
     queryKey: ["book", bookId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("books")
         .select(`
           ${BOOK_PUBLIC_COLUMNS},
