@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { SEO } from "@/components/seo/SEO";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
