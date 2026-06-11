@@ -268,7 +268,7 @@ export const useBookInteractions = (bookId?: string) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Deletion request submitted. Admin will review within 24-72 hours.");
+      toast.success("Deletion request submitted. Your book will be permanently deleted within 3 hours.");
     },
     onError: () => {
       toast.error("Failed to submit request");
