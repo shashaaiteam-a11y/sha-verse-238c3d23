@@ -29,6 +29,7 @@ import BookReportDialog from "@/components/bookshelf/BookReportDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
 import { BannerAd, NativeAdCard } from "@/components/ads";
+import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
 // BookDetail page component
 const BookDetail = () => {
