@@ -82,7 +82,7 @@ const PrivacyCenter = () => {
 
       const exportData = {
         exported_at: new Date().toISOString(),
-        profile: profileRes.data,
+        profile: { ...(profileRes.data || {}), ...((privateFields as Record<string, any>) || {}) },
         posts: postsRes.data || [],
         friendships: friendsRes.data || [],
         saved_posts: savedRes.data || [],
