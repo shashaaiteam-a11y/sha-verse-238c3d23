@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import BookRatingDialog from "@/components/bookshelf/BookRatingDialog";
 import BookDeletionDialog from "@/components/bookshelf/BookDeletionDialog";
+import BookReportDialog from "@/components/bookshelf/BookReportDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
 import { BannerAd, NativeAdCard } from "@/components/ads";
