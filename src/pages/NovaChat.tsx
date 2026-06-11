@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { SEO } from '@/components/seo/SEO';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Menu, X, SquarePen, Download, Printer, Image as ImageIcon, Globe } from 'lucide-react';
