@@ -184,6 +184,13 @@ const NovaChat = () => {
 
     <div className="h-screen flex bg-background">
 
+      <SEO
+        title="NovaChat AI — Sha-Verse"
+        description="Chat with NovaChat, the built-in AI assistant on Sha-Verse. Ask questions, brainstorm, and get instant answers."
+        path="/novachat"
+      />
+
+
       {/* Sidebar */}
 
       <aside 
