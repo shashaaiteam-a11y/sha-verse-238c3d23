@@ -239,6 +239,8 @@ const Home = () => {
 
               className="h-9 w-9 rounded-full"
 
+              aria-label="Saved posts"
+
             >
 
               <Bookmark className="w-5 h-5" />
@@ -254,6 +256,8 @@ const Home = () => {
               onClick={() => navigate('/friends')}
 
               className="relative h-9 w-9 rounded-full"
+
+              aria-label={pendingRequests && pendingRequests.length > 0 ? `Friends, ${pendingRequests.length} pending requests` : 'Friends'}
 
             >
 
