@@ -149,14 +149,21 @@ const PageDetail = () => {
                   <p className="text-sm">{page.about}</p>
                 )}
                 
-                {page.website && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a href={page.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      {page.website}
-                    </a>
-                  </div>
-                )}
+                {page.website && (() => {
+                  const raw = String(page.website).trim();
+                  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                  // Only allow http/https to prevent javascript:/data: URI injection
+                  const safeHref = /^https?:\/\//i.test(candidate) ? candidate : null;
+                  if (!safeHref) return null;
+                  return (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <a href={safeHref} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        {page.website}
+                      </a>
+                    </div>
+                  );
+                })()}
                 
                 {page.email && (
                   <div className="flex items-center gap-2 text-sm">
