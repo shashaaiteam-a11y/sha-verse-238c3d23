@@ -47,7 +47,7 @@ const EditBook = () => {
       try {
         const { data } = await supabase
           .from("books")
-          .select("*")
+          .select("id, channel_id, title, author, description, cover_url, book_url, pages, views_count, likes_count, comments_count, created_at, category, language, tags, visibility, age_restriction, comments_enabled, ratings_enabled, downloads_count, rating_avg, rating_count")
           .eq("id", bookId)
           .single();
         
