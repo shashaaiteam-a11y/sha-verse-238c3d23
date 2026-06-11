@@ -711,6 +711,15 @@ const BookDetail = () => {
         bookTitle={book.title}
       />
 
+      <BookReportDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        bookId={bookId!}
+        bookTitle={book.title}
+      />
+
+
+
       <ShareDialog
         open={showShareDialog}
         onOpenChange={setShowShareDialog}
