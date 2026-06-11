@@ -361,7 +361,7 @@ const BookDetail = () => {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="text-destructive focus:text-destructive">
                 <Flag className="w-4 h-4 mr-2" /> Report
               </DropdownMenuItem>
             </DropdownMenuContent>
