@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import BookRatingDialog from "@/components/bookshelf/BookRatingDialog";
 import BookDeletionDialog from "@/components/bookshelf/BookDeletionDialog";
+import BookReportDialog from "@/components/bookshelf/BookReportDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
 import { BannerAd, NativeAdCard } from "@/components/ads";
@@ -39,6 +40,7 @@ const BookDetail = () => {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [comment, setComment] = useState("");
   const [commentsExpanded, setCommentsExpanded] = useState(true);
   const [ratingsExpanded, setRatingsExpanded] = useState(true);
@@ -359,7 +361,7 @@ const BookDetail = () => {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="text-destructive focus:text-destructive">
                 <Flag className="w-4 h-4 mr-2" /> Report
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -708,6 +710,15 @@ const BookDetail = () => {
         bookId={bookId!}
         bookTitle={book.title}
       />
+
+      <BookReportDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        bookId={bookId!}
+        bookTitle={book.title}
+      />
+
+
 
       <ShareDialog
         open={showShareDialog}

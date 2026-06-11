@@ -86,7 +86,7 @@ const BookDeletionDialog = ({ open, onOpenChange, bookId, bookTitle }: BookDelet
               <SelectTrigger className="mt-2">
                 <SelectValue placeholder="Select a reason" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[80]">
                 {DELETION_REASONS.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}

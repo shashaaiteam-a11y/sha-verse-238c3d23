@@ -112,7 +112,7 @@ const BookReportDialog = ({
               <SelectTrigger id="reason" className="mt-1">
                 <SelectValue placeholder="Select a reason" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[80]">
                 {REPORT_REASONS.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
