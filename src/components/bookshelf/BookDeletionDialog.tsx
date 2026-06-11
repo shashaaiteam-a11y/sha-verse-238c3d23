@@ -69,7 +69,7 @@ const BookDeletionDialog = ({ open, onOpenChange, bookId, bookTitle }: BookDelet
           <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
             <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-yellow-600 dark:text-yellow-400">
-              This action cannot be undone. Once approved, your book will be permanently deleted.
+              This action cannot be undone. Your book will be permanently deleted within 3 hours of submitting this request.
             </p>
           </div>
 
