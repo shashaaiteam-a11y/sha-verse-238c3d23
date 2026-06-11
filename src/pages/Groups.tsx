@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { SEO } from "@/components/seo/SEO";
 
 import { useQuery } from "@tanstack/react-query";
 
@@ -812,6 +813,13 @@ const Groups = () => {
   return (
 
     <div className="min-h-screen bg-gradient-subtle pb-20">
+
+      <SEO
+        title="Groups — Communities on Sha-Verse"
+        description="Join and create communities on Sha-Verse Groups. Connect with people who share your interests, post updates, and grow your network."
+        path="/groups"
+      />
+
 
       {/* Header */}
 

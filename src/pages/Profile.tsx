@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { SEO } from "@/components/seo/SEO";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -924,6 +925,13 @@ const Profile = () => {
   return (
 
     <div className="min-h-screen bg-secondary pb-20">
+
+      <SEO
+        title="Profile — Sha-Verse"
+        description="View and manage your Sha-Verse profile. Share posts, connect with friends, and showcase your activity across the platform."
+        path="/profile"
+      />
+
 
       {/* Header */}
 

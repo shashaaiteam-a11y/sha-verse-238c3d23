@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useMemo, memo } from 'react';
 
 import { Button } from "@/components/ui/button";
+import { SEO } from "@/components/seo/SEO";
 
 /** Tiny wrapper: notifies the smart engine when an ad mounts (for session cap). */
 const SmartAdSlot = memo(({
@@ -185,7 +186,16 @@ const Home = () => {
 
     <div className="min-h-screen bg-gradient-subtle page-content">
 
+      <SEO
+        title="Sha-Verse — Your Unified Social Universe"
+        description="Sha-Verse brings social feeds, video, an AI assistant, groups and a bookshelf together in one unified social platform."
+        path="/"
+      />
+
+      <h1 className="sr-only">Sha-Verse — Your Unified Social Universe</h1>
+
       {/* Header */}
+
 
       <header className="sticky-header">
 
@@ -239,6 +249,8 @@ const Home = () => {
 
               className="h-9 w-9 rounded-full"
 
+              aria-label="Saved posts"
+
             >
 
               <Bookmark className="w-5 h-5" />
@@ -254,6 +266,8 @@ const Home = () => {
               onClick={() => navigate('/friends')}
 
               className="relative h-9 w-9 rounded-full"
+
+              aria-label={pendingRequests && pendingRequests.length > 0 ? `Friends, ${pendingRequests.length} pending requests` : 'Friends'}
 
             >
 

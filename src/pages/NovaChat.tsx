@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { SEO } from '@/components/seo/SEO';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Menu, X, SquarePen, Download, Printer, Image as ImageIcon, Globe } from 'lucide-react';
@@ -182,6 +183,13 @@ const NovaChat = () => {
   return (
 
     <div className="h-screen flex bg-background">
+
+      <SEO
+        title="NovaChat AI — Sha-Verse"
+        description="Chat with NovaChat, the built-in AI assistant on Sha-Verse. Ask questions, brainstorm, and get instant answers."
+        path="/novachat"
+      />
+
 
       {/* Sidebar */}
 

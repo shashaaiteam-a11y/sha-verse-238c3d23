@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEO } from "@/components/seo/SEO";
 
 import { useNavigate } from "react-router-dom";
 
@@ -245,6 +246,13 @@ const Bookshelf = () => {
   return (
 
     <div className="min-h-screen bg-gradient-subtle pb-20">
+
+      <SEO
+        title="Bookshelf — Read & Share Books on Sha-Verse"
+        description="Discover, read, and share books on the Sha-Verse Bookshelf. Browse author channels, track reading progress, and build your library."
+        path="/bookshelf"
+      />
+
 
       {/* Header */}
 

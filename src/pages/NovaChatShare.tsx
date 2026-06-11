@@ -74,7 +74,7 @@ const NovaChatShare = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border px-4 py-3 flex items-center gap-3 bg-background/95 backdrop-blur sticky top-0 z-10">
         <Button asChild variant="ghost" size="icon" className="h-9 w-9">
-          <Link to="/novachat">
+          <Link to="/novachat" aria-label="Back to NovaChat">
             <ArrowLeft className="w-5 h-5" />
           </Link>
         </Button>
