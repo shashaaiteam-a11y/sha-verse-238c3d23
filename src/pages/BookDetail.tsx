@@ -40,6 +40,7 @@ const BookDetail = () => {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showDeletionDialog, setShowDeletionDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [comment, setComment] = useState("");
   const [commentsExpanded, setCommentsExpanded] = useState(true);
   const [ratingsExpanded, setRatingsExpanded] = useState(true);
