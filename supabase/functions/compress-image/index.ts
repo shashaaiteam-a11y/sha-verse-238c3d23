@@ -101,6 +101,15 @@ Deno.serve(async (req) => {
       return ok({ ok: false, error: 'missing bucket or path' });
     }
 
+    // 🔒 PATH OWNERSHIP GATE: the service role bypasses storage RLS, so we must
+    // verify the caller owns the target path. All app uploads use the
+    // convention `<auth.uid()>/...` (enforced by storage RLS on the original
+    // upload), so the first path segment MUST equal the caller's user id.
+    // This blocks a user from triggering writes into another user's folder.
+    if (!path.startsWith(`${claims.sub}/`)) {
+      return unauthorized();
+    }
+
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 
