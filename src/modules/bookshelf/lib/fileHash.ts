@@ -32,6 +32,9 @@ export interface DuplicateCheckResult {
 /**
  * Pre-flight duplicate check. Runs against books table BEFORE upload.
  * Checks both file_hash (exact file match) and (title, author) case-insensitive.
+ *
+ * Uses the SECURITY DEFINER `check_book_duplicate` RPC so the sensitive
+ * `books.file_hash` column never needs to be client-readable.
  */
 export async function checkBookDuplicate(params: {
   fileHash?: string;
@@ -40,37 +43,27 @@ export async function checkBookDuplicate(params: {
 }): Promise<DuplicateCheckResult> {
   const { fileHash, title, author } = params;
 
-  // 1. File-hash match (strongest signal)
-  if (fileHash) {
-    const { data, error } = await (supabase as any)
-      .from("books")
-      .select("id, title, author")
-      .eq("file_hash", fileHash)
-      .maybeSingle();
-    if (!error && data) {
-      return {
-        isDuplicate: true,
-        matchType: "file",
-        existingBook: data,
-      };
-    }
+  if (!fileHash && !(title && author)) {
+    return { isDuplicate: false };
   }
 
-  // 2. Metadata match (title + author, case-insensitive)
-  if (title && author) {
-    const { data, error } = await (supabase as any)
-      .from("books")
-      .select("id, title, author")
-      .ilike("title", title.trim())
-      .ilike("author", author.trim())
-      .maybeSingle();
-    if (!error && data) {
-      return {
-        isDuplicate: true,
-        matchType: "metadata",
-        existingBook: data,
-      };
-    }
+  const { data, error } = await (supabase as any).rpc("check_book_duplicate", {
+    _file_hash: fileHash ?? null,
+    _title: title?.trim() ?? null,
+    _author: author?.trim() ?? null,
+  });
+
+  if (!error && Array.isArray(data) && data.length > 0) {
+    const match = data[0];
+    return {
+      isDuplicate: true,
+      matchType: match.match_type === "file" ? "file" : "metadata",
+      existingBook: {
+        id: match.id,
+        title: match.title,
+        author: match.author,
+      },
+    };
   }
 
   return { isDuplicate: false };
