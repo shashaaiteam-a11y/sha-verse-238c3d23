@@ -926,6 +926,13 @@ const Profile = () => {
 
     <div className="min-h-screen bg-secondary pb-20">
 
+      <SEO
+        title="Profile — Sha-Verse"
+        description="View and manage your Sha-Verse profile. Share posts, connect with friends, and showcase your activity across the platform."
+        path="/profile"
+      />
+
+
       {/* Header */}
 
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-lg border-b border-border shadow-sm">
