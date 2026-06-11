@@ -53,7 +53,7 @@ const BookDetail = () => {
       const { data, error } = await supabase
         .from("books")
         .select(`
-          *,
+          ${BOOK_PUBLIC_COLUMNS},
           channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id, subscribers_count)
         `)
         .eq("id", bookId)
