@@ -814,6 +814,13 @@ const Groups = () => {
 
     <div className="min-h-screen bg-gradient-subtle pb-20">
 
+      <SEO
+        title="Groups — Communities on Sha-Verse"
+        description="Join and create communities on Sha-Verse Groups. Connect with people who share your interests, post updates, and grow your network."
+        path="/groups"
+      />
+
+
       {/* Header */}
 
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b border-border shadow-sm">
