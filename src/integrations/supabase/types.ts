@@ -280,6 +280,7 @@ export type Database = {
           reason: string
           reviewed_at: string | null
           reviewed_by: string | null
+          scheduled_for: string | null
           status: string
           user_id: string
         }
@@ -292,6 +293,7 @@ export type Database = {
           reason: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          scheduled_for?: string | null
           status?: string
           user_id: string
         }
@@ -304,6 +306,7 @@ export type Database = {
           reason?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          scheduled_for?: string | null
           status?: string
           user_id?: string
         }
@@ -6093,6 +6096,7 @@ export type Database = {
         }
         Returns: number
       }
+      process_book_auto_deletions: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
