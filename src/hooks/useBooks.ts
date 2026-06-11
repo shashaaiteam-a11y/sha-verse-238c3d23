@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useBookFeed, useTrendingBooks } from "./useBookFeeds";
 import { generateFileHash, checkBookDuplicate } from "@/modules/bookshelf/lib/fileHash";
+import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
 export interface Book {
   id: string;
@@ -184,7 +185,7 @@ export const useBooks = (options: {
           publication_date: publicationDate || undefined,
           file_hash: fileHash || undefined,
         } as any)
-        .select()
+        .select(BOOK_PUBLIC_COLUMNS)
         .single();
 
       if (error) throw error;

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Book } from "@/hooks/useBooks";
 import { useEffect, useCallback } from "react";
+import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
 export const useBookFeed = (options: {
     page?: number;
@@ -25,7 +26,7 @@ export const useBookFeed = (options: {
             let query = supabase
                 .from("books")
                 .select(`
-          *,
+          ${BOOK_PUBLIC_COLUMNS},
           channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
         `)
                 .order("created_at", { ascending: false });
@@ -61,7 +62,7 @@ export const useTrendingBooks = (category: string = "All") => {
             let query = supabase
                 .from("books")
                 .select(`
-          *,
+          ${BOOK_PUBLIC_COLUMNS},
           channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
         `)
                 .order("views_count", { ascending: false })
@@ -120,7 +121,7 @@ export const useSubscribedBooks = (options: { search?: string; category?: string
 
             let query = (supabase as any)
                 .from("books")
-                .select(`*, channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)`)
+                .select(`${BOOK_PUBLIC_COLUMNS}, channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)`)
                 .in("channel_id", channelIds)
                 .order("created_at", { ascending: false });
 
@@ -168,7 +169,7 @@ export const useSavedBooks = (options: { search?: string; category?: string; pag
                 .from("saved_books")
                 .select(`
             id,
-            book:books!inner(*, channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id))
+            book:books!inner(${BOOK_PUBLIC_COLUMNS}, channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id))
           `)
                 .eq("user_id", user.id)
                 .order("created_at", { ascending: false });
@@ -230,7 +231,7 @@ export const useBook = (bookId?: string) => {
             const { data, error } = await supabase
                 .from("books")
                 .select(`
-          *,
+          ${BOOK_PUBLIC_COLUMNS},
           channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id, subscribers_count)
         `)
                 .eq("id", bookId)
