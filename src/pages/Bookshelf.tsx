@@ -247,6 +247,13 @@ const Bookshelf = () => {
 
     <div className="min-h-screen bg-gradient-subtle pb-20">
 
+      <SEO
+        title="Bookshelf — Read & Share Books on Sha-Verse"
+        description="Discover, read, and share books on the Sha-Verse Bookshelf. Browse author channels, track reading progress, and build your library."
+        path="/bookshelf"
+      />
+
+
       {/* Header */}
 
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-lg border-b border-border shadow-sm">
