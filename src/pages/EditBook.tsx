@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Book, Loader2, Upload } from "lucide-react";
+import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
 const CATEGORIES = [
   "Fiction", "Self-Help", "Education", "Comic", "Biography",
@@ -49,7 +50,7 @@ const EditBook = () => {
       try {
         const { data } = await supabase
           .from("books")
-          .select("*")
+          .select(BOOK_PUBLIC_COLUMNS)
           .eq("id", bookId)
           .single();
         

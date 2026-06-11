@@ -29,6 +29,7 @@ import BookReportDialog from "@/components/bookshelf/BookReportDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
 import { BannerAd, NativeAdCard } from "@/components/ads";
+import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
 // BookDetail page component
 const BookDetail = () => {
@@ -50,10 +51,10 @@ const BookDetail = () => {
   const { data: book, isLoading, isError, error } = useQuery({
     queryKey: ["book", bookId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("books")
         .select(`
-          *,
+          ${BOOK_PUBLIC_COLUMNS},
           channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id, subscribers_count)
         `)
         .eq("id", bookId)

@@ -25,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { StickyBannerAd, BookReaderInlineAd } from "@/components/ads";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
 // Mobile panel positioning: sits just above the bottom nav (h-14 = 56px) + 12px gap + safe area.
 // Mobile panel positioning: sits just above the reader's bottom controls + safe area.
@@ -84,7 +85,7 @@ const BookReader = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("books")
-        .select("*")
+        .select(BOOK_PUBLIC_COLUMNS)
         .eq("id", bookId)
         .single();
       if (error) throw error;

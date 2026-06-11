@@ -41,6 +41,7 @@ import { BOOK_CATEGORIES } from "@/lib/constants/bookshelf";
 
 import { SponsoredBookCard } from "@/components/ads";
 import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
+import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
 
 
@@ -142,7 +143,7 @@ const Bookshelf = () => {
 
           id, current_page, total_pages, completed, last_read_at,
 
-          book:books(*, channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id))
+          book:books(${BOOK_PUBLIC_COLUMNS}, channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id))
 
         `)
 
