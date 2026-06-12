@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { PAGE_PUBLIC_COLUMNS } from '@/lib/constants/pages';
 
 export interface Page {
   id: string;
@@ -83,7 +84,7 @@ export const usePages = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pages')
-        .select('*')
+        .select(PAGE_PUBLIC_COLUMNS)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Page[];
@@ -99,7 +100,7 @@ export const usePages = () => {
       // Get pages created by user
       const { data: ownedPages, error: ownedError } = await supabase
         .from('pages')
-        .select('*')
+        .select(PAGE_PUBLIC_COLUMNS)
         .eq('created_by', user.id);
       
       if (ownedError) throw ownedError;
@@ -107,7 +108,7 @@ export const usePages = () => {
       // Get pages where user has a role
       const { data: rolePages, error: roleError } = await supabase
         .from('page_roles')
-        .select('page_id, role, pages(*)')
+        .select(`page_id, role, pages(${PAGE_PUBLIC_COLUMNS})`)
         .eq('user_id', user.id);
       
       if (roleError) throw roleError;
@@ -131,7 +132,7 @@ export const usePages = () => {
       if (!user) return [];
       const { data, error } = await supabase
         .from('page_followers')
-        .select('page_id, pages(*)')
+        .select(`page_id, pages(${PAGE_PUBLIC_COLUMNS})`)
         .eq('user_id', user.id);
       if (error) throw error;
       return data?.map(f => f.pages).filter(Boolean) as Page[];
@@ -156,7 +157,7 @@ export const usePages = () => {
           phone: pageData.phone,
           created_by: user.id
         })
-        .select()
+        .select(PAGE_PUBLIC_COLUMNS)
         .single();
       
       if (error) throw error;
@@ -180,7 +181,7 @@ export const usePages = () => {
         .from('pages')
         .update(updates)
         .eq('id', pageId)
-        .select()
+        .select(PAGE_PUBLIC_COLUMNS)
         .single();
       
       if (error) throw error;
@@ -260,7 +261,7 @@ export const usePage = (pageId: string | undefined) => {
       if (!pageId) return null;
       const { data, error } = await supabase
         .from('pages')
-        .select('*')
+        .select(PAGE_PUBLIC_COLUMNS)
         .eq('id', pageId)
         .single();
       if (error) throw error;
