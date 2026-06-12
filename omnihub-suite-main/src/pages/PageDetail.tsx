@@ -11,7 +11,8 @@ import { usePage, usePages } from '@/hooks/usePages';
 import PagePostCard from '@/components/pages/PagePostCard';
 import CreatePagePost from '@/components/pages/CreatePagePost';
 import { ShareDialog } from '@/components/ShareDialog';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const PageDetail = () => {
   const { pageId } = useParams<{ pageId: string }>();
@@ -28,6 +29,22 @@ const PageDetail = () => {
     isEditor 
   } = usePage(pageId);
   const [showShareDialog, setShowShareDialog] = useState(false);
+
+  // Contact details (phone/email) are protected by column-level security
+  // and fetched per-page via a secure RPC to prevent bulk enumeration.
+  const [contact, setContact] = useState<{ email: string | null; phone: string | null }>({ email: null, phone: null });
+  useEffect(() => {
+    if (!pageId) return;
+    let active = true;
+    (supabase as any)
+      .rpc('get_page_contact', { _page_id: pageId })
+      .then(({ data }: { data: Array<{ email: string | null; phone: string | null }> | null }) => {
+        if (active && data && data.length) {
+          setContact({ email: data[0].email ?? null, phone: data[0].phone ?? null });
+        }
+      });
+    return () => { active = false; };
+  }, [pageId]);
 
   if (pageLoading) {
     return (
@@ -165,19 +182,19 @@ const PageDetail = () => {
                   );
                 })()}
                 
-                {page.email && (
+                {contact.email && (
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${page.email}`} className="text-primary hover:underline">
-                      {page.email}
+                    <a href={`mailto:${contact.email}`} className="text-primary hover:underline">
+                      {contact.email}
                     </a>
                   </div>
                 )}
                 
-                {page.phone && (
+                {contact.phone && (
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{page.phone}</span>
+                    <span>{contact.phone}</span>
                   </div>
                 )}
                 

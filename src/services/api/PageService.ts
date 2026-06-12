@@ -5,6 +5,7 @@
 
 import { BaseService, ServiceResult, PaginationParams, PaginatedResult } from './BaseService';
 import { EventBus, EVENTS } from '@/lib/events/EventBus';
+import { PAGE_PUBLIC_COLUMNS } from '@/lib/constants/pages';
 
 export interface Page {
   id: string;
@@ -67,7 +68,7 @@ class PageServiceClass extends BaseService {
   async getPages(params: PaginationParams = {}): Promise<ServiceResult<PaginatedResult<Page>>> {
     let query = this.supabase
       .from('pages')
-      .select('*', { count: 'exact' })
+      .select(PAGE_PUBLIC_COLUMNS, { count: 'exact' })
       .order('followers_count', { ascending: false });
 
     query = this.applyPagination(query, params);
@@ -94,7 +95,7 @@ class PageServiceClass extends BaseService {
     const { data, error } = await this.supabase
       .from('page_roles')
       .select(`
-        pages (*)
+        pages (${PAGE_PUBLIC_COLUMNS})
       `)
       .eq('user_id', userId);
 
@@ -112,7 +113,7 @@ class PageServiceClass extends BaseService {
   async getPage(pageId: string): Promise<ServiceResult<Page>> {
     const { data, error } = await this.supabase
       .from('pages')
-      .select('*')
+      .select(PAGE_PUBLIC_COLUMNS)
       .eq('id', pageId)
       .single();
 
@@ -141,7 +142,7 @@ class PageServiceClass extends BaseService {
         cover_url: params.coverUrl,
         created_by: userId,
       })
-      .select()
+      .select(PAGE_PUBLIC_COLUMNS)
       .single();
 
     if (!error && data) {

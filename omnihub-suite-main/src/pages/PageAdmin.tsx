@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Settings, Users, BarChart3, FileText, 
@@ -73,6 +73,22 @@ const PageAdmin = () => {
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberRole, setNewMemberRole] = useState<PageRole['role']>('editor');
   const { searchTerm: searchQuery, setSearchTerm: setSearchQuery, results: searchResults, isLoading: isSearching } = useUserSearch();
+
+  // Contact details are protected by column-level security; fetch via secure RPC.
+  const [contactInfo, setContactInfo] = useState<{ email: string | null; phone: string | null }>({ email: null, phone: null });
+  useEffect(() => {
+    if (!pageId) return;
+    let active = true;
+    (supabase as any)
+      .rpc('get_page_contact', { _page_id: pageId })
+      .then(({ data }: { data: Array<{ email: string | null; phone: string | null }> | null }) => {
+        if (active && data && data.length) {
+          setContactInfo({ email: data[0].email ?? null, phone: data[0].phone ?? null });
+          setFormData(prev => ({ ...prev, email: data[0].email ?? '', phone: data[0].phone ?? '' }));
+        }
+      });
+    return () => { active = false; };
+  }, [pageId]);
 
   // Initialize form data when page loads
   useState(() => {
@@ -310,7 +326,7 @@ const PageAdmin = () => {
                         type="email"
                       />
                     ) : (
-                      <p className="text-sm">{page.email || 'Not set'}</p>
+                      <p className="text-sm">{contactInfo.email || 'Not set'}</p>
                     )}
                   </div>
                   
@@ -323,7 +339,7 @@ const PageAdmin = () => {
                         type="tel"
                       />
                     ) : (
-                      <p className="text-sm">{page.phone || 'Not set'}</p>
+                      <p className="text-sm">{contactInfo.phone || 'Not set'}</p>
                     )}
                   </div>
                   

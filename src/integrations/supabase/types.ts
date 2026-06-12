@@ -5981,6 +5981,13 @@ export type Database = {
         Returns: string
       }
       get_nova_usage_today: { Args: { _user_id: string }; Returns: Json }
+      get_page_contact: {
+        Args: { _page_id: string }
+        Returns: {
+          email: string
+          phone: string
+        }[]
+      }
       get_profile_private_fields: {
         Args: { _profile_id: string }
         Returns: Json
