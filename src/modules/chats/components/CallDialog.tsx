@@ -3,7 +3,7 @@
  * Pure presentation; talks to a useWebRTCCall instance via props.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -63,6 +63,60 @@ export const CallDialog = ({
   setLocalVideoEl,
   setRemoteAudioEl,
 }: CallDialogProps) => {
+  // Outgoing ringback ("dialback") tone — plays on the caller's side while the
+  // call is ringing, and stops the moment it connects/ends. Purely additive,
+  // mirrors the receiver-side ringtone in IncomingCallDialog (no asset needed).
+  const ringbackRef = useRef<{ stop: () => void } | null>(null);
+  useEffect(() => {
+    const shouldRing = open && (phase === 'ringing' || phase === 'requesting-media');
+    if (!shouldRing) {
+      ringbackRef.current?.stop();
+      ringbackRef.current = null;
+      return;
+    }
+    if (ringbackRef.current) return; // already ringing
+    try {
+      const Ctx = (window.AudioContext || (window as any).webkitAudioContext);
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      let stopped = false;
+
+      // Classic ringback cadence: ~1s tone, ~3s gap.
+      const playRing = () => {
+        if (stopped) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 425; // standard ringback frequency
+        osc.type = 'sine';
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.05);
+        gain.gain.setValueAtTime(0.12, now + 0.9);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+        osc.start(now);
+        osc.stop(now + 1.05);
+      };
+      const interval = setInterval(playRing, 4000);
+      playRing();
+
+      ringbackRef.current = {
+        stop: () => {
+          stopped = true;
+          clearInterval(interval);
+          ctx.close().catch(() => {});
+        },
+      };
+    } catch (e) {
+      console.warn('Ringback tone unavailable', e);
+    }
+    return () => {
+      ringbackRef.current?.stop();
+      ringbackRef.current = null;
+    };
+  }, [open, phase]);
+
   // Auto-close shortly after end
   useEffect(() => {
     if (phase === 'ended' || phase === 'failed') {
