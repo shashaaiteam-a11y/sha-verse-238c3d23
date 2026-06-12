@@ -3,7 +3,7 @@
  * Pure presentation; talks to a useWebRTCCall instance via props.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
