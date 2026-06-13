@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BookCard from "@/components/bookshelf/BookCard";
 import { ShareDialog } from "@/components/ShareDialog";
+import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 import { toast } from "sonner";
 
 const AuthorChannel = () => {
@@ -46,7 +47,7 @@ const AuthorChannel = () => {
       const { data, error } = await supabase
         .from("books")
         .select(`
-          *,
+          ${BOOK_PUBLIC_COLUMNS},
           channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
         `)
         .eq("channel_id", channelId)
