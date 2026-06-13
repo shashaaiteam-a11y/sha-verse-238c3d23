@@ -149,8 +149,10 @@ export const CreatePostCard = () => {
 
     // Step 2: kick off uploads in parallel — non-blocking
     await Promise.all(
-      accepted.map(async ({ file, placeholder }) => {
+      accepted.map(async ({ file: rawFile, placeholder }) => {
         try {
+          // Compress before upload (image/video). Safe no-op on failure.
+          const file = await compressForUpload(rawFile);
           const fileExt = file.name.split('.').pop();
           const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
           const { error: uploadError } = await supabase.storage
@@ -162,7 +164,7 @@ export const CreatePostCard = () => {
             });
           if (uploadError) throw uploadError;
 
-          // Background: generate optimized WebP variants (fire-and-forget, silent)
+          // Background: generate optimized WebP variants (gated by flag, silent)
           triggerImageCompression('post-images', fileName);
 
           const { data: urlData } = supabase.storage
