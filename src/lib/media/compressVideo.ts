@@ -122,8 +122,12 @@ export async function compressVideo(
       /* ignore */
     }
 
-    const bytes = data instanceof Uint8Array ? data : new Uint8Array();
-    if (!bytes.byteLength) return file;
+    const src = data instanceof Uint8Array ? data : new Uint8Array();
+    if (!src.byteLength) return file;
+
+    // Copy into a fresh ArrayBuffer-backed view so the Blob type is concrete.
+    const bytes = new Uint8Array(src.byteLength);
+    bytes.set(src);
 
     const blob = new Blob([bytes], { type: 'video/mp4' });
     // Only use the compressed file if it's actually smaller.
