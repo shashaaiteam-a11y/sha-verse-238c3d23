@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/media/compressImage';
 
 export const useChannels = (channelType: 'video' | 'books' = 'video') => {
   const { user } = useAuth();
@@ -183,10 +184,11 @@ export const useCreateChannel = () => {
       let bannerUrl = null;
 
       if (avatarFile) {
-        const path = `${user.id}/avatar_${Date.now()}_${avatarFile.name}`;
+        const img = await compressImage(avatarFile);
+        const path = `${user.id}/avatar_${Date.now()}_${img.name}`;
         const { error } = await supabase.storage
           .from('avatars')
-          .upload(path, avatarFile);
+          .upload(path, img);
         
         if (!error) {
           const { data } = supabase.storage.from('avatars').getPublicUrl(path);
@@ -195,10 +197,11 @@ export const useCreateChannel = () => {
       }
 
       if (bannerFile) {
-        const path = `${user.id}/banner_${Date.now()}_${bannerFile.name}`;
+        const img = await compressImage(bannerFile);
+        const path = `${user.id}/banner_${Date.now()}_${img.name}`;
         const { error } = await supabase.storage
           .from('avatars')
-          .upload(path, bannerFile);
+          .upload(path, img);
         
         if (!error) {
           const { data } = supabase.storage.from('avatars').getPublicUrl(path);
