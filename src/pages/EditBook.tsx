@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/media/compressImage";
 import { triggerImageCompression } from "@/lib/compressImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -126,12 +127,13 @@ const EditBook = () => {
       let finalCoverUrl = book.cover_url;
 
       if (coverFile) {
-        const coverExt = coverFile.name.split(".").pop();
+        const cover = await compressImage(coverFile);
+        const coverExt = cover.name.split(".").pop();
         const coverName = `${user?.id}/covers/${Date.now()}.${coverExt}`;
 
         const { error: coverError } = await supabase.storage
           .from("books")
-          .upload(coverName, coverFile);
+          .upload(coverName, cover);
 
         if (coverError) throw coverError;
 

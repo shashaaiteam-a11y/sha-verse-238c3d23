@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { compressForUpload } from "@/lib/media/compressFile";
 
 // Module-level cache: tracks story IDs already marked as viewed in this session.
 // Prevents duplicate INSERTs to story_views when users rapidly swipe through stories
@@ -296,14 +297,18 @@ export const useStories = () => {
     }) => {
       if (!user?.id) throw new Error("Not authenticated");
 
-      // Upload media
-      const fileExt = mediaFile.name.split(".").pop();
+      // Compress media before upload (image/video). Safe no-op on failure.
+      const uploadFile = await compressForUpload(mediaFile, {
+        onLargeFileWarning: () =>
+          toast.info("Large video — compressing before upload, please wait…"),
+      });
+      const fileExt = uploadFile.name.split(".").pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      const mediaType = mediaFile.type.startsWith("video") ? "video" : "image";
+      const mediaType = uploadFile.type.startsWith("video") ? "video" : "image";
 
       const { error: uploadError } = await supabase.storage
         .from("post-images")
-        .upload(fileName, mediaFile);
+        .upload(fileName, uploadFile);
 
       if (uploadError) throw uploadError;
 

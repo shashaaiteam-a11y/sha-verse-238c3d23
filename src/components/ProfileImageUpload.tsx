@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
+import { compressImage } from '@/lib/media/compressImage';
 import { Button } from '@/components/ui/button';
 import { Camera, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -26,7 +27,7 @@ export const ProfileImageUpload = ({ type, onUpload, onRemove, hasImage = false,
         return;
       }
 
-      const file = event.target.files[0];
+      const file = await compressImage(event.target.files[0]);
       const fileExt = file.name.split('.').pop();
       const { data: { user } } = await supabase.auth.getUser();
       

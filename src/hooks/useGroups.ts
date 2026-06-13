@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
+import { compressImage } from '@/lib/media/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -328,24 +329,26 @@ export const useGroups = () => {
 
       // Upload avatar if provided
       if (avatarFile) {
-        const ext = avatarFile.name.split('.').pop();
+        const img = await compressImage(avatarFile);
+        const ext = img.name.split('.').pop();
         const path = `${user.id}/groups/${groupId}-avatar-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true });
+        const { error: upErr } = await supabase.storage.from('avatars').upload(path, img, { upsert: true });
         if (upErr) throw upErr;
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
         updates.avatar_url = publicUrl;
-        triggerImageCompression('avatars', path); // background WebP variants, silent
+        triggerImageCompression('avatars', path); // background WebP variants, gated
       }
 
       // Upload cover if provided
       if (coverFile) {
-        const ext = coverFile.name.split('.').pop();
+        const img = await compressImage(coverFile);
+        const ext = img.name.split('.').pop();
         const path = `${user.id}/groups/${groupId}-cover-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('avatars').upload(path, coverFile, { upsert: true });
+        const { error: upErr } = await supabase.storage.from('avatars').upload(path, img, { upsert: true });
         if (upErr) throw upErr;
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
         updates.cover_url = publicUrl;
-        triggerImageCompression('avatars', path); // background WebP variants, silent
+        triggerImageCompression('avatars', path); // background WebP variants, gated
       }
 
       const { error } = await supabase

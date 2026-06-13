@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { compressImage } from "@/lib/media/compressImage";
 import {
   Dialog,
   DialogContent,
@@ -95,10 +96,11 @@ export const ChannelSettingsDialog = ({
 
       // Upload avatar if changed
       if (avatarFile && user) {
+        const img = await compressImage(avatarFile);
         const fileName = `${user.id}/channel-avatar-${Date.now()}`;
         const { error: uploadError } = await supabase.storage
           .from("avatars")
-          .upload(fileName, avatarFile, { upsert: true });
+          .upload(fileName, img, { upsert: true });
 
         if (uploadError) {
           throw new Error(`Avatar upload failed: ${uploadError.message}`);
@@ -109,10 +111,11 @@ export const ChannelSettingsDialog = ({
 
       // Upload banner if changed
       if (bannerFile && user) {
+        const img = await compressImage(bannerFile);
         const fileName = `${user.id}/channel-banner-${Date.now()}`;
         const { error: uploadError } = await supabase.storage
           .from("avatars")
-          .upload(fileName, bannerFile, { upsert: true });
+          .upload(fileName, img, { upsert: true });
 
         if (uploadError) {
           throw new Error(`Banner upload failed: ${uploadError.message}`);

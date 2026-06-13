@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { maybeCompressImage } from '@/lib/chat/compressMedia';
+import { compressForUpload } from '@/lib/media/compressFile';
 import { useTheme } from 'next-themes';
 import {
   Popover,
@@ -157,9 +157,11 @@ export const ChatTypingBar = ({
     // For images: compress on a separate microtask so UI stays responsive.
     setIsUploading(true);
     const promise = (async () => {
-      const toUpload = file.type.startsWith('image/')
-        ? await maybeCompressImage(file)
-        : file;
+      // Compress before upload (image + video). Safe no-op on failure.
+      const toUpload = await compressForUpload(file, {
+        onLargeFileWarning: () =>
+          toast.info('Large video — compressing, this may take a moment…'),
+      });
       return uploadFile(toUpload);
     })().then((result) => {
       setIsUploading(false);

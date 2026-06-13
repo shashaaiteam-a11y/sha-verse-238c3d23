@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { CreatorBadge, CreatorEarnings } from '@/components/motion/types';
+import { compressVideo } from '@/lib/media/compressVideo';
+import { compressImage } from '@/lib/media/compressImage';
 
 // Get creator's channel
 export const useMyCreatorChannel = () => {
@@ -279,11 +281,17 @@ export const useUploadMotion = () => {
     }) => {
       if (!user) throw new Error('Not authenticated');
 
+      // Compress video before upload (size-thresholded, safe fallback)
+      const compressedVideo = await compressVideo(videoFile, {
+        onLargeFileWarning: () =>
+          toast.info('Large video — compressing before upload, please wait…'),
+      });
+
       // Upload video
-      const videoPath = `${user.id}/${Date.now()}_${videoFile.name}`;
+      const videoPath = `${user.id}/${Date.now()}_${compressedVideo.name}`;
       const { error: videoError } = await supabase.storage
         .from('videos')
-        .upload(videoPath, videoFile);
+        .upload(videoPath, compressedVideo);
       
       if (videoError) throw videoError;
 
@@ -294,10 +302,11 @@ export const useUploadMotion = () => {
       // Upload thumbnail if provided
       let thumbnailUrl = null;
       if (thumbnailFile) {
-        const thumbPath = `${user.id}/${Date.now()}_thumb_${thumbnailFile.name}`;
+        const thumb = await compressImage(thumbnailFile);
+        const thumbPath = `${user.id}/${Date.now()}_thumb_${thumb.name}`;
         const { error: thumbError } = await supabase.storage
           .from('videos')
-          .upload(thumbPath, thumbnailFile);
+          .upload(thumbPath, thumb);
         
         if (!thumbError) {
           const { data: thumbUrlData } = supabase.storage

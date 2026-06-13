@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
+import { compressImage } from '@/lib/media/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -361,14 +362,15 @@ export const useGroupAdmin = (groupId: string | undefined) => {
       if (!groupId) throw new Error('No group ID');
       
       if (!user) throw new Error('Not authenticated');
-      const fileExt = file.name.split('.').pop();
+      const img = await compressImage(file);
+      const fileExt = img.name.split('.').pop();
       const fileName = `${groupId}-${type}-${Date.now()}.${fileExt}`;
       // Path must start with userId to satisfy RLS policy
       const filePath = `${user.id}/groups/${fileName}`;
 
       const { error: uploadError, data } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, img, { upsert: true });
 
       if (uploadError) throw uploadError;
 

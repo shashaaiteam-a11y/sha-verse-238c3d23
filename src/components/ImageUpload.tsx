@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
+import { compressImage } from '@/lib/media/compressImage';
 import { Button } from '@/components/ui/button';
 import { ImagePlus, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -24,7 +25,7 @@ export const ImageUpload = ({ bucket, onUpload, currentImage, onRemove }: ImageU
         return;
       }
 
-      const file = event.target.files[0];
+      const file = await compressImage(event.target.files[0]);
       const fileExt = file.name.split('.').pop();
       const { data: { user } } = await supabase.auth.getUser();
       

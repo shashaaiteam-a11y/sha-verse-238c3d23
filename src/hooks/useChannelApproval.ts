@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImage } from '@/lib/media/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -71,10 +72,11 @@ export const useCreateChannelWithApproval = () => {
       let bannerUrl = null;
 
       if (avatarFile) {
-        const path = `${user.id}/avatar_${Date.now()}_${avatarFile.name}`;
+        const img = await compressImage(avatarFile);
+        const path = `${user.id}/avatar_${Date.now()}_${img.name}`;
         const { error } = await supabase.storage
           .from('avatars')
-          .upload(path, avatarFile);
+          .upload(path, img);
         
         if (!error) {
           const { data } = supabase.storage.from('avatars').getPublicUrl(path);
@@ -83,10 +85,11 @@ export const useCreateChannelWithApproval = () => {
       }
 
       if (bannerFile) {
-        const path = `${user.id}/banner_${Date.now()}_${bannerFile.name}`;
+        const img = await compressImage(bannerFile);
+        const path = `${user.id}/banner_${Date.now()}_${img.name}`;
         const { error } = await supabase.storage
           .from('avatars')
-          .upload(path, bannerFile);
+          .upload(path, img);
         
         if (!error) {
           const { data } = supabase.storage.from('avatars').getPublicUrl(path);

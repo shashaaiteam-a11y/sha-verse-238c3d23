@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/media/compressImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpdateChannel } from "@/hooks/useChannels";
 import { Button } from "@/components/ui/button";
@@ -79,7 +80,8 @@ const EditAuthorChannel = () => {
         }
     };
 
-    const uploadFile = async (file: File, bucket: string) => {
+    const uploadFile = async (rawFile: File, bucket: string) => {
+        const file = await compressImage(rawFile);
         const fileExt = file.name.split('.').pop();
         const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { compressImage } from "@/lib/media/compressImage";
 import {
   Dialog,
   DialogContent,
@@ -64,10 +65,11 @@ export const VideoEditDialog = ({
 
       // Upload new thumbnail if changed
       if (thumbnailFile) {
-        const fileName = `thumbnails/${video.id}/${Date.now()}-${thumbnailFile.name}`;
+        const thumb = await compressImage(thumbnailFile);
+        const fileName = `thumbnails/${video.id}/${Date.now()}-${thumb.name}`;
         const { error: uploadError } = await supabase.storage
           .from("videos")
-          .upload(fileName, thumbnailFile, { upsert: true });
+          .upload(fileName, thumb, { upsert: true });
 
         if (!uploadError) {
           const { data } = supabase.storage.from("videos").getPublicUrl(fileName);

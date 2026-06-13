@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImage } from '@/lib/media/compressImage';
 import { usePages } from '@/hooks/usePages';
 import { toast } from 'sonner';
 
@@ -85,12 +86,13 @@ const CreatePageDialog = ({ open, onOpenChange }: CreatePageDialogProps) => {
       let avatarUrl = null;
 
       if (avatarFile) {
-        const fileExt = avatarFile.name.split('.').pop();
+        const file = await compressImage(avatarFile);
+        const fileExt = file.name.split('.').pop();
         const fileName = `page-${Date.now()}.${fileExt}`;
         
         const { error: uploadError, data } = await supabase.storage
           .from('avatars')
-          .upload(fileName, avatarFile);
+          .upload(fileName, file);
 
         if (uploadError) throw uploadError;
 
