@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/media/compressImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpdateChannel } from "@/hooks/useChannels";
 import { Button } from "@/components/ui/button";

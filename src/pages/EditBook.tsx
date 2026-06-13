@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/lib/media/compressImage";
 import { triggerImageCompression } from "@/lib/compressImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
