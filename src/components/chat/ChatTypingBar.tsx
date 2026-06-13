@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { maybeCompressImage } from '@/lib/chat/compressMedia';
+import { compressForUpload } from '@/lib/media/compressFile';
 import { useTheme } from 'next-themes';
 import {
   Popover,
