@@ -157,9 +157,11 @@ export const ChatTypingBar = ({
     // For images: compress on a separate microtask so UI stays responsive.
     setIsUploading(true);
     const promise = (async () => {
-      const toUpload = file.type.startsWith('image/')
-        ? await maybeCompressImage(file)
-        : file;
+      // Compress before upload (image + video). Safe no-op on failure.
+      const toUpload = await compressForUpload(file, {
+        onLargeFileWarning: () =>
+          toast.info('Large video — compressing, this may take a moment…'),
+      });
       return uploadFile(toUpload);
     })().then((result) => {
       setIsUploading(false);
