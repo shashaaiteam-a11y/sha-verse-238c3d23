@@ -2,6 +2,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerImageCompression } from "@/lib/compressImage";
+import { compressImage } from "@/lib/media/compressImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useBookFeed, useTrendingBooks } from "./useBookFeeds";
@@ -123,14 +124,15 @@ export const useBooks = (options: {
         }
       }
 
-      // Upload cover image to books bucket
+      // Upload cover image to books bucket (compressed)
       if (coverFile) {
-        const coverExt = coverFile.name.split(".").pop();
+        const cover = await compressImage(coverFile);
+        const coverExt = cover.name.split(".").pop();
         const coverName = `${user.id}/covers/${Date.now()}.${coverExt}`;
 
         const { error: coverError } = await supabase.storage
           .from("books")
-          .upload(coverName, coverFile);
+          .upload(coverName, cover);
 
         if (coverError) throw coverError;
 
@@ -139,7 +141,7 @@ export const useBooks = (options: {
           .getPublicUrl(coverName);
 
         coverUrl = coverData.publicUrl;
-        // Background: generate optimized WebP variants for the cover (silent)
+        // Background: generate optimized WebP variants for the cover (gated)
         triggerImageCompression("books", coverName);
       }
 
