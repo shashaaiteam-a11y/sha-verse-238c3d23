@@ -5,6 +5,7 @@
 
 import { BaseService, ServiceResult } from './BaseService';
 import { EventBus, EVENTS } from '@/lib/events/EventBus';
+import { compressForUpload } from '@/lib/media/compressFile';
 
 export interface Story {
   id: string;
@@ -150,12 +151,14 @@ class StoryServiceClass extends BaseService {
     let mediaType = params.mediaType || 'image';
 
     if (params.file) {
-      const fileExt = params.file.name.split('.').pop();
+      // Compress media before upload (image/video). Safe no-op on failure.
+      const uploadFile = await compressForUpload(params.file);
+      const fileExt = uploadFile.name.split('.').pop();
       const fileName = `${userId}/${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await this.supabase.storage
         .from('stories')
-        .upload(fileName, params.file);
+        .upload(fileName, uploadFile);
 
       if (uploadError) {
         return this.handleResponse(null, uploadError);
