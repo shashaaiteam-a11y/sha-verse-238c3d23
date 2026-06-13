@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { compressImage } from "@/lib/media/compressImage";
 import {
   Dialog,
   DialogContent,
