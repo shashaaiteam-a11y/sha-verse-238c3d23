@@ -130,12 +130,14 @@ export const useCreatePromotion = () => {
     mutationFn: async ({ file, caption, linkUrl, expiresAt }: { file: File; caption?: string; linkUrl?: string; expiresAt?: string }) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      const isVideo = file.type.startsWith('video/');
+      // Compress before upload (image/video). Safe no-op on failure.
+      const uploadFile = await compressForUpload(file);
+      const isVideo = uploadFile.type.startsWith('video/');
       const bucket = isVideo ? 'videos' : 'post-images';
-      const ext = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
+      const ext = uploadFile.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
       const path = `${user.id}/promo-${Date.now()}.${ext}`;
 
-      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, uploadFile, { upsert: false });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
 
