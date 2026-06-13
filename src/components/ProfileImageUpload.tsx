@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
+import { compressImage } from '@/lib/media/compressImage';
 import { Button } from '@/components/ui/button';
 import { Camera, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
