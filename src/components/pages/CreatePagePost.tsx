@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
+import { compressImage } from '@/lib/media/compressImage';
 import { usePage } from '@/hooks/usePages';
 import { toast } from 'sonner';
 
@@ -48,12 +49,13 @@ const CreatePagePost = ({ pageId }: CreatePagePostProps) => {
       let imageUrl = null;
 
       if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
+        const file = await compressImage(imageFile);
+        const fileExt = file.name.split('.').pop();
         const fileName = `page-post-${Date.now()}.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
           .from('post-images')
-          .upload(fileName, imageFile);
+          .upload(fileName, file);
 
         if (uploadError) throw uploadError;
 
