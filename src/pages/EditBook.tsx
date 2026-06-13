@@ -126,12 +126,13 @@ const EditBook = () => {
       let finalCoverUrl = book.cover_url;
 
       if (coverFile) {
-        const coverExt = coverFile.name.split(".").pop();
+        const cover = await compressImage(coverFile);
+        const coverExt = cover.name.split(".").pop();
         const coverName = `${user?.id}/covers/${Date.now()}.${coverExt}`;
 
         const { error: coverError } = await supabase.storage
           .from("books")
-          .upload(coverName, coverFile);
+          .upload(coverName, cover);
 
         if (coverError) throw coverError;
 

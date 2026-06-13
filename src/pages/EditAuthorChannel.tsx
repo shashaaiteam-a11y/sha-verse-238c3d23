@@ -79,7 +79,8 @@ const EditAuthorChannel = () => {
         }
     };
 
-    const uploadFile = async (file: File, bucket: string) => {
+    const uploadFile = async (rawFile: File, bucket: string) => {
+        const file = await compressImage(rawFile);
         const fileExt = file.name.split('.').pop();
         const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
