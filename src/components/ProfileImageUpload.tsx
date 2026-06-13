@@ -26,7 +26,7 @@ export const ProfileImageUpload = ({ type, onUpload, onRemove, hasImage = false,
         return;
       }
 
-      const file = event.target.files[0];
+      const file = await compressImage(event.target.files[0]);
       const fileExt = file.name.split('.').pop();
       const { data: { user } } = await supabase.auth.getUser();
       
