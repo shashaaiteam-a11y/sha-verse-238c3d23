@@ -32,6 +32,9 @@ export const useBookFeed = (options: {
         `)
                 .order("created_at", { ascending: false });
 
+            // Hide demo/seed books (non-destructive, reversible)
+            query = excludeSeedBooks(query);
+
             if (channelId) {
                 query = query.eq("channel_id", channelId);
             }
