@@ -94,6 +94,10 @@ const Bookshelf = () => {
 
   const { channels } = useChannels("books");
 
+  // Hide seed-only demo author channels from public author listings
+  // (non-destructive — see useVisibleBookChannels / HIDE_SEED_BOOKS).
+  const visibleChannels = useVisibleBookChannels(channels);
+
 
 
   // Get user's book channel
