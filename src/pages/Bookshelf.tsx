@@ -712,9 +712,9 @@ const Bookshelf = () => {
 
           <TabsContent value="subscribed">
 
-            {subscribedChannels.length > 0 ? (
+            {visibleSubscribedChannels.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {subscribedChannels.map((channel: any) => (
+                {visibleSubscribedChannels.map((channel: any) => (
                   <Card
                     key={channel.id}
                     className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
