@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Book } from "@/hooks/useBooks";
 import { useEffect, useCallback } from "react";
 import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
+import { excludeSeedBooks, filterSeedBooks } from "@/modules/bookshelf/lib/seedFilter";
 
 export const useBookFeed = (options: {
     page?: number;
@@ -30,6 +31,9 @@ export const useBookFeed = (options: {
           channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
         `)
                 .order("created_at", { ascending: false });
+
+            // Hide demo/seed books (non-destructive, reversible)
+            query = excludeSeedBooks(query);
 
             if (channelId) {
                 query = query.eq("channel_id", channelId);
@@ -67,6 +71,9 @@ export const useTrendingBooks = (category: string = "All") => {
         `)
                 .order("views_count", { ascending: false })
                 .limit(20);
+
+            // Hide demo/seed books (non-destructive, reversible)
+            query = excludeSeedBooks(query);
 
             if (category && category !== "All") {
                 query = query.eq("category", category);
@@ -124,6 +131,9 @@ export const useSubscribedBooks = (options: { search?: string; category?: string
                 .select(`${BOOK_PUBLIC_COLUMNS}, channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)`)
                 .in("channel_id", channelIds)
                 .order("created_at", { ascending: false });
+
+            // Hide demo/seed books (non-destructive, reversible)
+            query = excludeSeedBooks(query);
 
             if (search) {
                 query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%`);
@@ -194,7 +204,9 @@ export const useSavedBooks = (options: { search?: string; category?: string; pag
             const { data, error } = await query;
 
             if (error) throw error;
-            return data?.map(d => d.book).filter(Boolean) as Book[] || [];
+            const savedBooks = data?.map(d => d.book).filter(Boolean) as Book[] || [];
+            // Hide demo/seed books (non-destructive, reversible)
+            return filterSeedBooks(savedBooks);
         },
         enabled: !!user?.id,
     });

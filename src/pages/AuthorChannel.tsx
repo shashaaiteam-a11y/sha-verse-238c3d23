@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BookCard from "@/components/bookshelf/BookCard";
 import { ShareDialog } from "@/components/ShareDialog";
 import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
+import { excludeSeedBooks } from "@/modules/bookshelf/lib/seedFilter";
 import { toast } from "sonner";
 
 const AuthorChannel = () => {
@@ -44,14 +45,16 @@ const AuthorChannel = () => {
   const { data: books = [], isLoading: booksLoading } = useQuery({
     queryKey: ["author-books", channelId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("books")
-        .select(`
-          ${BOOK_PUBLIC_COLUMNS},
-          channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
-        `)
-        .eq("channel_id", channelId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await excludeSeedBooks(
+        supabase
+          .from("books")
+          .select(`
+            ${BOOK_PUBLIC_COLUMNS},
+            channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
+          `)
+          .eq("channel_id", channelId)
+          .order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data;
     },
@@ -65,10 +68,12 @@ const AuthorChannel = () => {
       if (!channelId) return null;
       
       // Get total views and downloads from all books in this channel
-      const { data: bookStats, error: statsError } = await supabase
-        .from("books")
-        .select("views_count, downloads_count")
-        .eq("channel_id", channelId);
+      const { data: bookStats, error: statsError } = await excludeSeedBooks(
+        supabase
+          .from("books")
+          .select("views_count, downloads_count")
+          .eq("channel_id", channelId)
+      );
       
       if (statsError) throw statsError;
       
