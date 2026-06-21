@@ -204,7 +204,9 @@ export const useSavedBooks = (options: { search?: string; category?: string; pag
             const { data, error } = await query;
 
             if (error) throw error;
-            return data?.map(d => d.book).filter(Boolean) as Book[] || [];
+            const savedBooks = data?.map(d => d.book).filter(Boolean) as Book[] || [];
+            // Hide demo/seed books (non-destructive, reversible)
+            return filterSeedBooks(savedBooks);
         },
         enabled: !!user?.id,
     });
