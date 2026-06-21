@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Book } from "@/hooks/useBooks";
 import { useEffect, useCallback } from "react";
 import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
+import { excludeSeedBooks, filterSeedBooks } from "@/modules/bookshelf/lib/seedFilter";
 
 export const useBookFeed = (options: {
     page?: number;
