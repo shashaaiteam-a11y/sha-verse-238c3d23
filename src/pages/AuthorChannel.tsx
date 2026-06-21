@@ -45,14 +45,16 @@ const AuthorChannel = () => {
   const { data: books = [], isLoading: booksLoading } = useQuery({
     queryKey: ["author-books", channelId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("books")
-        .select(`
-          ${BOOK_PUBLIC_COLUMNS},
-          channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
-        `)
-        .eq("channel_id", channelId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await excludeSeedBooks(
+        supabase
+          .from("books")
+          .select(`
+            ${BOOK_PUBLIC_COLUMNS},
+            channel:channels!books_channel_id_fkey(id, name, avatar_url, user_id)
+          `)
+          .eq("channel_id", channelId)
+          .order("created_at", { ascending: false })
+      );
       if (error) throw error;
       return data;
     },
