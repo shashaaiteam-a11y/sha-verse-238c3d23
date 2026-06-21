@@ -124,6 +124,8 @@ const Bookshelf = () => {
 
   // Subscribed book channels (for Subscribed tab)
   const { data: subscribedChannels = [] } = useSubscribedBookChannels();
+  // Also hide seed-only demo authors from the Subscribed tab.
+  const visibleSubscribedChannels = useVisibleBookChannels(subscribedChannels as { id: string }[]);
 
 
 
