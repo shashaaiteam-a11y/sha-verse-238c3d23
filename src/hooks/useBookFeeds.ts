@@ -72,6 +72,9 @@ export const useTrendingBooks = (category: string = "All") => {
                 .order("views_count", { ascending: false })
                 .limit(20);
 
+            // Hide demo/seed books (non-destructive, reversible)
+            query = excludeSeedBooks(query);
+
             if (category && category !== "All") {
                 query = query.eq("category", category);
             }
