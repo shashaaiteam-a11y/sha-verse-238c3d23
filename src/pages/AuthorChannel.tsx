@@ -68,10 +68,12 @@ const AuthorChannel = () => {
       if (!channelId) return null;
       
       // Get total views and downloads from all books in this channel
-      const { data: bookStats, error: statsError } = await supabase
-        .from("books")
-        .select("views_count, downloads_count")
-        .eq("channel_id", channelId);
+      const { data: bookStats, error: statsError } = await excludeSeedBooks(
+        supabase
+          .from("books")
+          .select("views_count, downloads_count")
+          .eq("channel_id", channelId)
+      );
       
       if (statsError) throw statsError;
       
