@@ -2,9 +2,63 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Book } from "@/hooks/useBooks";
-import { useEffect, useCallback } from "react";
-import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
+import { useEffect, useCallback, useMemo } from "react";
+import { BOOK_PUBLIC_COLUMNS, HIDE_SEED_BOOKS, SEED_BOOK_URL } from "@/lib/constants/bookshelf";
 import { excludeSeedBooks, filterSeedBooks } from "@/modules/bookshelf/lib/seedFilter";
+
+/**
+ * Returns the set of "seed-only" author channel IDs — channels whose books are
+ * ALL demo/seed books (book_url === SEED_BOOK_URL) with no real uploads. These
+ * are the fake demo authors and should be hidden from author listings.
+ *
+ * Non-destructive: nothing is deleted; flip HIDE_SEED_BOOKS to false to reveal.
+ * A channel with zero books is NOT treated as seed (genuine new authors are kept).
+ */
+export const useSeedAuthorChannelIds = () => {
+    const { data } = useQuery({
+        queryKey: ["seed-author-channel-ids"],
+        queryFn: async () => {
+            if (!HIDE_SEED_BOOKS) return [] as string[];
+
+            // Channel IDs that have at least one seed book.
+            const { data: seedRows } = await supabase
+                .from("books")
+                .select("channel_id")
+                .eq("book_url", SEED_BOOK_URL);
+
+            // Channel IDs that have at least one REAL (non-seed) book.
+            const { data: realRows } = await supabase
+                .from("books")
+                .select("channel_id")
+                .or(`book_url.is.null,book_url.neq.${SEED_BOOK_URL}`);
+
+            const realIds = new Set((realRows || []).map((r: any) => r.channel_id));
+            const hidden = new Set<string>();
+            for (const r of seedRows || []) {
+                const id = (r as any).channel_id;
+                if (id && !realIds.has(id)) hidden.add(id);
+            }
+            return Array.from(hidden);
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+
+    return useMemo(() => new Set(data || []), [data]);
+};
+
+/**
+ * Convenience helper to strip seed-only author channels from a channel list.
+ */
+export const useVisibleBookChannels = <T extends { id: string }>(
+    channels: T[] | null | undefined,
+): T[] => {
+    const hidden = useSeedAuthorChannelIds();
+    return useMemo(() => {
+        if (!channels) return [];
+        if (!HIDE_SEED_BOOKS || hidden.size === 0) return channels;
+        return channels.filter((c) => !hidden.has(c.id));
+    }, [channels, hidden]);
+};
 
 export const useBookFeed = (options: {
     page?: number;

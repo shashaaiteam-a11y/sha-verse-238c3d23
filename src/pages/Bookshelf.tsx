@@ -23,7 +23,7 @@ import { useBooks } from "@/hooks/useBooks";
 
 import { useChannels } from "@/hooks/useChannels";
 
-import { useSavedBooks, useSubscribedBookChannels } from "@/hooks/useBookFeeds";
+import { useSavedBooks, useSubscribedBookChannels, useVisibleBookChannels } from "@/hooks/useBookFeeds";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -94,6 +94,10 @@ const Bookshelf = () => {
 
   const { channels } = useChannels("books");
 
+  // Hide seed-only demo author channels from public author listings
+  // (non-destructive — see useVisibleBookChannels / HIDE_SEED_BOOKS).
+  const visibleChannels = useVisibleBookChannels(channels);
+
 
 
   // Get user's book channel
@@ -120,6 +124,8 @@ const Bookshelf = () => {
 
   // Subscribed book channels (for Subscribed tab)
   const { data: subscribedChannels = [] } = useSubscribedBookChannels();
+  // Also hide seed-only demo authors from the Subscribed tab.
+  const visibleSubscribedChannels = useVisibleBookChannels(subscribedChannels as { id: string }[]);
 
 
 
@@ -617,7 +623,7 @@ const Bookshelf = () => {
                 Popular Authors
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {channels?.slice(0, 6).map((channel) => (
+                {visibleChannels?.slice(0, 6).map((channel) => (
                   <Card
                     key={channel.id}
                     className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
@@ -670,9 +676,9 @@ const Bookshelf = () => {
                 <Users className="w-5 h-5 text-primary" />
                 Trending Author Channels
               </h2>
-              {channels && channels.length > 0 ? (
+              {visibleChannels && visibleChannels.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                  {channels.slice(0, 12).map((channel) => (
+                  {visibleChannels.slice(0, 12).map((channel) => (
                     <Card
                       key={channel.id}
                       className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
@@ -706,9 +712,9 @@ const Bookshelf = () => {
 
           <TabsContent value="subscribed">
 
-            {subscribedChannels.length > 0 ? (
+            {visibleSubscribedChannels.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {subscribedChannels.map((channel: any) => (
+                {visibleSubscribedChannels.map((channel: any) => (
                   <Card
                     key={channel.id}
                     className="p-4 text-center hover:shadow-md transition-shadow cursor-pointer"

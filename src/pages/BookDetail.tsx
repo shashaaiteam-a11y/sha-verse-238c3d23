@@ -199,6 +199,10 @@ const BookDetail = () => {
             sessionStorage.setItem(sessionKey, '1');
             queryClient.invalidateQueries({ queryKey: ["book", bookId] });
             queryClient.invalidateQueries({ queryKey: ["channelMetrics"] });
+            // Keep listing view counts fresh when returning to feed/trending lists
+            queryClient.invalidateQueries({ queryKey: ["books", "feed"] });
+            queryClient.invalidateQueries({ queryKey: ["books", "trending"] });
+            queryClient.invalidateQueries({ queryKey: ["books", "detail", bookId] });
           }
         } catch (e) {
           console.error("Failed to track view:", e);
