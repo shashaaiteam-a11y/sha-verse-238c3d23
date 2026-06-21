@@ -132,6 +132,9 @@ export const useSubscribedBooks = (options: { search?: string; category?: string
                 .in("channel_id", channelIds)
                 .order("created_at", { ascending: false });
 
+            // Hide demo/seed books (non-destructive, reversible)
+            query = excludeSeedBooks(query);
+
             if (search) {
                 query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%`);
             }
