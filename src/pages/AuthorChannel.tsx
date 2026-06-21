@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BookCard from "@/components/bookshelf/BookCard";
 import { ShareDialog } from "@/components/ShareDialog";
 import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
+import { excludeSeedBooks } from "@/modules/bookshelf/lib/seedFilter";
 import { toast } from "sonner";
 
 const AuthorChannel = () => {
