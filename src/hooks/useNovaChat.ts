@@ -99,7 +99,8 @@ export const useNovaChat = () => {
       if (!user) return DEFAULT_SETTINGS;
       const { data, error } = await (supabase as any)
         .from('novachat_settings')
-        .select('*')
+        // Stripe identifiers are column-protected (server-side only); never select '*'
+        .select('id, user_id, preferred_model, custom_system_prompt, memory_facts, voice_enabled, show_reasoning, created_at, updated_at, is_pro, pro_expires_at')
         .eq('user_id', user.id)
         .maybeSingle();
       if (error) {
