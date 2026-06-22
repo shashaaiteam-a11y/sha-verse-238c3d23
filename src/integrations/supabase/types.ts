@@ -6117,13 +6117,10 @@ export type Database = {
         Args: never
         Returns: undefined
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       subscribe_to_channel: {
         Args: { target_channel_id: string }
         Returns: undefined
       }
-      unaccent: { Args: { "": string }; Returns: string }
       unsubscribe_from_channel: {
         Args: { target_channel_id: string }
         Returns: undefined
