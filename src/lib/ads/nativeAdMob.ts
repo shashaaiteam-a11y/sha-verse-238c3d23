@@ -63,9 +63,14 @@ export async function hideBanner(): Promise<void> {
 /** Show a rewarded video ad. Returns true if the user earned the reward. */
 export async function showRewarded(adUnitId: string): Promise<boolean> {
   if (!isNative()) {
-    // Web fallback: simulate a 3s ad in test mode so dev flow still works.
-    await new Promise((r) => setTimeout(r, USE_TEST_ADS ? 3000 : 0));
-    return true;
+    // Web has no verifiable rewarded-ad inventory. Only simulate in test mode
+    // (dev flow). In production web, do NOT grant a reward — otherwise users
+    // could earn rewards without ever watching an ad.
+    if (USE_TEST_ADS) {
+      await new Promise((r) => setTimeout(r, 3000));
+      return true;
+    }
+    return false;
   }
   try {
     const { AdMob } = await import('@capacitor-community/admob');
