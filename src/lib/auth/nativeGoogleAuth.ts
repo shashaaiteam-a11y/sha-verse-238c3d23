@@ -52,11 +52,13 @@ export async function nativeGoogleSignIn(): Promise<void> {
 
   // The plugin returns the Google credentials inside `result`. idToken shape
   // can vary slightly across versions, so read defensively.
-  const result = (res as { result?: Record<string, unknown> })?.result ?? {};
+  const result = ((res as unknown as { result?: Record<string, unknown> })
+    ?.result ?? {}) as Record<string, unknown>;
   const idToken =
     (result.idToken as string | undefined) ??
-    ((result as { authentication?: { idToken?: string } }).authentication
-      ?.idToken as string | undefined);
+    ((result.authentication as { idToken?: string } | undefined)?.idToken as
+      | string
+      | undefined);
 
   if (!idToken) {
     throw new Error("Google se idToken nahi mila. Setup (Web client ID) check karo.");
