@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { Loader2, Mail, Phone, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { SEO } from '@/components/seo/SEO';
 import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
+import { shouldUseNativeGoogle, nativeGoogleSignIn } from "@/lib/auth/nativeGoogleAuth";
 
 // Validation schemas
 const emailSchema = z.object({
@@ -125,6 +126,16 @@ const Auth = () => {
   const handleGoogleAuth = async () => {
     setLoading(true);
     try {
+      // Native app (Android/iOS): use native Google account picker → idToken.
+      // This avoids the /~oauth webview redirect that 404s in standalone builds.
+      if (shouldUseNativeGoogle()) {
+        await nativeGoogleSignIn();
+        toast({ title: 'Welcome back!', description: 'Successfully logged in with Google' });
+        navigate('/');
+        return;
+      }
+
+      // Web: Lovable managed OAuth (unchanged).
       const result = await lovable.auth.signInWithOAuth('google', {
         redirect_uri: window.location.origin,
         extraParams: {
