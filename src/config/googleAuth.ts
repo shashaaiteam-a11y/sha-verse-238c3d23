@@ -13,7 +13,7 @@
  *
  * Format: "1234567890-abcd....apps.googleusercontent.com"
  */
-export const GOOGLE_WEB_CLIENT_ID = "";
+export const GOOGLE_WEB_CLIENT_ID = "1045450930549-7km1bdvipje80098fa6tajfm9936n3nv.apps.googleusercontent.com";
 
 /**
  * iOS client ID (sirf tab chahiye jab iOS native build banao).
