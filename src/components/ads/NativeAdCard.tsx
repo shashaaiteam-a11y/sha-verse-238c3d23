@@ -81,7 +81,6 @@ const NativeAdCard = ({ placement, className, compact, _forceShow = true }: Nati
   const effectiveShouldRender = ADS_HIDDEN ? false : (_forceShow ? true : shouldRender);
   
   if (!effectiveShouldRender || dismissed) {
-    console.log(`[NativeAdCard ${placement}] Returning NULL - effectiveShouldRender:`, effectiveShouldRender, "dismissed:", dismissed);
     return null;
   }
 
