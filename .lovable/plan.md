@@ -1,180 +1,86 @@
-# Compress all uploads before saving (storage cost reduction)
 
-## Goal
+# SHA-VERSE — Slowness + Compression + Issues/Warnings: poori jaankari aur fix plan
 
-App me jahan bhi user image / video / file upload kare, wo **upload se pehle browser me hi compress** ho, aur storage me **sirf compressed version** save ho (original full-size file kabhi storage me na jaye). Isse storage aur cost dono bachenge.
+Maine teeno cheezein deeply analyze ki (slow queries, compression code, upload paths, console logs, DB indexes, security linter). Neeche **kyun ho raha hai** + **kya fix karunga** dono hai. Koi UI/design/feature flow nahi todunga — sirf wahi badlega jo aapne maanga (speed, compression, issues).
 
-### Realistic expectation (important)
+---
 
-"1 GB → KB" possible nahi hai bina file barbaad kiye. Smart targets jo achieve honge:
+## 1) APP + WEB SLOW HAI (load + data fetch + module switch slow)
 
-- **Images:** ~70–90% chhoti (WebP/JPEG, max ~1600px, quality ~0.8)
-- **Videos:** ~40–70% chhoti (max 720p, reasonable bitrate, re-encode)
-- **Book covers / page images:** images jaisa hi
-- **PDF/EPUB files:** neeche "Files" section dekhein (honest caveat hai)
+### Asli wajah (root causes)
+1. **Database me kuch zaroori INDEX missing hain** → kuch queries har baar poori table scan kar rahi hain:
+   - `notifications` (user_id + created_at par koi index nahi) → **total ~322 sec**, ek call 7.8 sec tak gayi.
+   - `group_posts` (group_id + created_at par koi index nahi) → feed/group load slow.
+   - `groups` list query har group ke liye **nested `group_posts(count)`** LATERAL count karti hai → **total ~456 sec**, ek call 6.8 sec tak. Ye sabse bada offender hai.
+2. **Console log spam (Android WebView ko zyada hurt karta hai):** ad components (`BannerAd`, `NativeAdCard`) har render par JSON log print kar rahe hain — ek hi second me dozens. Ads abhi hidden hain (`ADS_HIDDEN=true`) fir bhi ye log + re-render chal rahe hain. Ye CPU waste karta hai aur app laggy feel hoti hai.
+3. **React Query cache short hai** → har baar module switch par data dobara fetch hota hai (cache reuse nahi), isliye "ek module se dusre module" jaana slow lagta hai.
+4. **High-frequency writes** (ad_impressions 30k+ inserts, presence heartbeat, book progress) backend par load badhate hain — ye secondary hai, indexes/logs ke baad dekhenge.
 
-## Approach
+### Kya fix karunga
+- **Naye indexes add karunga** (DB migration, additive — kuch nahi tootega):
+  - `notifications (user_id, created_at DESC)`
+  - `group_posts (group_id, created_at DESC)`
+  - `groups (members_count DESC)`
+- **Groups list query optimize:** jo `group_posts(count)` embed sirf load slow kar raha hai usko hatakar `posts_count` column (jo already table me hai) use karunga — same number dikhega, query ~10x faster.
+- **Ad components ke debug `console.log` hata/gate karunga** (sirf logging, ad logic untouched) → renders halke honge, Android app smooth.
+- **React Query `staleTime` thoda badhaunga** (feeds/lists ke liye) → module switch par instant cached data, background me refresh. UI same.
 
-Ek **shared compression layer** banayenge aur har upload call-site pe file ko `.upload()` se theek pehle us layer se pass karenge. Koi UI, layout, ya feature logic nahi badlega — sirf file bytes chhoti hongi. Module isolation safe rahega kyunki har module sirf apne upload point pe ek wrapping call add karega.
+Iske baad list/feed/notifications/groups load aur module switching **clearly fast** ho jayega.
 
-### 1. Shared helpers (`src/lib/media/`)
+---
 
-- `compressImage.ts` — chat wale `maybeCompressImage` jaisa, but reusable: max 1600px, WebP output (JPEG fallback), skips GIF/SVG/already-small. Returns original on any failure (safe no-op).
-- `compressVideo.ts` — lazy-loaded `@ffmpeg/ffmpeg` (single-thread core, taaki cross-origin-isolation headers ki zarurat na pade). Downscale to max 720p, sensible bitrate, H.264/AAC mp4. Big threshold ke neeche skip; failure ya weak device pe original return (safe fallback). Progress optional.
-- `compressFile.ts` — dispatcher: `image/*` → compressImage, `video/*` → compressVideo, baaki (PDF etc.) → file-specific handling.
+## 2) COMPRESSION KAAM NAHI KAR RAHA + LOADING % GAYAB
 
-### 2. Wire into every upload path (src/ only)
+### Asli wajah
+- **Images:** code images ko compress karta hai (WebP/JPEG, max 1600px) **lekin sirf jab file > 150KB ho aur result chhota ho**. Problem ye hai ki **koi visible feedback nahi**, aur Android WebView me kabhi-kabhi WebP encode skip ho jaata hai — isliye laga ki "kuch nahi hua".
+- **Videos (ye main problem hai):** video compression `ffmpeg` ko **internet se unpkg CDN (~30MB)** se download karta hai. Android app (jo local/offline mode me chalti hai) ya slow network par **ye download fail ho jaata hai → code safe fallback me ORIGINAL video upload kar deta hai** → isliye video "utne hi MB" me chadhti hai. Phone par single-thread ffmpeg bahut slow/OOM bhi ho sakta hai → wahi fallback.
+- **Loading % gayab:** pehle jo percent dikhta tha wo **XHR upload progress** tha (abhi sirf Groups me bacha hai). Posts/Stories/Chat ab `supabase.storage.upload` use karte hain jo **progress event deta hi nahi**, aur compression bhi bina percent ke block karta hai → isliye "percent show nahi ho raha".
 
-Har jagah `const f = await compressX(file)` add karke `f` upload hoga:
+### Kya fix karunga
+- **ffmpeg core ko app ke andar bundle (self-host) karunga** (`/public` me), CDN ki jagah — taaki Android app + offline + slow net par video compression **reliably chale**, original-size upload band ho.
+- **Ek shared `uploadWithProgress` helper banaunga** (XHR-based, jaisa Groups me already hai) aur Posts/Stories/Chat/Books me wire karunga, taaki **real upload % wapas dikhe**.
+- **Visible progress UI** (compression % + upload %) wapas laaunga upload ke dauran.
+- **Image compression ko zyada robust + verifiable** banaunga: result size console me confirm, WebP fail ho to JPEG, aur thoda aggressive (taaki MB → KB clearly dikhe). Fallback safe rahega (fail ho to original, upload kabhi block nahi).
+- Threshold safety (memory rule) maintain: bahut chhoti images/videos as-is, bade files compress + warning.
 
-- Posts: `components/CreatePostCard.tsx`
-- Movion videos: `hooks/useVideos.ts`, `hooks/useCreatorDashboard.ts`, `components/movion/VideoEditDialog.tsx`, `components/movion/ChannelSettingsDialog.tsx`
-- Stories: `hooks/useStories.ts`, `services/api/StoryService.ts`
-- Profile/avatars/banners: `components/ProfileImageUpload.tsx`, `components/ImageUpload.tsx`, `hooks/useChannels.ts`, `hooks/useChannelApproval.ts`, `hooks/useGroups.ts`, `hooks/useGroupAdmin.ts`
-- Pages: `components/pages/CreatePagePost.tsx`, `components/pages/CreatePageDialog.tsx`
-- Bookshelf: `hooks/useBooks.ts`, `pages/EditBook.tsx`, `pages/EditAuthorChannel.tsx`
-- App promos: `hooks/useAppPromotions.ts`
-- Chat: `components/chat/ChatTypingBar.tsx` (image already compressed — add video compression)
+> Note: "1GB → KB" possible nahi (file kharab ho jayegi). Realistic: images ~70–90% chhoti, videos ~40–70% chhoti.
 
-### 3. "Only compressed" guarantee
+---
 
-Kyunki compression client pe upload se pehle hoti hai, storage me sirf compressed file jaati hai — alag se original delete karne ki zarurat nahi.
+## 3) APP ME ISSUES / WARNINGS / CRITICAL ERRORS — kya fix, kya ignore
 
-- Additive `compress-image` edge function abhi har image ke 3 EXTRA WebP copies banata hai (storage **badhata** hai). Goal "minimum storage" hai, isliye in image upload paths pe `triggerImageCompression(...)` calls hata denge. Edge function code rahega (kuch nahi tootega) bas extra copies banni band.
+### Database linter: 51 warnings, **0 critical errors**
+- Saari 51 warnings ek hi type ki hain: **"SECURITY DEFINER function executable by anon/authenticated"** (codes 0028/0029).
+  - **Ye critical NAHI hai.** Inme se zyada tar aapke helper functions hain (`has_role`, increment counters, presence-safe, etc.) jinko app ko call karna hi padta hai — **ye by-design hain, ignore karna theek hai.**
+  - **Fix sirf wahan zaroori jahan koi sensitive definer function bina-login (anon) call ho sakta ho** — un specific functions par `EXECUTE` revoke karke `authenticated`-only kar dunga (already pichhle security task me kuch ho chuka hai). Baaki ko `@security-memory` me document kar dunga taaki future scan inhe dobara flag na kare.
+- **Security scanner (agent/connector/supabase): abhi koi open finding nahi** — clean.
 
-### 4. Files (PDF / EPUB) — honest caveat
+### Console (runtime)
+- Sirf **ad debug logs** ka spam hai (upar #1 me fix ho raha). Koi runtime crash/critical error nahi mila.
 
-- **EPUB:** already ZIP-compressed hota hai → koi action nahi (re-compress se faayda nahi).
-- **PDF:** browser me reliable PDF re-compression heavy/risky hai (reader tootne ka khatra). Safe plan:
-  - Book **cover image** → normal image compression (badi saving).
-  - PDF **content** → sensible **max upload size guard** + clear warning, content ko touch nahi karenge taaki Bookshelf reader 100% intact rahe. (Agar aap chaho to baad me ek dedicated server-side PDF optimizer edge function add kar sakte hain — separate step.)
+### Verdict
+- **Fix karna zaroori:** missing indexes, groups query, ad log spam, compression+progress, sensitive anon-callable definer functions (agar koi).
+- **Ignore safe:** baaki SECURITY DEFINER warnings (helper functions) — document kar denge.
 
-## Safety / non-breaking guarantees
+---
 
-- Compression fail / unsupported / weak device → **original file** upload hoti hai (no crash, no blocked upload).
-- Koi bucket, RLS, path-convention (`<uid>/...`), ya DB schema nahi badlega.
-- Koi UI, layout, design, ya user flow nahi badlega — sirf upload hone wali file chhoti hogi.
-- Sirf active `src/` tree edit hoga (`omnihub-suite-main/` build ka part nahi hai).
-- Module isolation intact: har module sirf apne upload point pe ek line add karega.
+## Technical changes (summary)
+1. **New migration:** indexes on `notifications`, `group_posts`, `groups`; revoke EXECUTE on any truly-sensitive anon-callable definer fn.
+2. `src/hooks/useGroups.ts` (+ Groups service): drop nested `group_posts(count)` embed, use `posts_count` column.
+3. `src/lib/ads/*` components: remove/gate per-render `console.log` (logic untouched).
+4. React Query `staleTime`/`gcTime` tuning for feed/list hooks.
+5. `public/ffmpeg/*`: self-hosted ffmpeg core; `src/lib/media/compressVideo.ts` points to local core; lower load-failure rate.
+6. New `src/lib/media/uploadWithProgress.ts` (shared XHR uploader) + wire into Posts/Stories/Chat/Books upload paths; surface % in existing upload UIs.
+7. `src/lib/media/compressImage.ts`: more robust/verifiable, keep safe fallback.
+8. Update `@security-memory` to reflect accepted definer-function warnings.
 
-## Technical notes
-
-- Dependency: `@ffmpeg/ffmpeg` + `@ffmpeg/util` (lazy import, sirf tab load jab video compress ho — initial bundle pe asar nahi).
-- ffmpeg single-thread core use hoga (no SharedArrayBuffer / COOP-COEP headers needed) taaki Lovable preview + published + Capacitor Android WebView pe chale.
-- Video compression CPU-heavy hai; UI block na ho isliye progress toast aur reasonable size threshold rakhenge.
+## Safety guarantees
+- Compression fail / weak device / offline → **original file upload** (kabhi block nahi). 
+- Indexes additive — schema/RLS/data untouched.
+- Module isolation maintained; har module sirf apne upload point + shared helper use karega.
+- Koi UI/design/layout/user-flow change nahi (sirf progress % wapas dikhega).
 
 ## Verify
-
-- Build pass.
-- Test: post image, story (image+video), Movion video, profile/channel avatar, group cover, page post, book cover upload — sab kaam karein aur stored file original se chhoti ho.
-- Console errors na hon; fail hone par bhi upload complete ho (fallback).   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-**Mera jawab: "Approve karo, lekin 3 important changes ke saath."** ✅
-  Plan overall kaafi achha hai aur SHA-VERSE ke storage costs ko bahut reduce karega. Lekin main isse **100% as-is approve nahi karunga**.
-  ---
-  # ⚠️ Change #1: Videos ke liye "original upload if compression fails" rakho
-  Abhi plan me hai:
-  > Compression fail → original upload
-  Ye sahi hai. Isko mat hatao.
-  Kyun?
-  - FFmpeg browser me fail ho sakta hai.
-  - Low RAM phones me crash ho sakta hai.
-  - Android WebView me issues aa sakte hain.
-  Agar fail hone par upload hi block ho gaya to users pareshan honge.
-  ✅ Current fallback maintain rakho.
-  ---
-  # ⚠️ Change #2: Videos ke liye size threshold add karo
-  Main har video ko compress nahi karunga.
-  Example:
-
-  | Video Size | Action        |
-  | ---------- | ------------- |
-  | < 20 MB    | Direct upload |
-  | 20–100 MB  | Compress      |
-  | >100 MB    | Compress      |
-  | >500 MB    | Warn user     |
-
-  Kyun?
-  5 MB ki video ko compress karne me:
-  - CPU waste
-  - Battery waste
-  - Time waste
-  Storage saving bhi bahut kam hogi.
-  ✅ Threshold add karna better rahega.
-  ---
-  # ⚠️ Change #3: Edge function completely disable mat karo
-  Tumne likha hai:
-  > triggerImageCompression(...) calls hata denge
-  Main isko thoda modify karunga.
-  Current recommendation:
-  ✅ New uploads → browser compression
-  ✅ Edge function code → preserve
-  ✅ Trigger calls → feature flag ke peeche rakho
-  Example:
-  ```ts
-  ENABLE_SERVER_COMPRESSION=false
-
-  ```
-  Future me agar browser compression problem kare to instantly rollback kar sakte ho.
-  ---
-  # 📚 PDF / EPUB section
-  Is section se main poori tarah agree karta hoon.
-  ### EPUB
-  ✅ Leave untouched
-  ### PDF
-  ✅ Cover image compress
-  ✅ PDF content untouched
-  ✅ Upload size limit
-  Ye safest approach hai.
-  ---
-  # 🎥 Sabse bada risk
-  Ye plan ka weakest point hai:
-  ```text
-  @ffmpeg/ffmpeg
-
-  ```
-  Browser FFmpeg bahut heavy hai.
-  Main personally SHA-VERSE ke current stage par:
-  ### Images
-  ✅ Immediately compress
-  ### Videos
-  ✅ Pilot test first
-  Pehle:
-  - Chrome Android
-  - Firefox Android
-  - Desktop Chrome
-  - Capacitor Android
-  Par test karo.
-  Agar sab stable chale tab globally enable karo.
-  ---
-  # Final Verdict
-  ### Images
-  ✅ Approve
-  ### Book Covers
-  ✅ Approve
-  ### Profile Pictures
-  ✅ Approve
-  ### Stories Images
-  ✅ Approve
-  ### PDFs / EPUB
-  ✅ Approve
-  ### Videos
-  🟡 Approve with caution
-  ### Overall
-  **Main is plan ko ~90% approve karunga.**
-  Bas:
-  1. Video size threshold add karo.
-  2. Compression fail → original upload fallback rakho.
-  3. Edge-function rollback option preserve rakho.
-  In 3 changes ke baad ye SHA-VERSE ke current startup stage ke liye kaafi strong, cost-effective aur low-risk implementation ban jayega. 🚀
+- Build pass; module switch + notifications/groups load clearly fast.
+- Image upload → stored file MB→KB; video upload → smaller MB; upload % visible.
+- Console clean (no ad spam); linter sirf accepted definer warnings.
