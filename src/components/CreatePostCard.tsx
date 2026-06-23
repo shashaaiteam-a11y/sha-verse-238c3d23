@@ -413,7 +413,9 @@ export const CreatePostCard = () => {
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] pointer-events-none">
                     <div className="flex items-center gap-2 px-2.5 py-1 bg-black/70 rounded-full text-white text-xs">
                       <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Uploading…
+                      {media.progress != null && media.progress > 0
+                        ? `Uploading ${media.progress}%`
+                        : 'Uploading…'}
                     </div>
                   </div>
                 )}
