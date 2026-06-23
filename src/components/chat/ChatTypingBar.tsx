@@ -309,7 +309,7 @@ export const ChatTypingBar = ({
                 {isUploading && (
                   <span className="inline-flex items-center gap-1 text-primary">
                     <span className="inline-block w-2.5 h-2.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                    Uploading…
+                    {uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Uploading…'}
                   </span>
                 )}
                 {!isUploading && uploadedMedia && (
