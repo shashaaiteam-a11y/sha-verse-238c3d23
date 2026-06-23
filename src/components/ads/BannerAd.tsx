@@ -27,17 +27,8 @@ const BannerAd = ({ placement, className, dismissible = true, _forceShow = true 
   const { shouldRender, adUnitId } = useAdFrequency(placement, category, _forceShow);
   const [closed, setClosed] = useState(false);
 
-  // Debug logging
-  useEffect(() => {
-    console.log(`[BannerAd ${placement}]`, {
-      shouldRender,
-      adUnitId,
-      _forceShow,
-      hasUser: !!user,
-      category,
-      closed
-    });
-  }, [shouldRender, adUnitId, placement, user, category, closed]);
+  // (Debug logging removed — it ran on every render and spammed the console,
+  // wasting CPU and making the app feel laggy, especially in the Android WebView.)
 
   useEffect(() => {
     if (!shouldRender || closed) return;
