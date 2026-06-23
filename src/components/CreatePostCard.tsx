@@ -154,28 +154,28 @@ export const CreatePostCard = () => {
         try {
           // Compress before upload (image/video). Safe no-op on failure.
           const file = await compressForUpload(rawFile);
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage
-            .from('post-images')
-            .upload(fileName, file, {
-              contentType: file.type || undefined,
-              cacheControl: '3600',
-              upsert: false,
-            });
-          if (uploadError) throw uploadError;
+
+          // Upload with live progress so the user sees a percentage again.
+          const { path: fileName, publicUrl } = await uploadWithProgress({
+            bucket: 'post-images',
+            file,
+            userId: user.id,
+            onProgress: (pct) => {
+              setMediaFiles(prev =>
+                prev.map(m =>
+                  m.id === placeholder.id ? { ...m, progress: pct } : m
+                )
+              );
+            },
+          });
 
           // Background: generate optimized WebP variants (gated by flag, silent)
           triggerImageCompression('post-images', fileName);
 
-          const { data: urlData } = supabase.storage
-            .from('post-images')
-            .getPublicUrl(fileName);
-
           setMediaFiles(prev =>
             prev.map(m =>
               m.id === placeholder.id
-                ? { ...m, url: urlData.publicUrl, uploading: false }
+                ? { ...m, url: publicUrl, uploading: false, progress: 100 }
                 : m
             )
           );
