@@ -5,7 +5,7 @@ import {
   Send, Smile, Paperclip, Mic, Camera, Image as ImageIcon, 
   FileText, X, File
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+
 import { triggerImageCompression } from '@/lib/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
