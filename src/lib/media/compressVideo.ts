@@ -39,19 +39,22 @@ async function getFFmpeg(): Promise<FFmpeg | null> {
   if (loadPromise) return loadPromise;
 
   loadPromise = (async () => {
-    try {
-      const ff = new FFmpeg();
-      await ff.load({
-        coreURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
-      });
-      ffmpegInstance = ff;
-      return ff;
-    } catch (err) {
-      console.warn('[compress] ffmpeg load failed, videos upload uncompressed:', err);
-      loadPromise = null;
-      return null;
+    for (const base of CORE_BASES) {
+      try {
+        const ff = new FFmpeg();
+        await ff.load({
+          coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
+        ffmpegInstance = ff;
+        return ff;
+      } catch (err) {
+        console.warn(`[compress] ffmpeg core failed from ${base}, trying next…`, err);
+      }
     }
+    console.warn('[compress] all ffmpeg cores failed — videos upload uncompressed.');
+    loadPromise = null;
+    return null;
   })();
 
   return loadPromise;
