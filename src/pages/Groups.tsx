@@ -69,7 +69,7 @@ import {
 
 
 
-const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, members_count, posts_count, created_at, creator_id, group_posts(count)`;
+const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, members_count, posts_count, created_at, creator_id`;
 
 
 
