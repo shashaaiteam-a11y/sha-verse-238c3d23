@@ -150,6 +150,7 @@ export const ChatTypingBar = ({
     // Kick off upload immediately in background — non-blocking.
     // For images: compress on a separate microtask so UI stays responsive.
     setIsUploading(true);
+    setUploadProgress(0);
     const promise = (async () => {
       // Compress before upload (image + video). Safe no-op on failure.
       const toUpload = await compressForUpload(file, {
