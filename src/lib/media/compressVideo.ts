@@ -142,6 +142,14 @@ export async function compressVideo(
     // Only use the compressed file if it's actually smaller.
     if (blob.size >= file.size) return file;
 
+    try {
+      const before = Math.round(file.size / 1024 / 1024);
+      const after = Math.round((blob.size / 1024 / 1024) * 10) / 10;
+      console.info(`[compress] video ${before}MB -> ${after}MB`);
+    } catch {
+      /* ignore */
+    }
+
     const newName = file.name.replace(/\.[^.]+$/i, '') + '.mp4';
     return new File([blob], newName, {
       type: 'video/mp4',
