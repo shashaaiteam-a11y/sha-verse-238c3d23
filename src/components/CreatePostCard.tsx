@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
 import { compressForUpload } from '@/lib/media/compressFile';
+import { uploadWithProgress } from '@/lib/media/uploadWithProgress';
 import { useToast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
