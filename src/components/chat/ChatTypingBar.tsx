@@ -98,35 +98,27 @@ export const ChatTypingBar = ({
   const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
     if (!user) return null;
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-
-    const { error } = await supabase.storage
-      .from('chat-media')
-      .upload(fileName, file, {
-        contentType: file.type || undefined,
-        cacheControl: '3600',
-        upsert: false,
+    try {
+      const { path: fileName, publicUrl } = await uploadWithProgress({
+        bucket: 'chat-media',
+        file,
+        userId: user.id,
+        onProgress: (pct) => setUploadProgress(pct),
       });
 
-    if (error) {
+      let type = 'file';
+      if (file.type.startsWith('image/')) type = 'image';
+      else if (file.type.startsWith('video/')) type = 'video';
+
+      // Background: only images get optimized WebP variants (fire-and-forget, silent)
+      if (type === 'image') triggerImageCompression('chat-media', fileName);
+
+      return { url: publicUrl, type };
+    } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload file');
       return null;
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('chat-media')
-      .getPublicUrl(fileName);
-
-    let type = 'file';
-    if (file.type.startsWith('image/')) type = 'image';
-    else if (file.type.startsWith('video/')) type = 'video';
-
-    // Background: only images get optimized WebP variants (fire-and-forget, silent)
-    if (type === 'image') triggerImageCompression('chat-media', fileName);
-
-    return { url: publicUrl, type };
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'file' | 'image' | 'video') => {
