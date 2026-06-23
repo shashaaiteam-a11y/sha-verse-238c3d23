@@ -62,17 +62,8 @@ const NativeAdCard = ({ placement, className, compact, _forceShow = true }: Nati
   const { shouldRender, adUnitId } = useAdFrequency(placement, category, _forceShow);
   const [dismissed, setDismissed] = useState(false);
 
-  // Debug logging
-  useEffect(() => {
-    console.log(`[NativeAdCard ${placement}]`, {
-      shouldRender,
-      adUnitId,
-      _forceShow,
-      hasUser: !!user,
-      category,
-      dismissed
-    });
-  }, [shouldRender, adUnitId, placement, user, category, dismissed]);
+  // (Debug logging removed — it ran on every render and spammed the console,
+  // wasting CPU and making the app feel laggy, especially in the Android WebView.)
 
   // Pick a sample ad
   const pool = SAMPLE_ADS_BY_CATEGORY[category] ?? SAMPLE_ADS_BY_CATEGORY.general;
@@ -90,7 +81,6 @@ const NativeAdCard = ({ placement, className, compact, _forceShow = true }: Nati
   const effectiveShouldRender = ADS_HIDDEN ? false : (_forceShow ? true : shouldRender);
   
   if (!effectiveShouldRender || dismissed) {
-    console.log(`[NativeAdCard ${placement}] Returning NULL - effectiveShouldRender:`, effectiveShouldRender, "dismissed:", dismissed);
     return null;
   }
 

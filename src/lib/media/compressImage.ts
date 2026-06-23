@@ -72,6 +72,16 @@ export async function compressImage(file: File): Promise<File> {
     const newName =
       file.name.replace(/\.(png|jpe?g|bmp|webp|heic|heif|tiff?)$/i, '') + ext;
 
+    // Lightweight verification log (only when it actually shrank the file),
+    // so the saving is observable: e.g. "image 3204KB -> 312KB (webp)".
+    try {
+      const before = Math.round(file.size / 1024);
+      const after = Math.round(blob.size / 1024);
+      console.info(`[compress] image ${before}KB -> ${after}KB (${useWebp ? 'webp' : 'jpeg'})`);
+    } catch {
+      /* ignore */
+    }
+
     return new File([blob], newName, {
       type: mime,
       lastModified: Date.now(),

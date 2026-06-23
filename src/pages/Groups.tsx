@@ -69,7 +69,7 @@ import {
 
 
 
-const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, members_count, posts_count, created_at, creator_id, group_posts(count)`;
+const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, members_count, posts_count, created_at, creator_id`;
 
 
 
@@ -518,7 +518,7 @@ const Groups = () => {
 
                     <span className="hidden xs:inline">•</span>
 
-                    <span className="text-primary font-medium">{(group.group_posts as any)?.[0]?.count ?? group.posts_count ?? 0} posts</span>
+                    <span className="text-primary font-medium">{group.posts_count ?? 0} posts</span>
 
                   </div>
 

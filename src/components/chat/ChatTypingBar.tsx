@@ -5,11 +5,12 @@ import {
   Send, Smile, Paperclip, Mic, Camera, Image as ImageIcon, 
   FileText, X, File
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+
 import { triggerImageCompression } from '@/lib/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { compressForUpload } from '@/lib/media/compressFile';
+import { uploadWithProgress } from '@/lib/media/uploadWithProgress';
 import { useTheme } from 'next-themes';
 import {
   Popover,
@@ -59,6 +60,7 @@ export const ChatTypingBar = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   // Background-upload state — upload starts the moment a file is picked,
   // so by the time the user hits Send the URL is usually already ready.
   const [uploadedMedia, setUploadedMedia] = useState<{ url: string; type: string } | null>(null);
@@ -97,35 +99,27 @@ export const ChatTypingBar = ({
   const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
     if (!user) return null;
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-
-    const { error } = await supabase.storage
-      .from('chat-media')
-      .upload(fileName, file, {
-        contentType: file.type || undefined,
-        cacheControl: '3600',
-        upsert: false,
+    try {
+      const { path: fileName, publicUrl } = await uploadWithProgress({
+        bucket: 'chat-media',
+        file,
+        userId: user.id,
+        onProgress: (pct) => setUploadProgress(pct),
       });
 
-    if (error) {
+      let type = 'file';
+      if (file.type.startsWith('image/')) type = 'image';
+      else if (file.type.startsWith('video/')) type = 'video';
+
+      // Background: only images get optimized WebP variants (fire-and-forget, silent)
+      if (type === 'image') triggerImageCompression('chat-media', fileName);
+
+      return { url: publicUrl, type };
+    } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload file');
       return null;
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('chat-media')
-      .getPublicUrl(fileName);
-
-    let type = 'file';
-    if (file.type.startsWith('image/')) type = 'image';
-    else if (file.type.startsWith('video/')) type = 'video';
-
-    // Background: only images get optimized WebP variants (fire-and-forget, silent)
-    if (type === 'image') triggerImageCompression('chat-media', fileName);
-
-    return { url: publicUrl, type };
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'file' | 'image' | 'video') => {
@@ -156,6 +150,7 @@ export const ChatTypingBar = ({
     // Kick off upload immediately in background — non-blocking.
     // For images: compress on a separate microtask so UI stays responsive.
     setIsUploading(true);
+    setUploadProgress(0);
     const promise = (async () => {
       // Compress before upload (image + video). Safe no-op on failure.
       const toUpload = await compressForUpload(file, {
@@ -314,7 +309,7 @@ export const ChatTypingBar = ({
                 {isUploading && (
                   <span className="inline-flex items-center gap-1 text-primary">
                     <span className="inline-block w-2.5 h-2.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                    Uploading…
+                    {uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Uploading…'}
                   </span>
                 )}
                 {!isUploading && uploadedMedia && (

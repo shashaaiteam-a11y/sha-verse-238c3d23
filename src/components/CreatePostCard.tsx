@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerImageCompression } from '@/lib/compressImage';
 import { compressForUpload } from '@/lib/media/compressFile';
+import { uploadWithProgress } from '@/lib/media/uploadWithProgress';
 import { useToast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -89,7 +90,7 @@ export const CreatePostCard = () => {
   const [content, setContent] = useState('');
   const [privacy, setPrivacy] = useState<PostPrivacy>('public');
   const [location, setLocation] = useState<string | null>(null);
-  const [mediaFiles, setMediaFiles] = useState<{ id: string; url: string; type: string; uploading?: boolean; failed?: boolean }[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<{ id: string; url: string; type: string; uploading?: boolean; failed?: boolean; progress?: number }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPollDialog, setShowPollDialog] = useState(false);
@@ -154,28 +155,28 @@ export const CreatePostCard = () => {
         try {
           // Compress before upload (image/video). Safe no-op on failure.
           const file = await compressForUpload(rawFile);
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage
-            .from('post-images')
-            .upload(fileName, file, {
-              contentType: file.type || undefined,
-              cacheControl: '3600',
-              upsert: false,
-            });
-          if (uploadError) throw uploadError;
+
+          // Upload with live progress so the user sees a percentage again.
+          const { path: fileName, publicUrl } = await uploadWithProgress({
+            bucket: 'post-images',
+            file,
+            userId: user.id,
+            onProgress: (pct) => {
+              setMediaFiles(prev =>
+                prev.map(m =>
+                  m.id === placeholder.id ? { ...m, progress: pct } : m
+                )
+              );
+            },
+          });
 
           // Background: generate optimized WebP variants (gated by flag, silent)
           triggerImageCompression('post-images', fileName);
 
-          const { data: urlData } = supabase.storage
-            .from('post-images')
-            .getPublicUrl(fileName);
-
           setMediaFiles(prev =>
             prev.map(m =>
               m.id === placeholder.id
-                ? { ...m, url: urlData.publicUrl, uploading: false }
+                ? { ...m, url: publicUrl, uploading: false, progress: 100 }
                 : m
             )
           );
@@ -412,7 +413,9 @@ export const CreatePostCard = () => {
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] pointer-events-none">
                     <div className="flex items-center gap-2 px-2.5 py-1 bg-black/70 rounded-full text-white text-xs">
                       <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Uploading…
+                      {media.progress != null && media.progress > 0
+                        ? `Uploading ${media.progress}%`
+                        : 'Uploading…'}
                     </div>
                   </div>
                 )}
