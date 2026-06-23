@@ -10,6 +10,7 @@ import { triggerImageCompression } from '@/lib/compressImage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { compressForUpload } from '@/lib/media/compressFile';
+import { uploadWithProgress } from '@/lib/media/uploadWithProgress';
 import { useTheme } from 'next-themes';
 import {
   Popover,
