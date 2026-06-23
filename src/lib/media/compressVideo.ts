@@ -23,7 +23,13 @@ import {
 } from './config';
 
 // Single-thread core (no SharedArrayBuffer requirement).
-const CORE_BASE = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd';
+// We try a self-hosted copy first (works offline / inside the Android WebView),
+// then fall back to public CDNs. The first one that loads wins.
+const CORE_BASES = [
+  '/ffmpeg', // self-hosted (place ffmpeg-core.js/.wasm in public/ffmpeg when available)
+  'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd',
+  'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd',
+];
 
 let ffmpegInstance: FFmpeg | null = null;
 let loadPromise: Promise<FFmpeg | null> | null = null;
