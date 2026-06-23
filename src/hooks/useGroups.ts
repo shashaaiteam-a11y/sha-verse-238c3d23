@@ -20,11 +20,12 @@ export interface CreateGroupPayload {
   coverUrl?: string;
 }
 
+// NOTE: `posts_count` (maintained column) is used directly instead of an
+// expensive nested `group_posts(count)` aggregate — same number, far faster.
 const GROUP_SELECT = `
   id, name, description, avatar_url, cover_url,
   is_private, members_count, posts_count,
-  created_at, creator_id,
-  group_posts(count)
+  created_at, creator_id
 `;
 
 export const useGroups = () => {
