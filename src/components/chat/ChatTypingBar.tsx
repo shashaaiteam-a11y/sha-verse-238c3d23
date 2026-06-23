@@ -59,6 +59,7 @@ export const ChatTypingBar = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   // Background-upload state — upload starts the moment a file is picked,
   // so by the time the user hits Send the URL is usually already ready.
   const [uploadedMedia, setUploadedMedia] = useState<{ url: string; type: string } | null>(null);
