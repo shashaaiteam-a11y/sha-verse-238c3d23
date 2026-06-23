@@ -518,7 +518,7 @@ const Groups = () => {
 
                     <span className="hidden xs:inline">•</span>
 
-                    <span className="text-primary font-medium">{(group.group_posts as any)?.[0]?.count ?? group.posts_count ?? 0} posts</span>
+                    <span className="text-primary font-medium">{group.posts_count ?? 0} posts</span>
 
                   </div>
 
