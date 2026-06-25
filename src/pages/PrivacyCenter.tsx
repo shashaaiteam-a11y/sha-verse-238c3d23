@@ -8,6 +8,7 @@ import {
   FileText, Download, Trash2, ChevronRight
 } from "lucide-react";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
+import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
