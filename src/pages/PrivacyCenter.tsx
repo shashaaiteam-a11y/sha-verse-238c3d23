@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useProfile } from "@/hooks/useProfile";
-import { useProfile } from "@/hooks/useProfile";
 
 const PrivacyCenter = () => {
   const navigate = useNavigate();
