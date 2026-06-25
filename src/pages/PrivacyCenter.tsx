@@ -107,16 +107,7 @@ const PrivacyCenter = () => {
     }
   }
 
-  async function handleDeleteAccount() {
-    if (!user) return;
-    try {
-      await signOut();
-      toast({ title: 'Account deactivated', description: 'Your account has been deactivated. Contact support to permanently delete your data.' });
-      navigate('/auth');
-    } catch {
-      toast({ title: 'Error', description: 'Failed to deactivate account. Please try again.', variant: 'destructive' });
-    }
-  }
+
 
   return (
     <div className="min-h-screen bg-background pb-20">
