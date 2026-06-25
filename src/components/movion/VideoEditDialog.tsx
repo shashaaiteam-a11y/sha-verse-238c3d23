@@ -69,7 +69,7 @@ export const VideoEditDialog = ({
         const fileName = `thumbnails/${video.id}/${Date.now()}-${thumb.name}`;
         const { error: uploadError } = await supabase.storage
           .from("videos")
-          .upload(fileName, thumb, { upsert: true });
+          .upload(fileName, thumb, { upsert: false });
 
         if (!uploadError) {
           const { data } = supabase.storage.from("videos").getPublicUrl(fileName);

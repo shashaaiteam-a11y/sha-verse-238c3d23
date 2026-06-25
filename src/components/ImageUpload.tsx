@@ -35,7 +35,7 @@ export const ImageUpload = ({ bucket, onUpload, currentImage, onRemove }: ImageU
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, file, { upsert: false });
 
       if (uploadError) throw uploadError;
 

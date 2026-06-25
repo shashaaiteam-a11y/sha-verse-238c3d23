@@ -39,7 +39,7 @@ export const ProfileImageUpload = ({ type, onUpload, onRemove, hasImage = false,
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, file, { upsert: false });
 
       if (uploadError) throw uploadError;
 
