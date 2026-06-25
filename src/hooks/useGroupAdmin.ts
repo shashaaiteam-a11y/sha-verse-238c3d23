@@ -370,7 +370,7 @@ export const useGroupAdmin = (groupId: string | undefined) => {
 
       const { error: uploadError, data } = await supabase.storage
         .from('avatars')
-        .upload(filePath, img, { upsert: true });
+        .upload(filePath, img, { upsert: false });
 
       if (uploadError) throw uploadError;
 

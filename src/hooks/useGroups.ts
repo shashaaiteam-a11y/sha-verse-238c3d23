@@ -333,7 +333,7 @@ export const useGroups = () => {
         const img = await compressImage(avatarFile);
         const ext = img.name.split('.').pop();
         const path = `${user.id}/groups/${groupId}-avatar-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('avatars').upload(path, img, { upsert: true });
+        const { error: upErr } = await supabase.storage.from('avatars').upload(path, img, { upsert: false });
         if (upErr) throw upErr;
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
         updates.avatar_url = publicUrl;
@@ -345,7 +345,7 @@ export const useGroups = () => {
         const img = await compressImage(coverFile);
         const ext = img.name.split('.').pop();
         const path = `${user.id}/groups/${groupId}-cover-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('avatars').upload(path, img, { upsert: true });
+        const { error: upErr } = await supabase.storage.from('avatars').upload(path, img, { upsert: false });
         if (upErr) throw upErr;
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
         updates.cover_url = publicUrl;

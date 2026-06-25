@@ -132,14 +132,53 @@ export const useMessagesRealtime = (conversationId: string | null) => {
 
       return message;
     },
+    // Optimistic update: show the sent message instantly (WhatsApp-style) so the
+    // sender never waits for the server round-trip + realtime echo + refetch.
+    onMutate: async ({ content, mediaUrl, mediaType, replyTo }) => {
+      if (!user || !conversationId) return;
+      await queryClient.cancelQueries({ queryKey: ['messages-realtime', conversationId] });
+
+      const metadata: Record<string, any> = {};
+      if (mediaUrl && mediaType) {
+        metadata.mediaUrl = mediaUrl;
+        metadata.mediaType = mediaType;
+      }
+      if (replyTo) {
+        metadata.replyTo = { id: replyTo.id, senderName: replyTo.senderName, content: replyTo.content };
+      }
+
+      const optimisticMessage = {
+        id: `optimistic-${crypto.randomUUID()}`,
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content: content || null,
+        metadata: Object.keys(metadata).length > 0 ? metadata : null,
+        created_at: new Date().toISOString(),
+        profiles: null,
+        _optimistic: true,
+      };
+
+      const previous = queryClient.getQueriesData({ queryKey: ['messages-realtime', conversationId] });
+      queryClient.setQueriesData(
+        { queryKey: ['messages-realtime', conversationId] },
+        (old: any) => (Array.isArray(old) ? [...old, optimisticMessage] : old),
+      );
+      return { previous };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages-realtime', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['unread-badge', user?.id] });
     },
-    onError: (error) => {
+    onError: (error, _vars, context: any) => {
+      // Roll back the optimistic message on failure so nothing is left stranded.
+      if (context?.previous) {
+        for (const [key, data] of context.previous) {
+          queryClient.setQueryData(key, data);
+        }
+      }
       console.error('Failed to send message:', error);
-    }
+    },
   });
 
   // Auto-mark messages as read when conversation is opened (WhatsApp behavior).

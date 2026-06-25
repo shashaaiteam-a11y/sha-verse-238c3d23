@@ -15,6 +15,7 @@ import { Loader2, Mail, Phone, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { SEO } from '@/components/seo/SEO';
 import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 import { shouldUseNativeGoogle, nativeGoogleSignIn } from "@/lib/auth/nativeGoogleAuth";
+import { useAuth } from '@/contexts/AuthContext';
 
 // Validation schemas
 const emailSchema = z.object({
@@ -51,6 +52,16 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // If the user is already authenticated (e.g. after the post-login fresh-app
+  // reload lands back on /auth), bounce them home instead of showing the login
+  // form. This fixes the "first email login appears logged out" race where the
+  // forced reload fired before navigation completed.
+  useEffect(() => {
+    if (user) navigate('/', { replace: true });
+  }, [user, navigate]);
+
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -93,7 +104,7 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        await logAttempt(email, 'email', true);
+        void logAttempt(email, 'email', true);
         toast({ title: 'Welcome back!', description: 'Successfully logged in' });
         navigate('/');
       } else {

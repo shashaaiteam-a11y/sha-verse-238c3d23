@@ -100,7 +100,7 @@ export const ChannelSettingsDialog = ({
         const fileName = `${user.id}/channel-avatar-${Date.now()}`;
         const { error: uploadError } = await supabase.storage
           .from("avatars")
-          .upload(fileName, img, { upsert: true });
+          .upload(fileName, img, { upsert: false });
 
         if (uploadError) {
           throw new Error(`Avatar upload failed: ${uploadError.message}`);
@@ -115,7 +115,7 @@ export const ChannelSettingsDialog = ({
         const fileName = `${user.id}/channel-banner-${Date.now()}`;
         const { error: uploadError } = await supabase.storage
           .from("avatars")
-          .upload(fileName, img, { upsert: true });
+          .upload(fileName, img, { upsert: false });
 
         if (uploadError) {
           throw new Error(`Banner upload failed: ${uploadError.message}`);

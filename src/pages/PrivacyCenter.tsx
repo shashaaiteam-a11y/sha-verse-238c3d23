@@ -8,21 +8,11 @@ import {
   FileText, Download, Trash2, ChevronRight
 } from "lucide-react";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
+import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useProfile } from "@/hooks/useProfile";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 const PrivacyCenter = () => {
   const navigate = useNavigate();
@@ -106,16 +96,7 @@ const PrivacyCenter = () => {
     }
   }
 
-  async function handleDeleteAccount() {
-    if (!user) return;
-    try {
-      await signOut();
-      toast({ title: 'Account deactivated', description: 'Your account has been deactivated. Contact support to permanently delete your data.' });
-      navigate('/auth');
-    } catch {
-      toast({ title: 'Error', description: 'Failed to deactivate account. Please try again.', variant: 'destructive' });
-    }
-  }
+
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -181,8 +162,9 @@ const PrivacyCenter = () => {
 
                 if (option.action === "delete-account") {
                   return (
-                    <AlertDialog key={option.title}>
-                      <AlertDialogTrigger asChild>
+                    <DeleteAccountDialog
+                      key={option.title}
+                      trigger={
                         <button className="flex items-center w-full p-4 hover:bg-secondary/50 transition-colors">
                           <div className="flex items-center gap-3 flex-1">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-destructive/10">
@@ -195,25 +177,8 @@ const PrivacyCenter = () => {
                           </div>
                           <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         </button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Account?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will deactivate your account and sign you out. Your data will be retained for 30 days before permanent deletion. Contact support to recover your account within that period.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={handleDeleteAccount}
-                          >
-                            Delete Account
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                      }
+                    />
                   );
                 }
                 
