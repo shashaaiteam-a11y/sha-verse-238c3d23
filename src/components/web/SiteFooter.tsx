@@ -34,6 +34,7 @@ export const SiteFooter = () => {
       <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
       <Link to="/terms" className="hover:text-foreground">Terms</Link>
       <Link to="/help" className="hover:text-foreground">Help</Link>
+      <Link to="/delete-account" className="hover:text-foreground">Delete Account</Link>
     </>
   );
 
