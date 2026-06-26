@@ -98,6 +98,7 @@ const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
 const About = lazy(() => import("./pages/legal/About"));
 const Contact = lazy(() => import("./pages/legal/Contact"));
+const DeleteAccount = lazy(() => import("./pages/legal/DeleteAccount"));
 const PageAdmin = lazy(() => import("./pages/PageAdmin"));
 const Motion = lazy(() => import("./pages/Motion"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
