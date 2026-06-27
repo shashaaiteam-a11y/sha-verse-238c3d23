@@ -226,6 +226,7 @@ const App = () => (
                     <Route path="/about" element={withSuspense(About)} />
                     <Route path="/contact" element={withSuspense(Contact)} />
                     <Route path="/delete-account" element={withSuspense(DeleteAccount)} />
+                    <Route path="/delete-data" element={withSuspense(DeleteData)} />
                     <Route path="/help/delete-account" element={withSuspense(DeleteAccount)} />
                     <Route path="/promote/info" element={<ProtectedRoute>{withSuspense(PromoteInfo)}</ProtectedRoute>} />
                     <Route path="*" element={withSuspense(NotFound)} />
