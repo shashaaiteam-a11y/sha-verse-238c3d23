@@ -99,6 +99,7 @@ const Terms = lazy(() => import("./pages/legal/Terms"));
 const About = lazy(() => import("./pages/legal/About"));
 const Contact = lazy(() => import("./pages/legal/Contact"));
 const DeleteAccount = lazy(() => import("./pages/legal/DeleteAccount"));
+const DeleteData = lazy(() => import("./pages/legal/DeleteData"));
 const PageAdmin = lazy(() => import("./pages/PageAdmin"));
 const Motion = lazy(() => import("./pages/Motion"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
