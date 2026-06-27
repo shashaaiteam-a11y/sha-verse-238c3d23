@@ -211,7 +211,7 @@ const App = () => (
                     <Route path="/messages" element={<ProtectedRoute>{withSuspense(Messages)}</ProtectedRoute>} />
                     <Route path="/notifications" element={<ProtectedRoute>{withSuspense(Notifications)}</ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute>{withSuspense(Settings)}</ProtectedRoute>} />
-                    <Route path="/help" element={<ProtectedRoute>{withSuspense(HelpSupport)}</ProtectedRoute>} />
+                    <Route path="/help" element={withSuspense(HelpSupport)} />
                     <Route path="/privacy-center" element={<ProtectedRoute>{withSuspense(PrivacyCenter)}</ProtectedRoute>} />
                     <Route path="/admin/seed" element={<AdminRoute>{withSuspense(AdminSeed)}</AdminRoute>} />
                     <Route path="/pages" element={<ProtectedRoute>{withSuspense(Pages)}</ProtectedRoute>} />
