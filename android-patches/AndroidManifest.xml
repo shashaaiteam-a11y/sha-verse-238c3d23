@@ -49,10 +49,10 @@
         android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true">
 
-        <!-- AdMob TEST App ID (replace with real ID before Play Store release) -->
+        <!-- Sha-Verse AdMob App ID (real). Test ad UNITS still serve while USE_TEST_ADS=true. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-2928763177849470~4226601339" />
 
         <!-- Main Activity -->
         <activity
