@@ -134,10 +134,13 @@ export function getAdUnitForPlacement(placement: AdPlacement): string {
     case "shorts_scroll":
       return AD_IDS.shorts;
     case "novachat_rewarded":
+      return AD_IDS.rewardedNovachat;
     case "movion_rewarded":
+      return AD_IDS.rewardedMovion;
     case "bookshelf_rewarded":
+      return AD_IDS.rewardedBookshelf;
     case "group_post_boost":
-      return AD_IDS.rewarded;
+      return AD_IDS.groupBoost;
     default:
       return AD_IDS.banner;
   }
