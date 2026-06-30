@@ -1115,6 +1115,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   <img
                                     src={metadata.mediaUrl}
                                     alt="Shared image"
+                                    loading="lazy"
+                                    decoding="async"
                                     className="rounded-lg max-w-full cursor-pointer hover:opacity-90"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1126,6 +1128,8 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                                   <video
                                     src={metadata.mediaUrl}
                                     controls
+                                    preload="none"
+                                    playsInline
                                     className="rounded-lg max-w-full"
                                   />
                                 )}
