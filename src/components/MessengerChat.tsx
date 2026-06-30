@@ -801,6 +801,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
             onClick={scrollChatToBottom}
           />
           <ChatLayout
+            bottomAnchorKey={conversationId}
             onViewportReady={(v) => { scrollViewportRef.current = v; }}
             onScrollPositionChange={handleScrollPositionChange}
             pinnedBanner={

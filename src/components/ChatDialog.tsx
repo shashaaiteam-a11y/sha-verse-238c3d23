@@ -44,6 +44,7 @@ export const ChatDialog = ({ open, onOpenChange, conversationId, otherUser }: Ch
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md h-[600px] flex flex-col p-0 overflow-hidden">
         <ChatLayout
+          bottomAnchorKey={conversationId}
           header={
             <DialogHeader className="p-4 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-3">
