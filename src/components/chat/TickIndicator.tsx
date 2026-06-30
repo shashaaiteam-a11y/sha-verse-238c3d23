@@ -48,7 +48,7 @@ export const TickIndicator = memo(({ status, className, showText = false }: Tick
       )}
     </div>
   );
-};
+});
 
 /**
  * MessageStatusIndicator - Compact version for message bubbles
