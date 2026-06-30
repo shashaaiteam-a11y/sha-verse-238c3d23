@@ -6,6 +6,7 @@
  */
 
 import { Check } from 'lucide-react';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface TickIndicatorProps {
@@ -14,7 +15,9 @@ interface TickIndicatorProps {
   showText?: boolean;
 }
 
-export const TickIndicator = ({ status, className, showText = false }: TickIndicatorProps) => {
+// Memoized: tick widgets re-render only when status/className/showText change,
+// avoiding rebuilds when sibling messages update in long conversations.
+export const TickIndicator = memo(({ status, className, showText = false }: TickIndicatorProps) => {
   const isBlue = status === 'read';
 
   if (status === 'pending') {
@@ -45,7 +48,7 @@ export const TickIndicator = ({ status, className, showText = false }: TickIndic
       )}
     </div>
   );
-};
+});
 
 /**
  * MessageStatusIndicator - Compact version for message bubbles
