@@ -19,6 +19,14 @@ interface ChatLayoutProps {
   onScrollToBottom?: () => void;
   onScrollPositionChange?: (distanceFromBottom: number) => void;
   onViewportReady?: (viewport: HTMLElement | null) => void;
+  /**
+   * When this key changes (e.g. the active conversationId), the layout treats it
+   * as opening a fresh chat: it re-anchors the viewport to the LATEST message
+   * instantly (no smooth animation, no visible top→bottom scroll), matching
+   * WhatsApp's "open directly on the last message" behavior. Optional so existing
+   * consumers (group/dialog chat) keep working unchanged.
+   */
+  bottomAnchorKey?: string | null;
 }
 
 
@@ -29,9 +37,11 @@ interface ChatLayoutProps {
  * - Fixed input bar at bottom
  * - Consistent across all chat types (1-to-1, group, dialog, full-page)
  *
- * Auto-scroll behavior (WhatsApp parity):
- *   - If the user is at/near the bottom (within 80px) → auto-scroll on new content.
- *   - If the user has scrolled UP to read history → do NOT auto-scroll. Parent
+ * Scroll behavior (WhatsApp parity):
+ *   - On open / conversation switch → jump straight to the latest message.
+ *   - While near the bottom → auto-stick to the bottom as new content / media
+ *     loads (ResizeObserver keeps it pinned even when images/videos reflow).
+ *   - When the user has scrolled UP to read history → do NOT auto-scroll. Parent
  *     can show a "new messages" indicator via onScrollPositionChange.
  */
 export const ChatLayout = ({
@@ -44,14 +54,20 @@ export const ChatLayout = ({
   isLoading = false,
   onScrollPositionChange,
   onViewportReady,
+  bottomAnchorKey,
 }: ChatLayoutProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLElement | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const wasNearBottomRef = useRef(true);
   // Track previous scrollHeight so we ONLY auto-scroll when new content was
   // actually appended. This prevents the viewport from snapping back to the
   // bottom on every unrelated parent re-render (the cause of mobile scroll jank).
   const prevScrollHeightRef = useRef(0);
+  // Until the first real content render for a conversation is pinned to the
+  // bottom, we keep forcing the viewport down (covers async media reflow).
+  const initialAnchoredRef = useRef(false);
+  const anchorKeyRef = useRef<string | null | undefined>(bottomAnchorKey);
 
   const getViewport = useCallback((): HTMLElement | null => {
     if (viewportRef.current) return viewportRef.current;
@@ -59,6 +75,18 @@ export const ChatLayout = ({
     viewportRef.current = v;
     return v;
   }, []);
+
+  const jumpToBottom = useCallback((smooth = false) => {
+    const v = getViewport();
+    if (!v) return;
+    if (smooth) {
+      v.scrollTo({ top: v.scrollHeight, behavior: 'smooth' });
+    } else {
+      v.scrollTop = v.scrollHeight;
+    }
+    wasNearBottomRef.current = true;
+    prevScrollHeightRef.current = v.scrollHeight;
+  }, [getViewport]);
 
   // Expose viewport ref to parent and wire scroll listener
   useEffect(() => {
@@ -70,26 +98,75 @@ export const ChatLayout = ({
       wasNearBottomRef.current = dist < 80;
       onScrollPositionChange?.(dist);
     };
-    handle();
     v.addEventListener('scroll', handle, { passive: true });
     return () => v.removeEventListener('scroll', handle);
+    // Intentionally NOT calling handle() on mount: on first paint scrollTop is 0
+    // which would mark the user as "scrolled up" and suppress the open-at-bottom
+    // auto-anchor below.
   }, [getViewport, onScrollPositionChange, onViewportReady]);
 
-  // Auto-scroll on new content ONLY when:
-  //   1. scrollHeight actually grew (new message/banner added), AND
-  //   2. user was already near the bottom.
-  // Without the height-diff guard, every parent re-render would snap mobile
-  // touch-scroll back to the bottom — exactly the "atak rahi hai" bug.
+  // Re-anchor to the latest message when the active conversation changes (open,
+  // reopen, switch). Done instantly so the user never sees a top→bottom scroll.
+  useEffect(() => {
+    if (anchorKeyRef.current === bottomAnchorKey) return;
+    anchorKeyRef.current = bottomAnchorKey;
+    initialAnchoredRef.current = false;
+    wasNearBottomRef.current = true;
+    prevScrollHeightRef.current = 0;
+    // Multiple frames: content + async measurement can land across ticks.
+    jumpToBottom(false);
+    const r1 = requestAnimationFrame(() => jumpToBottom(false));
+    const t1 = setTimeout(() => jumpToBottom(false), 60);
+    const t2 = setTimeout(() => jumpToBottom(false), 200);
+    return () => {
+      cancelAnimationFrame(r1);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [bottomAnchorKey, jumpToBottom]);
+
+  // Auto-scroll on content change:
+  //   - First content render for this conversation → force to bottom (open at
+  //     last message) regardless of measured position.
+  //   - Afterwards → only stick to bottom if the user was already near it.
   useEffect(() => {
     const v = getViewport();
     if (!v) return;
     const prev = prevScrollHeightRef.current;
     const curr = v.scrollHeight;
+
+    if (!initialAnchoredRef.current && curr > 0) {
+      v.scrollTop = curr;
+      wasNearBottomRef.current = true;
+      prevScrollHeightRef.current = curr;
+      // Consider the chat anchored once it actually has scrollable content.
+      if (curr > v.clientHeight) initialAnchoredRef.current = true;
+      return;
+    }
+
     if (curr > prev && wasNearBottomRef.current) {
       v.scrollTop = curr;
     }
     prevScrollHeightRef.current = curr;
   }, [messages, getViewport]);
+
+  // Keep pinned to the bottom while media (images/videos) load and reflow the
+  // content. ResizeObserver catches height changes that don't change the
+  // `messages` node reference, so the open-at-bottom stays correct on mobile.
+  useEffect(() => {
+    const v = getViewport();
+    const content = contentRef.current;
+    if (!v || !content || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      if (!initialAnchoredRef.current || wasNearBottomRef.current) {
+        v.scrollTop = v.scrollHeight;
+        prevScrollHeightRef.current = v.scrollHeight;
+        if (v.scrollHeight > v.clientHeight) initialAnchoredRef.current = true;
+      }
+    });
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, [getViewport, bottomAnchorKey]);
 
   return (
     <div className={cn("flex flex-col h-full overflow-hidden bg-background", className)}>
@@ -118,7 +195,7 @@ export const ChatLayout = ({
             ref={scrollRef}
             className="h-full w-full bg-background"
           >
-            <div className="p-4 min-h-full bg-background">
+            <div ref={contentRef} className="p-4 min-h-full bg-background">
               {messages ? (
                 <>{messages}</>
               ) : (
