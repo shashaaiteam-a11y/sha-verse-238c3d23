@@ -371,17 +371,30 @@ export class MessageService {
     clientId: string,
     metadata?: Record<string, any>
   ): Promise<Message | null> {
-    // Check block BEFORE sending
+    // Check block BEFORE sending.
+    // Perf: resolve recipients + block state in 2 parallel-free round-trips
+    // instead of an N+1 loop (1 members query + 1 block check per recipient).
     const { data: recipients } = await supabase
       .from('conversation_members')
       .select('user_id')
       .eq('conversation_id', conversationId)
       .neq('user_id', senderId);
 
-    for (const recipient of recipients || []) {
-      const isBlocked = await BlockService.isBlocked(recipient.user_id!, senderId);
-      if (isBlocked) {
-        console.warn(`Blocked by ${recipient.user_id}, message not sent`);
+    const recipientIds = (recipients || [])
+      .map((r: any) => r.user_id)
+      .filter(Boolean);
+
+    if (recipientIds.length > 0) {
+      // Single query: has ANY recipient blocked the sender?
+      const { data: blocks } = await (supabase as any)
+        .from('user_blocks')
+        .select('blocker_id')
+        .in('blocker_id', recipientIds)
+        .eq('blocked_id', senderId)
+        .limit(1);
+
+      if (blocks && blocks.length > 0) {
+        console.warn('Blocked by a recipient, message not sent');
         return null;
       }
     }
