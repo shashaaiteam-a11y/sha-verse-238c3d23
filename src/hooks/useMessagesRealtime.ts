@@ -39,8 +39,25 @@ export const useMessagesRealtime = (conversationId: string | null) => {
     getReceiptsSetting();
   }, [user?.id]);
 
+  // Perf: "deleted for me" ids are per-user and change rarely, so fetch them in
+  // their own cached query instead of re-running this query serially on every
+  // single message refetch (previously doubled the round-trip on each receive).
+  const { data: deletedIds } = useQuery({
+    queryKey: ['message-deletions', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return new Set<string>();
+      const { data } = await (supabase as any)
+        .from('message_deletions')
+        .select('message_id')
+        .eq('user_id', user.id);
+      return new Set<string>((data || []).map((d: any) => d.message_id));
+    },
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
+
   // Fetch messages with real-time updates
-  const { data: messages, isLoading } = useQuery({
+  const { data: rawMessages, isLoading } = useQuery({
     queryKey: ['messages-realtime', conversationId, clearedAt, user?.id],
     queryFn: async () => {
       if (!conversationId) return [];
@@ -66,22 +83,17 @@ export const useMessagesRealtime = (conversationId: string | null) => {
 
       const { data, error } = await query;
       if (error) throw error;
-      
-      // Filter out deleted-for-me messages
-      if (user?.id) {
-        const { data: deletions } = await (supabase as any)
-          .from('message_deletions')
-          .select('message_id')
-          .eq('user_id', user.id);
-
-        const deletedIds = new Set(deletions?.map((d: any) => d.message_id) || []);
-        return (data || []).filter((m: any) => !deletedIds.has(m.id));
-      }
-
       return data || [];
     },
     enabled: !!conversationId
   });
+
+  // Filter out "deleted for me" messages client-side using the cached set.
+  // Same output structure as before (array of message rows).
+  const messages = useMemo(() => {
+    if (!deletedIds || deletedIds.size === 0) return rawMessages || [];
+    return (rawMessages || []).filter((m: any) => !deletedIds.has(m.id));
+  }, [rawMessages, deletedIds]);
 
   // Send message with idempotency
   const sendMessage = useMutation({
