@@ -354,6 +354,7 @@ export const useMessagesRealtime = (conversationId: string | null) => {
       return success;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['message-deletions', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['messages-realtime', conversationId] });
     }
   });
