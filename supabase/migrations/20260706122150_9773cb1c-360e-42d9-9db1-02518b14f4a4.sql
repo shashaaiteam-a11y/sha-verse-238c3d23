@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_message_deletions_user ON public.message_deletions USING btree (user_id);
