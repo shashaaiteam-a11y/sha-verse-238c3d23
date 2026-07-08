@@ -235,6 +235,7 @@ const App = () => (
                     <Route path="/promote/info" element={<ProtectedRoute>{withSuspense(PromoteInfo)}</ProtectedRoute>} />
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>
+                  </ModuleTransition>
                 </SwipeWrapper>
                 <RealtimeStatus />
                 <GlobalVideoManager />
