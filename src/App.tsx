@@ -143,6 +143,31 @@ const withSuspense = (Component: React.ComponentType) => (
   </Suspense>
 );
 
+// Primary module roots handled by the keep-alive shell (mounted once, kept alive).
+const keepAliveModules = [
+  { path: "/", element: <Home /> },
+  { path: "/movion", element: <MovionComingSoon /> },
+  { path: "/novachat", element: <NovaChat /> },
+  { path: "/bookshelf", element: <Bookshelf /> },
+  { path: "/groups", element: <Groups /> },
+  { path: "/profile", element: <Profile /> },
+];
+
+// Placeholder route element for module roots. The actual module is rendered by
+// the keep-alive shell; this only keeps the router path matched so it never
+// falls through to NotFound.
+const ModuleSlot = () => null;
+
+// Keep-alive shell, gated behind auth so module state clears on sign-out and the
+// unauthenticated redirect (handled by ProtectedRoute on the slot) still runs.
+const AuthedKeepAlive = () => {
+  const { user, loading } = useAuth();
+  if (loading || !user) return null;
+  return <KeepAliveModules modules={keepAliveModules} />;
+};
+
+
+
 // 🚀 Prefetch main module chunks during idle time so module-switching feels instant
 const ModulePrefetcher = () => {
   useEffect(() => {
