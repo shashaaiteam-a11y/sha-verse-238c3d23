@@ -33,6 +33,7 @@ export const BottomNav = () => {
           <NavLink
             key={path}
             to={path}
+            replace={location.pathname === path}
             className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors relative group touch-target ripple min-w-0"
             activeClassName="text-primary"
           >
