@@ -1,30 +1,36 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useLocation, useNavigationType } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import { moduleStack, isModuleRoot } from "@/lib/navigation/moduleStack";
 
 /**
  * AppBackButtonHandler
  * --------------------
- * Wires the Android hardware back button to a proper in-app navigation history
- * stack (Facebook / WhatsApp behavior) instead of instantly closing the app.
+ * Wires the Android hardware back button to Facebook-style behavior:
  *
- *   - Tracks how deep we are from the app launch entry using the router's
- *     navigation type (PUSH increments, POP decrements).
- *   - On hardware back: if there is history to walk, go back one entry
- *     (this naturally walks the real module-switch order). Only when we reach
- *     the launch entry does the app exit.
+ *   1. On a DEEP page inside a module → normal router back (navigate(-1)) so the
+ *      existing internal navigation is untouched.
+ *   2. On a primary MODULE root → walk backwards through the dedicated module
+ *      history stack (independent of browser history).
+ *   3. Only when we reach the base entry (Home) does the app actually exit.
  *
- * Web / browser back is untouched — the native listener is only attached on
- * native platforms. No module, data, or routing logic is modified.
+ * The listener is attached only on native platforms — web/browser back is left
+ * completely untouched. `@capacitor/app` is required here because there is no
+ * other way to intercept the Android hardware back button; it is a Capacitor
+ * plugin, not an animation library.
  */
 export const AppBackButtonHandler = () => {
   const navigate = useNavigate();
-  const navType = useNavigationType();
   const location = useLocation();
-  const depth = useRef(0);
+  const navType = useNavigationType();
 
-  // Maintain distance from the launch entry. Initial render is a POP and keeps
-  // depth at 0, so the first screen is the exit point.
+  const pathRef = useRef(location.pathname);
+  const depth = useRef(0); // distance from launch entry, for deep-page safety.
+
+  useEffect(() => {
+    pathRef.current = location.pathname;
+  }, [location.pathname]);
+
   useEffect(() => {
     if (navType === "PUSH") depth.current += 1;
     else if (navType === "POP") depth.current = Math.max(0, depth.current - 1);
@@ -41,10 +47,23 @@ export const AppBackButtonHandler = () => {
       .then(({ App }) => {
         if (cancelled) return;
         App.addListener("backButton", () => {
-          if (depth.current > 0) {
-            navigate(-1);
+          const path = pathRef.current;
+
+          if (isModuleRoot(path)) {
+            // Walk the dedicated module history stack.
+            const prev = moduleStack.back();
+            if (prev && prev !== path) {
+              navigate(prev);
+            } else {
+              App.exitApp();
+            }
           } else {
-            App.exitApp();
+            // Deep page — normal router back, exit only if nothing behind.
+            if (depth.current > 0) {
+              navigate(-1);
+            } else {
+              App.exitApp();
+            }
           }
         }).then((handle) => {
           if (cancelled) {
