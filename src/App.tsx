@@ -215,26 +215,29 @@ const App = () => (
               <GlobalCallHost>
               <div className="min-h-screen bg-background safe-left safe-right">
                 <SwipeWrapper>
-                  <ModuleTransition>
+                  {/* Keep-alive shell for the six primary modules (mounted once, animated switches) */}
+                  <AuthedKeepAlive />
                   <Routes>
                     <Route path="/auth" element={withSuspense(Auth)} />
                     <Route path="/offline" element={withSuspense(OfflinePage)} />
-                    <Route path="/" element={<ProtectedRoute>{withSuspense(Home)}</ProtectedRoute>} />
+                    {/* Module roots are rendered by the keep-alive shell; slots keep the router matched */}
+                    <Route path="/" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
+                    <Route path="/movion" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
+                    <Route path="/novachat" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
+                    <Route path="/bookshelf" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
+                    <Route path="/groups" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
                     <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
                     <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
                     <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
-                    <Route path="/novachat" element={<ProtectedRoute>{withSuspense(NovaChat)}</ProtectedRoute>} />
                     <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
-                    <Route path="/bookshelf" element={<ProtectedRoute>{withSuspense(Bookshelf)}</ProtectedRoute>} />
                     <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute>{withSuspense(EditBook)}</ProtectedRoute>} />
                     <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute>{withSuspense(BookReader)}</ProtectedRoute>} />
                     <Route path="/bookshelf/book/:bookId" element={<ProtectedRoute>{withSuspense(BookDetail)}</ProtectedRoute>} />
                     <Route path="/bookshelf/channel/:channelId" element={<ProtectedRoute>{withSuspense(AuthorChannel)}</ProtectedRoute>} />
                     <Route path="/bookshelf/channel/:channelId/edit" element={<ProtectedRoute>{withSuspense(EditAuthorChannel)}</ProtectedRoute>} />
-                    <Route path="/groups" element={<ProtectedRoute>{withSuspense(Groups)}</ProtectedRoute>} />
                     <Route path="/groups/:groupId/admin" element={<ProtectedRoute>{withSuspense(GroupAdmin)}</ProtectedRoute>} />
                     <Route path="/groups/:groupId" element={<ProtectedRoute>{withSuspense(GroupDetail)}</ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute>{withSuspense(Profile)}</ProtectedRoute>} />
                     <Route path="/profile/:userId" element={<ProtectedRoute>{withSuspense(Profile)}</ProtectedRoute>} />
                     <Route path="/friends" element={<ProtectedRoute>{withSuspense(Friends)}</ProtectedRoute>} />
                     <Route path="/saved" element={<ProtectedRoute>{withSuspense(SavedPosts)}</ProtectedRoute>} />
@@ -261,7 +264,6 @@ const App = () => (
                     <Route path="/promote/info" element={<ProtectedRoute>{withSuspense(PromoteInfo)}</ProtectedRoute>} />
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>
-                  </ModuleTransition>
                 </SwipeWrapper>
                 <RealtimeStatus />
                 <GlobalVideoManager />
