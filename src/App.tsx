@@ -185,9 +185,11 @@ const App = () => (
               <AdProvider>
               <ChatPresenceBridge />
               <ModulePrefetcher />
+              <AppBackButtonHandler />
               <GlobalCallHost>
               <div className="min-h-screen bg-background safe-left safe-right">
                 <SwipeWrapper>
+                  <ModuleTransition>
                   <Routes>
                     <Route path="/auth" element={withSuspense(Auth)} />
                     <Route path="/offline" element={withSuspense(OfflinePage)} />
