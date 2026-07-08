@@ -44,6 +44,8 @@ const lazy = <T extends ComponentType<any>>(
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import { SwipeWrapper } from "./components/SwipeWrapper";
+import { ModuleTransition } from "./components/ModuleTransition";
+import { AppBackButtonHandler } from "./components/AppBackButtonHandler";
 import { AdProvider } from "./contexts/AdContext";
 import { ChatPresenceBridge } from "./components/chat/ChatPresenceBridge";
 import { GlobalCallHost } from "./modules/chats/components/GlobalCallHost";
