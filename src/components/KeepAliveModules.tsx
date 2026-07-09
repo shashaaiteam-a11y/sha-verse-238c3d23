@@ -218,7 +218,9 @@ export const KeepAliveModules = ({ modules }: KeepAliveModulesProps) => {
             }}
             style={{ display: m.path === activePath ? undefined : "none" }}
           >
-            <Suspense fallback={<LayerLoader />}>{m.element}</Suspense>
+            <ModuleVisibilityProvider isVisible={m.path === activePath}>
+              <Suspense fallback={<LayerLoader />}>{m.element}</Suspense>
+            </ModuleVisibilityProvider>
           </div>
         ))}
     </div>
