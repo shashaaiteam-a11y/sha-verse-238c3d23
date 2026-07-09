@@ -369,7 +369,39 @@ export const CreatePostCard = () => {
   return (
     <>
       <Card className="p-3 shadow-md hover:shadow-lg transition-shadow">
+        {/* Collapsed Facebook-style compact composer row */}
+        {!isComposerExpanded && (
+          <div className="flex items-center gap-2">
+            <Avatar className="w-9 h-9 flex-shrink-0">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+              <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm">
+                {profile?.display_name?.[0] || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="flex-1 h-10 px-4 rounded-full bg-secondary/60 hover:bg-secondary text-left text-sm text-muted-foreground transition-colors"
+            >
+              What's on your mind?
+            </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Add photo"
+              onClick={() => {
+                setExpanded(true);
+                requestAnimationFrame(() => photoInputRef.current?.click());
+              }}
+              className="h-9 w-9 flex-shrink-0 rounded-full text-green-600 hover:text-green-700 hover:bg-green-50"
+            >
+              <Image className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
+
         {/* Header */}
+        {isComposerExpanded && (
         <div className="flex items-start gap-3 mb-2">
           <Avatar className="w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0">
             {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
