@@ -2,6 +2,7 @@ import { ReactNode, Suspense, useEffect, useLayoutEffect, useRef, useState } fro
 import { useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { moduleStack, MODULE_ROOTS } from "@/lib/navigation/moduleStack";
+import { ModuleVisibilityProvider } from "@/lib/navigation/moduleVisibility";
 
 /**
  * KeepAliveModules
@@ -19,6 +20,21 @@ import { moduleStack, MODULE_ROOTS } from "@/lib/navigation/moduleStack";
  *
  * This is a presentation/navigation-only shell. It does not touch any module
  * logic, data, queries, Supabase, auth, or unrelated components.
+ *
+ * SCOPE (hard limit): keep-alive applies ONLY to the six primary bottom-nav
+ * modules listed in MODULE_ROOTS. It never extends automatically to future
+ * routes — those keep using the normal router and are mounted/unmounted as
+ * usual. To add a module here you must explicitly add it to MODULE_ROOTS.
+ *
+ * BACKGROUND WORK: hidden modules stay MOUNTED (state preserved), but the shell
+ * pauses their expensive work while they are not visible, without changing any
+ * business logic or triggering refetches:
+ *   - Hidden layers use `display:none`, so CSS animations/transitions and
+ *     visual `requestAnimationFrame` work stop automatically.
+ *   - Hidden layers are marked `inert` + `aria-hidden`, so no focus / pointer /
+ *     a11y work runs on them.
+ *   - Each layer is wrapped in <ModuleVisibilityProvider> exposing `useModuleVisible()`
+ *     so timers/polling/realtime hooks can opt in to pause while hidden.
  */
 
 interface ModuleDef {
@@ -163,6 +179,13 @@ export const KeepAliveModules = ({ modules }: KeepAliveModulesProps) => {
       fromEl!.style.display = "none";
       toEl!.style.display = "";
 
+      // Sync inert/a11y state now that the switch is complete: the outgoing
+      // module becomes inert (background), the incoming one becomes interactive.
+      (fromEl as HTMLDivElement & { inert: boolean }).inert = true;
+      fromEl!.setAttribute("aria-hidden", "true");
+      (toEl as HTMLDivElement & { inert: boolean }).inert = false;
+      toEl!.removeAttribute("aria-hidden");
+
       transitioning.current = false;
       restoreScroll();
     };
@@ -174,12 +197,19 @@ export const KeepAliveModules = ({ modules }: KeepAliveModulesProps) => {
   }, [activePath, mounted]);
 
   // Visibility sync — keeps exactly the active module visible when NOT animating.
+  // Hidden layers are also marked inert + aria-hidden so no interaction, focus,
+  // or a11y work happens on them while they stay mounted in the background.
   useLayoutEffect(() => {
     if (transitioning.current) return;
     for (const m of modules) {
       const el = layerRefs.current[m.path];
       if (!el) continue;
-      el.style.display = m.path === activePath ? "" : "none";
+      const isActive = m.path === activePath;
+      el.style.display = isActive ? "" : "none";
+      // `inert` prevents focus/pointer/tab-order work on hidden modules.
+      (el as HTMLDivElement & { inert: boolean }).inert = !isActive;
+      if (isActive) el.removeAttribute("aria-hidden");
+      else el.setAttribute("aria-hidden", "true");
     }
   });
 
@@ -195,7 +225,9 @@ export const KeepAliveModules = ({ modules }: KeepAliveModulesProps) => {
             }}
             style={{ display: m.path === activePath ? undefined : "none" }}
           >
-            <Suspense fallback={<LayerLoader />}>{m.element}</Suspense>
+            <ModuleVisibilityProvider isVisible={m.path === activePath}>
+              <Suspense fallback={<LayerLoader />}>{m.element}</Suspense>
+            </ModuleVisibilityProvider>
           </div>
         ))}
     </div>
