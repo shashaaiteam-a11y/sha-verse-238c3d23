@@ -104,6 +104,14 @@ export const CreatePostCard = () => {
   const [showFeelingPicker, setShowFeelingPicker] = useState(false);
   const [activityInput, setActivityInput] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<typeof activitiesOptions[0] | null>(null);
+  // Facebook-style composer: start collapsed as a compact single row, expand on interaction.
+  const [expanded, setExpanded] = useState(false);
+  const isComposerExpanded =
+    expanded ||
+    !!content.trim() ||
+    mediaFiles.length > 0 ||
+    !!pollQuestion.trim() ||
+    !!feeling;
 
   // Optimistic UI + Background upload — file select hote hi local preview dikha do,
   // upload background me chalti rahe. User ko wait nahi karna padega.
