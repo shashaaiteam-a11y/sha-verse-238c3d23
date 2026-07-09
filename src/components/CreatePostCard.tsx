@@ -491,7 +491,7 @@ export const CreatePostCard = () => {
               size="sm"
               onClick={() => photoInputRef.current?.click()}
               disabled={isUploading}
-              className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+              className="h-8 px-2 gap-2 text-green-600 hover:text-green-700 hover:bg-green-50"
             >
               <Image className="w-5 h-5" />
               <span className="hidden sm:inline">Photo</span>
