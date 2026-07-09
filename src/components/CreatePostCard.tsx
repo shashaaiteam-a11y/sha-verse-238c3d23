@@ -674,6 +674,7 @@ export const CreatePostCard = () => {
             </Button>
           </div>
         </div>
+        )}
       </Card>
 
       {/* Poll Creation Dialog - Facebook Style */}
