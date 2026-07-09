@@ -190,12 +190,19 @@ export const KeepAliveModules = ({ modules }: KeepAliveModulesProps) => {
   }, [activePath, mounted]);
 
   // Visibility sync — keeps exactly the active module visible when NOT animating.
+  // Hidden layers are also marked inert + aria-hidden so no interaction, focus,
+  // or a11y work happens on them while they stay mounted in the background.
   useLayoutEffect(() => {
     if (transitioning.current) return;
     for (const m of modules) {
       const el = layerRefs.current[m.path];
       if (!el) continue;
-      el.style.display = m.path === activePath ? "" : "none";
+      const isActive = m.path === activePath;
+      el.style.display = isActive ? "" : "none";
+      // `inert` prevents focus/pointer/tab-order work on hidden modules.
+      (el as HTMLDivElement & { inert: boolean }).inert = !isActive;
+      if (isActive) el.removeAttribute("aria-hidden");
+      else el.setAttribute("aria-hidden", "true");
     }
   });
 
