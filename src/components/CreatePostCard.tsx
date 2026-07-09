@@ -465,7 +465,7 @@ export const CreatePostCard = () => {
         )}
 
         {/* Actions Row */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-border">
           <div className="flex items-center gap-1 flex-wrap">
             {/* Photo Input */}
             <input
@@ -491,7 +491,7 @@ export const CreatePostCard = () => {
               size="sm"
               onClick={() => photoInputRef.current?.click()}
               disabled={isUploading}
-              className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+              className="h-8 px-2 gap-2 text-green-600 hover:text-green-700 hover:bg-green-50"
             >
               <Image className="w-5 h-5" />
               <span className="hidden sm:inline">Photo</span>
@@ -502,7 +502,7 @@ export const CreatePostCard = () => {
               size="sm"
               onClick={() => videoInputRef.current?.click()}
               disabled={isUploading}
-              className="gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              className="h-8 px-2 gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
             >
               <Video className="w-5 h-5" />
               <span className="hidden sm:inline">Video</span>
@@ -514,7 +514,7 @@ export const CreatePostCard = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-2 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                  className="h-8 px-2 gap-2 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
                 >
                   <Smile className="w-5 h-5" />
                   <span className="hidden sm:inline">Feeling</span>
@@ -581,7 +581,7 @@ export const CreatePostCard = () => {
               variant="ghost"
               size="sm"
               onClick={() => setShowPollDialog(true)}
-              className="gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              className="h-8 px-2 gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
             >
               <BarChart2 className="w-5 h-5" />
               <span className="hidden sm:inline">Poll</span>
