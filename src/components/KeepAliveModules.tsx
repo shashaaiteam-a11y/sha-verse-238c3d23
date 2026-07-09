@@ -2,6 +2,7 @@ import { ReactNode, Suspense, useEffect, useLayoutEffect, useRef, useState } fro
 import { useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { moduleStack, MODULE_ROOTS } from "@/lib/navigation/moduleStack";
+import { ModuleVisibilityProvider } from "@/lib/navigation/moduleVisibility";
 
 /**
  * KeepAliveModules
