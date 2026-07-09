@@ -341,6 +341,7 @@ export const CreatePostCard = () => {
 
       toast({ title: 'Post created!' });
       setContent('');
+      setExpanded(false);
       setMediaFiles([]);
       setPrivacy('public');
       setLocation(null);
