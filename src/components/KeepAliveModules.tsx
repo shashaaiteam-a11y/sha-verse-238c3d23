@@ -20,6 +20,21 @@ import { ModuleVisibilityProvider } from "@/lib/navigation/moduleVisibility";
  *
  * This is a presentation/navigation-only shell. It does not touch any module
  * logic, data, queries, Supabase, auth, or unrelated components.
+ *
+ * SCOPE (hard limit): keep-alive applies ONLY to the six primary bottom-nav
+ * modules listed in MODULE_ROOTS. It never extends automatically to future
+ * routes — those keep using the normal router and are mounted/unmounted as
+ * usual. To add a module here you must explicitly add it to MODULE_ROOTS.
+ *
+ * BACKGROUND WORK: hidden modules stay MOUNTED (state preserved), but the shell
+ * pauses their expensive work while they are not visible, without changing any
+ * business logic or triggering refetches:
+ *   - Hidden layers use `display:none`, so CSS animations/transitions and
+ *     visual `requestAnimationFrame` work stop automatically.
+ *   - Hidden layers are marked `inert` + `aria-hidden`, so no focus / pointer /
+ *     a11y work runs on them.
+ *   - Each layer is wrapped in <ModuleVisibilityProvider> exposing `useModuleVisible()`
+ *     so timers/polling/realtime hooks can opt in to pause while hidden.
  */
 
 interface ModuleDef {
