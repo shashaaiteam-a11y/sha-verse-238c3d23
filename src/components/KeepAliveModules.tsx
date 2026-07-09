@@ -179,6 +179,13 @@ export const KeepAliveModules = ({ modules }: KeepAliveModulesProps) => {
       fromEl!.style.display = "none";
       toEl!.style.display = "";
 
+      // Sync inert/a11y state now that the switch is complete: the outgoing
+      // module becomes inert (background), the incoming one becomes interactive.
+      (fromEl as HTMLDivElement & { inert: boolean }).inert = true;
+      fromEl!.setAttribute("aria-hidden", "true");
+      (toEl as HTMLDivElement & { inert: boolean }).inert = false;
+      toEl!.removeAttribute("aria-hidden");
+
       transitioning.current = false;
       restoreScroll();
     };
