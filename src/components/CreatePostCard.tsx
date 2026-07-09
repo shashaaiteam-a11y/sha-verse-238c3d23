@@ -581,7 +581,7 @@ export const CreatePostCard = () => {
               variant="ghost"
               size="sm"
               onClick={() => setShowPollDialog(true)}
-              className="gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              className="h-8 px-2 gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
             >
               <BarChart2 className="w-5 h-5" />
               <span className="hidden sm:inline">Poll</span>
