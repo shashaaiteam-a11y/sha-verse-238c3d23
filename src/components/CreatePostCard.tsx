@@ -430,6 +430,7 @@ export const CreatePostCard = () => {
             />
           </div>
         </div>
+        )}
 
         {/* Media Preview */}
         {mediaFiles.length > 0 && (
