@@ -1,18 +1,26 @@
-# Sha-Verse
+# SHA-VERSE
 
-> Sha-Verse is a unified social universe — one mobile-first app that combines a social feed, long and short videos (Movion), an AI assistant (NovaChat), an EPUB/PDF reader (Bookshelf), and communities (Groups & Pages).
+> SHA-VERSE (also written Sha-Verse) is an independent technology company and a unified social universe — one mobile-first app that combines a social feed, long and short videos (Movion), an AI assistant (NovaChat), an EPUB/PDF reader (Bookshelf), and communities (Groups & Pages).
 
-Sha-Verse brings together the social, video, AI, reading, and community experiences that usually live in five different apps. Most of the product is behind sign-in; the pages listed below are public.
+## About SHA-VERSE
+
+- **What is SHA-VERSE?** SHA-VERSE is a technology company and social software ecosystem. It unifies the social, video, AI, reading, and community experiences that usually live in five separate apps into a single mobile-first platform.
+- **What products does SHA-VERSE provide?** A social Home Feed, Movion (video platform), NovaChat (AI assistant), Bookshelf (EPUB/PDF reader), Groups and Pages (communities), and real-time messaging.
+- **What industry is SHA-VERSE in?** Consumer technology — social networking, digital media, artificial intelligence, and online communities.
+- **What is its mission?** To build a respectful, ad-supported social platform where creators earn fairly, users keep control of their data, and AI makes everyday tasks easier — without paywalls or subscriptions.
+- **Note on naming:** The official name is SHA-VERSE (aliases: Sha-Verse, ShaVerse). It is not related to other similarly named projects.
+
+Most of the product is behind sign-in; the pages listed below are public.
 
 ## Pages
 
 - [Home](/): Marketing / app entry point.
 - [Sign in](/auth): Create an account or log in (email, phone OTP, or Google).
-- [About](/about): What Sha-Verse is and what's inside it.
-- [Contact](/contact): How to reach the Sha-Verse team.
+- [About](/about): What SHA-VERSE is and what's inside it.
+- [Contact](/contact): How to reach the SHA-VERSE team.
 - [Help & Support](/help): FAQs, common issues, and support form.
 
 ## Optional
 
 - [Privacy Policy](/privacy): How user data is collected, used, and protected.
-- [Terms of Service](/terms): Rules for using Sha-Verse.
+- [Terms of Service](/terms): Rules for using SHA-VERSE.
