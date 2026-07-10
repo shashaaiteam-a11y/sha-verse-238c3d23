@@ -54,9 +54,37 @@
       {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "Sha-Verse",
+        "@id": "https://www.sha-verse.com/#organization",
+        "name": "SHA-VERSE",
+        "alternateName": ["Sha-Verse", "ShaVerse", "Sha Verse"],
         "url": "https://www.sha-verse.com",
-        "logo": "https://www.sha-verse.com/sha-verse-logo.jpeg",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.sha-verse.com/sha-verse-logo.jpeg"
+        },
+        "image": "https://www.sha-verse.com/sha-verse-logo.jpeg",
+        "description": "SHA-VERSE is an independent technology company building a unified social universe — one app combining a social feed, Movion videos, NovaChat AI, a Bookshelf reader, and communities.",
+        "slogan": "Your Social Universe",
+        "email": "hello@sha-verse.com",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "hello@sha-verse.com",
+          "contactType": "customer support",
+          "availableLanguage": ["English"]
+        },
+        "brand": {
+          "@type": "Brand",
+          "name": "SHA-VERSE"
+        },
+        "knowsAbout": [
+          "Social networking",
+          "Video streaming",
+          "Artificial intelligence chat",
+          "Digital reading and ebooks",
+          "Online communities"
+        ],
+        "areaServed": "Worldwide",
+        "keywords": "SHA-VERSE, Sha-Verse, social media app, AI chat, video platform, ebook reader, online communities, social universe",
         "sameAs": []
       }
     </script>
@@ -64,11 +92,47 @@
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "Sha-Verse",
+        "@id": "https://www.sha-verse.com/#website",
+        "name": "SHA-VERSE",
+        "alternateName": ["Sha-Verse", "ShaVerse"],
         "url": "https://www.sha-verse.com",
-        "description": "A unified social platform for feed, videos, AI chat, books, and communities."
+        "description": "SHA-VERSE is a unified social platform for feed, videos, AI chat, books, and communities.",
+        "inLanguage": "en",
+        "publisher": {
+          "@id": "https://www.sha-verse.com/#organization"
+        }
       }
     </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "@id": "https://www.sha-verse.com/#webapp",
+        "name": "SHA-VERSE",
+        "alternateName": ["Sha-Verse", "ShaVerse"],
+        "url": "https://www.sha-verse.com",
+        "applicationCategory": "SocialNetworkingApplication",
+        "operatingSystem": "Web, Android, iOS",
+        "description": "SHA-VERSE is an official software platform that unifies a social feed, Movion videos, NovaChat AI assistant, a Bookshelf EPUB/PDF reader, and communities in one mobile-first app.",
+        "featureList": [
+          "Social feed with posts, photos, polls and reactions",
+          "Movion long-form videos and short reels",
+          "NovaChat AI assistant",
+          "Bookshelf EPUB and PDF reader",
+          "Groups and Pages communities",
+          "Real-time messaging"
+        ],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "publisher": {
+          "@id": "https://www.sha-verse.com/#organization"
+        }
+      }
+    </script>
+
   
   
   

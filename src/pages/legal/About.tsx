@@ -50,6 +50,14 @@ const About = () => (
         and AI makes everyday tasks easier — without locking anyone behind a paywall &amp; subscriptions.
       </p>
 
+      <h2>Our vision</h2>
+      <p>
+        Sha-Verse is building an independent technology company and social universe where feed, video, AI, reading, and
+        community live together in one place — a single, unified home for everything people do online, owned and operated
+        as its own brand rather than a feature of someone else's platform.
+      </p>
+
+
       <h2>How we make money</h2>
       <p>
         Sha-Verse is free. We sustain the platform through Google AdMob (in the app) and Google AdSense (on the web). We
