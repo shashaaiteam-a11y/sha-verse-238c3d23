@@ -21,6 +21,26 @@ const contactSchema = z.object({
 
 const SUPPORT_EMAIL = "support@sha-verse.com";
 
+const crumbs: Crumb[] = [
+  { name: "Home", path: "/" },
+  { name: "Contact", path: "/contact" },
+];
+
+const faqs: QA[] = [
+  {
+    q: "How do I contact SHA-VERSE support?",
+    a: "Email support@sha-verse.com for general help and bug reports, or use the message form on this page.",
+  },
+  {
+    q: "Who do I contact about privacy or data requests?",
+    a: "Email privacy@sha-verse.com for privacy questions and data requests such as access or deletion.",
+  },
+  {
+    q: "Does the contact form send email automatically?",
+    a: "The form opens your own email app with the message pre-filled, so nothing is sent until you press send. This keeps your request private and requires no account.",
+  },
+];
+
 const Contact = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
