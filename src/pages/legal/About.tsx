@@ -1,12 +1,5 @@
 import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
 import { SEO } from "@/components/seo/SEO";
-import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
-import { buildBreadcrumbJsonLd, type Crumb } from "@/lib/seo/structuredData";
-
-const crumbs: Crumb[] = [
-  { name: "Home", path: "/" },
-  { name: "About", path: "/about" },
-];
 
 const About = () => (
   <>
@@ -14,10 +7,8 @@ const About = () => (
       title="About Sha-Verse — One app for social, video, AI, books"
       description="Sha-Verse is a unified social universe combining a feed, Movion videos, NovaChat AI, Bookshelf reader, and communities — all in one mobile-first app."
       path="/about"
-      jsonLd={buildBreadcrumbJsonLd(crumbs)}
     />
     <LegalPageLayout title="About Sha-Verse">
-      <Breadcrumbs items={crumbs} />
       <p>
         <strong>Sha-Verse</strong> is a unified social universe — one app that brings together everything you love about
         the internet. No more switching between five different apps.

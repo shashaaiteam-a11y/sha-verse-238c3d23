@@ -30,12 +30,6 @@ export const SiteFooter = () => {
   const links = (
     <>
       <Link to="/about" className="hover:text-foreground">About</Link>
-      <Link to="/mission" className="hover:text-foreground">Mission</Link>
-      <Link to="/vision" className="hover:text-foreground">Vision</Link>
-      <Link to="/media-kit" className="hover:text-foreground">Media Kit</Link>
-      <Link to="/brand-assets" className="hover:text-foreground">Brand</Link>
-      <Link to="/careers" className="hover:text-foreground">Careers</Link>
-      <Link to="/developers" className="hover:text-foreground">Developers</Link>
       <Link to="/contact" className="hover:text-foreground">Contact</Link>
       <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
       <Link to="/terms" className="hover:text-foreground">Terms</Link>
