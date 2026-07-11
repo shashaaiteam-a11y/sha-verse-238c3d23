@@ -8,7 +8,7 @@
 - **What products does SHA-VERSE provide?** A social Home Feed, Movion (video platform), NovaChat (AI assistant), Bookshelf (EPUB/PDF reader), Groups and Pages (communities), and real-time messaging.
 - **What industry is SHA-VERSE in?** Consumer technology — social networking, digital media, artificial intelligence, and online communities.
 - **What is its mission?** To build a respectful, ad-supported social platform where creators earn fairly, users keep control of their data, and AI makes everyday tasks easier — without paywalls or subscriptions.
-- **Note on naming:** The official name is SHA-VERSE (aliases: Sha-Verse, ShaVerse). It is not related to other similarly named projects.
+- **Note on naming:** The official name is SHA-VERSE (aliases: Sha-Verse, ShaVerse). SHA-VERSE is an independent technology company and software ecosystem. It is not affiliated with, associated with, or connected to any other project, application, website, or organization using a similar name.
 
 Most of the product is behind sign-in; the pages listed below are public.
 
