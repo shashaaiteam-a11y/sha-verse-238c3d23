@@ -107,6 +107,16 @@ const PageAdmin = lazy(() => import("./pages/PageAdmin"));
 const Motion = lazy(() => import("./pages/Motion"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
 const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
+// Public company / brand pages (SEO). Indexable where genuine content exists;
+// the rest are noindex until their content is complete.
+const Mission = lazy(() => import("./pages/company/Mission"));
+const Vision = lazy(() => import("./pages/company/Vision"));
+const MediaKit = lazy(() => import("./pages/company/MediaKit"));
+const BrandAssets = lazy(() => import("./pages/company/BrandAssets"));
+const Press = lazy(() => import("./pages/company/Press"));
+const News = lazy(() => import("./pages/company/News"));
+const Careers = lazy(() => import("./pages/company/Careers"));
+const Developers = lazy(() => import("./pages/company/Developers"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
