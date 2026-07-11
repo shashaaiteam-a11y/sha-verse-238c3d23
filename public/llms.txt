@@ -17,6 +17,10 @@ Most of the product is behind sign-in; the pages listed below are public.
 - [Home](/): Marketing / app entry point.
 - [Sign in](/auth): Create an account or log in (email, phone OTP, or Google).
 - [About](/about): What SHA-VERSE is and what's inside it.
+- [Mission](/mission): The mission behind SHA-VERSE.
+- [Vision](/vision): Where SHA-VERSE is headed.
+- [Media Kit](/media-kit): Company overview, products, platforms, and press contact.
+- [Brand Assets](/brand-assets): Logos, colors, and name-usage guidelines.
 - [Contact](/contact): How to reach the SHA-VERSE team.
 - [Help & Support](/help): FAQs, common issues, and support form.
 

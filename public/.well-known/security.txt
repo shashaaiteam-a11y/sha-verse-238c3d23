@@ -1,0 +1,6 @@
+# Security contact for SHA-VERSE (https://www.sha-verse.com)
+# Please report security issues responsibly.
+Contact: mailto:hello@sha-verse.com
+Preferred-Languages: en
+Canonical: https://www.sha-verse.com/.well-known/security.txt
+Expires: 2027-07-11T00:00:00.000Z

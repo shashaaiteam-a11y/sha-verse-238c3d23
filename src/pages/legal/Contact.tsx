@@ -3,6 +3,9 @@ import { z } from "zod";
 import { Mail, Send, CheckCircle2 } from "lucide-react";
 import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
 import { SEO } from "@/components/seo/SEO";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
+import { FAQSection } from "@/components/seo/FAQSection";
+import { buildBreadcrumbJsonLd, buildFaqJsonLd, type Crumb, type QA } from "@/lib/seo/structuredData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +20,26 @@ const contactSchema = z.object({
 });
 
 const SUPPORT_EMAIL = "support@sha-verse.com";
+
+const crumbs: Crumb[] = [
+  { name: "Home", path: "/" },
+  { name: "Contact", path: "/contact" },
+];
+
+const faqs: QA[] = [
+  {
+    q: "How do I contact SHA-VERSE support?",
+    a: "Email support@sha-verse.com for general help and bug reports, or use the message form on this page.",
+  },
+  {
+    q: "Who do I contact about privacy or data requests?",
+    a: "Email privacy@sha-verse.com for privacy questions and data requests such as access or deletion.",
+  },
+  {
+    q: "Does the contact form send email automatically?",
+    a: "The form opens your own email app with the message pre-filled, so nothing is sent until you press send. This keeps your request private and requires no account.",
+  },
+];
 
 const Contact = () => {
   const [submitted, setSubmitted] = useState(false);
@@ -55,8 +78,10 @@ const Contact = () => {
         title="Contact Sha-Verse — Support &amp; inquiries"
         description="Get in touch with the Sha-Verse team for support, bug reports, or business inquiries."
         path="/contact"
+        jsonLd={[buildBreadcrumbJsonLd(crumbs), buildFaqJsonLd(faqs)]}
       />
     <LegalPageLayout title="Contact Us">
+      <Breadcrumbs items={crumbs} />
       <p>Questions, bug reports, business inquiries, or just want to say hi? We'd love to hear from you.</p>
 
       <div className="not-prose grid gap-3 sm:grid-cols-2 my-6">
@@ -124,6 +149,8 @@ const Contact = () => {
           </Button>
         </form>
       )}
+
+      <FAQSection items={faqs} />
     </LegalPageLayout>
     </>
   );
