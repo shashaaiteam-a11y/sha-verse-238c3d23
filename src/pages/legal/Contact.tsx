@@ -78,8 +78,10 @@ const Contact = () => {
         title="Contact Sha-Verse — Support &amp; inquiries"
         description="Get in touch with the Sha-Verse team for support, bug reports, or business inquiries."
         path="/contact"
+        jsonLd={[buildBreadcrumbJsonLd(crumbs), buildFaqJsonLd(faqs)]}
       />
     <LegalPageLayout title="Contact Us">
+      <Breadcrumbs items={crumbs} />
       <p>Questions, bug reports, business inquiries, or just want to say hi? We'd love to hear from you.</p>
 
       <div className="not-prose grid gap-3 sm:grid-cols-2 my-6">
