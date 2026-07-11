@@ -271,6 +271,14 @@ const App = () => (
                     <Route path="/delete-account" element={withSuspense(DeleteAccount)} />
                     <Route path="/delete-data" element={withSuspense(DeleteData)} />
                     <Route path="/help/delete-account" element={withSuspense(DeleteAccount)} />
+                    <Route path="/mission" element={withSuspense(Mission)} />
+                    <Route path="/vision" element={withSuspense(Vision)} />
+                    <Route path="/media-kit" element={withSuspense(MediaKit)} />
+                    <Route path="/brand-assets" element={withSuspense(BrandAssets)} />
+                    <Route path="/press" element={withSuspense(Press)} />
+                    <Route path="/news" element={withSuspense(News)} />
+                    <Route path="/careers" element={withSuspense(Careers)} />
+                    <Route path="/developers" element={withSuspense(Developers)} />
                     <Route path="/promote/info" element={<ProtectedRoute>{withSuspense(PromoteInfo)}</ProtectedRoute>} />
                     <Route path="*" element={withSuspense(NotFound)} />
                   </Routes>
