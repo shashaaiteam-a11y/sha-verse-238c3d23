@@ -149,6 +149,8 @@ const Contact = () => {
           </Button>
         </form>
       )}
+
+      <FAQSection items={faqs} />
     </LegalPageLayout>
     </>
   );
