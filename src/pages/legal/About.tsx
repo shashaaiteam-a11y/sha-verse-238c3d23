@@ -1,5 +1,12 @@
 import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
 import { SEO } from "@/components/seo/SEO";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
+import { buildBreadcrumbJsonLd, type Crumb } from "@/lib/seo/structuredData";
+
+const crumbs: Crumb[] = [
+  { name: "Home", path: "/" },
+  { name: "About", path: "/about" },
+];
 
 const About = () => (
   <>
