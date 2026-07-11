@@ -7,13 +7,19 @@ interface SEOProps {
   description: string;
   path: string; // e.g. "/about"
   jsonLd?: object | object[];
+  /**
+   * When true, adds `<meta name="robots" content="noindex, follow">` so the
+   * page is reachable by users but kept out of search indexes until its
+   * content is finished. Links are still followed for crawl discovery.
+   */
+  noindex?: boolean;
 }
 
 /**
  * Per-route SEO head tags. Sets <title>, meta description, canonical,
  * and og:* / twitter:* overrides. Optional JSON-LD blocks accepted.
  */
-export function SEO({ title, description, path, jsonLd }: SEOProps) {
+export function SEO({ title, description, path, jsonLd, noindex }: SEOProps) {
   const url = `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
   const blocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
@@ -21,6 +27,7 @@ export function SEO({ title, description, path, jsonLd }: SEOProps) {
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description} />
+      {noindex && <meta name="robots" content="noindex, follow" />}
       <link rel="canonical" href={url} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
