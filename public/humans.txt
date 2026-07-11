@@ -1,0 +1,10 @@
+/* TEAM */
+SHA-VERSE Team
+Contact: hello [at] sha-verse.com
+Location: Worldwide
+
+/* SITE */
+Name: SHA-VERSE
+Description: An independent technology company and unified social universe — one app for a social feed, video, AI, reading, and communities.
+Standards: HTML5, CSS3, TypeScript
+Components: React, Vite, Tailwind CSS, Capacitor
