@@ -108,6 +108,22 @@ const Motion = lazy(() => import("./pages/Motion"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
 const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 
+// ============================================================================
+// 🎬 MOVION MASTER SWITCH
+// ----------------------------------------------------------------------------
+//   false  → Movion HIDDEN  (shows the "Movion Coming Soon" page everywhere)
+//   true   → Movion LIVE    (real Movion module: feed, video, channels)
+//
+// Sirf yeh ek line badalni hai. Save karo → app apne aap update ho jayega.
+// ============================================================================
+const MOVION_ENABLED = false;
+
+// Movion routes decide which component to render based on the switch above.
+const MovionRoot = MOVION_ENABLED ? Movion : MovionComingSoon;
+const MovionWatch = MOVION_ENABLED ? VideoWatch : MovionComingSoon;
+const MovionChannel = MOVION_ENABLED ? ChannelPage : MovionComingSoon;
+const MotionRoute = MOVION_ENABLED ? Motion : MovionComingSoon;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
