@@ -39,8 +39,12 @@ export const useSubscriptions = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    const realtimeChannelName = `public:subscriptions:${user.id}:${Date.now()}:${Math.random()
+      .toString(36)
+      .slice(2)}`;
+
     const channel = supabase
-      .channel('public:subscriptions')
+      .channel(realtimeChannelName)
       .on(
         'postgres_changes',
         {
@@ -120,8 +124,12 @@ export const useIsSubscribed = (channelId?: string) => {
   useEffect(() => {
     if (!channelId) return;
 
+    const realtimeChannelName = `public:channels:id=eq.${channelId}:${Date.now()}:${Math.random()
+      .toString(36)
+      .slice(2)}`;
+
     const channel = supabase
-      .channel(`public:channels:id=eq.${channelId}`)
+      .channel(realtimeChannelName)
       .on(
         'postgres_changes',
         {
