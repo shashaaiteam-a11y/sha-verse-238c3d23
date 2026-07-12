@@ -18,9 +18,7 @@ import { Suspense, lazy as reactLazy, useEffect, ComponentType } from "react";
 // When the browser still has the old index-*.js cached and tries to fetch a
 // hashed chunk that no longer exists, force a one-time hard reload instead of
 // showing a blank screen.
-const lazy = <T extends ComponentType<any>>(
-  factory: () => Promise<{ default: T }>
-) =>
+const lazy = <T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) =>
   reactLazy(() =>
     factory().catch((err) => {
       const msg = String(err?.message || err);
@@ -39,7 +37,7 @@ const lazy = <T extends ComponentType<any>>(
         }
       }
       throw err;
-    })
+    }),
   );
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
@@ -116,7 +114,7 @@ const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 //
 // Sirf yeh ek line badalni hai. Save karo → app apne aap update ho jayega.
 // ============================================================================
-const MOVION_ENABLED = false;
+const MOVION_ENABLED = true;
 
 // Movion routes decide which component to render based on the switch above.
 const MovionRoot = MOVION_ENABLED ? Movion : MovionComingSoon;
@@ -182,24 +180,25 @@ const AuthedKeepAlive = () => {
   return <KeepAliveModules modules={keepAliveModules} />;
 };
 
-
-
 // 🚀 Prefetch main module chunks during idle time so module-switching feels instant
 const ModulePrefetcher = () => {
   useEffect(() => {
     const ric: any = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 1500));
-    const handle = ric(() => {
-      // Fire-and-forget — vite/browser caches these chunks
-      homeImport().catch(() => {});
-      movionImport().catch(() => {});
-      novachatImport().catch(() => {});
-      bookshelfImport().catch(() => {});
-      groupsImport().catch(() => {});
-      profileImport().catch(() => {});
-    }, { timeout: 4000 });
+    const handle = ric(
+      () => {
+        // Fire-and-forget — vite/browser caches these chunks
+        homeImport().catch(() => {});
+        movionImport().catch(() => {});
+        novachatImport().catch(() => {});
+        bookshelfImport().catch(() => {});
+        groupsImport().catch(() => {});
+        profileImport().catch(() => {});
+      },
+      { timeout: 4000 },
+    );
     return () => {
       const cic: any = (window as any).cancelIdleCallback;
-      if (cic && typeof handle === 'number') cic(handle);
+      if (cic && typeof handle === "number") cic(handle);
     };
   }, []);
   return null;
@@ -225,72 +224,165 @@ const App = () => (
           <AuthProvider>
             <MobileProvider>
               <AdProvider>
-              <ChatPresenceBridge />
-              <ModulePrefetcher />
-              <AppBackButtonHandler />
-              <GlobalCallHost>
-              <div className="min-h-screen bg-background safe-left safe-right">
-                <SwipeWrapper>
-                  {/* Keep-alive shell for the six primary modules (mounted once, animated switches) */}
-                  <AuthedKeepAlive />
-                  <Routes>
-                    <Route path="/auth" element={withSuspense(Auth)} />
-                    <Route path="/offline" element={withSuspense(OfflinePage)} />
-                    {/* Module roots are rendered by the keep-alive shell; slots keep the router matched */}
-                    <Route path="/" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
-                    <Route path="/movion" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
-                    <Route path="/novachat" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
-                    <Route path="/bookshelf" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
-                    <Route path="/groups" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
-                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionRoot)}</ProtectedRoute>} />
-                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(MovionWatch)}</ProtectedRoute>} />
-                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(MovionChannel)}</ProtectedRoute>} />
-                    <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
-                    <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute>{withSuspense(EditBook)}</ProtectedRoute>} />
-                    <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute>{withSuspense(BookReader)}</ProtectedRoute>} />
-                    <Route path="/bookshelf/book/:bookId" element={<ProtectedRoute>{withSuspense(BookDetail)}</ProtectedRoute>} />
-                    <Route path="/bookshelf/channel/:channelId" element={<ProtectedRoute>{withSuspense(AuthorChannel)}</ProtectedRoute>} />
-                    <Route path="/bookshelf/channel/:channelId/edit" element={<ProtectedRoute>{withSuspense(EditAuthorChannel)}</ProtectedRoute>} />
-                    <Route path="/groups/:groupId/admin" element={<ProtectedRoute>{withSuspense(GroupAdmin)}</ProtectedRoute>} />
-                    <Route path="/groups/:groupId" element={<ProtectedRoute>{withSuspense(GroupDetail)}</ProtectedRoute>} />
-                    <Route path="/profile/:userId" element={<ProtectedRoute>{withSuspense(Profile)}</ProtectedRoute>} />
-                    <Route path="/friends" element={<ProtectedRoute>{withSuspense(Friends)}</ProtectedRoute>} />
-                    <Route path="/saved" element={<ProtectedRoute>{withSuspense(SavedPosts)}</ProtectedRoute>} />
-                    <Route path="/messages" element={<ProtectedRoute>{withSuspense(Messages)}</ProtectedRoute>} />
-                    <Route path="/notifications" element={<ProtectedRoute>{withSuspense(Notifications)}</ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute>{withSuspense(Settings)}</ProtectedRoute>} />
-                    <Route path="/help" element={withSuspense(HelpSupport)} />
-                    <Route path="/privacy-center" element={<ProtectedRoute>{withSuspense(PrivacyCenter)}</ProtectedRoute>} />
-                    <Route path="/admin/seed" element={<AdminRoute>{withSuspense(AdminSeed)}</AdminRoute>} />
-                    <Route path="/pages" element={<ProtectedRoute>{withSuspense(Pages)}</ProtectedRoute>} />
-                    <Route path="/pages/:pageId" element={<ProtectedRoute>{withSuspense(PageDetail)}</ProtectedRoute>} />
-                    <Route path="/pages/:pageId/admin" element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>} />
-                    <Route path="/motion" element={<ProtectedRoute>{withSuspense(MotionRoute)}</ProtectedRoute>} />
-                    <Route path="/post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
-                    <Route path="/group-post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
-                    <Route path="/movion/admin" element={<AdminRoute>{withSuspense(MovionAdmin)}</AdminRoute>} />
-                    <Route path="/privacy" element={withSuspense(Privacy)} />
-                    <Route path="/terms" element={withSuspense(Terms)} />
-                    <Route path="/about" element={withSuspense(About)} />
-                    <Route path="/contact" element={withSuspense(Contact)} />
-                    <Route path="/delete-account" element={withSuspense(DeleteAccount)} />
-                    <Route path="/delete-data" element={withSuspense(DeleteData)} />
-                    <Route path="/help/delete-account" element={withSuspense(DeleteAccount)} />
-                    <Route path="/promote/info" element={<ProtectedRoute>{withSuspense(PromoteInfo)}</ProtectedRoute>} />
-                    <Route path="*" element={withSuspense(NotFound)} />
-                  </Routes>
-                </SwipeWrapper>
-                <RealtimeStatus />
-                <GlobalVideoManager />
-                <BottomNav />
-                <GlobalRefresh />
+                <ChatPresenceBridge />
+                <ModulePrefetcher />
+                <AppBackButtonHandler />
+                <GlobalCallHost>
+                  <div className="min-h-screen bg-background safe-left safe-right">
+                    <SwipeWrapper>
+                      {/* Keep-alive shell for the six primary modules (mounted once, animated switches) */}
+                      <AuthedKeepAlive />
+                      <Routes>
+                        <Route path="/auth" element={withSuspense(Auth)} />
+                        <Route path="/offline" element={withSuspense(OfflinePage)} />
+                        {/* Module roots are rendered by the keep-alive shell; slots keep the router matched */}
+                        <Route
+                          path="/"
+                          element={
+                            <ProtectedRoute>
+                              <ModuleSlot />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/movion"
+                          element={
+                            <ProtectedRoute>
+                              <ModuleSlot />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/novachat"
+                          element={
+                            <ProtectedRoute>
+                              <ModuleSlot />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/bookshelf"
+                          element={
+                            <ProtectedRoute>
+                              <ModuleSlot />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/groups"
+                          element={
+                            <ProtectedRoute>
+                              <ModuleSlot />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/profile"
+                          element={
+                            <ProtectedRoute>
+                              <ModuleSlot />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionRoot)}</ProtectedRoute>} />
+                        <Route
+                          path="/video/:videoId"
+                          element={<ProtectedRoute>{withSuspense(MovionWatch)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/channel/:channelId"
+                          element={<ProtectedRoute>{withSuspense(MovionChannel)}</ProtectedRoute>}
+                        />
+                        <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
+                        <Route
+                          path="/bookshelf/edit/:bookId"
+                          element={<ProtectedRoute>{withSuspense(EditBook)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/bookshelf/read/:bookId"
+                          element={<ProtectedRoute>{withSuspense(BookReader)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/bookshelf/book/:bookId"
+                          element={<ProtectedRoute>{withSuspense(BookDetail)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/bookshelf/channel/:channelId"
+                          element={<ProtectedRoute>{withSuspense(AuthorChannel)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/bookshelf/channel/:channelId/edit"
+                          element={<ProtectedRoute>{withSuspense(EditAuthorChannel)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/groups/:groupId/admin"
+                          element={<ProtectedRoute>{withSuspense(GroupAdmin)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/groups/:groupId"
+                          element={<ProtectedRoute>{withSuspense(GroupDetail)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/profile/:userId"
+                          element={<ProtectedRoute>{withSuspense(Profile)}</ProtectedRoute>}
+                        />
+                        <Route path="/friends" element={<ProtectedRoute>{withSuspense(Friends)}</ProtectedRoute>} />
+                        <Route path="/saved" element={<ProtectedRoute>{withSuspense(SavedPosts)}</ProtectedRoute>} />
+                        <Route path="/messages" element={<ProtectedRoute>{withSuspense(Messages)}</ProtectedRoute>} />
+                        <Route
+                          path="/notifications"
+                          element={<ProtectedRoute>{withSuspense(Notifications)}</ProtectedRoute>}
+                        />
+                        <Route path="/settings" element={<ProtectedRoute>{withSuspense(Settings)}</ProtectedRoute>} />
+                        <Route path="/help" element={withSuspense(HelpSupport)} />
+                        <Route
+                          path="/privacy-center"
+                          element={<ProtectedRoute>{withSuspense(PrivacyCenter)}</ProtectedRoute>}
+                        />
+                        <Route path="/admin/seed" element={<AdminRoute>{withSuspense(AdminSeed)}</AdminRoute>} />
+                        <Route path="/pages" element={<ProtectedRoute>{withSuspense(Pages)}</ProtectedRoute>} />
+                        <Route
+                          path="/pages/:pageId"
+                          element={<ProtectedRoute>{withSuspense(PageDetail)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/pages/:pageId/admin"
+                          element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>}
+                        />
+                        <Route path="/motion" element={<ProtectedRoute>{withSuspense(MotionRoute)}</ProtectedRoute>} />
+                        <Route
+                          path="/post/:postId"
+                          element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>}
+                        />
+                        <Route
+                          path="/group-post/:postId"
+                          element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>}
+                        />
+                        <Route path="/movion/admin" element={<AdminRoute>{withSuspense(MovionAdmin)}</AdminRoute>} />
+                        <Route path="/privacy" element={withSuspense(Privacy)} />
+                        <Route path="/terms" element={withSuspense(Terms)} />
+                        <Route path="/about" element={withSuspense(About)} />
+                        <Route path="/contact" element={withSuspense(Contact)} />
+                        <Route path="/delete-account" element={withSuspense(DeleteAccount)} />
+                        <Route path="/delete-data" element={withSuspense(DeleteData)} />
+                        <Route path="/help/delete-account" element={withSuspense(DeleteAccount)} />
+                        <Route
+                          path="/promote/info"
+                          element={<ProtectedRoute>{withSuspense(PromoteInfo)}</ProtectedRoute>}
+                        />
+                        <Route path="*" element={withSuspense(NotFound)} />
+                      </Routes>
+                    </SwipeWrapper>
+                    <RealtimeStatus />
+                    <GlobalVideoManager />
+                    <BottomNav />
+                    <GlobalRefresh />
 
-                <SiteFooter />
-                <AdSenseLoader />
-                <CookieConsent />
-              </div>
-              </GlobalCallHost>
+                    <SiteFooter />
+                    <AdSenseLoader />
+                    <CookieConsent />
+                  </div>
+                </GlobalCallHost>
               </AdProvider>
             </MobileProvider>
           </AuthProvider>
