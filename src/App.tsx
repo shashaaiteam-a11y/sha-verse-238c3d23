@@ -108,6 +108,22 @@ const Motion = lazy(() => import("./pages/Motion"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
 const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 
+// ============================================================================
+// 🎬 MOVION MASTER SWITCH
+// ----------------------------------------------------------------------------
+//   false  → Movion HIDDEN  (shows the "Movion Coming Soon" page everywhere)
+//   true   → Movion LIVE    (real Movion module: feed, video, channels)
+//
+// Sirf yeh ek line badalni hai. Save karo → app apne aap update ho jayega.
+// ============================================================================
+const MOVION_ENABLED = false;
+
+// Movion routes decide which component to render based on the switch above.
+const MovionRoot = MOVION_ENABLED ? Movion : MovionComingSoon;
+const MovionWatch = MOVION_ENABLED ? VideoWatch : MovionComingSoon;
+const MovionChannel = MOVION_ENABLED ? ChannelPage : MovionComingSoon;
+const MotionRoute = MOVION_ENABLED ? Motion : MovionComingSoon;
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -146,7 +162,7 @@ const withSuspense = (Component: React.ComponentType) => (
 // Primary module roots handled by the keep-alive shell (mounted once, kept alive).
 const keepAliveModules = [
   { path: "/", element: <Home /> },
-  { path: "/movion", element: <MovionComingSoon /> },
+  { path: "/movion", element: <MovionRoot /> },
   { path: "/novachat", element: <NovaChat /> },
   { path: "/bookshelf", element: <Bookshelf /> },
   { path: "/groups", element: <Groups /> },
@@ -227,9 +243,9 @@ const App = () => (
                     <Route path="/bookshelf" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
                     <Route path="/groups" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
-                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
-                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
-                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
+                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionRoot)}</ProtectedRoute>} />
+                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(MovionWatch)}</ProtectedRoute>} />
+                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(MovionChannel)}</ProtectedRoute>} />
                     <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
                     <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute>{withSuspense(EditBook)}</ProtectedRoute>} />
                     <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute>{withSuspense(BookReader)}</ProtectedRoute>} />
@@ -250,7 +266,7 @@ const App = () => (
                     <Route path="/pages" element={<ProtectedRoute>{withSuspense(Pages)}</ProtectedRoute>} />
                     <Route path="/pages/:pageId" element={<ProtectedRoute>{withSuspense(PageDetail)}</ProtectedRoute>} />
                     <Route path="/pages/:pageId/admin" element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>} />
-                    <Route path="/motion" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
+                    <Route path="/motion" element={<ProtectedRoute>{withSuspense(MotionRoute)}</ProtectedRoute>} />
                     <Route path="/post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/group-post/:postId" element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>} />
                     <Route path="/movion/admin" element={<AdminRoute>{withSuspense(MovionAdmin)}</AdminRoute>} />
