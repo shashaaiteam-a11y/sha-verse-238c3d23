@@ -61,9 +61,16 @@ export function useMovionSubscriptions({ channelId }: UseMovionSubscriptionsProp
 
     getSubscriberCount();
 
-    // Subscribe to realtime updates
+    // Subscribe to realtime updates with a unique name per mount.
+    // React StrictMode can mount the same hook twice before cleanup finishes;
+    // reusing `channel:${channelId}:subscriber_count` makes Supabase return the
+    // already-subscribed channel, then `.on()` throws.
+    const realtimeChannelName = `channel:${channelId}:subscriber_count:${Date.now()}:${Math.random()
+      .toString(36)
+      .slice(2)}`;
+
     const channel = supabase
-      .channel(`channel:${channelId}:subscriber_count`)
+      .channel(realtimeChannelName)
       .on(
         'postgres_changes',
         {
