@@ -26,8 +26,9 @@ export const useMovionRealtime = () => {
     };
 
     // Create a single channel for all MOVION realtime subscriptions
+    // Unique suffix prevents reusing an already-subscribed channel on re-mount
     const channel = supabase
-      .channel(`movion-realtime-${user.id}`)
+      .channel(`movion-realtime-${user.id}-${Math.random().toString(36).slice(2)}`)
       // Watch History changes
       .on(
         'postgres_changes',
@@ -141,7 +142,7 @@ export const useGlobalVideoRealtime = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel('movion-global-videos')
+      .channel(`movion-global-videos-${Math.random().toString(36).slice(2)}`)
       // New video uploads
       .on(
         'postgres_changes',
