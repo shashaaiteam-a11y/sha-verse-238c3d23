@@ -243,9 +243,9 @@ const App = () => (
                     <Route path="/bookshelf" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
                     <Route path="/groups" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><ModuleSlot /></ProtectedRoute>} />
-                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
-                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
-                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(MovionComingSoon)}</ProtectedRoute>} />
+                    <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionRoot)}</ProtectedRoute>} />
+                    <Route path="/video/:videoId" element={<ProtectedRoute>{withSuspense(MovionWatch)}</ProtectedRoute>} />
+                    <Route path="/channel/:channelId" element={<ProtectedRoute>{withSuspense(MovionChannel)}</ProtectedRoute>} />
                     <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
                     <Route path="/bookshelf/edit/:bookId" element={<ProtectedRoute>{withSuspense(EditBook)}</ProtectedRoute>} />
                     <Route path="/bookshelf/read/:bookId" element={<ProtectedRoute>{withSuspense(BookReader)}</ProtectedRoute>} />
