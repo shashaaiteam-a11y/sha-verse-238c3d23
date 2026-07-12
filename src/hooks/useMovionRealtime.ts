@@ -142,7 +142,7 @@ export const useGlobalVideoRealtime = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel('movion-global-videos')
+      .channel(`movion-global-videos-${Math.random().toString(36).slice(2)}`)
       // New video uploads
       .on(
         'postgres_changes',
