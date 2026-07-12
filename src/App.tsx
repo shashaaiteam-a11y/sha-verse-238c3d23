@@ -162,7 +162,7 @@ const withSuspense = (Component: React.ComponentType) => (
 // Primary module roots handled by the keep-alive shell (mounted once, kept alive).
 const keepAliveModules = [
   { path: "/", element: <Home /> },
-  { path: "/movion", element: <MovionComingSoon /> },
+  { path: "/movion", element: <MovionRoot /> },
   { path: "/novachat", element: <NovaChat /> },
   { path: "/bookshelf", element: <Bookshelf /> },
   { path: "/groups", element: <Groups /> },
