@@ -4,18 +4,19 @@ const config: CapacitorConfig = {
   appId: 'com.shaverse.app',
   appName: 'Sha-Verse',
   webDir: 'dist',
-  // ⚡ HOT-RELOAD (sirf development ke liye) — DISABLED for standalone/native build.
-  // Niche wala `server` block jab tak commented hai, app apni LOCAL `dist/`
-  // build use karegi (standalone app), Lovable preview/Chrome se load NAHI hogi.
+  // 🌐 LIVE MODE — WebToNative jaisa behaviour.
+  // App ab bundled purani `dist/` ke bajaye seedha LIVE website load karega,
+  // bilkul WebToNative APK ki tarah (jo sha-verse.com load karta hai).
+  // Faida: hamesha latest code, module-switch animation + video thumbnail
+  // sab website jaisa hi chalega. Zaroorat: internet connection.
   //
-  // Agar tumhe wapas live hot-reload chahiye (sirf testing ke liye), to
-  // niche wale block ko uncomment kar lena. PLAY STORE release ke liye ise
-  // ALWAYS commented/HATA hi rakhna.
-  //
-  // server: {
-  //   url: 'https://b16b27b9-9c46-4630-8c45-b59b2b0e9094.lovableproject.com?forceHideBadge=true',
-  //   cleartext: true,
-  // },
+  // Agar tum PURI OFFLINE standalone app chahte ho (internet ke bina),
+  // to niche wale `server` block ko comment kar do — phir bundled `dist/`
+  // use hogi (lekin uske liye har baar fresh `npm run build` zaroori hai).
+  server: {
+    url: 'https://www.sha-verse.com',
+    cleartext: true,
+  },
   // Native WebView background matches app theme so overscroll bounce
   // never shows a white flash (Facebook / WhatsApp / YouTube pattern).
   backgroundColor: '#0F172A',
