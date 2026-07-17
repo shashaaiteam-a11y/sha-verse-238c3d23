@@ -90,6 +90,17 @@ export async function uploadWithProgress({
     xhr.send(fd);
   });
 
+  // Private buckets (e.g. chat-media) must use signed URLs. Public buckets keep public URLs.
+  const PRIVATE_BUCKETS = new Set(['chat-media']);
+  if (PRIVATE_BUCKETS.has(bucket)) {
+    const { data: signed, error: signErr } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(finalPath, 60 * 60 * 24 * 365); // 1 year
+    if (signErr || !signed?.signedUrl) {
+      throw new Error(signErr?.message || 'Failed to create signed URL');
+    }
+    return { path: finalPath, publicUrl: signed.signedUrl };
+  }
   const { data } = supabase.storage.from(bucket).getPublicUrl(finalPath);
   return { path: finalPath, publicUrl: data.publicUrl };
 }
