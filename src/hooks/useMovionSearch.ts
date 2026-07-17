@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeSearchTerm } from '@/lib/security/sanitizeSearch';
 
 export interface MovionSearchResult {
   id: string;
@@ -35,7 +36,12 @@ export const useMovionSearch = (query: string) => {
     abortRef.current = new AbortController();
 
     try {
-      const term = q.toLowerCase().trim();
+      const term = sanitizeSearchTerm(q.toLowerCase().trim());
+      if (!term) {
+        setResults([]);
+        setIsLoading(false);
+        return;
+      }
 
       // Search videos (title, description, category)
       const { data: videos } = await supabase
