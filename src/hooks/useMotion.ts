@@ -201,38 +201,12 @@ export const useMotionReaction = (motionId?: string) => {
           .delete()
           .eq('video_id', motionId)
           .eq('user_id', user.id);
-        
-        // Decrement count
-        const { data: motion } = await supabase
-          .from('videos')
-          .select('likes_count')
-          .eq('id', motionId)
-          .single();
-        
-        if (motion) {
-          await supabase
-            .from('videos')
-            .update({ likes_count: Math.max(0, (motion.likes_count || 0) - 1) })
-            .eq('id', motionId);
-        }
+        // videos.likes_count is maintained by sync_video_likes_count trigger
       } else {
         await supabase
           .from('likes')
           .insert({ video_id: motionId, user_id: user.id, reaction_type: 'react' });
-        
-        // Increment count
-        const { data: motion } = await supabase
-          .from('videos')
-          .select('likes_count')
-          .eq('id', motionId)
-          .single();
-        
-        if (motion) {
-          await supabase
-            .from('videos')
-            .update({ likes_count: (motion.likes_count || 0) + 1 })
-            .eq('id', motionId);
-        }
+        // videos.likes_count is maintained by sync_video_likes_count trigger
       }
     },
     onSuccess: () => {
