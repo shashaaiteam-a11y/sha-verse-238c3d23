@@ -159,9 +159,18 @@ export const useIncrementMotionView = () => {
 
   return useMutation({
     mutationFn: async (motionId: string) => {
-      // Server-side trigger (sync_video_views_count on video_views) maintains the counter.
-      if (!motionId) return;
-      await supabase.from('video_views').insert({ video_id: motionId });
+      const { data: motion } = await supabase
+        .from('videos')
+        .select('views_count')
+        .eq('id', motionId)
+        .single();
+      
+      if (motion) {
+        await supabase
+          .from('videos')
+          .update({ views_count: (motion.views_count || 0) + 1 })
+          .eq('id', motionId);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['motions'] });
@@ -201,12 +210,38 @@ export const useMotionReaction = (motionId?: string) => {
           .delete()
           .eq('video_id', motionId)
           .eq('user_id', user.id);
-        // videos.likes_count is maintained by sync_video_likes_count trigger
+        
+        // Decrement count
+        const { data: motion } = await supabase
+          .from('videos')
+          .select('likes_count')
+          .eq('id', motionId)
+          .single();
+        
+        if (motion) {
+          await supabase
+            .from('videos')
+            .update({ likes_count: Math.max(0, (motion.likes_count || 0) - 1) })
+            .eq('id', motionId);
+        }
       } else {
         await supabase
           .from('likes')
           .insert({ video_id: motionId, user_id: user.id, reaction_type: 'react' });
-        // videos.likes_count is maintained by sync_video_likes_count trigger
+        
+        // Increment count
+        const { data: motion } = await supabase
+          .from('videos')
+          .select('likes_count')
+          .eq('id', motionId)
+          .single();
+        
+        if (motion) {
+          await supabase
+            .from('videos')
+            .update({ likes_count: (motion.likes_count || 0) + 1 })
+            .eq('id', motionId);
+        }
       }
     },
     onSuccess: () => {
@@ -252,13 +287,40 @@ export const useFollowCreator = (creatorId?: string) => {
           .eq('channel_id', creatorId)
           .eq('user_id', user.id);
         
-        // channels.subscribers_count is maintained by sync_channel_subscribers_count trigger
+        // Decrement count
+        const { data: channel } = await supabase
+          .from('channels')
+          .select('subscribers_count')
+          .eq('id', creatorId)
+          .single();
+        
+        if (channel) {
+          await supabase
+            .from('channels')
+            .update({ subscribers_count: Math.max(0, (channel.subscribers_count || 0) - 1) })
+            .eq('id', creatorId);
+        }
+        
         toast.success('Unfollowed creator');
       } else {
         await supabase
           .from('subscriptions')
           .insert({ channel_id: creatorId, user_id: user.id });
-        // channels.subscribers_count is maintained by sync_channel_subscribers_count trigger
+        
+        // Increment count
+        const { data: channel } = await supabase
+          .from('channels')
+          .select('subscribers_count')
+          .eq('id', creatorId)
+          .single();
+        
+        if (channel) {
+          await supabase
+            .from('channels')
+            .update({ subscribers_count: (channel.subscribers_count || 0) + 1 })
+            .eq('id', creatorId);
+        }
+        
         toast.success('Now following!');
       }
     },

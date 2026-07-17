@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useCallback } from 'react';
 import { debounce } from '@/lib/utils';
-import { sanitizeSearchTerm } from '@/lib/security/sanitizeSearch';
 
 export const useUserSearch = () => {
   const { user } = useAuth();
@@ -27,13 +26,12 @@ export const useUserSearch = () => {
   const { data: results, isLoading } = useQuery({
     queryKey: ['user-search', debouncedTerm],
     queryFn: async () => {
-      const safeTerm = sanitizeSearchTerm(debouncedTerm);
-      if (!safeTerm || safeTerm.length < 2) return [];
+      if (!debouncedTerm || debouncedTerm.length < 2) return [];
 
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, username, avatar_url, bio')
-        .or(`display_name.ilike.%${safeTerm}%,username.ilike.%${safeTerm}%`)
+        .or(`display_name.ilike.%${debouncedTerm}%,username.ilike.%${debouncedTerm}%`)
         .neq('id', user?.id || '')
         .limit(20);
 

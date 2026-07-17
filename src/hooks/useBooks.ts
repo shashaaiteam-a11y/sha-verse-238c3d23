@@ -224,11 +224,24 @@ export const useBooks = (options: {
 
   const incrementViews = useMutation({
     mutationFn: async (bookId: string) => {
-      // Direct client UPDATE on books.views_count is revoked. Use the atomic RPC.
-      await supabase.rpc("increment_book_views", { book_id: bookId });
+      // Use RPC if available for atomic increment, otherwise standard update
+      // For now keeping it simple but checking if we can optimize
+      const { data: book } = await supabase
+        .from("books")
+        .select("views_count")
+        .eq("id", bookId)
+        .single();
+
+      await supabase
+        .from("books")
+        .update({ views_count: (book?.views_count || 0) + 1 })
+        .eq("id", bookId);
     },
-    onSuccess: () => {
+    onSuccess: (data, bookId) => {
+      // Only invalidate trending and the specific book, NOT the main feed
       queryClient.invalidateQueries({ queryKey: ["books", "trending"] });
+      // We can optionally invalidate the specific book if we are viewing it
+      // queryClient.invalidateQueries({ queryKey: ["books", "detail", bookId] });
     }
   });
 

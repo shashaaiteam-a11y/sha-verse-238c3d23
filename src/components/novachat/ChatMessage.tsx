@@ -135,17 +135,7 @@ const ChatMessage = ({
               </div>
             )}
             <ReactMarkdown
-              urlTransform={(url) => {
-                if (typeof url !== 'string') return '';
-                const trimmed = url.trim();
-                // Allow safe relative URLs and anchors
-                if (trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('?')) return trimmed;
-                // Allow only safe schemes
-                if (/^(https?:|mailto:|tel:)/i.test(trimmed)) return trimmed;
-                // Allow inline images (data:image/*) but nothing else
-                if (/^data:image\/(png|jpe?g|gif|webp|svg\+xml);/i.test(trimmed)) return trimmed;
-                return '';
-              }}
+              urlTransform={(url) => url}
               components={{
                 img({ src, alt }) {
                   if (!src) return null;

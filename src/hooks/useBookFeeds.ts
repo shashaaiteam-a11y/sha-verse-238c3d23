@@ -5,7 +5,6 @@ import { Book } from "@/hooks/useBooks";
 import { useEffect, useCallback, useMemo } from "react";
 import { BOOK_PUBLIC_COLUMNS, HIDE_SEED_BOOKS, SEED_BOOK_URL } from "@/lib/constants/bookshelf";
 import { excludeSeedBooks, filterSeedBooks } from "@/modules/bookshelf/lib/seedFilter";
-import { sanitizeSearchTerm } from "@/lib/security/sanitizeSearch";
 
 /**
  * Returns the set of "seed-only" author channel IDs — channels whose books are
@@ -95,7 +94,7 @@ export const useBookFeed = (options: {
             }
 
             if (search) {
-                const _s = sanitizeSearchTerm(search); if (_s) query = query.or(`title.ilike.%${_s}%,author.ilike.%${_s}%`);
+                query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%`);
             }
 
             if (category && category !== "All") {
@@ -191,7 +190,7 @@ export const useSubscribedBooks = (options: { search?: string; category?: string
             query = excludeSeedBooks(query);
 
             if (search) {
-                const _s = sanitizeSearchTerm(search); if (_s) query = query.or(`title.ilike.%${_s}%,author.ilike.%${_s}%`);
+                query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%`);
             }
 
             if (category && category !== "All") {
@@ -247,7 +246,7 @@ export const useSavedBooks = (options: { search?: string; category?: string; pag
             // Correct PostgREST syntax for nested filter: books.title.ilike
 
             if (search) {
-                const _s2 = sanitizeSearchTerm(search); if (_s2) query = query.or(`title.ilike.%${_s2}%,author.ilike.%${_s2}%`, { foreignTable: 'books' });
+                query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%`, { foreignTable: 'books' });
             }
 
             if (category && category !== "All") {
