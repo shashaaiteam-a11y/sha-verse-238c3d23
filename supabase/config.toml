@@ -5,3 +5,5 @@ project_id = "plmhjuqedtkiffzhberf"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.startup-voice]
+    verify_jwt = false
