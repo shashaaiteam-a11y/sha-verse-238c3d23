@@ -36,7 +36,7 @@ import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ShareDialog } from '@/components/ShareDialog';
-import { useState } from 'react';
+import { useState, useLayoutEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
