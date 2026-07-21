@@ -208,7 +208,16 @@ export const ProfilePostCard = ({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => setShowPrivacySubmenu(true)}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      const target = (e.currentTarget || e.target) as HTMLElement | null;
+                      if (target && typeof target.getBoundingClientRect === 'function') {
+                        setPrivacyAnchorRect(target.getBoundingClientRect());
+                      } else {
+                        setPrivacyAnchorRect(null);
+                      }
+                      setShowPrivacySubmenu(true);
+                    }}
                     disabled={isSubmitting}
                   >
                     <Eye className="w-4 h-4 mr-2" />
