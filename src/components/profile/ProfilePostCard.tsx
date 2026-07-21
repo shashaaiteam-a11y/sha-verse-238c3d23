@@ -156,6 +156,59 @@ export const ProfilePostCard = ({
     navigate(`/profile/${post.profiles?.id || post.user_id}`);
   };
 
+  useLayoutEffect(() => {
+    if (!showPrivacySubmenu) {
+      setPrivacyPos(null);
+      return;
+    }
+    const computePos = () => {
+      const popup = privacyPopupRef.current;
+      const popupW = popup?.offsetWidth || 288;
+      const popupH = popup?.offsetHeight || 280;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const margin = 8;
+
+      if (!privacyAnchorRect) {
+        // fallback: center
+        setPrivacyPos({
+          top: Math.max(margin, (vh - popupH) / 2),
+          left: Math.max(margin, (vw - popupW) / 2),
+        });
+        return;
+      }
+
+      // Prefer right-align to the anchor's right edge (menu opened align="end")
+      let left = privacyAnchorRect.right - popupW;
+      if (left + popupW > vw - margin) left = vw - margin - popupW;
+      if (left < margin) left = margin;
+
+      // Prefer below the anchor item; flip above if not enough space
+      let top = privacyAnchorRect.bottom + 4;
+      if (top + popupH > vh - margin) {
+        const flipped = privacyAnchorRect.top - popupH - 4;
+        top = flipped >= margin ? flipped : Math.max(margin, vh - margin - popupH);
+      }
+      setPrivacyPos({ top, left });
+    };
+    computePos();
+    // Recompute after popup mounts so we have accurate size
+    const raf = requestAnimationFrame(computePos);
+    window.addEventListener('resize', computePos);
+    window.addEventListener('scroll', computePos, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', computePos);
+      window.removeEventListener('scroll', computePos, true);
+    };
+  }, [showPrivacySubmenu, privacyAnchorRect]);
+
+  const closePrivacySubmenu = () => {
+    setShowPrivacySubmenu(false);
+    setPrivacyAnchorRect(null);
+    setPrivacyPos(null);
+  };
+
   return (
     <Card className="shadow-sm overflow-hidden">
       {/* Post Header */}
