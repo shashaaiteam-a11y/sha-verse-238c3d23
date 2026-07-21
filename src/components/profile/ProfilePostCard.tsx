@@ -96,9 +96,15 @@ export const ProfilePostCard = ({
   const [editVisibility, setEditVisibility] = useState(post.visibility || 'public');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPrivacySubmenu, setShowPrivacySubmenu] = useState(false);
-  const [privacyAnchorRect, setPrivacyAnchorRect] = useState<DOMRect | null>(null);
-  const privacyPopupRef = useRef<HTMLDivElement | null>(null);
-  const [privacyPos, setPrivacyPos] = useState<{ top: number; left: number } | null>(null);
+  const anchorRectRef = useRef<DOMRect | null>(null);
+
+  const { refs, floatingStyles } = useFloating({
+    open: showPrivacySubmenu,
+    onOpenChange: setShowPrivacySubmenu,
+    placement: 'bottom-end',
+    middleware: [offset(4), flip(), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  });
   
   const isSaved = isPostSaved(post.id, 'post');
   const totalReactions = Object.values(reactionCounts || {}).reduce((a: any, b: any) => a + b, 0);
