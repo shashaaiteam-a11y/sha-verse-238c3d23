@@ -490,11 +490,26 @@ export const ProfilePostCard = ({
 
       {/* Privacy Submenu Dialog */}
       {showPrivacySubmenu && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPrivacySubmenu(false)}>
-          <div className="bg-card rounded-lg shadow-lg p-4 w-72" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50"
+          onClick={closePrivacySubmenu}
+        >
+          <div
+            ref={privacyPopupRef}
+            className="fixed bg-card border border-border rounded-lg shadow-lg p-4 w-72 animate-in fade-in zoom-in-95 duration-150"
+            style={{
+              top: privacyPos ? `${privacyPos.top}px` : '50%',
+              left: privacyPos ? `${privacyPos.left}px` : '50%',
+              transform: privacyPos ? undefined : 'translate(-50%, -50%)',
+              visibility: privacyPos ? 'visible' : 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Who can see this post?"
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">Who can see this post?</h3>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowPrivacySubmenu(false)}>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={closePrivacySubmenu}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
