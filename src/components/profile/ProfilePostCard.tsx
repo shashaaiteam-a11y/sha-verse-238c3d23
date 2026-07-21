@@ -542,7 +542,8 @@ export const ProfilePostCard = ({
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        </FloatingPortal>
       )}
     </Card>
   );
