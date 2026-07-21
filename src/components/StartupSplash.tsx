@@ -1,19 +1,10 @@
 import { useEffect, useState } from "react";
 import logo from "@/assets/sha-verse-logo.jpeg";
-import startupAudio from "@/assets/sha-verse-startup.mp3.asset.json";
 
 /**
  * StartupSplash
- * Premium 5s cinematic brand intro overlay. Renders above the app while it
- * hydrates, then fades out and unmounts. Does not block loading — the app
- * mounts and initialises behind the overlay in parallel.
- *
- * Audio is a single pre-mastered MP3 bundled via Lovable Assets:
- *  - Professional female narration ("SHA-VERSE: The Next Generation.")
- *  - Cinematic ambient pad
- *  - Ducking + fades pre-mixed into the file
- *
- * No API calls, no WebAudio synthesis, no network dependency — works offline.
+ * Premium 5s cinematic brand intro overlay (silent). Renders above the app
+ * while it hydrates, then fades out and unmounts.
  * Shows once per browser session (sessionStorage).
  */
 const SESSION_KEY = "__sv_splash_shown__";
@@ -42,18 +33,6 @@ export const StartupSplash = () => {
     const reduce =
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-    // Play bundled audio. If autoplay-with-sound is blocked, fall back to
-    // muted playback so the splash never crashes or delays startup.
-    const audio = new Audio(startupAudio.url);
-    audio.preload = "auto";
-    audio.volume = 0.9;
-    audio.play().catch(() => {
-      audio.muted = true;
-      audio.play().catch(() => {
-        /* silent — device muted or autoplay fully blocked */
-      });
-    });
-
     const fadeAt = reduce ? 500 : TOTAL_MS - FADE_OUT_MS;
     const unmountAt = reduce ? 500 + FADE_OUT_MS : TOTAL_MS;
 
@@ -63,12 +42,6 @@ export const StartupSplash = () => {
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      try {
-        audio.pause();
-      } catch {
-        /* ignore */
-      }
-      audio.src = "";
     };
   }, [visible]);
 
