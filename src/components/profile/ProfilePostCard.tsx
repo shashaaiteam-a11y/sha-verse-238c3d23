@@ -36,7 +36,7 @@ import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ShareDialog } from '@/components/ShareDialog';
-import { useState } from 'react';
+import { useState, useLayoutEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -88,6 +88,9 @@ export const ProfilePostCard = ({
   const [editVisibility, setEditVisibility] = useState(post.visibility || 'public');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPrivacySubmenu, setShowPrivacySubmenu] = useState(false);
+  const [privacyAnchorRect, setPrivacyAnchorRect] = useState<DOMRect | null>(null);
+  const privacyPopupRef = useRef<HTMLDivElement | null>(null);
+  const [privacyPos, setPrivacyPos] = useState<{ top: number; left: number } | null>(null);
   
   const isSaved = isPostSaved(post.id, 'post');
   const totalReactions = Object.values(reactionCounts || {}).reduce((a: any, b: any) => a + b, 0);
@@ -153,6 +156,59 @@ export const ProfilePostCard = ({
     navigate(`/profile/${post.profiles?.id || post.user_id}`);
   };
 
+  useLayoutEffect(() => {
+    if (!showPrivacySubmenu) {
+      setPrivacyPos(null);
+      return;
+    }
+    const computePos = () => {
+      const popup = privacyPopupRef.current;
+      const popupW = popup?.offsetWidth || 288;
+      const popupH = popup?.offsetHeight || 280;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const margin = 8;
+
+      if (!privacyAnchorRect) {
+        // fallback: center
+        setPrivacyPos({
+          top: Math.max(margin, (vh - popupH) / 2),
+          left: Math.max(margin, (vw - popupW) / 2),
+        });
+        return;
+      }
+
+      // Prefer right-align to the anchor's right edge (menu opened align="end")
+      let left = privacyAnchorRect.right - popupW;
+      if (left + popupW > vw - margin) left = vw - margin - popupW;
+      if (left < margin) left = margin;
+
+      // Prefer below the anchor item; flip above if not enough space
+      let top = privacyAnchorRect.bottom + 4;
+      if (top + popupH > vh - margin) {
+        const flipped = privacyAnchorRect.top - popupH - 4;
+        top = flipped >= margin ? flipped : Math.max(margin, vh - margin - popupH);
+      }
+      setPrivacyPos({ top, left });
+    };
+    computePos();
+    // Recompute after popup mounts so we have accurate size
+    const raf = requestAnimationFrame(computePos);
+    window.addEventListener('resize', computePos);
+    window.addEventListener('scroll', computePos, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', computePos);
+      window.removeEventListener('scroll', computePos, true);
+    };
+  }, [showPrivacySubmenu, privacyAnchorRect]);
+
+  const closePrivacySubmenu = () => {
+    setShowPrivacySubmenu(false);
+    setPrivacyAnchorRect(null);
+    setPrivacyPos(null);
+  };
+
   return (
     <Card className="shadow-sm overflow-hidden">
       {/* Post Header */}
@@ -205,7 +261,16 @@ export const ProfilePostCard = ({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => setShowPrivacySubmenu(true)}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      const target = (e.currentTarget || e.target) as HTMLElement | null;
+                      if (target && typeof target.getBoundingClientRect === 'function') {
+                        setPrivacyAnchorRect(target.getBoundingClientRect());
+                      } else {
+                        setPrivacyAnchorRect(null);
+                      }
+                      setShowPrivacySubmenu(true);
+                    }}
                     disabled={isSubmitting}
                   >
                     <Eye className="w-4 h-4 mr-2" />
@@ -425,11 +490,26 @@ export const ProfilePostCard = ({
 
       {/* Privacy Submenu Dialog */}
       {showPrivacySubmenu && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPrivacySubmenu(false)}>
-          <div className="bg-card rounded-lg shadow-lg p-4 w-72" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50"
+          onClick={closePrivacySubmenu}
+        >
+          <div
+            ref={privacyPopupRef}
+            className="fixed bg-card border border-border rounded-lg shadow-lg p-4 w-72 animate-in fade-in zoom-in-95 duration-150"
+            style={{
+              top: privacyPos ? `${privacyPos.top}px` : '50%',
+              left: privacyPos ? `${privacyPos.left}px` : '50%',
+              transform: privacyPos ? undefined : 'translate(-50%, -50%)',
+              visibility: privacyPos ? 'visible' : 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Who can see this post?"
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">Who can see this post?</h3>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowPrivacySubmenu(false)}>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={closePrivacySubmenu}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
