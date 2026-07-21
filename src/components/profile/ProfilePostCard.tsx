@@ -36,10 +36,18 @@ import { useSavedPosts } from '@/hooks/useSavedPosts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ShareDialog } from '@/components/ShareDialog';
-import { useState, useLayoutEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import {
+  useFloating,
+  autoUpdate,
+  offset,
+  flip,
+  shift,
+  FloatingPortal,
+} from '@floating-ui/react';
 
 interface ProfilePostCardProps {
   post: any;
