@@ -231,11 +231,24 @@ export const ProfilePostCard = ({
                     onSelect={(e) => {
                       e.preventDefault();
                       const target = (e.currentTarget || e.target) as HTMLElement | null;
-                      if (target && typeof target.getBoundingClientRect === 'function') {
-                        setPrivacyAnchorRect(target.getBoundingClientRect());
-                      } else {
-                        setPrivacyAnchorRect(null);
-                      }
+                      const rect = target && typeof target.getBoundingClientRect === 'function'
+                        ? target.getBoundingClientRect()
+                        : null;
+                      anchorRectRef.current = rect;
+                      refs.setPositionReference({
+                        getBoundingClientRect: () =>
+                          anchorRectRef.current ?? {
+                            x: window.innerWidth / 2,
+                            y: window.innerHeight / 2,
+                            top: window.innerHeight / 2,
+                            left: window.innerWidth / 2,
+                            right: window.innerWidth / 2,
+                            bottom: window.innerHeight / 2,
+                            width: 0,
+                            height: 0,
+                            toJSON() {},
+                          },
+                      });
                       setShowPrivacySubmenu(true);
                     }}
                     disabled={isSubmitting}
