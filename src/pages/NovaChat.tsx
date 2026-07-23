@@ -460,7 +460,7 @@ const NovaChat = () => {
 
           )}
 
-        </ScrollArea>
+        </div>
 
 
 
