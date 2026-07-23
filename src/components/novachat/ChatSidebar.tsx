@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -136,8 +135,11 @@ const ChatSidebar = ({
         </div>
       </div>
 
-      {/* Conversations List - REALTIME-FIX: overscroll-contain + pan-y to prevent scroll lock */}
-      <ScrollArea className="flex-1 overscroll-contain" style={{ touchAction: 'pan-y' }}>
+      {/* Conversations List - native NovaChat-only scroller (no Radix nested viewport) */}
+      <div
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      >
         <div className="px-2 py-2" style={{ touchAction: 'pan-y' }}>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
@@ -253,7 +255,7 @@ const ChatSidebar = ({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Footer: Usage + Upgrade + User */}
       <div className="p-2 sm:p-3 border-t border-border flex-shrink-0 space-y-2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}>

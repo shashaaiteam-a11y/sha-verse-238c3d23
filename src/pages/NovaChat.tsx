@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { SEO } from '@/components/seo/SEO';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Menu, X, SquarePen, Download, Printer, Image as ImageIcon, Globe } from 'lucide-react';
 import { useNovaChat, useNovaUsage, Attachment, ChatMode } from '@/hooks/useNovaChat';
 import { useAuth } from '@/contexts/AuthContext';
@@ -92,6 +91,40 @@ const NovaChat = () => {
     el.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // NovaChat must be the only vertical scroll owner for messages. Prevent edge
+  // overscroll from chaining to html/body/native WebView pull-to-refresh without
+  // blocking normal upward/downward scrolling inside the chat history.
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    let lastY = 0;
+    const onTouchStart = (event: TouchEvent) => {
+      lastY = event.touches[0]?.clientY ?? 0;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      const y = event.touches[0]?.clientY ?? lastY;
+      const deltaY = y - lastY;
+      lastY = y;
+
+      const atTop = el.scrollTop <= 0;
+      const atBottom = Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
+      const pullingPastTop = atTop && deltaY > 0;
+      const pushingPastBottom = atBottom && deltaY < 0;
+
+      if ((pullingPastTop || pushingPastBottom) && event.cancelable) {
+        event.preventDefault();
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+    };
   }, []);
 
   // Smart auto-scroll:
@@ -210,7 +243,7 @@ const NovaChat = () => {
 
   return (
 
-    <div className="h-screen flex bg-background">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden flex bg-background">
 
       <SEO
         title="NovaChat AI — Sha-Verse"
@@ -273,7 +306,7 @@ const NovaChat = () => {
 
       {/* Main Chat Area */}
 
-      <main className="flex-1 flex flex-col h-full min-w-0">
+      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
 
         {/* Header */}
 
@@ -371,7 +404,8 @@ const NovaChat = () => {
 
         <div
           ref={scrollContainerRef}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+          data-novachat-scroll="messages"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
         >
 

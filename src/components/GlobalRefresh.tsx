@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 const EXCLUDED_PATH_PREFIXES = [
   "/auth",
   "/messages",
+  "/novachat", // NovaChat owns an internal chat scroller; document pull-refresh breaks it
   "/bookshelf/read/",
   "/movion", // Movion has its own scrolling shorts player
 ];
