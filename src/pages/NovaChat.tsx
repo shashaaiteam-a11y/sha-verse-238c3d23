@@ -369,7 +369,11 @@ const NovaChat = () => {
 
         {/* Messages Area */}
 
-        <ScrollArea className="flex-1" ref={scrollAreaRef}>
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+        >
 
           {messages.length === 0 ? (
 
