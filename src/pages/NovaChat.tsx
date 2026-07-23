@@ -63,7 +63,9 @@ const NovaChat = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const lastMessageCountRef = useRef(0);
 
 
 
@@ -79,13 +81,39 @@ const NovaChat = () => {
 
 
 
-  // Auto-scroll to bottom
-
+  // Track whether user is near the bottom (within 120px). Only then do we auto-scroll.
   useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      isNearBottomRef.current = dist < 120;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Smart auto-scroll:
+  // - New message from user → always scroll (smooth)
+  // - Streaming/appending content → only if user is already near the bottom (instant, no jump)
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const grew = messages.length > lastMessageCountRef.current;
+    lastMessageCountRef.current = messages.length;
 
-  }, [messages]);
+    if (grew) {
+      // New message added: jump smoothly to bottom
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        isNearBottomRef.current = true;
+      });
+    } else if (isStreaming && isNearBottomRef.current) {
+      // Streaming updates: keep pinned to bottom instantly (no smooth to avoid fighting user)
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages, isStreaming]);
 
   // Auto voice-over disabled — was irritating users.
   // Voice replies will be reintroduced in a future version with explicit per-message playback control.
@@ -341,7 +369,11 @@ const NovaChat = () => {
 
         {/* Messages Area */}
 
-        <ScrollArea className="flex-1" ref={scrollAreaRef}>
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+        >
 
           {messages.length === 0 ? (
 
@@ -428,7 +460,7 @@ const NovaChat = () => {
 
           )}
 
-        </ScrollArea>
+        </div>
 
 
 
