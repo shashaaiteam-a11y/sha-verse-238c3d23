@@ -102,6 +102,7 @@ export const ProfilePostCard = ({
     open: showPrivacySubmenu,
     onOpenChange: setShowPrivacySubmenu,
     placement: 'bottom-end',
+    strategy: 'fixed',
     middleware: [offset(4), flip(), shift({ padding: 8 })],
     whileElementsMounted: autoUpdate,
   });
