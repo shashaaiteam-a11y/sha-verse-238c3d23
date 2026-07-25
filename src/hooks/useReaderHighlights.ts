@@ -38,7 +38,7 @@ export function useReaderHighlights(bookId?: string) {
   );
 
   const addHighlight = useCallback(
-    (payload: Omit<Highlight, "id" | "bookId" | "createdAt"> & { color?: string }) => {
+    (payload: Omit<Highlight, "id" | "bookId" | "createdAt" | "color"> & { color?: string }) => {
       if (!bookId) return null;
       const highlight: Highlight = {
         id: `h_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
