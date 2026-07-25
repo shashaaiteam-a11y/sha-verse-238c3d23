@@ -649,8 +649,8 @@ const BookReader = () => {
                     </div>
                   )}
 
-                  {/* Zoom (PDF only) */}
-                  {fileType === "pdf" && (
+                  {/* Zoom (Original PDF mode only) */}
+                  {fileType === "pdf" && !isReaderMode && (
                     <div>
                       <label className="text-sm font-medium mb-3 block">Zoom: {Math.round(scale * 100)}%</label>
                       <div className="flex items-center gap-4">
