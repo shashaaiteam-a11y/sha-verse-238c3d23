@@ -745,7 +745,24 @@ const BookReader = () => {
           </div>
           <ScrollArea className={isMobile ? "flex-1 min-h-0" : "h-[calc(100%-60px)]"}>
             <div className="p-2">
-              {fileType === "epub" && epubToc.length > 0 ? (
+              {isReaderMode && reflow.book && reflow.book.chapters.length > 0 ? (
+                reflow.book.chapters.map((chapter) => (
+                  <Button
+                    key={chapter.id}
+                    variant="ghost"
+                    className="w-full justify-start text-left"
+                    style={{ paddingLeft: `${16 + chapter.level * 16}px` }}
+                    onClick={() => {
+                      jumpToBlock(chapter.blockIndex);
+                      setCurrentPage(chapter.page);
+                      setShowToc(false);
+                    }}
+                  >
+                    <span className="truncate">{chapter.title}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">p.{chapter.page}</span>
+                  </Button>
+                ))
+              ) : fileType === "epub" && epubToc.length > 0 ? (
                 renderEpubTocItems(epubToc)
               ) : pdfOutline.length > 0 ? (
                 renderOutlineItems(pdfOutline)
