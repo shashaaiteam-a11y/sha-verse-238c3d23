@@ -317,11 +317,12 @@ async function extractPageImages(
   try {
     const ops = await page.getOperatorList();
     const names: string[] = [];
+    const imageOps = [
+      pdfjsLib.OPS.paintImageXObject,
+      (pdfjsLib.OPS as Record<string, number>).paintJpegXObject,
+    ].filter((op) => typeof op === "number");
     for (let i = 0; i < ops.fnArray.length; i++) {
-      if (
-        ops.fnArray[i] === pdfjsLib.OPS.paintImageXObject ||
-        ops.fnArray[i] === pdfjsLib.OPS.paintJpegXObject
-      ) {
+      if (imageOps.includes(ops.fnArray[i])) {
         const name = ops.argsArray[i]?.[0];
         if (typeof name === "string" && !names.includes(name)) names.push(name);
       }
