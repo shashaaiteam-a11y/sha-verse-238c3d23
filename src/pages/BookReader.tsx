@@ -875,9 +875,49 @@ const BookReader = () => {
         )}
       >
         <div className={cn("relative w-full h-full overflow-hidden", colors.bg)}>
-          {/* PDF Viewer — wrapper paints theme bg behind canvas so any
+          {/* Reader Mode — reflowable text extracted from the PDF. */}
+          {isReaderMode && book.book_url && (
+            <>
+              {reflow.book && reflow.book.blocks.length > 0 ? (
+                <ReflowReader
+                  book={reflow.book}
+                  settings={readerSettings}
+                  highlights={highlights}
+                  searchQuery={showSearch ? searchQuery : undefined}
+                  jumpTo={jumpTo}
+                  onLocationChange={handleReaderLocation}
+                  onCreateHighlight={handleCreateHighlight}
+                  onTap={toggleControls}
+                />
+              ) : reflow.status === "error" ? (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
+                  <Book className="h-10 w-10 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{reflow.error}</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => reflow.reprocess()}>Try again</Button>
+                    <Button onClick={() => setViewMode("original")}>Open original PDF</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3">
+                  <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Preparing Reader Mode…</p>
+                </div>
+              )}
+
+              {/* Background extraction indicator — reading is never blocked. */}
+              {reflow.status === "extracting" && reflow.book && reflow.book.blocks.length > 0 && (
+                <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-2 rounded-full bg-black/65 px-3 py-1.5 text-[11px] font-medium text-white">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Preparing {reflow.progress}%
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Original PDF Viewer — wrapper paints theme bg behind canvas so any
               side gutters from natural aspect ratio match the reader theme. */}
-          {fileType === "pdf" && book.book_url && (
+          {fileType === "pdf" && !isReaderMode && book.book_url && (
             <div className={cn("w-full h-full overflow-auto overscroll-contain", colors.bg)} style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y pinch-zoom" }}>
               <PDFViewer
                 key={`${book.id}-${book.book_url}`}
