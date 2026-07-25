@@ -859,11 +859,100 @@ const BookReader = () => {
                   </div>
                 ))
               )}
+
+              {/* Highlights & notes (Reader Mode) */}
+              {isReaderMode && highlights.length > 0 && (
+                <div className="pt-3">
+                  <Separator className="mb-2" />
+                  <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                    Highlights & notes ({highlights.length})
+                  </p>
+                  {highlights.map((highlight) => {
+                    const index = reflow.book?.blocks.findIndex((b) => b.id === highlight.blockId) ?? -1;
+                    return (
+                      <div key={highlight.id} className="flex items-start gap-2">
+                        <button
+                          type="button"
+                          className="flex-1 rounded-md px-2 py-2 text-left hover:bg-muted"
+                          onClick={() => {
+                            if (index >= 0) jumpToBlock(index);
+                            setShowBookmarks(false);
+                          }}
+                        >
+                          <span
+                            className="line-clamp-2 text-sm"
+                            style={{ backgroundColor: highlight.color }}
+                          >
+                            {highlight.text}
+                          </span>
+                          {highlight.note && (
+                            <span className="mt-1 block text-xs italic text-muted-foreground">
+                              {highlight.note}
+                            </span>
+                          )}
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-destructive hover:text-destructive"
+                          aria-label="Delete highlight"
+                          onClick={() => removeHighlight(highlight.id)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
         </>
       )}
+
+      {/* Search (Reader Mode) */}
+      {showSearch && isReaderMode && reflow.book && (
+        <>
+          {isMobile && (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 animate-in fade-in-0"
+              onClick={() => setShowSearch(false)}
+            />
+          )}
+          <div
+            className={cn(
+              "fixed z-50 flex flex-col shadow-lg",
+              isMobile
+                ? "left-2 right-2 rounded-2xl border animate-in slide-in-from-bottom-4"
+                : "top-0 right-0 bottom-0 w-80 border-l",
+              theme === "dark" ? "bg-zinc-800" : theme === "sepia" ? "bg-[#e8dcc8]" : "bg-white"
+            )}
+            style={
+              isMobile
+                ? { bottom: MOBILE_PANEL_BOTTOM_OFFSET, maxHeight: MOBILE_PANEL_MAX_HEIGHT }
+                : undefined
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ReaderSearchPanel
+              book={reflow.book}
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              onSelect={(match) => {
+                jumpToBlock(match.blockIndex);
+                setCurrentPage(match.page);
+                if (isMobile) setShowSearch(false);
+              }}
+              onClose={() => {
+                setShowSearch(false);
+                setSearchQuery("");
+              }}
+            />
+          </div>
+        </>
+      )}
+
 
       {/* Main Content — true edge-to-edge. Always fills 100vh minus
           (header when shown) and (footer when shown). Ads NEVER displace it. */}
