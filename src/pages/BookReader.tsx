@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,9 +6,17 @@ import { useBookInteractions } from "@/hooks/useBookInteractions";
 import { useReaderBookmarks } from "@/hooks/useReaderBookmarks";
 import PDFViewer, { PDFOutlineItem } from "@/components/bookshelf/PDFViewer";
 import EPUBViewer, { TocItem } from "@/components/bookshelf/EPUBViewer";
+import ReflowReader from "@/components/bookshelf/reader/ReflowReader";
+import ReaderSettingsPanel from "@/components/bookshelf/reader/ReaderSettingsPanel";
+import ReaderSearchPanel from "@/components/bookshelf/reader/ReaderSearchPanel";
+import { useReflowBook } from "@/hooks/useReflowBook";
+import { useReaderHighlights } from "@/hooks/useReaderHighlights";
+import { useReaderSettings } from "@/lib/reader/settings";
+import { loadAnchor, saveAnchor } from "@/lib/reader/cache";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Moon, Sun, Bookmark, BookmarkCheck, Settings,
-  ZoomIn, ZoomOut, Book, List, X, FileText, Type, Minus, Plus, Palette
+  ZoomIn, ZoomOut, Book, List, X, FileText, Type, Minus, Plus, Palette,
+  Search, BookOpen, ScanLine, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -34,6 +42,8 @@ const MOBILE_PANEL_MAX_HEIGHT = "calc(70vh - env(safe-area-inset-bottom))";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 
+const VIEW_MODE_KEY = "shaverse:reader-view-mode:v1";
+
 const getFileType = (url: string | null): "pdf" | "epub" | "unknown" => {
   if (!url) return "unknown";
   const lowerUrl = url.toLowerCase();
@@ -54,6 +64,7 @@ const THEME_COLORS: Record<ReaderTheme, { bg: string; text: string; headerBg: st
   dark: { bg: "bg-zinc-900", text: "text-zinc-100", headerBg: "bg-zinc-800/95" },
   sepia: { bg: "bg-[#f4ecd8]", text: "text-[#5b4636]", headerBg: "bg-[#e8dcc8]/95" },
 };
+
 
 const BookReader = () => {
   const { bookId } = useParams();
