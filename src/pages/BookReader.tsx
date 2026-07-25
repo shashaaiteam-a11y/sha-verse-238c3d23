@@ -321,8 +321,12 @@ const BookReader = () => {
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+      if (isReaderMode) {
+        const index = pageStartIndex.get(page);
+        if (index !== undefined) jumpToBlock(index);
+      }
     }
-  }, [totalPages]);
+  }, [totalPages, isReaderMode, pageStartIndex, jumpToBlock]);
 
   const handleTotalPagesChange = useCallback((pages: number) => {
     setTotalPages(pages);
