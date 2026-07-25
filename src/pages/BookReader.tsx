@@ -112,6 +112,129 @@ const BookReader = () => {
   const fileType = getFileType(book?.book_url);
   const colors = THEME_COLORS[theme];
 
+  /* ------------------------------- Reader Mode ------------------------------ */
+  // Reader Mode = reflowable text extracted from the PDF (default).
+  // Original PDF Mode = the existing page-image renderer (fallback).
+  const [viewMode, setViewMode] = useState<"reader" | "original">(() => {
+    if (typeof window === "undefined") return "reader";
+    return window.localStorage.getItem(VIEW_MODE_KEY) === "original" ? "original" : "reader";
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [jumpTo, setJumpTo] = useState<{ blockIndex: number; token: number } | null>(null);
+  const jumpTokenRef = useRef(0);
+  const anchorRestoredRef = useRef(false);
+
+  const {
+    settings: readerSettings,
+    update: updateReaderSetting,
+    reset: resetReaderSettings,
+  } = useReaderSettings();
+
+  const isReaderMode = fileType === "pdf" && viewMode === "reader";
+
+  const reflow = useReflowBook({
+    bookId,
+    url: book?.book_url ?? undefined,
+    title: book?.title,
+    author: book?.author,
+    enabled: isReaderMode && !!book?.book_url,
+    ocr: true,
+  });
+
+  const { highlights, addHighlight, removeHighlight, updateHighlight } =
+    useReaderHighlights(bookId);
+
+  // page -> first block index, for page/bookmark navigation inside Reader Mode.
+  const pageStartIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    reflow.book?.blocks.forEach((block, index) => {
+      if (!map.has(block.page)) map.set(block.page, index);
+    });
+    return map;
+  }, [reflow.book]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch {
+      /* ignore */
+    }
+  }, [viewMode]);
+
+  // Keep the reader chrome in sync with the Reader Mode theme.
+  useEffect(() => {
+    if (!isReaderMode) return;
+    setTheme(readerSettings.theme === "black" ? "dark" : readerSettings.theme);
+  }, [isReaderMode, readerSettings.theme]);
+
+  useEffect(() => {
+    anchorRestoredRef.current = false;
+  }, [bookId, isReaderMode]);
+
+  useEffect(() => {
+    if (isReaderMode && reflow.totalPages > 0) setTotalPages(reflow.totalPages);
+  }, [isReaderMode, reflow.totalPages]);
+
+  const jumpToBlock = useCallback((blockIndex: number) => {
+    jumpTokenRef.current += 1;
+    setJumpTo({ blockIndex, token: jumpTokenRef.current });
+  }, []);
+
+  // Restore the saved reading anchor once enough of the book is available.
+  useEffect(() => {
+    if (!isReaderMode || !bookId || anchorRestoredRef.current) return;
+    const blocks = reflow.book?.blocks;
+    if (!blocks?.length) return;
+
+    anchorRestoredRef.current = true;
+    void loadAnchor(bookId).then((anchor) => {
+      if (!anchor) return;
+      const byId = blocks.findIndex((b) => b.id === anchor.blockId);
+      const bySnippet =
+        byId >= 0
+          ? byId
+          : blocks.findIndex((b) => "text" in b && anchor.snippet && b.text.startsWith(anchor.snippet));
+      const index = bySnippet >= 0 ? bySnippet : pageStartIndex.get(anchor.page) ?? -1;
+      if (index >= 0) jumpToBlock(index);
+    });
+  }, [isReaderMode, bookId, reflow.book, pageStartIndex, jumpToBlock]);
+
+  const handleReaderLocation = useCallback(
+    (location: { blockIndex: number; blockId: string; page: number; percent: number; snippet: string }) => {
+      setCurrentPage((prev) => (prev === location.page ? prev : location.page));
+      if (bookId) {
+        void saveAnchor(bookId, {
+          blockId: location.blockId,
+          blockIndex: location.blockIndex,
+          charOffset: 0,
+          snippet: location.snippet,
+          page: location.page,
+          updatedAt: Date.now(),
+        });
+      }
+    },
+    [bookId]
+  );
+
+  const handleCreateHighlight = useCallback(
+    (payload: { blockId: string; start: number; end: number; text: string; withNote: boolean }) => {
+      const created = addHighlight({
+        blockId: payload.blockId,
+        start: payload.start,
+        end: payload.end,
+        text: payload.text,
+      });
+      if (created && payload.withNote) {
+        const note = window.prompt("Add a note", "");
+        if (note && note.trim()) updateHighlight(created.id, { note: note.trim() });
+        else if (note === null) removeHighlight(created.id);
+      }
+    },
+    [addHighlight, updateHighlight, removeHighlight]
+  );
+
+
   useEffect(() => {
     saveProgressRef.current = updateProgress.mutate;
   }, [updateProgress.mutate]);
