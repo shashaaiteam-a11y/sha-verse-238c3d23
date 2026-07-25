@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,9 +6,17 @@ import { useBookInteractions } from "@/hooks/useBookInteractions";
 import { useReaderBookmarks } from "@/hooks/useReaderBookmarks";
 import PDFViewer, { PDFOutlineItem } from "@/components/bookshelf/PDFViewer";
 import EPUBViewer, { TocItem } from "@/components/bookshelf/EPUBViewer";
+import ReflowReader from "@/components/bookshelf/reader/ReflowReader";
+import ReaderSettingsPanel from "@/components/bookshelf/reader/ReaderSettingsPanel";
+import ReaderSearchPanel from "@/components/bookshelf/reader/ReaderSearchPanel";
+import { useReflowBook } from "@/hooks/useReflowBook";
+import { useReaderHighlights } from "@/hooks/useReaderHighlights";
+import { useReaderSettings } from "@/lib/reader/settings";
+import { loadAnchor, saveAnchor } from "@/lib/reader/cache";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Moon, Sun, Bookmark, BookmarkCheck, Settings,
-  ZoomIn, ZoomOut, Book, List, X, FileText, Type, Minus, Plus, Palette
+  ZoomIn, ZoomOut, Book, List, X, FileText, Type, Minus, Plus, Palette,
+  Search, BookOpen, ScanLine, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -34,6 +42,8 @@ const MOBILE_PANEL_MAX_HEIGHT = "calc(70vh - env(safe-area-inset-bottom))";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 
+const VIEW_MODE_KEY = "shaverse:reader-view-mode:v1";
+
 const getFileType = (url: string | null): "pdf" | "epub" | "unknown" => {
   if (!url) return "unknown";
   const lowerUrl = url.toLowerCase();
@@ -54,6 +64,7 @@ const THEME_COLORS: Record<ReaderTheme, { bg: string; text: string; headerBg: st
   dark: { bg: "bg-zinc-900", text: "text-zinc-100", headerBg: "bg-zinc-800/95" },
   sepia: { bg: "bg-[#f4ecd8]", text: "text-[#5b4636]", headerBg: "bg-[#e8dcc8]/95" },
 };
+
 
 const BookReader = () => {
   const { bookId } = useParams();
@@ -100,6 +111,129 @@ const BookReader = () => {
 
   const fileType = getFileType(book?.book_url);
   const colors = THEME_COLORS[theme];
+
+  /* ------------------------------- Reader Mode ------------------------------ */
+  // Reader Mode = reflowable text extracted from the PDF (default).
+  // Original PDF Mode = the existing page-image renderer (fallback).
+  const [viewMode, setViewMode] = useState<"reader" | "original">(() => {
+    if (typeof window === "undefined") return "reader";
+    return window.localStorage.getItem(VIEW_MODE_KEY) === "original" ? "original" : "reader";
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [jumpTo, setJumpTo] = useState<{ blockIndex: number; token: number } | null>(null);
+  const jumpTokenRef = useRef(0);
+  const anchorRestoredRef = useRef(false);
+
+  const {
+    settings: readerSettings,
+    update: updateReaderSetting,
+    reset: resetReaderSettings,
+  } = useReaderSettings();
+
+  const isReaderMode = fileType === "pdf" && viewMode === "reader";
+
+  const reflow = useReflowBook({
+    bookId,
+    url: book?.book_url ?? undefined,
+    title: book?.title,
+    author: book?.author,
+    enabled: isReaderMode && !!book?.book_url,
+    ocr: true,
+  });
+
+  const { highlights, addHighlight, removeHighlight, updateHighlight } =
+    useReaderHighlights(bookId);
+
+  // page -> first block index, for page/bookmark navigation inside Reader Mode.
+  const pageStartIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    reflow.book?.blocks.forEach((block, index) => {
+      if (!map.has(block.page)) map.set(block.page, index);
+    });
+    return map;
+  }, [reflow.book]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch {
+      /* ignore */
+    }
+  }, [viewMode]);
+
+  // Keep the reader chrome in sync with the Reader Mode theme.
+  useEffect(() => {
+    if (!isReaderMode) return;
+    setTheme(readerSettings.theme === "black" ? "dark" : readerSettings.theme);
+  }, [isReaderMode, readerSettings.theme]);
+
+  useEffect(() => {
+    anchorRestoredRef.current = false;
+  }, [bookId, isReaderMode]);
+
+  useEffect(() => {
+    if (isReaderMode && reflow.totalPages > 0) setTotalPages(reflow.totalPages);
+  }, [isReaderMode, reflow.totalPages]);
+
+  const jumpToBlock = useCallback((blockIndex: number) => {
+    jumpTokenRef.current += 1;
+    setJumpTo({ blockIndex, token: jumpTokenRef.current });
+  }, []);
+
+  // Restore the saved reading anchor once enough of the book is available.
+  useEffect(() => {
+    if (!isReaderMode || !bookId || anchorRestoredRef.current) return;
+    const blocks = reflow.book?.blocks;
+    if (!blocks?.length) return;
+
+    anchorRestoredRef.current = true;
+    void loadAnchor(bookId).then((anchor) => {
+      if (!anchor) return;
+      const byId = blocks.findIndex((b) => b.id === anchor.blockId);
+      const bySnippet =
+        byId >= 0
+          ? byId
+          : blocks.findIndex((b) => "text" in b && anchor.snippet && b.text.startsWith(anchor.snippet));
+      const index = bySnippet >= 0 ? bySnippet : pageStartIndex.get(anchor.page) ?? -1;
+      if (index >= 0) jumpToBlock(index);
+    });
+  }, [isReaderMode, bookId, reflow.book, pageStartIndex, jumpToBlock]);
+
+  const handleReaderLocation = useCallback(
+    (location: { blockIndex: number; blockId: string; page: number; percent: number; snippet: string }) => {
+      setCurrentPage((prev) => (prev === location.page ? prev : location.page));
+      if (bookId) {
+        void saveAnchor(bookId, {
+          blockId: location.blockId,
+          blockIndex: location.blockIndex,
+          charOffset: 0,
+          snippet: location.snippet,
+          page: location.page,
+          updatedAt: Date.now(),
+        });
+      }
+    },
+    [bookId]
+  );
+
+  const handleCreateHighlight = useCallback(
+    (payload: { blockId: string; start: number; end: number; text: string; withNote: boolean }) => {
+      const created = addHighlight({
+        blockId: payload.blockId,
+        start: payload.start,
+        end: payload.end,
+        text: payload.text,
+      });
+      if (created && payload.withNote) {
+        const note = window.prompt("Add a note", "");
+        if (note && note.trim()) updateHighlight(created.id, { note: note.trim() });
+        else if (note === null) removeHighlight(created.id);
+      }
+    },
+    [addHighlight, updateHighlight, removeHighlight]
+  );
+
 
   useEffect(() => {
     saveProgressRef.current = updateProgress.mutate;
@@ -187,8 +321,12 @@ const BookReader = () => {
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+      if (isReaderMode) {
+        const index = pageStartIndex.get(page);
+        if (index !== undefined) jumpToBlock(index);
+      }
     }
-  }, [totalPages]);
+  }, [totalPages, isReaderMode, pageStartIndex, jumpToBlock]);
 
   const handleTotalPagesChange = useCallback((pages: number) => {
     setTotalPages(pages);
@@ -366,14 +504,37 @@ const BookReader = () => {
           <div className="flex items-center gap-1">
             {fileType === "pdf" && (
               <>
-                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.max(prev - 0.25, 1))}>
-                  <ZoomOut className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.min(prev + 0.25, 3))}>
-                  <ZoomIn className="w-5 h-5" />
+                {isReaderMode ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Search in book"
+                    onClick={() => { setShowSearch(true); setShowToc(false); setShowBookmarks(false); }}
+                  >
+                    <Search className="w-5 h-5" />
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="icon" aria-label="Zoom out" onClick={() => setScale(prev => Math.max(prev - 0.25, 1))}>
+                      <ZoomOut className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" aria-label="Zoom in" onClick={() => setScale(prev => Math.min(prev + 0.25, 3))}>
+                      <ZoomIn className="w-5 h-5" />
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={isReaderMode ? "Switch to original PDF" : "Switch to Reader Mode"}
+                  title={isReaderMode ? "Original PDF" : "Reader Mode"}
+                  onClick={() => setViewMode(isReaderMode ? "original" : "reader")}
+                >
+                  {isReaderMode ? <ScanLine className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
                 </Button>
               </>
             )}
+
 
             {/* Bookmark Toggle */}
             <Button variant="ghost" size="icon" onClick={handleBookmarkToggle}>
@@ -420,8 +581,16 @@ const BookReader = () => {
                 <SheetHeader>
                   <SheetTitle>Reading Settings</SheetTitle>
                 </SheetHeader>
-                <div className="py-6 space-y-6">
-                  {/* Theme */}
+                {isReaderMode && (
+                  <ReaderSettingsPanel
+                    settings={readerSettings}
+                    onChange={updateReaderSetting}
+                    onReset={resetReaderSettings}
+                  />
+                )}
+                <div className={cn("space-y-6", isReaderMode ? "pb-6" : "py-6")}>
+                  {/* Theme (Original PDF / EPUB modes) */}
+                  {!isReaderMode && (
                   <div>
                     <label className="text-sm font-medium mb-3 block flex items-center gap-2">
                       <Palette className="w-4 h-4" /> Theme
@@ -454,6 +623,7 @@ const BookReader = () => {
                       </Button>
                     </div>
                   </div>
+                  )}
 
                   {/* Font Size (EPUB only) */}
                   {fileType === "epub" && (
@@ -488,8 +658,8 @@ const BookReader = () => {
                     </div>
                   )}
 
-                  {/* Zoom (PDF only) */}
-                  {fileType === "pdf" && (
+                  {/* Zoom (Original PDF mode only) */}
+                  {fileType === "pdf" && !isReaderMode && (
                     <div>
                       <label className="text-sm font-medium mb-3 block">Zoom: {Math.round(scale * 100)}%</label>
                       <div className="flex items-center gap-4">
@@ -575,7 +745,24 @@ const BookReader = () => {
           </div>
           <ScrollArea className={isMobile ? "flex-1 min-h-0" : "h-[calc(100%-60px)]"}>
             <div className="p-2">
-              {fileType === "epub" && epubToc.length > 0 ? (
+              {isReaderMode && reflow.book && reflow.book.chapters.length > 0 ? (
+                reflow.book.chapters.map((chapter) => (
+                  <Button
+                    key={chapter.id}
+                    variant="ghost"
+                    className="w-full justify-start text-left"
+                    style={{ paddingLeft: `${16 + chapter.level * 16}px` }}
+                    onClick={() => {
+                      jumpToBlock(chapter.blockIndex);
+                      setCurrentPage(chapter.page);
+                      setShowToc(false);
+                    }}
+                  >
+                    <span className="truncate">{chapter.title}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">p.{chapter.page}</span>
+                  </Button>
+                ))
+              ) : fileType === "epub" && epubToc.length > 0 ? (
                 renderEpubTocItems(epubToc)
               ) : pdfOutline.length > 0 ? (
                 renderOutlineItems(pdfOutline)
@@ -672,11 +859,100 @@ const BookReader = () => {
                   </div>
                 ))
               )}
+
+              {/* Highlights & notes (Reader Mode) */}
+              {isReaderMode && highlights.length > 0 && (
+                <div className="pt-3">
+                  <Separator className="mb-2" />
+                  <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                    Highlights & notes ({highlights.length})
+                  </p>
+                  {highlights.map((highlight) => {
+                    const index = reflow.book?.blocks.findIndex((b) => b.id === highlight.blockId) ?? -1;
+                    return (
+                      <div key={highlight.id} className="flex items-start gap-2">
+                        <button
+                          type="button"
+                          className="flex-1 rounded-md px-2 py-2 text-left hover:bg-muted"
+                          onClick={() => {
+                            if (index >= 0) jumpToBlock(index);
+                            setShowBookmarks(false);
+                          }}
+                        >
+                          <span
+                            className="line-clamp-2 text-sm"
+                            style={{ backgroundColor: highlight.color }}
+                          >
+                            {highlight.text}
+                          </span>
+                          {highlight.note && (
+                            <span className="mt-1 block text-xs italic text-muted-foreground">
+                              {highlight.note}
+                            </span>
+                          )}
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-destructive hover:text-destructive"
+                          aria-label="Delete highlight"
+                          onClick={() => removeHighlight(highlight.id)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
         </>
       )}
+
+      {/* Search (Reader Mode) */}
+      {showSearch && isReaderMode && reflow.book && (
+        <>
+          {isMobile && (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 animate-in fade-in-0"
+              onClick={() => setShowSearch(false)}
+            />
+          )}
+          <div
+            className={cn(
+              "fixed z-50 flex flex-col shadow-lg",
+              isMobile
+                ? "left-2 right-2 rounded-2xl border animate-in slide-in-from-bottom-4"
+                : "top-0 right-0 bottom-0 w-80 border-l",
+              theme === "dark" ? "bg-zinc-800" : theme === "sepia" ? "bg-[#e8dcc8]" : "bg-white"
+            )}
+            style={
+              isMobile
+                ? { bottom: MOBILE_PANEL_BOTTOM_OFFSET, maxHeight: MOBILE_PANEL_MAX_HEIGHT }
+                : undefined
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ReaderSearchPanel
+              book={reflow.book}
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              onSelect={(match) => {
+                jumpToBlock(match.blockIndex);
+                setCurrentPage(match.page);
+                if (isMobile) setShowSearch(false);
+              }}
+              onClose={() => {
+                setShowSearch(false);
+                setSearchQuery("");
+              }}
+            />
+          </div>
+        </>
+      )}
+
 
       {/* Main Content — true edge-to-edge. Always fills 100vh minus
           (header when shown) and (footer when shown). Ads NEVER displace it. */}
@@ -688,9 +964,49 @@ const BookReader = () => {
         )}
       >
         <div className={cn("relative w-full h-full overflow-hidden", colors.bg)}>
-          {/* PDF Viewer — wrapper paints theme bg behind canvas so any
+          {/* Reader Mode — reflowable text extracted from the PDF. */}
+          {isReaderMode && book.book_url && (
+            <>
+              {reflow.book && reflow.book.blocks.length > 0 ? (
+                <ReflowReader
+                  book={reflow.book}
+                  settings={readerSettings}
+                  highlights={highlights}
+                  searchQuery={showSearch ? searchQuery : undefined}
+                  jumpTo={jumpTo}
+                  onLocationChange={handleReaderLocation}
+                  onCreateHighlight={handleCreateHighlight}
+                  onTap={toggleControls}
+                />
+              ) : reflow.status === "error" ? (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
+                  <Book className="h-10 w-10 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{reflow.error}</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => reflow.reprocess()}>Try again</Button>
+                    <Button onClick={() => setViewMode("original")}>Open original PDF</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-3">
+                  <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Preparing Reader Mode…</p>
+                </div>
+              )}
+
+              {/* Background extraction indicator — reading is never blocked. */}
+              {reflow.status === "extracting" && reflow.book && reflow.book.blocks.length > 0 && (
+                <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-2 rounded-full bg-black/65 px-3 py-1.5 text-[11px] font-medium text-white">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Preparing {reflow.progress}%
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Original PDF Viewer — wrapper paints theme bg behind canvas so any
               side gutters from natural aspect ratio match the reader theme. */}
-          {fileType === "pdf" && book.book_url && (
+          {fileType === "pdf" && !isReaderMode && book.book_url && (
             <div className={cn("w-full h-full overflow-auto overscroll-contain", colors.bg)} style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y pinch-zoom" }}>
               <PDFViewer
                 key={`${book.id}-${book.book_url}`}
