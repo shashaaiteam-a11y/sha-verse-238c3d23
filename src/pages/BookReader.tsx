@@ -581,8 +581,16 @@ const BookReader = () => {
                 <SheetHeader>
                   <SheetTitle>Reading Settings</SheetTitle>
                 </SheetHeader>
-                <div className="py-6 space-y-6">
-                  {/* Theme */}
+                {isReaderMode && (
+                  <ReaderSettingsPanel
+                    settings={readerSettings}
+                    onChange={updateReaderSetting}
+                    onReset={resetReaderSettings}
+                  />
+                )}
+                <div className={cn("space-y-6", isReaderMode ? "pb-6" : "py-6")}>
+                  {/* Theme (Original PDF / EPUB modes) */}
+                  {!isReaderMode && (
                   <div>
                     <label className="text-sm font-medium mb-3 block flex items-center gap-2">
                       <Palette className="w-4 h-4" /> Theme
@@ -615,6 +623,7 @@ const BookReader = () => {
                       </Button>
                     </div>
                   </div>
+                  )}
 
                   {/* Font Size (EPUB only) */}
                   {fileType === "epub" && (
