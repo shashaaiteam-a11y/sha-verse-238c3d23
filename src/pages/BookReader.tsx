@@ -500,14 +500,37 @@ const BookReader = () => {
           <div className="flex items-center gap-1">
             {fileType === "pdf" && (
               <>
-                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.max(prev - 0.25, 1))}>
-                  <ZoomOut className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => setScale(prev => Math.min(prev + 0.25, 3))}>
-                  <ZoomIn className="w-5 h-5" />
+                {isReaderMode ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Search in book"
+                    onClick={() => { setShowSearch(true); setShowToc(false); setShowBookmarks(false); }}
+                  >
+                    <Search className="w-5 h-5" />
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="icon" aria-label="Zoom out" onClick={() => setScale(prev => Math.max(prev - 0.25, 1))}>
+                      <ZoomOut className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" aria-label="Zoom in" onClick={() => setScale(prev => Math.min(prev + 0.25, 3))}>
+                      <ZoomIn className="w-5 h-5" />
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={isReaderMode ? "Switch to original PDF" : "Switch to Reader Mode"}
+                  title={isReaderMode ? "Original PDF" : "Reader Mode"}
+                  onClick={() => setViewMode(isReaderMode ? "original" : "reader")}
+                >
+                  {isReaderMode ? <ScanLine className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
                 </Button>
               </>
             )}
+
 
             {/* Bookmark Toggle */}
             <Button variant="ghost" size="icon" onClick={handleBookmarkToggle}>
