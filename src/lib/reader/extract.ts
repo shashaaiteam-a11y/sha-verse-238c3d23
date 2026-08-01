@@ -621,9 +621,17 @@ export async function* extractReflowBook(
       }
     } else {
       const outlineTitle = outlinePages.get(pageNumber);
-      const textBlocks = linesToBlocks(lines, pageNumber, ctx, nextId);
+      const carry = pendingContinuation;
+      pendingContinuation = null;
+      const { blocks: textBlocks, lastLineFull, firstLineIndent } = linesToBlocks(
+        lines,
+        pageNumber,
+        ctx,
+        nextId
+      );
       const imageBlocks = await extractPageImages(page, pageNumber, nextId);
 
+      const hasOutlineHeading = !!outlineTitle;
       if (outlineTitle && !textBlocks.some((b) => b.type === "heading" && b.text === outlineTitle)) {
         book.blocks.push({
           id: nextId(),
@@ -634,8 +642,40 @@ export async function* extractReflowBook(
           dir: isRtl(outlineTitle) ? "rtl" : "ltr",
         });
       }
+
+      // Cross-page continuation: a paragraph left open on the previous page is
+      // merged with the first paragraph here when that paragraph clearly
+      // continues it (no indent, no heading, same kind of body text).
+      const firstBlock = textBlocks[0];
+      if (
+        carry &&
+        !hasOutlineHeading &&
+        !firstLineIndent &&
+        firstBlock &&
+        firstBlock.type === "paragraph" &&
+        !firstBlock.quote &&
+        !firstBlock.small &&
+        !carry.quote &&
+        !carry.small &&
+        !BULLET_RE.test(firstBlock.text)
+      ) {
+        if (/[-\u2010\u00AD]$/.test(carry.text) && /^[a-zà-öø-ÿ]/.test(firstBlock.text)) {
+          carry.text = carry.text.replace(/[-\u2010\u00AD]$/, "") + firstBlock.text;
+        } else {
+          carry.text = `${carry.text} ${firstBlock.text}`.replace(/\s+/g, " ").trim();
+        }
+        textBlocks.shift();
+      }
+
       book.blocks.push(...textBlocks, ...imageBlocks);
+
+      // Remember an open paragraph so the next page can continue it.
+      if (lastLineFull && !imageBlocks.length) {
+        const last = book.blocks[book.blocks.length - 1];
+        if (last && last.type === "paragraph") pendingContinuation = last;
+      }
     }
+
 
     book.blocks.push({ id: nextId(), page: pageNumber, type: "pagebreak" });
 
