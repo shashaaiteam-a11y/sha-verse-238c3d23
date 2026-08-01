@@ -206,15 +206,23 @@ interface GroupContext {
   bodySamples: number[];
 }
 
+export interface PageBlocksResult {
+  blocks: Block[];
+  /** True when the last text line of the page ran to the column edge (paragraph continues). */
+  lastLineFull: boolean;
+  /** True when the first text line of the page was indented (new paragraph). */
+  firstLineIndent: boolean;
+}
+
 /** Merge visual lines into semantic blocks (headings, paragraphs, tables, lists). */
 function linesToBlocks(
   lines: Line[],
   page: number,
   ctx: GroupContext,
   nextId: () => string
-): Block[] {
+): PageBlocksResult {
   const blocks: Block[] = [];
-  if (!lines.length) return blocks;
+  if (!lines.length) return { blocks, lastLineFull: false, firstLineIndent: false };
 
   ctx.bodySamples.push(...lines.map((l) => l.size));
   if (ctx.bodySamples.length > 4000) ctx.bodySamples.splice(0, ctx.bodySamples.length - 4000);
@@ -229,6 +237,9 @@ function linesToBlocks(
   const columnRight = Math.max(...lines.map((l) => l.right));
   const columnLeft = Math.min(...lines.map((l) => l.x));
   const columnWidth = Math.max(columnRight - columnLeft, 1);
+
+  /** A line that reaches (almost) the column edge can never end a paragraph. */
+  const reachesEdge = (line: Line) => line.right >= columnRight - columnWidth * 0.12;
 
   const flush = (group: Line[]) => {
     if (!group.length) return;
@@ -270,6 +281,9 @@ function linesToBlocks(
     });
   };
 
+  let firstTextLine: Line | null = null;
+  let lastTextLine: Line | null = null;
+
   let group: Line[] = [];
   for (let i = 0; i < lines.length; i++) {
     const table = detectTable(lines, i);
@@ -282,6 +296,9 @@ function linesToBlocks(
     }
 
     const line = lines[i];
+    if (!firstTextLine) firstTextLine = line;
+    lastTextLine = line;
+
     const prev = lines[i - 1];
     if (!prev) {
       group = [line];
@@ -289,14 +306,26 @@ function linesToBlocks(
     }
 
     const gap = prev.y - line.y;
-    const bigGap = gap > baseGap * 1.55 || gap < 0;
-    const sizeShift = Math.abs(line.size - prev.size) > Math.max(prev.size * 0.16, 0.9);
-    const indentStart = line.x > prev.x + Math.max(line.size * 0.7, 4);
-    const prevShort = prev.right < columnRight - columnWidth * 0.14;
-    const sentenceBreak = prevShort && SENTENCE_END_RE.test(prev.text);
+    // Structural signals — these always start a new block.
+    const columnJump = gap < 0 || gap > baseGap * 2.2;
+    const hardGap = gap > baseGap * 1.55;
     const bulletStart = BULLET_RE.test(line.text);
+    // Only treat a real size change (not inline superscripts) as a break.
+    const sizeShift =
+      Math.abs(line.size - prev.size) > Math.max(prev.size * 0.28, 1.6) &&
+      Math.abs(line.size - prev.size) > 1;
 
-    if (bigGap || sizeShift || indentStart || sentenceBreak || bulletStart) {
+    // Continuation-first: a previous line that runs to the column edge is,
+    // by definition, mid-paragraph — regardless of punctuation or indent.
+    const prevContinues = reachesEdge(prev);
+
+    const indentStart = line.x > prev.x + Math.max(line.size * 0.7, 4);
+    const sentenceBreak = SENTENCE_END_RE.test(prev.text);
+
+    const softBreak =
+      !prevContinues && (indentStart || (sentenceBreak && hardGap) || (sentenceBreak && indentStart));
+
+    if (columnJump || bulletStart || sizeShift || (hardGap && !prevContinues) || softBreak) {
       flush(group);
       group = [line];
     } else {
@@ -305,8 +334,15 @@ function linesToBlocks(
   }
   flush(group);
 
-  return blocks;
+  return {
+    blocks,
+    lastLineFull: lastTextLine ? reachesEdge(lastTextLine) : false,
+    firstLineIndent: firstTextLine
+      ? firstTextLine.x > columnLeft + ctx.bodySize * 0.8
+      : false,
+  };
 }
+
 
 async function extractPageImages(
   page: any,
