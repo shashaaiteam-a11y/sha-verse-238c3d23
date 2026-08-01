@@ -537,6 +537,11 @@ export async function* extractReflowBook(
 
   let ocrUsed = false;
   let ocrWorker: { recognize: (img: Blob) => Promise<string[]> } | null = null;
+  /** Normalised text of lines seen at page extremes → occurrence count. */
+  const edgeTextCounts = new Map<string, number>();
+  /** Paragraph left open at the end of the previous page (for cross-page merge). */
+  let pendingContinuation: ParagraphBlock | null = null;
+
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     if (options.signal?.aborted) return;
