@@ -320,14 +320,33 @@ const ReflowReader = ({
 
   // Keep the reader anchored to the same block when typography changes.
   const anchorIndexRef = useRef(0);
+  const firstTypographyRun = useRef(true);
   useEffect(() => {
-    virtualizer.measure();
-    const index = anchorIndexRef.current;
-    if (index > 0) {
-      requestAnimationFrame(() => virtualizer.scrollToIndex(index, { align: "start" }));
+    if (firstTypographyRun.current) {
+      firstTypographyRun.current = false;
+      return;
     }
+    const index = anchorIndexRef.current;
+    // Drop every cached height first — old measurements are invalid once the
+    // font metrics change, and stale sizes are what cause the jump/overlap.
+    virtualizer.measure();
+    requestAnimationFrame(() => {
+      virtualizer.measure();
+      requestAnimationFrame(() => {
+        if (index > 0) virtualizer.scrollToIndex(index, { align: "start" });
+      });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.fontSize, settings.lineHeight, settings.margin, settings.font, settings.paragraphSpacing]);
+  }, [
+    settings.fontSize,
+    settings.lineHeight,
+    settings.margin,
+    settings.font,
+    settings.paragraphSpacing,
+    settings.justify,
+    settings.looseSpacing,
+  ]);
+
 
   useEffect(() => {
     if (!jumpTo) return;
