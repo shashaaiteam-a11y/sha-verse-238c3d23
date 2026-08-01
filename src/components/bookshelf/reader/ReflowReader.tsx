@@ -256,11 +256,17 @@ const BlockView = memo(
           fontStyle: block.quote ? "italic" : undefined,
           color: block.small ? theme.muted : undefined,
           overflowWrap: "break-word",
+          textWrap: settings.justify ? undefined : ("pretty" as never),
+          orphans: 2,
+          widows: 2,
+          textRendering: "optimizeLegibility",
+          WebkitFontSmoothing: "antialiased",
         }}
       >
         <TextContent text={block.text} ranges={ranges} />
       </p>
     );
+
   }
 );
 BlockView.displayName = "BlockView";
