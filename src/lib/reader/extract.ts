@@ -547,12 +547,23 @@ export async function* extractReflowBook(
     let lines = buildLines(content.items as any[]);
     lines = orderColumns(lines, viewport.width);
 
-    // Drop running headers / footers (single short line at the page extremes).
+    // Drop running headers / footers: folios, plus any short edge line whose
+    // normalised text already appeared at a page extreme on 2+ earlier pages.
     lines = lines.filter((line, index) => {
       const nearEdge = line.y > viewport.height * 0.94 || line.y < viewport.height * 0.06;
+      if (!nearEdge) return true;
       const looksLikeFolio = /^[ivxlcdm\d\s\-—–.]+$/i.test(line.text) && line.text.length <= 12;
-      return !(nearEdge && (looksLikeFolio || (index === 0 && line.text.length < 60 && lines.length > 4)));
+      const key = line.text.replace(/\d+/g, "#").toLowerCase().trim();
+      const seen = edgeTextCounts.get(key) ?? 0;
+      if (line.text.length <= 90) edgeTextCounts.set(key, seen + 1);
+      const repeated = line.text.length <= 90 && seen >= 2;
+      return !(
+        looksLikeFolio ||
+        repeated ||
+        (index === 0 && line.text.length < 60 && lines.length > 4)
+      );
     });
+
 
     const plainText = lines.map((l) => l.text).join("").trim();
     const startIndex = book.blocks.length;
