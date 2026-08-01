@@ -577,7 +577,9 @@ export async function* extractReflowBook(
 
     if (plainText.length < 12) {
       // Scanned / image-only page.
+      pendingContinuation = null;
       meta.scanned = true;
+
       const rendered = await renderPageToBlob(page);
       let recognised = false;
 
