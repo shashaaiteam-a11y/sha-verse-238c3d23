@@ -12,9 +12,11 @@ import type {
   Block,
   Chapter,
   Direction,
+  ParagraphBlock,
   ReflowBook,
   ReflowBookMeta,
 } from "./types";
+
 import { REFLOW_MODEL_VERSION } from "./types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
