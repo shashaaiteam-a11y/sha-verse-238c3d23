@@ -12,9 +12,11 @@ import type {
   Block,
   Chapter,
   Direction,
+  ParagraphBlock,
   ReflowBook,
   ReflowBookMeta,
 } from "./types";
+
 import { REFLOW_MODEL_VERSION } from "./types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -206,15 +208,23 @@ interface GroupContext {
   bodySamples: number[];
 }
 
+export interface PageBlocksResult {
+  blocks: Block[];
+  /** True when the last text line of the page ran to the column edge (paragraph continues). */
+  lastLineFull: boolean;
+  /** True when the first text line of the page was indented (new paragraph). */
+  firstLineIndent: boolean;
+}
+
 /** Merge visual lines into semantic blocks (headings, paragraphs, tables, lists). */
 function linesToBlocks(
   lines: Line[],
   page: number,
   ctx: GroupContext,
   nextId: () => string
-): Block[] {
+): PageBlocksResult {
   const blocks: Block[] = [];
-  if (!lines.length) return blocks;
+  if (!lines.length) return { blocks, lastLineFull: false, firstLineIndent: false };
 
   ctx.bodySamples.push(...lines.map((l) => l.size));
   if (ctx.bodySamples.length > 4000) ctx.bodySamples.splice(0, ctx.bodySamples.length - 4000);
@@ -229,6 +239,9 @@ function linesToBlocks(
   const columnRight = Math.max(...lines.map((l) => l.right));
   const columnLeft = Math.min(...lines.map((l) => l.x));
   const columnWidth = Math.max(columnRight - columnLeft, 1);
+
+  /** A line that reaches (almost) the column edge can never end a paragraph. */
+  const reachesEdge = (line: Line) => line.right >= columnRight - columnWidth * 0.12;
 
   const flush = (group: Line[]) => {
     if (!group.length) return;
@@ -270,6 +283,9 @@ function linesToBlocks(
     });
   };
 
+  let firstTextLine: Line | null = null;
+  let lastTextLine: Line | null = null;
+
   let group: Line[] = [];
   for (let i = 0; i < lines.length; i++) {
     const table = detectTable(lines, i);
@@ -282,6 +298,9 @@ function linesToBlocks(
     }
 
     const line = lines[i];
+    if (!firstTextLine) firstTextLine = line;
+    lastTextLine = line;
+
     const prev = lines[i - 1];
     if (!prev) {
       group = [line];
@@ -289,14 +308,26 @@ function linesToBlocks(
     }
 
     const gap = prev.y - line.y;
-    const bigGap = gap > baseGap * 1.55 || gap < 0;
-    const sizeShift = Math.abs(line.size - prev.size) > Math.max(prev.size * 0.16, 0.9);
-    const indentStart = line.x > prev.x + Math.max(line.size * 0.7, 4);
-    const prevShort = prev.right < columnRight - columnWidth * 0.14;
-    const sentenceBreak = prevShort && SENTENCE_END_RE.test(prev.text);
+    // Structural signals — these always start a new block.
+    const columnJump = gap < 0 || gap > baseGap * 2.2;
+    const hardGap = gap > baseGap * 1.55;
     const bulletStart = BULLET_RE.test(line.text);
+    // Only treat a real size change (not inline superscripts) as a break.
+    const sizeShift =
+      Math.abs(line.size - prev.size) > Math.max(prev.size * 0.28, 1.6) &&
+      Math.abs(line.size - prev.size) > 1;
 
-    if (bigGap || sizeShift || indentStart || sentenceBreak || bulletStart) {
+    // Continuation-first: a previous line that runs to the column edge is,
+    // by definition, mid-paragraph — regardless of punctuation or indent.
+    const prevContinues = reachesEdge(prev);
+
+    const indentStart = line.x > prev.x + Math.max(line.size * 0.7, 4);
+    const sentenceBreak = SENTENCE_END_RE.test(prev.text);
+
+    const softBreak =
+      !prevContinues && (indentStart || (sentenceBreak && hardGap) || (sentenceBreak && indentStart));
+
+    if (columnJump || bulletStart || sizeShift || (hardGap && !prevContinues) || softBreak) {
       flush(group);
       group = [line];
     } else {
@@ -305,8 +336,15 @@ function linesToBlocks(
   }
   flush(group);
 
-  return blocks;
+  return {
+    blocks,
+    lastLineFull: lastTextLine ? reachesEdge(lastTextLine) : false,
+    firstLineIndent: firstTextLine
+      ? firstTextLine.x > columnLeft + ctx.bodySize * 0.8
+      : false,
+  };
 }
+
 
 async function extractPageImages(
   page: any,
@@ -501,6 +539,11 @@ export async function* extractReflowBook(
 
   let ocrUsed = false;
   let ocrWorker: { recognize: (img: Blob) => Promise<string[]> } | null = null;
+  /** Normalised text of lines seen at page extremes → occurrence count. */
+  const edgeTextCounts = new Map<string, number>();
+  /** Paragraph left open at the end of the previous page (for cross-page merge). */
+  let pendingContinuation: ParagraphBlock | null = null;
+
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     if (options.signal?.aborted) return;
@@ -511,19 +554,32 @@ export async function* extractReflowBook(
     let lines = buildLines(content.items as any[]);
     lines = orderColumns(lines, viewport.width);
 
-    // Drop running headers / footers (single short line at the page extremes).
+    // Drop running headers / footers: folios, plus any short edge line whose
+    // normalised text already appeared at a page extreme on 2+ earlier pages.
     lines = lines.filter((line, index) => {
       const nearEdge = line.y > viewport.height * 0.94 || line.y < viewport.height * 0.06;
+      if (!nearEdge) return true;
       const looksLikeFolio = /^[ivxlcdm\d\s\-—–.]+$/i.test(line.text) && line.text.length <= 12;
-      return !(nearEdge && (looksLikeFolio || (index === 0 && line.text.length < 60 && lines.length > 4)));
+      const key = line.text.replace(/\d+/g, "#").toLowerCase().trim();
+      const seen = edgeTextCounts.get(key) ?? 0;
+      if (line.text.length <= 90) edgeTextCounts.set(key, seen + 1);
+      const repeated = line.text.length <= 90 && seen >= 2;
+      return !(
+        looksLikeFolio ||
+        repeated ||
+        (index === 0 && line.text.length < 60 && lines.length > 4)
+      );
     });
+
 
     const plainText = lines.map((l) => l.text).join("").trim();
     const startIndex = book.blocks.length;
 
     if (plainText.length < 12) {
       // Scanned / image-only page.
+      pendingContinuation = null;
       meta.scanned = true;
+
       const rendered = await renderPageToBlob(page);
       let recognised = false;
 
@@ -567,9 +623,17 @@ export async function* extractReflowBook(
       }
     } else {
       const outlineTitle = outlinePages.get(pageNumber);
-      const textBlocks = linesToBlocks(lines, pageNumber, ctx, nextId);
+      const carry = pendingContinuation;
+      pendingContinuation = null;
+      const { blocks: textBlocks, lastLineFull, firstLineIndent } = linesToBlocks(
+        lines,
+        pageNumber,
+        ctx,
+        nextId
+      );
       const imageBlocks = await extractPageImages(page, pageNumber, nextId);
 
+      const hasOutlineHeading = !!outlineTitle;
       if (outlineTitle && !textBlocks.some((b) => b.type === "heading" && b.text === outlineTitle)) {
         book.blocks.push({
           id: nextId(),
@@ -580,8 +644,40 @@ export async function* extractReflowBook(
           dir: isRtl(outlineTitle) ? "rtl" : "ltr",
         });
       }
+
+      // Cross-page continuation: a paragraph left open on the previous page is
+      // merged with the first paragraph here when that paragraph clearly
+      // continues it (no indent, no heading, same kind of body text).
+      const firstBlock = textBlocks[0];
+      if (
+        carry &&
+        !hasOutlineHeading &&
+        !firstLineIndent &&
+        firstBlock &&
+        firstBlock.type === "paragraph" &&
+        !firstBlock.quote &&
+        !firstBlock.small &&
+        !carry.quote &&
+        !carry.small &&
+        !BULLET_RE.test(firstBlock.text)
+      ) {
+        if (/[-\u2010\u00AD]$/.test(carry.text) && /^[a-zà-öø-ÿ]/.test(firstBlock.text)) {
+          carry.text = carry.text.replace(/[-\u2010\u00AD]$/, "") + firstBlock.text;
+        } else {
+          carry.text = `${carry.text} ${firstBlock.text}`.replace(/\s+/g, " ").trim();
+        }
+        textBlocks.shift();
+      }
+
       book.blocks.push(...textBlocks, ...imageBlocks);
+
+      // Remember an open paragraph so the next page can continue it.
+      if (lastLineFull && !imageBlocks.length) {
+        const last = book.blocks[book.blocks.length - 1];
+        if (last && last.type === "paragraph") pendingContinuation = last;
+      }
     }
+
 
     book.blocks.push({ id: nextId(), page: pageNumber, type: "pagebreak" });
 
