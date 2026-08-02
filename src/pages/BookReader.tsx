@@ -514,9 +514,15 @@ const BookReader = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="hidden sm:block">
-              <h1 className="font-semibold truncate max-w-[200px]">{book.title}</h1>
-              <p className="text-xs text-muted-foreground">{book.author} · {progressPercent}%</p>
+            <div className="min-w-0">
+              <h1 className="font-semibold truncate max-w-[46vw] sm:max-w-[240px] text-sm sm:text-base">{book.title}</h1>
+              <p className="truncate max-w-[46vw] sm:max-w-[240px] text-[11px] text-muted-foreground">
+                {isReaderMode && readerPagination.chapterTitle
+                  ? readerPagination.chapterTitle
+                  : book.author}
+                {" · "}
+                {displayPercent}%
+              </p>
             </div>
           </div>
 
