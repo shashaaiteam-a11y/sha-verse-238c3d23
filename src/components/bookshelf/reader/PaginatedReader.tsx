@@ -683,6 +683,7 @@ const PaginatedReader = ({
 
   /* -------------------------------- gestures ------------------------------ */
   const touchRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const lastTouchRef = useRef(0);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -692,6 +693,7 @@ const PaginatedReader = ({
   const handleTouchEnd = (e: React.TouchEvent) => {
     const start = touchRef.current;
     touchRef.current = null;
+    lastTouchRef.current = Date.now();
     if (!start) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
@@ -731,10 +733,13 @@ const PaginatedReader = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onClick={(event) => {
+        // The reader owns its own tap handling — never let it bubble to the
+        // page-level toggle (that would double-fire the controls).
+        event.stopPropagation();
         const target = event.target as HTMLElement;
         if (target.closest("[data-reader-toolbar]")) return;
         // Touch devices already handled the tap in touchend.
-        if ((event.nativeEvent as PointerEvent).pointerType === "touch") return;
+        if (Date.now() - lastTouchRef.current < 700) return;
         handleTap(event.clientX, event.currentTarget);
       }}
     >

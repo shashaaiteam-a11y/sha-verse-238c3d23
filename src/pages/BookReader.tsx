@@ -366,7 +366,7 @@ const BookReader = () => {
     if (!showControls) return;
     const timer = window.setTimeout(() => setShowControls(false), 3000);
     return () => window.clearTimeout(timer);
-  }, [showControls, currentPage]);
+  }, [showControls, currentPage, readerPagination.page]);
 
   // Keyboard navigation (desktop): ArrowLeft/Right to flip, Escape to toggle controls
   useEffect(() => {
