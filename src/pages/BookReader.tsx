@@ -6,7 +6,7 @@ import { useBookInteractions } from "@/hooks/useBookInteractions";
 import { useReaderBookmarks } from "@/hooks/useReaderBookmarks";
 import PDFViewer, { PDFOutlineItem } from "@/components/bookshelf/PDFViewer";
 import EPUBViewer, { TocItem } from "@/components/bookshelf/EPUBViewer";
-import ReflowReader from "@/components/bookshelf/reader/ReflowReader";
+import PaginatedReader, { type PaginationInfo } from "@/components/bookshelf/reader/PaginatedReader";
 import ReaderSettingsPanel from "@/components/bookshelf/reader/ReaderSettingsPanel";
 import ReaderSearchPanel from "@/components/bookshelf/reader/ReaderSearchPanel";
 import { useReflowBook } from "@/hooks/useReflowBook";
@@ -124,6 +124,19 @@ const BookReader = () => {
   const [jumpTo, setJumpTo] = useState<{ blockIndex: number; token: number } | null>(null);
   const jumpTokenRef = useRef(0);
   const anchorRestoredRef = useRef(false);
+  // Paginated Reader Mode: page/percent come from the renderer itself.
+  const [readerPagination, setReaderPagination] = useState<PaginationInfo>({
+    page: 1,
+    totalPages: 1,
+    percent: 0,
+    chapterTitle: "",
+  });
+  const [navRequest, setNavRequest] = useState<{ delta: number; token: number } | null>(null);
+  const navTokenRef = useRef(0);
+  const requestFlip = useCallback((delta: number) => {
+    navTokenRef.current += 1;
+    setNavRequest({ delta, token: navTokenRef.current });
+  }, []);
 
   const {
     settings: readerSettings,
@@ -968,13 +981,18 @@ const BookReader = () => {
           {isReaderMode && book.book_url && (
             <>
               {reflow.book && reflow.book.blocks.length > 0 ? (
-                <ReflowReader
+                <PaginatedReader
                   book={reflow.book}
                   settings={readerSettings}
                   highlights={highlights}
                   searchQuery={showSearch ? searchQuery : undefined}
                   jumpTo={jumpTo}
+                  navRequest={navRequest}
+                  coverUrl={book.cover_url}
+                  title={book.title}
+                  author={book.author ?? undefined}
                   onLocationChange={handleReaderLocation}
+                  onPaginationChange={setReaderPagination}
                   onCreateHighlight={handleCreateHighlight}
                   onTap={toggleControls}
                 />
