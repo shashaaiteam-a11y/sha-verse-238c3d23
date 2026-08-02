@@ -44,9 +44,12 @@ export const READER_THEMES: Record<
 };
 
 export const READER_FONT_STACKS: Record<ReaderFont, string> = {
-  serif: 'Georgia, "Iowan Old Style", "Times New Roman", "Noto Serif", serif',
-  sans: '"Helvetica Neue", Helvetica, Arial, "Noto Sans", system-ui, sans-serif',
-  dyslexic: '"Comic Sans MS", "Trebuchet MS", Verdana, sans-serif',
+  serif:
+    'Georgia, "Iowan Old Style", "Times New Roman", "Noto Serif", "Noto Serif Devanagari", "Noto Naskh Arabic", "Noto Nastaliq Urdu", "Noto Sans CJK SC", serif',
+  sans:
+    '"Helvetica Neue", Helvetica, Arial, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Arabic", "Noto Nastaliq Urdu", "Noto Sans CJK SC", system-ui, sans-serif',
+  dyslexic:
+    '"Comic Sans MS", "Trebuchet MS", Verdana, "Noto Sans Devanagari", "Noto Sans Arabic", sans-serif',
 };
 
 function readStored(): ReaderSettings {
