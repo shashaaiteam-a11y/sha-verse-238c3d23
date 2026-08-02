@@ -377,12 +377,14 @@ const BookReader = () => {
 
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        if (fileType === "epub") epubPrev();
+        if (isReaderMode) requestFlip(-1);
+        else if (fileType === "epub") epubPrev();
         else setCurrentPage((p) => Math.max(1, p - 1));
         setShowControls(true);
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        if (fileType === "epub") epubNext();
+        if (isReaderMode) requestFlip(1);
+        else if (fileType === "epub") epubNext();
         else setCurrentPage((p) => (totalPages > 0 ? Math.min(totalPages, p + 1) : p + 1));
         setShowControls(true);
       } else if (e.key === "Escape") {
@@ -393,7 +395,7 @@ const BookReader = () => {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileType, totalPages]);
+  }, [fileType, totalPages, isReaderMode, requestFlip]);
 
   const handleBookmarkToggle = () => {
     if (isPageBookmarked(currentPage)) {
@@ -485,6 +487,10 @@ const BookReader = () => {
   }
 
   const progressPercent = totalPages > 0 ? Math.round((currentPage / totalPages) * 100) : 0;
+  // Reader Mode shows real rendered pages; other modes show source pages.
+  const displayPage = isReaderMode ? readerPagination.page : currentPage;
+  const displayTotal = isReaderMode ? readerPagination.totalPages : totalPages;
+  const displayPercent = isReaderMode ? readerPagination.percent : progressPercent;
   const isCurrentPageBookmarked = isPageBookmarked(currentPage);
 
   return (
@@ -1163,17 +1169,21 @@ const BookReader = () => {
           {/* Progress Bar */}
           <div className="mb-2">
             <Slider
-              value={[currentPage]}
+              value={[displayPage]}
               onValueChange={(v) => {
-                if (fileType === "epub") {
-                  // For EPUB, we just update the page tracker
-                  setCurrentPage(v[0]);
+                if (isReaderMode) {
+                  const total = Math.max(displayTotal, 1);
+                  const blocks = reflow.book?.blocks.length ?? 0;
+                  if (blocks > 0) {
+                    const ratio = Math.min(Math.max((v[0] - 1) / total, 0), 0.999);
+                    jumpToBlock(Math.floor(ratio * blocks));
+                  }
                 } else {
                   setCurrentPage(v[0]);
                 }
               }}
               min={1}
-              max={Math.max(totalPages, 1)}
+              max={Math.max(displayTotal, 1)}
               step={1}
             />
           </div>
@@ -1183,21 +1193,36 @@ const BookReader = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fileType === "epub" ? epubPrev() : goToPage(currentPage - 1)}
-              disabled={fileType !== "epub" && currentPage <= 1}
+              onClick={() => {
+                if (isReaderMode) requestFlip(-1);
+                else if (fileType === "epub") epubPrev();
+                else goToPage(currentPage - 1);
+              }}
+              disabled={!isReaderMode && fileType !== "epub" && currentPage <= 1}
             >
               <ChevronLeft className="w-4 h-4 mr-1" /> Prev
             </Button>
 
-            <span className="text-sm font-medium">
-              {currentPage} / {totalPages} · {progressPercent}%
+            <span className="flex flex-col items-center text-sm font-medium leading-tight">
+              <span>
+                {displayPage} / {Math.max(displayTotal, 1)} · {displayPercent}%
+              </span>
+              {isReaderMode && readerPagination.chapterTitle && (
+                <span className="max-w-[46vw] truncate text-[11px] font-normal opacity-70">
+                  {readerPagination.chapterTitle}
+                </span>
+              )}
             </span>
 
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fileType === "epub" ? epubNext() : goToPage(currentPage + 1)}
-              disabled={fileType !== "epub" && currentPage >= totalPages}
+              onClick={() => {
+                if (isReaderMode) requestFlip(1);
+                else if (fileType === "epub") epubNext();
+                else goToPage(currentPage + 1);
+              }}
+              disabled={!isReaderMode && fileType !== "epub" && currentPage >= totalPages}
             >
               Next <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
