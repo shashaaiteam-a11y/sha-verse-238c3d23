@@ -89,3 +89,42 @@ has not been modified — adoption is opt-in per call site.
 revoked from `authenticated` / `anon` at the column level. They are only
 readable by `service_role` (used by the Stripe webhook edge function).
 Owners can still read all other settings rows normally.
+
+## 5. `public.media` — owner/admin only (verified 2026-08-03)
+
+SELECT is restricted to `owner = auth.uid()` OR admin. Access is **not**
+granted by bucket name: a public storage bucket does not make the media
+row (owner id, storage path, metadata) public. The table is currently
+empty and is not referenced by any client code.
+
+## 6. Profile PII — column-level lockdown (verified 2026-08-03)
+
+`profiles.phone`, `phone_number`, `birthdate`, `gender` and
+`relationship_status` are REVOKEd from `anon` and `authenticated` at the
+column level. RLS is row-level only, so the row-visibility policy alone
+would have leaked these columns for public profiles. They are served
+exclusively by `public.get_profile_private_fields(_profile_id)`, which
+applies the owner / friends / privacy-setting rules.
+`src/hooks/useProfile.ts` already selects an explicit non-sensitive
+column list and merges the RPC result — never use `select('*')` on
+`profiles`, it will fail with `42501`.
+
+## 7. `has_role()` — not executable by `anon` (verified 2026-08-03)
+
+Anonymous visitors must never evaluate `public.has_role`. Read policies
+on `channels`, `books` and `videos` are therefore split by role:
+
+- `TO anon` — approved/public content only, no admin branch.
+- `TO authenticated` — approved content, own content, or admin.
+
+EXECUTE on `has_role` is granted to `authenticated` and `service_role`
+only. Do not add an admin branch to an `anon` policy; add a separate
+`TO authenticated` policy instead.
+
+## 8. chat-media path structure (verified 2026-08-03)
+
+The INSERT policy assumes the object key is `<auth.uid()>/<filename>`.
+Verified against live storage: 23/23 objects have a UUID first segment
+matching the uploader. There is **no** conversation-id prefix. If the
+upload path scheme ever changes, this policy must change with it.
+
