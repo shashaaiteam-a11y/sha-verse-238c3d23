@@ -42,8 +42,9 @@ export function devanagariLooksBroken(text: string): boolean {
   const letters = text.match(/[\u0900-\u097F]/g)?.length ?? 0;
   if (letters < 40) return false;
   const marks = text.match(DEVANAGARI_MARK_RE)?.length ?? 0;
-  // Natural Hindi prose carries a matra/virama on roughly a third of letters.
-  return marks / letters < 0.08;
+  // Natural Hindi prose carries a matra/virama on ~25-35% of its letters;
+  // a broken CID mapping drops most of them (observed ~10%).
+  return marks / letters < 0.15;
 }
 
 /**
