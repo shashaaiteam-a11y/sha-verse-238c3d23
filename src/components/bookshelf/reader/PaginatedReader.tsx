@@ -320,12 +320,10 @@ BlockView.displayName = "BlockView";
 const PageImage = ({
   block,
   label,
-  onTap,
   onZoomChange,
 }: {
   block: ImageBlock;
   label: string;
-  onTap?: () => void;
   onZoomChange?: (zoomed: boolean) => void;
 }) => {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -987,7 +985,6 @@ const PaginatedReader = ({
           <PageImage
             block={activeSection.blocks[0] as ImageBlock}
             label={`Page ${activeSection.blocks[0]?.page ?? ""}`}
-            onTap={onTap}
             onZoomChange={setPageZoomed}
           />
         </div>
