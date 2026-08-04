@@ -719,12 +719,19 @@ const PaginatedReader = ({
     if (!original) return;
     const index = blocks.findIndex((b) => b.id === original.id);
     if (index < 0) return;
-    const target = sections.findIndex(
-      (s, i) =>
-        s.kind === "content" &&
-        index >= s.startIndex &&
-        (i === sections.length - 1 || index < (sections[i + 1]?.startIndex ?? Infinity))
-    );
+    // Page Mode sections are single-block, so an exact hit wins; otherwise the
+    // owning reflow section is the last one starting at or before the block.
+    const exact = sections.findIndex((s) => s.kind === "page" && s.startIndex === index);
+    const target =
+      exact >= 0
+        ? exact
+        : sections.findIndex(
+            (s, i) =>
+              s.kind === "content" &&
+              index >= s.startIndex &&
+              (i === sections.length - 1 || index < (sections[i + 1]?.startIndex ?? Infinity))
+          );
+
     if (target < 0) return;
     pendingBlockRef.current = original.id;
     if (target === sectionIndex) {
