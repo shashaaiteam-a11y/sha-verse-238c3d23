@@ -981,7 +981,18 @@ const PaginatedReader = ({
             )}
           </div>
         </div>
+      ) : isPageMode ? (
+        /* Page Mode — original page rendered as a fitted image (no reflow). */
+        <div style={{ position: "absolute", inset: 0, padding: 8 }}>
+          <PageImage
+            block={activeSection.blocks[0] as ImageBlock}
+            label={`Page ${activeSection.blocks[0]?.page ?? ""}`}
+            onTap={onTap}
+            onZoomChange={setPageZoomed}
+          />
+        </div>
       ) : (
+
         <div
           style={{
             position: "absolute",
