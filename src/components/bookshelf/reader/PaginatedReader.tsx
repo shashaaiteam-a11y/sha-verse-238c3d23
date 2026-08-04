@@ -618,9 +618,23 @@ const PaginatedReader = ({
   const columnWidth = Math.max(size.width - 2 * (MARGIN_STEPS[settings.margin] ?? 26), 100);
   const step = columnWidth + COLUMN_GAP;
 
+  const isPageMode = activeSection?.kind === "page";
+  const isCoverSection = activeSection?.kind === "cover";
+
   const remeasure = useCallback(() => {
+    // Cover and Page Mode sections are exactly one page — nothing to measure.
+    if (isPageMode || isCoverSection) {
+      measuredRef.current.set(sectionIndex, 1);
+      setMeasuredVersion((v) => v + 1);
+      setPageCount(1);
+      pendingBlockRef.current = null;
+      pendingEdgeRef.current = "start";
+      setPage(0);
+      return;
+    }
     const inner = columnsRef.current;
     if (!inner || columnWidth <= 0) return;
+
     const count = Math.max(1, Math.round(inner.scrollWidth / step));
     measuredRef.current.set(sectionIndex, count);
     setMeasuredVersion((v) => v + 1);
