@@ -871,6 +871,12 @@ const PaginatedReader = ({
   /* -------------------------------- gestures ------------------------------ */
   const touchRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const lastTouchRef = useRef(0);
+  /** While a Page-Mode image is zoomed in, gestures pan instead of flipping. */
+  const [pageZoomed, setPageZoomed] = useState(false);
+
+  useEffect(() => {
+    setPageZoomed(false);
+  }, [sectionIndex]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -881,7 +887,7 @@ const PaginatedReader = ({
     const start = touchRef.current;
     touchRef.current = null;
     lastTouchRef.current = Date.now();
-    if (!start) return;
+    if (!start || pageZoomed) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
@@ -895,6 +901,7 @@ const PaginatedReader = ({
   };
 
   const handleTap = (clientX: number, host: HTMLElement) => {
+    if (pageZoomed) return;
     if (window.getSelection()?.isCollapsed === false) return;
     const rect = host.getBoundingClientRect();
     const ratio = (clientX - rect.left) / Math.max(rect.width, 1);
@@ -903,8 +910,9 @@ const PaginatedReader = ({
     else onTap?.();
   };
 
-  const isCover = activeSection?.kind === "cover";
+  const isCover = isCoverSection;
   const sidePadding = MARGIN_STEPS[settings.margin] ?? 26;
+
 
   return (
     <div
