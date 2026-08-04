@@ -307,16 +307,144 @@ const BlockView = memo(
 );
 BlockView.displayName = "BlockView";
 
+/* ------------------------------- page mode -------------------------------- */
+
+/**
+ * PageImage — Page Mode renderer for rasterised original pages (scanned books,
+ * broken font mappings, comics). The page is always fitted inside the viewport
+ * with its aspect ratio preserved: never cropped, never stretched.
+ *
+ * Zoom: ctrl/⌘ + wheel, trackpad pinch and double tap. Panning is enabled once
+ * zoomed in; page flips are suppressed while zoomed so gestures never conflict.
+ */
+const PageImage = ({
+  block,
+  label,
+  onTap,
+  onZoomChange,
+}: {
+  block: ImageBlock;
+  label: string;
+  onTap?: () => void;
+  onZoomChange?: (zoomed: boolean) => void;
+}) => {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [src, setSrc] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(block.blob);
+    setSrc(url);
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+    return () => URL.revokeObjectURL(url);
+  }, [block.blob]);
+
+  useEffect(() => onZoomChange?.(zoom > 1.01), [zoom, onZoomChange]);
+
+  // Anchored zoom around the pointer. Native non-passive listener because
+  // React's onWheel is passive and cannot preventDefault().
+  const zoomRef = useRef({ zoom, offset });
+  zoomRef.current = { zoom, offset };
+
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      const dy = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1);
+      const state = zoomRef.current;
+      const next = Math.min(5, Math.max(1, state.zoom * Math.exp(-dy * 0.0018)));
+      const rect = el.getBoundingClientRect();
+      const px = event.clientX - rect.left - rect.width / 2;
+      const py = event.clientY - rect.top - rect.height / 2;
+      const k = next / state.zoom;
+      setZoom(next);
+      setOffset(
+        next <= 1.001
+          ? { x: 0, y: 0 }
+          : { x: px - (px - state.offset.x) * k, y: py - (py - state.offset.y) * k }
+      );
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const toggleZoom = () => {
+    if (zoom > 1.01) {
+      setZoom(1);
+      setOffset({ x: 0, y: 0 });
+    } else {
+      setZoom(2.5);
+    }
+  };
+
+  return (
+    <div
+      ref={hostRef}
+      className="flex h-full w-full items-center justify-center overflow-hidden"
+      style={{ touchAction: zoom > 1.01 ? "none" : undefined, cursor: zoom > 1.01 ? "grab" : undefined }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        toggleZoom();
+      }}
+      onPointerDown={(event) => {
+        if (zoom <= 1.01) return;
+        dragRef.current = { x: event.clientX, y: event.clientY, ox: offset.x, oy: offset.y };
+        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const drag = dragRef.current;
+        if (!drag) return;
+        setOffset({ x: drag.ox + (event.clientX - drag.x), y: drag.oy + (event.clientY - drag.y) });
+      }}
+      onPointerUp={() => {
+        dragRef.current = null;
+      }}
+      onClick={(event) => {
+        // Tapping a zoomed page pans/does nothing; unzoomed it toggles controls.
+        if (zoom > 1.01) event.stopPropagation();
+      }}
+    >
+      {src && (
+        <img
+          src={src}
+          alt={block.alt || label}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
+            objectFit: "contain",
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+            transformOrigin: "center center",
+            transition: dragRef.current ? "none" : "transform 160ms ease-out",
+            userSelect: "none",
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
 /* -------------------------------- sections -------------------------------- */
 
 interface Section {
-  kind: "cover" | "content";
+  /** `page` = rasterised original page rendered in Page Mode. */
+  kind: "cover" | "content" | "page";
   /** Indices refer to the sanitised block list. */
   blocks: Block[];
   startIndex: number;
   title: string;
   chars: number;
 }
+
 
 function offsetWithin(root: HTMLElement, node: Node, offset: number) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
