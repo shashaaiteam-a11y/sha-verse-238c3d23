@@ -142,8 +142,8 @@ export const ChatHeader = ({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Disable calls if blocked */}
-        {!isBlockedBy && (
+        {/* Voice & Video call buttons — temporarily hidden (all functionality intact, re-enable on request) */}
+        {false && !isBlockedBy && (
           <>
             <Button
               variant="ghost"
