@@ -40,7 +40,14 @@ export interface ImageBlock extends BlockBase {
   width: number;
   height: number;
   alt: string;
+  /**
+   * True for a rasterised original page (scanned book, broken font mapping,
+   * OCR fallback). Rendered in Page Mode: fitted to the viewport, never
+   * cropped, never reflowed alongside text.
+   */
+  fullPage?: boolean;
 }
+
 
 export interface TableBlock extends BlockBase {
   type: "table";
