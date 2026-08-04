@@ -658,7 +658,7 @@ const PaginatedReader = ({
       }
       return Math.min(prev, count - 1);
     });
-  }, [columnWidth, sectionIndex, step]);
+  }, [columnWidth, sectionIndex, step, isPageMode, isCoverSection]);
 
   // Re-paginate whenever geometry, typography or content changes.
   useLayoutEffect(() => {
