@@ -18,8 +18,10 @@ import type {
 } from "./types";
 
 import { REFLOW_MODEL_VERSION } from "./types";
+import { assessPageText, isBoilerplate, isGarbageLine } from "./quality";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
 
 const RTL_RE = /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0750-\u077F\u08A0-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 const CJK_RE = /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uAC00-\uD7AF]/;
