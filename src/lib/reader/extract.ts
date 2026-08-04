@@ -18,8 +18,10 @@ import type {
 } from "./types";
 
 import { REFLOW_MODEL_VERSION } from "./types";
+import { assessPageText, isBoilerplate, isGarbageLine } from "./quality";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
 
 const RTL_RE = /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0750-\u077F\u08A0-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 const CJK_RE = /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uAC00-\uD7AF]/;
@@ -572,30 +574,40 @@ export async function* extractReflowBook(
     });
 
 
-    const plainText = lines.map((l) => l.text).join("").trim();
+    /* --------------------- adaptive rendering decision ---------------------
+     * Judge the page's text layer BEFORE it is sanitised for display. A page
+     * whose glyphs are damaged (non-embedded / broken CID fonts — very common
+     * in Hindi & Urdu PDFs), whose script lost its vowel marks, or which is
+     * mostly OCR noise can never be reflowed correctly. Such a page is
+     * rasterised and rendered in Page Mode instead of showing fake text.
+     */
+    const quality = assessPageText(lines.map((l) => l.text));
     const startIndex = book.blocks.length;
 
-    if (plainText.length < 12) {
-      // Scanned / image-only page.
+    if (quality.unusable) {
       pendingContinuation = null;
       meta.scanned = true;
 
       const rendered = await renderPageToBlob(page);
       let recognised = false;
 
-      if (options.ocr && rendered) {
+      // OCR is only attempted on genuinely empty (scanned) pages — and its
+      // output is accepted only when it passes the same quality gate. We never
+      // replace broken text with worse text.
+      if (options.ocr && rendered && quality.reason === "empty") {
         try {
           if (!ocrWorker) {
             const { createOcrWorker } = await import("./ocr");
             ocrWorker = await createOcrWorker(options.ocrLanguage || "eng");
           }
-          const paragraphs = await ocrWorker.recognize(rendered.blob);
-          if (paragraphs.length) {
+          const paragraphs = (await ocrWorker.recognize(rendered.blob))
+            .map((text) => text.replace(/\s+/g, " ").trim())
+            .filter((text) => text.length >= 2 && !isGarbageLine(text) && !isBoilerplate(text));
+
+          if (paragraphs.length && !assessPageText(paragraphs).unusable) {
             ocrUsed = true;
             recognised = true;
-            for (const text of paragraphs) {
-              const clean = text.replace(/\s+/g, " ").trim();
-              if (clean.length < 2) continue;
+            for (const clean of paragraphs) {
               book.blocks.push({
                 id: nextId(),
                 page: pageNumber,
@@ -618,10 +630,16 @@ export async function* extractReflowBook(
           blob: rendered.blob,
           width: rendered.width,
           height: rendered.height,
-          alt: `Scanned page ${pageNumber}`,
+          alt: `Page ${pageNumber}`,
+          fullPage: true,
         });
       }
     } else {
+      // Drop distributor boilerplate (Project Gutenberg headers/licences) and
+      // any residual glyph soup before the lines become semantic blocks.
+      lines = lines.filter((line) => !isBoilerplate(line.text) && !isGarbageLine(line.text));
+
+
       const outlineTitle = outlinePages.get(pageNumber);
       const carry = pendingContinuation;
       pendingContinuation = null;

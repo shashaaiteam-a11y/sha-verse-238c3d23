@@ -12,6 +12,8 @@ import { Highlighter, StickyNote, Copy, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Block, Highlight, ImageBlock, ReflowBook } from "@/lib/reader/types";
 import { isHiddenMetadata, normalizeReaderText } from "@/lib/reader/sanitize";
+import { isBoilerplate, isGarbageLine } from "@/lib/reader/quality";
+
 import {
   READER_FONT_STACKS,
   READER_THEMES,
@@ -305,16 +307,142 @@ const BlockView = memo(
 );
 BlockView.displayName = "BlockView";
 
+/* ------------------------------- page mode -------------------------------- */
+
+/**
+ * PageImage — Page Mode renderer for rasterised original pages (scanned books,
+ * broken font mappings, comics). The page is always fitted inside the viewport
+ * with its aspect ratio preserved: never cropped, never stretched.
+ *
+ * Zoom: ctrl/⌘ + wheel, trackpad pinch and double tap. Panning is enabled once
+ * zoomed in; page flips are suppressed while zoomed so gestures never conflict.
+ */
+const PageImage = ({
+  block,
+  label,
+  onZoomChange,
+}: {
+  block: ImageBlock;
+  label: string;
+  onZoomChange?: (zoomed: boolean) => void;
+}) => {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [src, setSrc] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(block.blob);
+    setSrc(url);
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+    return () => URL.revokeObjectURL(url);
+  }, [block.blob]);
+
+  useEffect(() => onZoomChange?.(zoom > 1.01), [zoom, onZoomChange]);
+
+  // Anchored zoom around the pointer. Native non-passive listener because
+  // React's onWheel is passive and cannot preventDefault().
+  const zoomRef = useRef({ zoom, offset });
+  zoomRef.current = { zoom, offset };
+
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      const dy = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1);
+      const state = zoomRef.current;
+      const next = Math.min(5, Math.max(1, state.zoom * Math.exp(-dy * 0.0018)));
+      const rect = el.getBoundingClientRect();
+      const px = event.clientX - rect.left - rect.width / 2;
+      const py = event.clientY - rect.top - rect.height / 2;
+      const k = next / state.zoom;
+      setZoom(next);
+      setOffset(
+        next <= 1.001
+          ? { x: 0, y: 0 }
+          : { x: px - (px - state.offset.x) * k, y: py - (py - state.offset.y) * k }
+      );
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const toggleZoom = () => {
+    if (zoom > 1.01) {
+      setZoom(1);
+      setOffset({ x: 0, y: 0 });
+    } else {
+      setZoom(2.5);
+    }
+  };
+
+  return (
+    <div
+      ref={hostRef}
+      className="flex h-full w-full items-center justify-center overflow-hidden"
+      style={{ touchAction: zoom > 1.01 ? "none" : undefined, cursor: zoom > 1.01 ? "grab" : undefined }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        toggleZoom();
+      }}
+      onPointerDown={(event) => {
+        if (zoom <= 1.01) return;
+        dragRef.current = { x: event.clientX, y: event.clientY, ox: offset.x, oy: offset.y };
+        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const drag = dragRef.current;
+        if (!drag) return;
+        setOffset({ x: drag.ox + (event.clientX - drag.x), y: drag.oy + (event.clientY - drag.y) });
+      }}
+      onPointerUp={() => {
+        dragRef.current = null;
+      }}
+      onClick={(event) => {
+        // Tapping a zoomed page pans/does nothing; unzoomed it toggles controls.
+        if (zoom > 1.01) event.stopPropagation();
+      }}
+    >
+      {src && (
+        <img
+          src={src}
+          alt={block.alt || label}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
+            objectFit: "contain",
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+            transformOrigin: "center center",
+            transition: dragRef.current ? "none" : "transform 160ms ease-out",
+            userSelect: "none",
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
 /* -------------------------------- sections -------------------------------- */
 
 interface Section {
-  kind: "cover" | "content";
+  /** `page` = rasterised original page rendered in Page Mode. */
+  kind: "cover" | "content" | "page";
   /** Indices refer to the sanitised block list. */
   blocks: Block[];
   startIndex: number;
   title: string;
   chars: number;
 }
+
 
 function offsetWithin(root: HTMLElement, node: Node, offset: number) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -366,13 +494,16 @@ const PaginatedReader = ({
     left: number;
   } | null>(null);
 
-  /* --- sanitise blocks once per book revision (drops leaked metadata) ------ */
+  /* --- sanitise blocks once per book revision -----------------------------
+   * Second line of defence (older cached books were extracted before the
+   * quality gate existed): repairs Unicode, then drops PDF metadata, glyph
+   * soup and distributor boilerplate so only real book content can render.  */
   const blocks = useMemo(() => {
     const out: Block[] = [];
     for (const raw of book.blocks) {
       if (raw.type === "paragraph" || raw.type === "heading") {
         const text = normalizeReaderText(raw.text);
-        if (!text || isHiddenMetadata(text)) continue;
+        if (!text || isHiddenMetadata(text) || isBoilerplate(text) || isGarbageLine(text)) continue;
         out.push({ ...raw, text });
       } else {
         out.push(raw);
@@ -381,7 +512,11 @@ const PaginatedReader = ({
     return out;
   }, [book.blocks]);
 
-  /* --- sections: cover page + chapter (or chunked) sections --------------- */
+  /* --- sections: cover + chapter (or chunked) sections + full-page images ---
+   * Rendering strategy is chosen per section:
+   *   cover   → title card
+   *   content → Reflow Mode (CSS multi-column pagination)
+   *   page    → Page Mode (fitted image of the original page)                */
   const sections = useMemo<Section[]>(() => {
     const list: Section[] = [
       {
@@ -412,11 +547,10 @@ const PaginatedReader = ({
     const starts = [0, ...boundaries.filter((v, i, arr) => arr.indexOf(v) === i)].sort(
       (a, b) => a - b
     );
-    for (let i = 0; i < starts.length; i++) {
-      const start = starts[i];
-      const end = i + 1 < starts.length ? starts[i + 1] : blocks.length;
-      if (end <= start) continue;
-      const slice = blocks.slice(start, end);
+
+    const pushContent = (slice: Block[], start: number) => {
+      const meaningful = slice.filter((b) => b.type !== "pagebreak");
+      if (!meaningful.length) return;
       const head = slice.find((b) => b.type === "heading");
       list.push({
         kind: "content",
@@ -425,9 +559,39 @@ const PaginatedReader = ({
         title: head && "text" in head ? head.text : "",
         chars: slice.reduce((sum, b) => sum + ("text" in b ? b.text.length : 120), 0),
       });
+    };
+
+    for (let i = 0; i < starts.length; i++) {
+      const start = starts[i];
+      const end = i + 1 < starts.length ? starts[i + 1] : blocks.length;
+      if (end <= start) continue;
+
+      // A rasterised original page always occupies a page of its own; it is
+      // never mixed into the reflowed column stream.
+      let runStart = start;
+      let run: Block[] = [];
+      for (let index = start; index < end; index++) {
+        const block = blocks[index];
+        if (block.type === "image" && block.fullPage) {
+          pushContent(run, runStart);
+          run = [];
+          runStart = index + 1;
+          list.push({
+            kind: "page",
+            blocks: [block],
+            startIndex: index,
+            title: "",
+            chars: 900,
+          });
+        } else {
+          run.push(block);
+        }
+      }
+      pushContent(run, runStart);
     }
     return list;
   }, [blocks, book.blocks, book.chapters, book.meta.title, title]);
+
 
   const activeSection = sections[Math.min(sectionIndex, sections.length - 1)] ?? sections[0];
 
@@ -452,9 +616,23 @@ const PaginatedReader = ({
   const columnWidth = Math.max(size.width - 2 * (MARGIN_STEPS[settings.margin] ?? 26), 100);
   const step = columnWidth + COLUMN_GAP;
 
+  const isPageMode = activeSection?.kind === "page";
+  const isCoverSection = activeSection?.kind === "cover";
+
   const remeasure = useCallback(() => {
+    // Cover and Page Mode sections are exactly one page — nothing to measure.
+    if (isPageMode || isCoverSection) {
+      measuredRef.current.set(sectionIndex, 1);
+      setMeasuredVersion((v) => v + 1);
+      setPageCount(1);
+      pendingBlockRef.current = null;
+      pendingEdgeRef.current = "start";
+      setPage(0);
+      return;
+    }
     const inner = columnsRef.current;
     if (!inner || columnWidth <= 0) return;
+
     const count = Math.max(1, Math.round(inner.scrollWidth / step));
     measuredRef.current.set(sectionIndex, count);
     setMeasuredVersion((v) => v + 1);
@@ -478,7 +656,7 @@ const PaginatedReader = ({
       }
       return Math.min(prev, count - 1);
     });
-  }, [columnWidth, sectionIndex, step]);
+  }, [columnWidth, sectionIndex, step, isPageMode, isCoverSection]);
 
   // Re-paginate whenever geometry, typography or content changes.
   useLayoutEffect(() => {
@@ -539,12 +717,19 @@ const PaginatedReader = ({
     if (!original) return;
     const index = blocks.findIndex((b) => b.id === original.id);
     if (index < 0) return;
-    const target = sections.findIndex(
-      (s, i) =>
-        s.kind === "content" &&
-        index >= s.startIndex &&
-        (i === sections.length - 1 || index < (sections[i + 1]?.startIndex ?? Infinity))
-    );
+    // Page Mode sections are single-block, so an exact hit wins; otherwise the
+    // owning reflow section is the last one starting at or before the block.
+    const exact = sections.findIndex((s) => s.kind === "page" && s.startIndex === index);
+    const target =
+      exact >= 0
+        ? exact
+        : sections.findIndex(
+            (s, i) =>
+              s.kind === "content" &&
+              index >= s.startIndex &&
+              (i === sections.length - 1 || index < (sections[i + 1]?.startIndex ?? Infinity))
+          );
+
     if (target < 0) return;
     pendingBlockRef.current = original.id;
     if (target === sectionIndex) {
@@ -684,6 +869,12 @@ const PaginatedReader = ({
   /* -------------------------------- gestures ------------------------------ */
   const touchRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const lastTouchRef = useRef(0);
+  /** While a Page-Mode image is zoomed in, gestures pan instead of flipping. */
+  const [pageZoomed, setPageZoomed] = useState(false);
+
+  useEffect(() => {
+    setPageZoomed(false);
+  }, [sectionIndex]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -694,7 +885,7 @@ const PaginatedReader = ({
     const start = touchRef.current;
     touchRef.current = null;
     lastTouchRef.current = Date.now();
-    if (!start) return;
+    if (!start || pageZoomed) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
@@ -708,6 +899,7 @@ const PaginatedReader = ({
   };
 
   const handleTap = (clientX: number, host: HTMLElement) => {
+    if (pageZoomed) return;
     if (window.getSelection()?.isCollapsed === false) return;
     const rect = host.getBoundingClientRect();
     const ratio = (clientX - rect.left) / Math.max(rect.width, 1);
@@ -716,8 +908,9 @@ const PaginatedReader = ({
     else onTap?.();
   };
 
-  const isCover = activeSection?.kind === "cover";
+  const isCover = isCoverSection;
   const sidePadding = MARGIN_STEPS[settings.margin] ?? 26;
+
 
   return (
     <div
@@ -786,7 +979,17 @@ const PaginatedReader = ({
             )}
           </div>
         </div>
+      ) : isPageMode ? (
+        /* Page Mode — original page rendered as a fitted image (no reflow). */
+        <div style={{ position: "absolute", inset: 0, padding: 8 }}>
+          <PageImage
+            block={activeSection.blocks[0] as ImageBlock}
+            label={`Page ${activeSection.blocks[0]?.page ?? ""}`}
+            onZoomChange={setPageZoomed}
+          />
+        </div>
       ) : (
+
         <div
           style={{
             position: "absolute",
