@@ -496,13 +496,16 @@ const PaginatedReader = ({
     left: number;
   } | null>(null);
 
-  /* --- sanitise blocks once per book revision (drops leaked metadata) ------ */
+  /* --- sanitise blocks once per book revision -----------------------------
+   * Second line of defence (older cached books were extracted before the
+   * quality gate existed): repairs Unicode, then drops PDF metadata, glyph
+   * soup and distributor boilerplate so only real book content can render.  */
   const blocks = useMemo(() => {
     const out: Block[] = [];
     for (const raw of book.blocks) {
       if (raw.type === "paragraph" || raw.type === "heading") {
         const text = normalizeReaderText(raw.text);
-        if (!text || isHiddenMetadata(text)) continue;
+        if (!text || isHiddenMetadata(text) || isBoilerplate(text) || isGarbageLine(text)) continue;
         out.push({ ...raw, text });
       } else {
         out.push(raw);
@@ -511,7 +514,11 @@ const PaginatedReader = ({
     return out;
   }, [book.blocks]);
 
-  /* --- sections: cover page + chapter (or chunked) sections --------------- */
+  /* --- sections: cover + chapter (or chunked) sections + full-page images ---
+   * Rendering strategy is chosen per section:
+   *   cover   → title card
+   *   content → Reflow Mode (CSS multi-column pagination)
+   *   page    → Page Mode (fitted image of the original page)                */
   const sections = useMemo<Section[]>(() => {
     const list: Section[] = [
       {
@@ -542,11 +549,10 @@ const PaginatedReader = ({
     const starts = [0, ...boundaries.filter((v, i, arr) => arr.indexOf(v) === i)].sort(
       (a, b) => a - b
     );
-    for (let i = 0; i < starts.length; i++) {
-      const start = starts[i];
-      const end = i + 1 < starts.length ? starts[i + 1] : blocks.length;
-      if (end <= start) continue;
-      const slice = blocks.slice(start, end);
+
+    const pushContent = (slice: Block[], start: number) => {
+      const meaningful = slice.filter((b) => b.type !== "pagebreak");
+      if (!meaningful.length) return;
       const head = slice.find((b) => b.type === "heading");
       list.push({
         kind: "content",
@@ -555,9 +561,39 @@ const PaginatedReader = ({
         title: head && "text" in head ? head.text : "",
         chars: slice.reduce((sum, b) => sum + ("text" in b ? b.text.length : 120), 0),
       });
+    };
+
+    for (let i = 0; i < starts.length; i++) {
+      const start = starts[i];
+      const end = i + 1 < starts.length ? starts[i + 1] : blocks.length;
+      if (end <= start) continue;
+
+      // A rasterised original page always occupies a page of its own; it is
+      // never mixed into the reflowed column stream.
+      let runStart = start;
+      let run: Block[] = [];
+      for (let index = start; index < end; index++) {
+        const block = blocks[index];
+        if (block.type === "image" && block.fullPage) {
+          pushContent(run, runStart);
+          run = [];
+          runStart = index + 1;
+          list.push({
+            kind: "page",
+            blocks: [block],
+            startIndex: index,
+            title: "",
+            chars: 900,
+          });
+        } else {
+          run.push(block);
+        }
+      }
+      pushContent(run, runStart);
     }
     return list;
   }, [blocks, book.blocks, book.chapters, book.meta.title, title]);
+
 
   const activeSection = sections[Math.min(sectionIndex, sections.length - 1)] ?? sections[0];
 
