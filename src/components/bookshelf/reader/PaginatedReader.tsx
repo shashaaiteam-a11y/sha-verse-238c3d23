@@ -12,6 +12,8 @@ import { Highlighter, StickyNote, Copy, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Block, Highlight, ImageBlock, ReflowBook } from "@/lib/reader/types";
 import { isHiddenMetadata, normalizeReaderText } from "@/lib/reader/sanitize";
+import { isBoilerplate, isGarbageLine } from "@/lib/reader/quality";
+
 import {
   READER_FONT_STACKS,
   READER_THEMES,
