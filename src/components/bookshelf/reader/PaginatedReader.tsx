@@ -630,7 +630,7 @@ const PaginatedReader = ({
       pushContent(run, runStart);
     }
     return list;
-  }, [blocks, book.blocks, book.chapters, book.meta.title, title]);
+  }, [blocks, blockIndexById, book.blocks, book.chapters, book.meta.title, title]);
 
 
   const activeSection = sections[Math.min(sectionIndex, sections.length - 1)] ?? sections[0];
