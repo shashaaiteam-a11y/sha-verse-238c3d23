@@ -519,6 +519,32 @@ const PaginatedReader = ({
     return out;
   }, [book.blocks]);
 
+  // O(1) id lookups — linear scans here ran on every page flip of large books.
+  const blockIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    blocks.forEach((b, i) => map.set(b.id, i));
+    return map;
+  }, [blocks]);
+
+  const originalIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    book.blocks.forEach((b, i) => map.set(b.id, i));
+    return map;
+  }, [book.blocks]);
+
+  // Highlights bucketed per block so memoised blocks stay memoised.
+  const highlightsByBlock = useMemo(() => {
+    const map = new Map<string, Highlight[]>();
+    for (const h of highlights) {
+      const list = map.get(h.blockId);
+      if (list) list.push(h);
+      else map.set(h.blockId, [h]);
+    }
+    return map;
+  }, [highlights]);
+
+
+
   /* --- sections: cover + chapter (or chunked) sections + full-page images ---
    * Rendering strategy is chosen per section:
    *   cover   → title card
