@@ -795,7 +795,7 @@ const PaginatedReader = ({
       setSectionIndex(target);
       setPage(0);
     }
-  }, [jumpTo, blocks, book.blocks, sections, sectionIndex, remeasure]);
+  }, [jumpTo, blockIndexById, book.blocks, sections, sectionIndex, remeasure]);
 
   /* ------------------------- location + pagination ------------------------ */
   const totalEstimate = useMemo(() => {
