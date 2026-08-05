@@ -809,9 +809,9 @@ const PaginatedReader = ({
     });
   }, [globalPage, totalEstimate, activeSection, onPaginationChange]);
 
-  // Report the first visible block so progress / anchors keep working.
+  // Report the first visible block so progress / anchors keep working, and
+  // remember it as the reflow anchor for the next re-pagination.
   useEffect(() => {
-    if (!onLocationChange) return;
     const inner = columnsRef.current;
     if (!inner || activeSection?.kind !== "content") return;
     const raf = requestAnimationFrame(() => {
@@ -825,12 +825,14 @@ const PaginatedReader = ({
         }
       }
       const id = chosen?.dataset.blockId;
-      const index = id ? blocks.findIndex((b) => b.id === id) : -1;
+      const index = id ? blockIndexById.get(id) ?? -1 : -1;
       const block = index >= 0 ? blocks[index] : null;
       if (!block) return;
-      const originalIndex = book.blocks.findIndex((b) => b.id === block.id);
+      currentBlockIdRef.current = block.id;
+      if (!onLocationChange) return;
+      const originalIndex = originalIndexById.get(block.id) ?? index;
       onLocationChange({
-        blockIndex: originalIndex >= 0 ? originalIndex : index,
+        blockIndex: originalIndex,
         blockId: block.id,
         page: block.page,
         percent: Math.min(100, Math.round((globalPage / Math.max(totalEstimate, globalPage)) * 100)),
@@ -838,6 +840,7 @@ const PaginatedReader = ({
       });
     });
     return () => cancelAnimationFrame(raf);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, sectionIndex, pageCount, blocks]);
 
