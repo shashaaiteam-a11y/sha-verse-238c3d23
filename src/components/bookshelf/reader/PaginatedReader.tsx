@@ -60,6 +60,8 @@ interface Props {
 }
 
 const MARGIN_STEPS = [16, 26, 40, 60];
+/** Stable empty array so blocks without highlights never break memoisation. */
+const EMPTY_HIGHLIGHTS: Highlight[] = [];
 const MAX_CONTENT_WIDTH = [760, 700, 640, 580];
 const COLUMN_GAP = 48;
 /** Approximate blocks per rendered section when the book has no chapters. */
