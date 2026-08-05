@@ -246,18 +246,19 @@ const BlockView = memo(
     }
 
     const text = block.text;
+    // `highlights` is already scoped to this block by the parent, so memoised
+    // blocks no longer re-render when an unrelated highlight is added.
     const ranges: TextRange[] = [
-      ...highlights
-        .filter((h) => h.blockId === block.id)
-        .map<TextRange>((h) => ({
-          start: h.start,
-          end: h.end,
-          kind: "highlight",
-          color: h.color,
-          id: h.id,
-        })),
+      ...highlights.map<TextRange>((h) => ({
+        start: h.start,
+        end: h.end,
+        kind: "highlight",
+        color: h.color,
+        id: h.id,
+      })),
       ...findSearchRanges(text, searchQuery ?? ""),
     ];
+
 
     if (block.type === "heading") {
       const scale = block.level === 1 ? 1.5 : block.level === 2 ? 1.28 : 1.12;
