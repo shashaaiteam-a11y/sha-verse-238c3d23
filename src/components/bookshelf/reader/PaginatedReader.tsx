@@ -772,7 +772,7 @@ const PaginatedReader = ({
     jumpTokenRef.current = jumpTo.token;
     const original = book.blocks[Math.max(0, Math.min(jumpTo.blockIndex, book.blocks.length - 1))];
     if (!original) return;
-    const index = blocks.findIndex((b) => b.id === original.id);
+    const index = blockIndexById.get(original.id) ?? -1;
     if (index < 0) return;
     // Page Mode sections are single-block, so an exact hit wins; otherwise the
     // owning reflow section is the last one starting at or before the block.
