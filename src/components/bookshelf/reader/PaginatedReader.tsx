@@ -160,11 +160,16 @@ const ImageContent = ({ block, onReady }: { block: ImageBlock; onReady?: () => v
           src={src}
           alt={block.alt || ""}
           decoding="async"
+          loading="lazy"
           onLoad={onReady}
+          onError={onReady}
           style={{
             display: "inline-block",
             maxWidth: "100%",
-            maxHeight: "78%",
+            // Percentages resolve against an auto-height figure (i.e. not at
+            // all), which let tall images overflow the column and clip. The
+            // page height is published as a CSS var by the column container.
+            maxHeight: "calc(var(--reader-page-h, 70vh) * 0.72)",
             width: "auto",
             height: "auto",
             objectFit: "contain",
@@ -175,6 +180,7 @@ const ImageContent = ({ block, onReady }: { block: ImageBlock; onReady?: () => v
     </figure>
   );
 };
+
 
 /* --------------------------------- blocks --------------------------------- */
 
