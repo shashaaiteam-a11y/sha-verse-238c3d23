@@ -565,12 +565,11 @@ const PaginatedReader = ({
 
     const boundaries: number[] = [];
     if (book.chapters.length > 1) {
-      const idSet = new Set(blocks.map((b) => b.id));
       book.chapters.forEach((chapter) => {
         const original = book.blocks[chapter.blockIndex];
-        if (!original || !idSet.has(original.id)) return;
-        const index = blocks.findIndex((b) => b.id === original.id);
-        if (index > 0) boundaries.push(index);
+        if (!original) return;
+        const index = blockIndexById.get(original.id);
+        if (index !== undefined && index > 0) boundaries.push(index);
       });
     }
     if (!boundaries.length) {
@@ -579,9 +578,15 @@ const PaginatedReader = ({
       }
     }
 
-    const starts = [0, ...boundaries.filter((v, i, arr) => arr.indexOf(v) === i)].sort(
-      (a, b) => a - b
-    );
+    const unique = [...new Set(boundaries)].sort((a, b) => a - b);
+    // Cap section size: one huge chapter would otherwise mount thousands of
+    // DOM nodes at once and stall measurement on large books.
+    const starts: number[] = [];
+    [0, ...unique].forEach((start, i, arr) => {
+      const end = arr[i + 1] ?? blocks.length;
+      for (let s = start; s < end || s === start; s += FALLBACK_SECTION_SIZE) starts.push(s);
+    });
+
 
     const pushContent = (slice: Block[], start: number) => {
       const meaningful = slice.filter((b) => b.type !== "pagebreak");
