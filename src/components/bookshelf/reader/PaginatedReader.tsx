@@ -1072,19 +1072,23 @@ const PaginatedReader = ({
                 transform: `translateX(${-page * step}px)`,
                 transition: "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)",
                 willChange: "transform",
-              }}
+                // Published so figures can cap their height against the real
+                // page box instead of an auto-height parent.
+                ["--reader-page-h" as string]: `${Math.max(size.height - 40, 160)}px`,
+              } as React.CSSProperties}
             >
               {activeSection?.blocks.map((block) => (
                 <BlockView
                   key={block.id}
                   block={block}
                   settings={settings}
-                  highlights={highlights}
+                  highlights={highlightsByBlock.get(block.id) ?? EMPTY_HIGHLIGHTS}
                   searchQuery={searchQuery}
                   onImageReady={remeasure}
                 />
               ))}
             </div>
+
           </div>
         </div>
       )}
