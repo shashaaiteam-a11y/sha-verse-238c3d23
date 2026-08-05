@@ -626,6 +626,14 @@ const PaginatedReader = ({
   const isPageMode = activeSection?.kind === "page";
   const isCoverSection = activeSection?.kind === "cover";
 
+  /** Block at the start of the visible column — the reflow anchor that keeps
+   *  the reader on the same sentence when typography or geometry changes. */
+  const currentBlockIdRef = useRef<string | null>(null);
+  const pageRef = useRef(0);
+  pageRef.current = page;
+  const pageCountRef = useRef(1);
+  pageCountRef.current = pageCount;
+
   const remeasure = useCallback(() => {
     // Cover and Page Mode sections are exactly one page — nothing to measure.
     if (isPageMode || isCoverSection) {
@@ -640,19 +648,21 @@ const PaginatedReader = ({
     const inner = columnsRef.current;
     if (!inner || columnWidth <= 0) return;
 
-    const count = Math.max(1, Math.round(inner.scrollWidth / step));
+    // N columns span N*columnWidth + (N-1)*gap, so add one gap back before
+    // dividing. Without this the last page could be rounded away (blank/lost).
+    const count = Math.max(1, Math.round((inner.scrollWidth + COLUMN_GAP) / step));
     measuredRef.current.set(sectionIndex, count);
     setMeasuredVersion((v) => v + 1);
     setPageCount(count);
 
-    if (pendingBlockRef.current) {
-      const target = inner.querySelector<HTMLElement>(
-        `[data-block-id="${CSS.escape(pendingBlockRef.current)}"]`
-      );
-      pendingBlockRef.current = null;
+    // Explicit jump target wins; otherwise stay anchored to the block the
+    // reader was already looking at (zero jump on font/margin/rotate).
+    const anchorId = pendingBlockRef.current ?? currentBlockIdRef.current;
+    pendingBlockRef.current = null;
+    if (anchorId) {
+      const target = inner.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(anchorId)}"]`);
       if (target) {
-        const left = target.offsetLeft;
-        setPage(Math.max(0, Math.min(count - 1, Math.round(left / step))));
+        setPage(Math.max(0, Math.min(count - 1, Math.round(target.offsetLeft / step))));
         return;
       }
     }
@@ -686,27 +696,34 @@ const PaginatedReader = ({
   ]);
 
   /* ------------------------------- navigation ----------------------------- */
+  // Side effects never run inside a state updater (that would double-fire in
+  // StrictMode); page/section are read from refs instead.
   const flip = useCallback(
     (delta: number) => {
       if (!delta) return;
-      setPage((prev) => {
-        const next = prev + delta;
-        if (next >= 0 && next < pageCount) return next;
-        if (next < 0 && sectionIndex > 0) {
-          pendingEdgeRef.current = "end";
-          setSectionIndex(sectionIndex - 1);
-          return prev;
-        }
-        if (next >= pageCount && sectionIndex < sections.length - 1) {
-          pendingEdgeRef.current = "start";
-          setSectionIndex(sectionIndex + 1);
-          return 0;
-        }
-        return prev;
-      });
+      const count = pageCountRef.current;
+      const next = pageRef.current + delta;
+
+      if (next >= 0 && next < count) {
+        setPage(next);
+        return;
+      }
+      if (next < 0 && sectionIndex > 0) {
+        pendingEdgeRef.current = "end";
+        currentBlockIdRef.current = null;
+        setSectionIndex(sectionIndex - 1);
+        return;
+      }
+      if (next >= count && sectionIndex < sections.length - 1) {
+        pendingEdgeRef.current = "start";
+        currentBlockIdRef.current = null;
+        setSectionIndex(sectionIndex + 1);
+        setPage(0);
+      }
     },
-    [pageCount, sectionIndex, sections.length]
+    [sectionIndex, sections.length]
   );
+
 
   const navTokenRef = useRef(0);
   useEffect(() => {
