@@ -60,6 +60,8 @@ interface Props {
 }
 
 const MARGIN_STEPS = [16, 26, 40, 60];
+/** Stable empty array so blocks without highlights never break memoisation. */
+const EMPTY_HIGHLIGHTS: Highlight[] = [];
 const MAX_CONTENT_WIDTH = [760, 700, 640, 580];
 const COLUMN_GAP = 48;
 /** Approximate blocks per rendered section when the book has no chapters. */
@@ -160,11 +162,16 @@ const ImageContent = ({ block, onReady }: { block: ImageBlock; onReady?: () => v
           src={src}
           alt={block.alt || ""}
           decoding="async"
+          loading="lazy"
           onLoad={onReady}
+          onError={onReady}
           style={{
             display: "inline-block",
             maxWidth: "100%",
-            maxHeight: "78%",
+            // Percentages resolve against an auto-height figure (i.e. not at
+            // all), which let tall images overflow the column and clip. The
+            // page height is published as a CSS var by the column container.
+            maxHeight: "calc(var(--reader-page-h, 70vh) * 0.72)",
             width: "auto",
             height: "auto",
             objectFit: "contain",
@@ -175,6 +182,7 @@ const ImageContent = ({ block, onReady }: { block: ImageBlock; onReady?: () => v
     </figure>
   );
 };
+
 
 /* --------------------------------- blocks --------------------------------- */
 
@@ -240,18 +248,19 @@ const BlockView = memo(
     }
 
     const text = block.text;
+    // `highlights` is already scoped to this block by the parent, so memoised
+    // blocks no longer re-render when an unrelated highlight is added.
     const ranges: TextRange[] = [
-      ...highlights
-        .filter((h) => h.blockId === block.id)
-        .map<TextRange>((h) => ({
-          start: h.start,
-          end: h.end,
-          kind: "highlight",
-          color: h.color,
-          id: h.id,
-        })),
+      ...highlights.map<TextRange>((h) => ({
+        start: h.start,
+        end: h.end,
+        kind: "highlight",
+        color: h.color,
+        id: h.id,
+      })),
       ...findSearchRanges(text, searchQuery ?? ""),
     ];
+
 
     if (block.type === "heading") {
       const scale = block.level === 1 ? 1.5 : block.level === 2 ? 1.28 : 1.12;
@@ -512,6 +521,32 @@ const PaginatedReader = ({
     return out;
   }, [book.blocks]);
 
+  // O(1) id lookups — linear scans here ran on every page flip of large books.
+  const blockIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    blocks.forEach((b, i) => map.set(b.id, i));
+    return map;
+  }, [blocks]);
+
+  const originalIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    book.blocks.forEach((b, i) => map.set(b.id, i));
+    return map;
+  }, [book.blocks]);
+
+  // Highlights bucketed per block so memoised blocks stay memoised.
+  const highlightsByBlock = useMemo(() => {
+    const map = new Map<string, Highlight[]>();
+    for (const h of highlights) {
+      const list = map.get(h.blockId);
+      if (list) list.push(h);
+      else map.set(h.blockId, [h]);
+    }
+    return map;
+  }, [highlights]);
+
+
+
   /* --- sections: cover + chapter (or chunked) sections + full-page images ---
    * Rendering strategy is chosen per section:
    *   cover   → title card
@@ -530,12 +565,11 @@ const PaginatedReader = ({
 
     const boundaries: number[] = [];
     if (book.chapters.length > 1) {
-      const idSet = new Set(blocks.map((b) => b.id));
       book.chapters.forEach((chapter) => {
         const original = book.blocks[chapter.blockIndex];
-        if (!original || !idSet.has(original.id)) return;
-        const index = blocks.findIndex((b) => b.id === original.id);
-        if (index > 0) boundaries.push(index);
+        if (!original) return;
+        const index = blockIndexById.get(original.id);
+        if (index !== undefined && index > 0) boundaries.push(index);
       });
     }
     if (!boundaries.length) {
@@ -544,9 +578,15 @@ const PaginatedReader = ({
       }
     }
 
-    const starts = [0, ...boundaries.filter((v, i, arr) => arr.indexOf(v) === i)].sort(
-      (a, b) => a - b
-    );
+    const unique = [...new Set(boundaries)].sort((a, b) => a - b);
+    // Cap section size: one huge chapter would otherwise mount thousands of
+    // DOM nodes at once and stall measurement on large books.
+    const starts: number[] = [];
+    [0, ...unique].forEach((start, i, arr) => {
+      const end = arr[i + 1] ?? blocks.length;
+      for (let s = start; s < end || s === start; s += FALLBACK_SECTION_SIZE) starts.push(s);
+    });
+
 
     const pushContent = (slice: Block[], start: number) => {
       const meaningful = slice.filter((b) => b.type !== "pagebreak");
@@ -590,7 +630,7 @@ const PaginatedReader = ({
       pushContent(run, runStart);
     }
     return list;
-  }, [blocks, book.blocks, book.chapters, book.meta.title, title]);
+  }, [blocks, blockIndexById, book.blocks, book.chapters, book.meta.title, title]);
 
 
   const activeSection = sections[Math.min(sectionIndex, sections.length - 1)] ?? sections[0];
@@ -619,6 +659,14 @@ const PaginatedReader = ({
   const isPageMode = activeSection?.kind === "page";
   const isCoverSection = activeSection?.kind === "cover";
 
+  /** Block at the start of the visible column — the reflow anchor that keeps
+   *  the reader on the same sentence when typography or geometry changes. */
+  const currentBlockIdRef = useRef<string | null>(null);
+  const pageRef = useRef(0);
+  pageRef.current = page;
+  const pageCountRef = useRef(1);
+  pageCountRef.current = pageCount;
+
   const remeasure = useCallback(() => {
     // Cover and Page Mode sections are exactly one page — nothing to measure.
     if (isPageMode || isCoverSection) {
@@ -633,19 +681,21 @@ const PaginatedReader = ({
     const inner = columnsRef.current;
     if (!inner || columnWidth <= 0) return;
 
-    const count = Math.max(1, Math.round(inner.scrollWidth / step));
+    // N columns span N*columnWidth + (N-1)*gap, so add one gap back before
+    // dividing. Without this the last page could be rounded away (blank/lost).
+    const count = Math.max(1, Math.round((inner.scrollWidth + COLUMN_GAP) / step));
     measuredRef.current.set(sectionIndex, count);
     setMeasuredVersion((v) => v + 1);
     setPageCount(count);
 
-    if (pendingBlockRef.current) {
-      const target = inner.querySelector<HTMLElement>(
-        `[data-block-id="${CSS.escape(pendingBlockRef.current)}"]`
-      );
-      pendingBlockRef.current = null;
+    // Explicit jump target wins; otherwise stay anchored to the block the
+    // reader was already looking at (zero jump on font/margin/rotate).
+    const anchorId = pendingBlockRef.current ?? currentBlockIdRef.current;
+    pendingBlockRef.current = null;
+    if (anchorId) {
+      const target = inner.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(anchorId)}"]`);
       if (target) {
-        const left = target.offsetLeft;
-        setPage(Math.max(0, Math.min(count - 1, Math.round(left / step))));
+        setPage(Math.max(0, Math.min(count - 1, Math.round(target.offsetLeft / step))));
         return;
       }
     }
@@ -679,27 +729,34 @@ const PaginatedReader = ({
   ]);
 
   /* ------------------------------- navigation ----------------------------- */
+  // Side effects never run inside a state updater (that would double-fire in
+  // StrictMode); page/section are read from refs instead.
   const flip = useCallback(
     (delta: number) => {
       if (!delta) return;
-      setPage((prev) => {
-        const next = prev + delta;
-        if (next >= 0 && next < pageCount) return next;
-        if (next < 0 && sectionIndex > 0) {
-          pendingEdgeRef.current = "end";
-          setSectionIndex(sectionIndex - 1);
-          return prev;
-        }
-        if (next >= pageCount && sectionIndex < sections.length - 1) {
-          pendingEdgeRef.current = "start";
-          setSectionIndex(sectionIndex + 1);
-          return 0;
-        }
-        return prev;
-      });
+      const count = pageCountRef.current;
+      const next = pageRef.current + delta;
+
+      if (next >= 0 && next < count) {
+        setPage(next);
+        return;
+      }
+      if (next < 0 && sectionIndex > 0) {
+        pendingEdgeRef.current = "end";
+        currentBlockIdRef.current = null;
+        setSectionIndex(sectionIndex - 1);
+        return;
+      }
+      if (next >= count && sectionIndex < sections.length - 1) {
+        pendingEdgeRef.current = "start";
+        currentBlockIdRef.current = null;
+        setSectionIndex(sectionIndex + 1);
+        setPage(0);
+      }
     },
-    [pageCount, sectionIndex, sections.length]
+    [sectionIndex, sections.length]
   );
+
 
   const navTokenRef = useRef(0);
   useEffect(() => {
@@ -715,7 +772,7 @@ const PaginatedReader = ({
     jumpTokenRef.current = jumpTo.token;
     const original = book.blocks[Math.max(0, Math.min(jumpTo.blockIndex, book.blocks.length - 1))];
     if (!original) return;
-    const index = blocks.findIndex((b) => b.id === original.id);
+    const index = blockIndexById.get(original.id) ?? -1;
     if (index < 0) return;
     // Page Mode sections are single-block, so an exact hit wins; otherwise the
     // owning reflow section is the last one starting at or before the block.
@@ -738,7 +795,7 @@ const PaginatedReader = ({
       setSectionIndex(target);
       setPage(0);
     }
-  }, [jumpTo, blocks, book.blocks, sections, sectionIndex, remeasure]);
+  }, [jumpTo, blockIndexById, book.blocks, sections, sectionIndex, remeasure]);
 
   /* ------------------------- location + pagination ------------------------ */
   const totalEstimate = useMemo(() => {
@@ -785,9 +842,9 @@ const PaginatedReader = ({
     });
   }, [globalPage, totalEstimate, activeSection, onPaginationChange]);
 
-  // Report the first visible block so progress / anchors keep working.
+  // Report the first visible block so progress / anchors keep working, and
+  // remember it as the reflow anchor for the next re-pagination.
   useEffect(() => {
-    if (!onLocationChange) return;
     const inner = columnsRef.current;
     if (!inner || activeSection?.kind !== "content") return;
     const raf = requestAnimationFrame(() => {
@@ -801,12 +858,14 @@ const PaginatedReader = ({
         }
       }
       const id = chosen?.dataset.blockId;
-      const index = id ? blocks.findIndex((b) => b.id === id) : -1;
+      const index = id ? blockIndexById.get(id) ?? -1 : -1;
       const block = index >= 0 ? blocks[index] : null;
       if (!block) return;
-      const originalIndex = book.blocks.findIndex((b) => b.id === block.id);
+      currentBlockIdRef.current = block.id;
+      if (!onLocationChange) return;
+      const originalIndex = originalIndexById.get(block.id) ?? index;
       onLocationChange({
-        blockIndex: originalIndex >= 0 ? originalIndex : index,
+        blockIndex: originalIndex,
         blockId: block.id,
         page: block.page,
         percent: Math.min(100, Math.round((globalPage / Math.max(totalEstimate, globalPage)) * 100)),
@@ -814,6 +873,7 @@ const PaginatedReader = ({
       });
     });
     return () => cancelAnimationFrame(raf);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, sectionIndex, pageCount, blocks]);
 
@@ -1019,19 +1079,23 @@ const PaginatedReader = ({
                 transform: `translateX(${-page * step}px)`,
                 transition: "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)",
                 willChange: "transform",
-              }}
+                // Published so figures can cap their height against the real
+                // page box instead of an auto-height parent.
+                ["--reader-page-h" as string]: `${Math.max(size.height - 40, 160)}px`,
+              } as React.CSSProperties}
             >
               {activeSection?.blocks.map((block) => (
                 <BlockView
                   key={block.id}
                   block={block}
                   settings={settings}
-                  highlights={highlights}
+                  highlights={highlightsByBlock.get(block.id) ?? EMPTY_HIGHLIGHTS}
                   searchQuery={searchQuery}
                   onImageReady={remeasure}
                 />
               ))}
             </div>
+
           </div>
         </div>
       )}
