@@ -102,7 +102,7 @@ export function useReflowBook({ bookId, url, title, author, enabled, ocr, ocrLan
         }
       } catch (err) {
         if (controller.signal.aborted || runId !== runIdRef.current) return;
-        console.error("[ReflowReader] extraction failed:", err);
+        console.error("[Bookshelf] reflow extraction failed:", err);
         setState((prev) => ({
           ...prev,
           status: "error",
