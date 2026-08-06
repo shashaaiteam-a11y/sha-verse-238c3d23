@@ -1,11 +1,18 @@
 /**
- * PaginatedReader — production-grade paginated ebook renderer (Bookshelf only).
+ * PaginatedReader — Google Play Books style reflowable reader (Bookshelf only).
  *
- * Uses real CSS multi-column pagination (the same technique Play Books / epub.js
- * use): the content flows into viewport-sized columns and we translate
- * horizontally one column at a time. No vertical scrolling while reading, real
- * text reflow on every typography change, images never cropped, and only the
- * current section of the book is mounted so memory stays flat.
+ * Architecture (fixed):
+ *   Document → one continuous DOM → viewport → visible "page"
+ *
+ * The book is NEVER split into sections/columns/pages. Every extracted block is
+ * mounted exactly once inside a single continuous flowing document. A "page" is
+ * simply a viewport position inside that document, so nothing can ever be
+ * clipped, skipped or duplicated. Scrolling is fully continuous; tap zones and
+ * external nav controls only move the viewport by one screen.
+ *
+ * Reflow is real semantic HTML reflow — no zoom, no transform scaling, no
+ * canvas, no iframes. Changing typography relayouts the text and the reader
+ * stays anchored to the exact same sentence.
  */
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Highlighter, StickyNote, Copy, X } from "lucide-react";
@@ -41,7 +48,7 @@ interface Props {
   highlights: Highlight[];
   searchQuery?: string;
   jumpTo?: { blockIndex: number; token: number } | null;
-  /** Imperative page flip request from external controls. */
+  /** Imperative viewport flip request from external controls. */
   navRequest?: { delta: number; token: number } | null;
   coverUrl?: string | null;
   title?: string;
@@ -63,9 +70,8 @@ const MARGIN_STEPS = [16, 26, 40, 60];
 /** Stable empty array so blocks without highlights never break memoisation. */
 const EMPTY_HIGHLIGHTS: Highlight[] = [];
 const MAX_CONTENT_WIDTH = [760, 700, 640, 580];
-const COLUMN_GAP = 48;
-/** Approximate blocks per rendered section when the book has no chapters. */
-const FALLBACK_SECTION_SIZE = 60;
+/** Above this block count we let the browser skip offscreen painting. */
+const VIRTUALIZE_THRESHOLD = 250;
 
 /* ------------------------------- text pieces ------------------------------- */
 
@@ -140,7 +146,11 @@ const TextContent = ({ text, ranges }: { text: string; ranges: TextRange[] }) =>
   </>
 );
 
-const ImageContent = ({ block, onReady }: { block: ImageBlock; onReady?: () => void }) => {
+/**
+ * Inline illustration — stays attached to its surrounding paragraphs in the
+ * flow, keeps its aspect ratio, never overlaps text, lazily decoded.
+ */
+const ImageContent = ({ block }: { block: ImageBlock }) => {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     const url = URL.createObjectURL(block.blob);
@@ -148,14 +158,12 @@ const ImageContent = ({ block, onReady }: { block: ImageBlock; onReady?: () => v
     return () => URL.revokeObjectURL(url);
   }, [block.blob]);
 
+  const ratio = block.width > 0 && block.height > 0 ? block.width / block.height : undefined;
+
   return (
     <figure
-      style={{
-        margin: "1.2em 0",
-        textAlign: "center",
-        breakInside: "avoid",
-        pageBreakInside: "avoid",
-      }}
+      data-block-id={block.id}
+      style={{ margin: "1.2em 0", textAlign: "center" }}
     >
       {src && (
         <img
@@ -163,17 +171,13 @@ const ImageContent = ({ block, onReady }: { block: ImageBlock; onReady?: () => v
           alt={block.alt || ""}
           decoding="async"
           loading="lazy"
-          onLoad={onReady}
-          onError={onReady}
           style={{
             display: "inline-block",
             maxWidth: "100%",
-            // Percentages resolve against an auto-height figure (i.e. not at
-            // all), which let tall images overflow the column and clip. The
-            // page height is published as a CSS var by the column container.
-            maxHeight: "calc(var(--reader-page-h, 70vh) * 0.72)",
+            maxHeight: "72vh",
             width: "auto",
             height: "auto",
+            aspectRatio: ratio ? `${block.width} / ${block.height}` : undefined,
             objectFit: "contain",
             borderRadius: 6,
           }}
@@ -183,7 +187,6 @@ const ImageContent = ({ block, onReady }: { block: ImageBlock; onReady?: () => v
   );
 };
 
-
 /* --------------------------------- blocks --------------------------------- */
 
 const BlockView = memo(
@@ -192,27 +195,27 @@ const BlockView = memo(
     settings,
     highlights,
     searchQuery,
-    onImageReady,
   }: {
     block: Block;
     settings: ReaderSettings;
     highlights: Highlight[];
     searchQuery?: string;
-    onImageReady?: () => void;
   }) => {
     const theme = READER_THEMES[settings.theme];
 
     if (block.type === "pagebreak") {
-      return <div aria-hidden style={{ height: settings.fontSize * 0.5 }} />;
+      // A source page boundary is invisible in a reflowable document — it only
+      // contributes a little breathing room. It never breaks the flow.
+      return <div data-block-id={block.id} aria-hidden style={{ height: settings.fontSize * 0.4 }} />;
     }
 
     if (block.type === "image") {
-      return <ImageContent block={block} onReady={onImageReady} />;
+      return <ImageContent block={block} />;
     }
 
     if (block.type === "table") {
       return (
-        <div style={{ margin: "1em 0", breakInside: "avoid" }}>
+        <div data-block-id={block.id} style={{ margin: "1em 0", overflowX: "auto" }}>
           <table
             style={{
               borderCollapse: "collapse",
@@ -261,7 +264,6 @@ const BlockView = memo(
       ...findSearchRanges(text, searchQuery ?? ""),
     ];
 
-
     if (block.type === "heading") {
       const scale = block.level === 1 ? 1.5 : block.level === 2 ? 1.28 : 1.12;
       const Tag = `h${Math.min(block.level + 1, 4)}` as "h2" | "h3" | "h4";
@@ -273,12 +275,11 @@ const BlockView = memo(
             fontSize: `${settings.fontSize * scale}px`,
             lineHeight: 1.3,
             fontWeight: 700,
-            margin: `${settings.fontSize * 0.9}px 0 ${settings.fontSize * 0.4}px`,
+            margin: `${settings.fontSize * 1.1}px 0 ${settings.fontSize * 0.45}px`,
             letterSpacing: "-0.01em",
-            breakAfter: "avoid",
-            breakInside: "avoid",
             overflowWrap: "break-word",
-          }}
+            textWrap: "balance",
+          } as React.CSSProperties}
         >
           <TextContent text={text} ranges={ranges} />
         </Tag>
@@ -296,6 +297,7 @@ const BlockView = memo(
           textIndent: block.indent && !block.quote ? "1.3em" : undefined,
           textAlign: settings.justify && !block.quote ? "justify" : "start",
           hyphens: settings.justify ? "auto" : undefined,
+          WebkitHyphens: settings.justify ? "auto" : undefined,
           letterSpacing: settings.looseSpacing ? "0.02em" : undefined,
           wordSpacing: settings.looseSpacing ? "0.1em" : undefined,
           paddingInlineStart: block.quote ? "1em" : undefined,
@@ -303,11 +305,14 @@ const BlockView = memo(
           fontStyle: block.quote ? "italic" : undefined,
           color: block.small ? theme.muted : undefined,
           overflowWrap: "break-word",
+          textWrap: settings.justify ? undefined : "pretty",
           orphans: 2,
           widows: 2,
+          fontKerning: "normal",
+          fontVariantLigatures: "common-ligatures",
           textRendering: "optimizeLegibility",
           WebkitFontSmoothing: "antialiased",
-        }}
+        } as React.CSSProperties}
       >
         <TextContent text={text} ranges={ranges} />
       </p>
@@ -316,25 +321,15 @@ const BlockView = memo(
 );
 BlockView.displayName = "BlockView";
 
-/* ------------------------------- page mode -------------------------------- */
+/* ------------------------------- page images ------------------------------ */
 
 /**
- * PageImage — Page Mode renderer for rasterised original pages (scanned books,
- * broken font mappings, comics). The page is always fitted inside the viewport
- * with its aspect ratio preserved: never cropped, never stretched.
- *
- * Zoom: ctrl/⌘ + wheel, trackpad pinch and double tap. Panning is enabled once
- * zoomed in; page flips are suppressed while zoomed so gestures never conflict.
+ * FullPageImage — rasterised original page (scanned book / broken font map).
+ * It lives inline in the same continuous document, fitted to the viewport with
+ * its aspect ratio preserved: never cropped, never stretched. Double tap or
+ * ctrl/⌘ + wheel zooms; panning is enabled once zoomed in.
  */
-const PageImage = ({
-  block,
-  label,
-  onZoomChange,
-}: {
-  block: ImageBlock;
-  label: string;
-  onZoomChange?: (zoomed: boolean) => void;
-}) => {
+const FullPageImage = ({ block }: { block: ImageBlock }) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -349,10 +344,6 @@ const PageImage = ({
     return () => URL.revokeObjectURL(url);
   }, [block.blob]);
 
-  useEffect(() => onZoomChange?.(zoom > 1.01), [zoom, onZoomChange]);
-
-  // Anchored zoom around the pointer. Native non-passive listener because
-  // React's onWheel is passive and cannot preventDefault().
   const zoomRef = useRef({ zoom, offset });
   zoomRef.current = { zoom, offset };
 
@@ -380,26 +371,31 @@ const PageImage = ({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  const toggleZoom = () => {
-    if (zoom > 1.01) {
-      setZoom(1);
-      setOffset({ x: 0, y: 0 });
-    } else {
-      setZoom(2.5);
-    }
-  };
+  const zoomed = zoom > 1.01;
 
   return (
     <div
       ref={hostRef}
-      className="flex h-full w-full items-center justify-center overflow-hidden"
-      style={{ touchAction: zoom > 1.01 ? "none" : undefined, cursor: zoom > 1.01 ? "grab" : undefined }}
+      data-block-id={block.id}
+      data-page-image={zoomed ? "zoomed" : "fit"}
+      className="flex w-full items-center justify-center overflow-hidden"
+      style={{
+        height: "min(88vh, var(--reader-vh, 88vh))",
+        margin: "1em 0",
+        touchAction: zoomed ? "none" : undefined,
+        cursor: zoomed ? "grab" : undefined,
+      }}
       onDoubleClick={(event) => {
         event.stopPropagation();
-        toggleZoom();
+        if (zoomed) {
+          setZoom(1);
+          setOffset({ x: 0, y: 0 });
+        } else {
+          setZoom(2.5);
+        }
       }}
       onPointerDown={(event) => {
-        if (zoom <= 1.01) return;
+        if (!zoomed) return;
         dragRef.current = { x: event.clientX, y: event.clientY, ox: offset.x, oy: offset.y };
         (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
       }}
@@ -412,14 +408,13 @@ const PageImage = ({
         dragRef.current = null;
       }}
       onClick={(event) => {
-        // Tapping a zoomed page pans/does nothing; unzoomed it toggles controls.
-        if (zoom > 1.01) event.stopPropagation();
+        if (zoomed) event.stopPropagation();
       }}
     >
       {src && (
         <img
           src={src}
-          alt={block.alt || label}
+          alt={block.alt || `Page ${block.page}`}
           loading="lazy"
           decoding="async"
           draggable={false}
@@ -440,18 +435,7 @@ const PageImage = ({
   );
 };
 
-/* -------------------------------- sections -------------------------------- */
-
-interface Section {
-  /** `page` = rasterised original page rendered in Page Mode. */
-  kind: "cover" | "content" | "page";
-  /** Indices refer to the sanitised block list. */
-  blocks: Block[];
-  startIndex: number;
-  title: string;
-  chars: number;
-}
-
+/* --------------------------------- helpers -------------------------------- */
 
 function offsetWithin(root: HTMLElement, node: Node, offset: number) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -464,6 +448,47 @@ function offsetWithin(root: HTMLElement, node: Node, offset: number) {
   }
   return total;
 }
+
+/** One mounted block. Offscreen painting is skipped on large books only. */
+const BlockSlot = memo(
+  ({
+    block,
+    settings,
+    highlights,
+    searchQuery,
+    virtualize,
+  }: {
+    block: Block;
+    settings: ReaderSettings;
+    highlights: Highlight[];
+    searchQuery?: string;
+    virtualize: boolean;
+  }) => {
+    if (block.type === "image" && block.fullPage) {
+      return <FullPageImage block={block} />;
+    }
+    const body = (
+      <BlockView
+        block={block}
+        settings={settings}
+        highlights={highlights}
+        searchQuery={searchQuery}
+      />
+    );
+    if (!virtualize) return body;
+    return (
+      <div
+        style={{
+          contentVisibility: "auto",
+          containIntrinsicSize: `auto ${Math.round(settings.fontSize * 4)}px`,
+        } as React.CSSProperties}
+      >
+        {body}
+      </div>
+    );
+  }
+);
+BlockSlot.displayName = "BlockSlot";
 
 const PaginatedReader = ({
   book,
@@ -482,17 +507,8 @@ const PaginatedReader = ({
   className,
 }: Props) => {
   const theme = READER_THEMES[settings.theme];
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const columnsRef = useRef<HTMLDivElement>(null);
-
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const [sectionIndex, setSectionIndex] = useState(0);
-  const [page, setPage] = useState(0);
-  const [pageCount, setPageCount] = useState(1);
-  const pendingEdgeRef = useRef<"start" | "end">("start");
-  const pendingBlockRef = useRef<string | null>(null);
-  const measuredRef = useRef<Map<number, number>>(new Map());
-  const [measuredVersion, setMeasuredVersion] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const [selection, setSelection] = useState<{
     blockId: string;
@@ -521,7 +537,9 @@ const PaginatedReader = ({
     return out;
   }, [book.blocks]);
 
-  // O(1) id lookups — linear scans here ran on every page flip of large books.
+  const virtualize = blocks.length > VIRTUALIZE_THRESHOLD;
+
+  // O(1) id lookups — linear scans here ran on every scroll frame.
   const blockIndexById = useMemo(() => {
     const map = new Map<string, number>();
     blocks.forEach((b, i) => map.set(b.id, i));
@@ -545,178 +563,91 @@ const PaginatedReader = ({
     return map;
   }, [highlights]);
 
-
-
-  /* --- sections: cover + chapter (or chunked) sections + full-page images ---
-   * Rendering strategy is chosen per section:
-   *   cover   → title card
-   *   content → Reflow Mode (CSS multi-column pagination)
-   *   page    → Page Mode (fitted image of the original page)                */
-  const sections = useMemo<Section[]>(() => {
-    const list: Section[] = [
-      {
-        kind: "cover",
-        blocks: [],
-        startIndex: 0,
-        title: title || book.meta.title || "",
-        chars: 0,
-      },
-    ];
-
-    const boundaries: number[] = [];
-    if (book.chapters.length > 1) {
-      book.chapters.forEach((chapter) => {
-        const original = book.blocks[chapter.blockIndex];
-        if (!original) return;
-        const index = blockIndexById.get(original.id);
-        if (index !== undefined && index > 0) boundaries.push(index);
-      });
-    }
-    if (!boundaries.length) {
-      for (let i = FALLBACK_SECTION_SIZE; i < blocks.length; i += FALLBACK_SECTION_SIZE) {
-        boundaries.push(i);
-      }
-    }
-
-    const unique = [...new Set(boundaries)].sort((a, b) => a - b);
-    // Cap section size: one huge chapter would otherwise mount thousands of
-    // DOM nodes at once and stall measurement on large books.
-    const starts: number[] = [];
-    [0, ...unique].forEach((start, i, arr) => {
-      const end = arr[i + 1] ?? blocks.length;
-      for (let s = start; s < end || s === start; s += FALLBACK_SECTION_SIZE) starts.push(s);
+  /** Chapter titles by block index, for the running header/progress readout. */
+  const chapterMarks = useMemo(() => {
+    const marks: { index: number; title: string }[] = [];
+    book.chapters.forEach((chapter) => {
+      const original = book.blocks[chapter.blockIndex];
+      if (!original) return;
+      const index = blockIndexById.get(original.id);
+      if (index !== undefined) marks.push({ index, title: chapter.title });
     });
+    return marks.sort((a, b) => a.index - b.index);
+  }, [book.chapters, book.blocks, blockIndexById]);
 
+  /* ---------------------------- viewport metrics --------------------------- */
+  const [viewportHeight, setViewportHeight] = useState(0);
 
-    const pushContent = (slice: Block[], start: number) => {
-      const meaningful = slice.filter((b) => b.type !== "pagebreak");
-      if (!meaningful.length) return;
-      const head = slice.find((b) => b.type === "heading");
-      list.push({
-        kind: "content",
-        blocks: slice,
-        startIndex: start,
-        title: head && "text" in head ? head.text : "",
-        chars: slice.reduce((sum, b) => sum + ("text" in b ? b.text.length : 120), 0),
-      });
-    };
-
-    for (let i = 0; i < starts.length; i++) {
-      const start = starts[i];
-      const end = i + 1 < starts.length ? starts[i + 1] : blocks.length;
-      if (end <= start) continue;
-
-      // A rasterised original page always occupies a page of its own; it is
-      // never mixed into the reflowed column stream.
-      let runStart = start;
-      let run: Block[] = [];
-      for (let index = start; index < end; index++) {
-        const block = blocks[index];
-        if (block.type === "image" && block.fullPage) {
-          pushContent(run, runStart);
-          run = [];
-          runStart = index + 1;
-          list.push({
-            kind: "page",
-            blocks: [block],
-            startIndex: index,
-            title: "",
-            chars: 900,
-          });
-        } else {
-          run.push(block);
-        }
-      }
-      pushContent(run, runStart);
-    }
-    return list;
-  }, [blocks, blockIndexById, book.blocks, book.chapters, book.meta.title, title]);
-
-
-  const activeSection = sections[Math.min(sectionIndex, sections.length - 1)] ?? sections[0];
-
-  /* ------------------------------ measurement ----------------------------- */
   useLayoutEffect(() => {
-    const el = viewportRef.current;
+    const el = scrollRef.current;
     if (!el) return;
-    const apply = () => {
-      const rect = el.getBoundingClientRect();
-      setSize((prev) =>
-        Math.abs(prev.width - rect.width) < 1 && Math.abs(prev.height - rect.height) < 1
-          ? prev
-          : { width: rect.width, height: rect.height }
-      );
-    };
+    const apply = () => setViewportHeight(el.clientHeight);
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  const columnWidth = Math.max(size.width - 2 * (MARGIN_STEPS[settings.margin] ?? 26), 100);
-  const step = columnWidth + COLUMN_GAP;
+  /* ------------------------------- anchoring ------------------------------- */
+  /** Topmost visible block + how far into it we are — the reflow anchor. */
+  const anchorRef = useRef<{ id: string; offset: number } | null>(null);
+  const restoringRef = useRef(false);
 
-  const isPageMode = activeSection?.kind === "page";
-  const isCoverSection = activeSection?.kind === "cover";
-
-  /** Block at the start of the visible column — the reflow anchor that keeps
-   *  the reader on the same sentence when typography or geometry changes. */
-  const currentBlockIdRef = useRef<string | null>(null);
-  const pageRef = useRef(0);
-  pageRef.current = page;
-  const pageCountRef = useRef(1);
-  pageCountRef.current = pageCount;
-
-  const remeasure = useCallback(() => {
-    // Cover and Page Mode sections are exactly one page — nothing to measure.
-    if (isPageMode || isCoverSection) {
-      measuredRef.current.set(sectionIndex, 1);
-      setMeasuredVersion((v) => v + 1);
-      setPageCount(1);
-      pendingBlockRef.current = null;
-      pendingEdgeRef.current = "start";
-      setPage(0);
-      return;
+  const visibleBlockElement = useCallback(() => {
+    const scroller = scrollRef.current;
+    const content = contentRef.current;
+    if (!scroller || !content) return null;
+    const nodes = content.querySelectorAll<HTMLElement>("[data-block-id]");
+    const top = scroller.getBoundingClientRect().top + 4;
+    let fallback: HTMLElement | null = null;
+    for (const node of Array.from(nodes)) {
+      const rect = node.getBoundingClientRect();
+      fallback = fallback ?? node;
+      if (rect.bottom >= top) return node;
     }
-    const inner = columnsRef.current;
-    if (!inner || columnWidth <= 0) return;
+    return fallback;
+  }, []);
 
-    // N columns span N*columnWidth + (N-1)*gap, so add one gap back before
-    // dividing. Without this the last page could be rounded away (blank/lost).
-    const count = Math.max(1, Math.round((inner.scrollWidth + COLUMN_GAP) / step));
-    measuredRef.current.set(sectionIndex, count);
-    setMeasuredVersion((v) => v + 1);
-    setPageCount(count);
+  const captureAnchor = useCallback(() => {
+    const scroller = scrollRef.current;
+    const node = visibleBlockElement();
+    if (!scroller || !node) return;
+    const id = node.dataset.blockId;
+    if (!id) return;
+    anchorRef.current = {
+      id,
+      offset: node.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
+    };
+  }, [visibleBlockElement]);
 
-    // Explicit jump target wins; otherwise stay anchored to the block the
-    // reader was already looking at (zero jump on font/margin/rotate).
-    const anchorId = pendingBlockRef.current ?? currentBlockIdRef.current;
-    pendingBlockRef.current = null;
-    if (anchorId) {
-      const target = inner.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(anchorId)}"]`);
-      if (target) {
-        setPage(Math.max(0, Math.min(count - 1, Math.round(target.offsetLeft / step))));
-        return;
-      }
-    }
-    setPage((prev) => {
-      if (pendingEdgeRef.current === "end") {
-        pendingEdgeRef.current = "start";
-        return count - 1;
-      }
-      return Math.min(prev, count - 1);
+  const scrollToBlock = useCallback((blockId: string, offset = 0) => {
+    const scroller = scrollRef.current;
+    const content = contentRef.current;
+    if (!scroller || !content) return false;
+    const node = content.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`);
+    if (!node) return false;
+    const delta =
+      node.getBoundingClientRect().top - scroller.getBoundingClientRect().top - offset;
+    restoringRef.current = true;
+    scroller.scrollTop += delta;
+    requestAnimationFrame(() => {
+      restoringRef.current = false;
     });
-  }, [columnWidth, sectionIndex, step, isPageMode, isCoverSection]);
+    return true;
+  }, []);
 
-  // Re-paginate whenever geometry, typography or content changes.
+  // Typography / geometry changed → text truly reflows, and we land on the very
+  // same sentence the reader was looking at (never a scaled or zoomed page).
   useLayoutEffect(() => {
-    const raf = requestAnimationFrame(remeasure);
-    return () => cancelAnimationFrame(raf);
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    // Two frames: one for layout, one after lazily-painted blocks settle.
+    const raf1 = requestAnimationFrame(() => {
+      scrollToBlock(anchor.id, anchor.offset);
+      requestAnimationFrame(() => scrollToBlock(anchor.id, anchor.offset));
+    });
+    return () => cancelAnimationFrame(raf1);
   }, [
-    remeasure,
-    activeSection,
-    size.width,
-    size.height,
     settings.fontSize,
     settings.lineHeight,
     settings.font,
@@ -724,39 +655,90 @@ const PaginatedReader = ({
     settings.paragraphSpacing,
     settings.justify,
     settings.looseSpacing,
-    searchQuery,
-    highlights.length,
+    settings.theme,
+    viewportHeight,
+    scrollToBlock,
   ]);
 
-  /* ------------------------------- navigation ----------------------------- */
-  // Side effects never run inside a state updater (that would double-fire in
-  // StrictMode); page/section are read from refs instead.
-  const flip = useCallback(
-    (delta: number) => {
-      if (!delta) return;
-      const count = pageCountRef.current;
-      const next = pageRef.current + delta;
+  /* ------------------------- progress + location -------------------------- */
+  const reportRef = useRef(0);
 
-      if (next >= 0 && next < count) {
-        setPage(next);
-        return;
-      }
-      if (next < 0 && sectionIndex > 0) {
-        pendingEdgeRef.current = "end";
-        currentBlockIdRef.current = null;
-        setSectionIndex(sectionIndex - 1);
-        return;
-      }
-      if (next >= count && sectionIndex < sections.length - 1) {
-        pendingEdgeRef.current = "start";
-        currentBlockIdRef.current = null;
-        setSectionIndex(sectionIndex + 1);
-        setPage(0);
-      }
-    },
-    [sectionIndex, sections.length]
-  );
+  const report = useCallback(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+    const pageH = Math.max(scroller.clientHeight - 24, 1);
+    const totalPages = Math.max(1, Math.ceil(scroller.scrollHeight / pageH));
+    const page = Math.min(totalPages, Math.floor(scroller.scrollTop / pageH) + 1);
+    const maxScroll = Math.max(scroller.scrollHeight - scroller.clientHeight, 1);
+    const percent = Math.min(100, Math.round((scroller.scrollTop / maxScroll) * 100));
 
+    const node = visibleBlockElement();
+    const id = node?.dataset.blockId;
+    const index = id ? blockIndexById.get(id) ?? -1 : -1;
+    const block = index >= 0 ? blocks[index] : null;
+
+    let chapterTitle = "";
+    for (const mark of chapterMarks) {
+      if (mark.index <= index) chapterTitle = mark.title;
+      else break;
+    }
+
+    onPaginationChange?.({ page, totalPages, percent, chapterTitle });
+
+    if (block && onLocationChange) {
+      onLocationChange({
+        blockIndex: originalIndexById.get(block.id) ?? index,
+        blockId: block.id,
+        page: block.page,
+        percent,
+        snippet: "text" in block ? block.text.slice(0, 60) : "",
+      });
+    }
+  }, [
+    blocks,
+    blockIndexById,
+    originalIndexById,
+    chapterMarks,
+    onLocationChange,
+    onPaginationChange,
+    visibleBlockElement,
+  ]);
+
+  const handleScroll = useCallback(() => {
+    if (reportRef.current) return;
+    reportRef.current = requestAnimationFrame(() => {
+      reportRef.current = 0;
+      if (!restoringRef.current) captureAnchor();
+      report();
+    });
+  }, [captureAnchor, report]);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      captureAnchor();
+      report();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [captureAnchor, report, viewportHeight]);
+
+  useEffect(() => () => {
+    if (reportRef.current) cancelAnimationFrame(reportRef.current);
+  }, []);
+
+  /* ------------------------------- navigation ------------------------------ */
+  /** A "page turn" is nothing but a viewport move — content is never split. */
+  const flip = useCallback((delta: number) => {
+    const scroller = scrollRef.current;
+    if (!scroller || !delta) return;
+    const pageH = Math.max(scroller.clientHeight - 24, 1);
+    scroller.scrollTo({
+      top: Math.max(
+        0,
+        Math.min(scroller.scrollHeight - scroller.clientHeight, scroller.scrollTop + delta * pageH)
+      ),
+      behavior: "smooth",
+    });
+  }, []);
 
   const navTokenRef = useRef(0);
   useEffect(() => {
@@ -772,114 +754,57 @@ const PaginatedReader = ({
     jumpTokenRef.current = jumpTo.token;
     const original = book.blocks[Math.max(0, Math.min(jumpTo.blockIndex, book.blocks.length - 1))];
     if (!original) return;
-    const index = blockIndexById.get(original.id) ?? -1;
-    if (index < 0) return;
-    // Page Mode sections are single-block, so an exact hit wins; otherwise the
-    // owning reflow section is the last one starting at or before the block.
-    const exact = sections.findIndex((s) => s.kind === "page" && s.startIndex === index);
-    const target =
-      exact >= 0
-        ? exact
-        : sections.findIndex(
-            (s, i) =>
-              s.kind === "content" &&
-              index >= s.startIndex &&
-              (i === sections.length - 1 || index < (sections[i + 1]?.startIndex ?? Infinity))
-          );
-
-    if (target < 0) return;
-    pendingBlockRef.current = original.id;
-    if (target === sectionIndex) {
-      requestAnimationFrame(remeasure);
-    } else {
-      setSectionIndex(target);
-      setPage(0);
-    }
-  }, [jumpTo, blockIndexById, book.blocks, sections, sectionIndex, remeasure]);
-
-  /* ------------------------- location + pagination ------------------------ */
-  const totalEstimate = useMemo(() => {
-    const measured = measuredRef.current;
-    let knownPages = 0;
-    let knownChars = 0;
-    measured.forEach((count, index) => {
-      knownPages += count;
-      knownChars += sections[index]?.chars ?? 0;
-    });
-    const perPage = knownChars > 0 && knownPages > 0 ? knownChars / knownPages : 1400;
-    let total = 0;
-    sections.forEach((section, index) => {
-      const known = measured.get(index);
-      total += known ?? Math.max(1, Math.round(section.chars / perPage));
-    });
-    return Math.max(total, 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections, measuredVersion]);
-
-  const globalPage = useMemo(() => {
-    const measured = measuredRef.current;
-    let knownPages = 0;
-    let knownChars = 0;
-    measured.forEach((count, index) => {
-      knownPages += count;
-      knownChars += sections[index]?.chars ?? 0;
-    });
-    const perPage = knownChars > 0 && knownPages > 0 ? knownChars / knownPages : 1400;
-    let before = 0;
-    for (let i = 0; i < sectionIndex; i++) {
-      before += measured.get(i) ?? Math.max(1, Math.round((sections[i]?.chars ?? 0) / perPage));
-    }
-    return before + page + 1;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections, sectionIndex, page, measuredVersion]);
-
-  useEffect(() => {
-    onPaginationChange?.({
-      page: globalPage,
-      totalPages: Math.max(totalEstimate, globalPage),
-      percent: Math.min(100, Math.round((globalPage / Math.max(totalEstimate, globalPage)) * 100)),
-      chapterTitle: activeSection?.title ?? "",
-    });
-  }, [globalPage, totalEstimate, activeSection, onPaginationChange]);
-
-  // Report the first visible block so progress / anchors keep working, and
-  // remember it as the reflow anchor for the next re-pagination.
-  useEffect(() => {
-    const inner = columnsRef.current;
-    if (!inner || activeSection?.kind !== "content") return;
-    const raf = requestAnimationFrame(() => {
-      const left = page * step;
-      const nodes = inner.querySelectorAll<HTMLElement>("[data-block-id]");
-      let chosen: HTMLElement | null = null;
-      for (const node of Array.from(nodes)) {
-        if (node.offsetLeft + node.offsetWidth >= left - 2) {
-          chosen = node;
+    // The target may have been filtered out — walk forward to the next kept one.
+    let index = blockIndexById.get(original.id);
+    if (index === undefined) {
+      const from = Math.max(0, Math.min(jumpTo.blockIndex, book.blocks.length - 1));
+      for (let i = from; i < book.blocks.length; i++) {
+        const found = blockIndexById.get(book.blocks[i].id);
+        if (found !== undefined) {
+          index = found;
           break;
         }
       }
-      const id = chosen?.dataset.blockId;
-      const index = id ? blockIndexById.get(id) ?? -1 : -1;
-      const block = index >= 0 ? blocks[index] : null;
-      if (!block) return;
-      currentBlockIdRef.current = block.id;
-      if (!onLocationChange) return;
-      const originalIndex = originalIndexById.get(block.id) ?? index;
-      onLocationChange({
-        blockIndex: originalIndex,
-        blockId: block.id,
-        page: block.page,
-        percent: Math.min(100, Math.round((globalPage / Math.max(totalEstimate, globalPage)) * 100)),
-        snippet: "text" in block ? block.text.slice(0, 60) : "",
-      });
+    }
+    if (index === undefined) return;
+    const targetId = blocks[index].id;
+    const attempt = (tries: number) => {
+      if (scrollToBlock(targetId, 0)) {
+        anchorRef.current = { id: targetId, offset: 0 };
+        report();
+        return;
+      }
+      if (tries > 0) requestAnimationFrame(() => attempt(tries - 1));
+    };
+    requestAnimationFrame(() => attempt(4));
+  }, [jumpTo, blockIndexById, blocks, book.blocks, scrollToBlock, report]);
+
+  /* --------------------------- integrity validation ------------------------ */
+  // Every extracted block must be mounted exactly once — no loss, no dupes.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const content = contentRef.current;
+    if (!content) return;
+    const raf = requestAnimationFrame(() => {
+      const ids = Array.from(content.querySelectorAll<HTMLElement>("[data-block-id]")).map(
+        (n) => n.dataset.blockId
+      );
+      const unique = new Set(ids);
+      if (ids.length !== unique.size) {
+        console.warn("[Reader] duplicated blocks in DOM", ids.length - unique.size);
+      }
+      if (unique.size !== blocks.length) {
+        console.warn(
+          `[Reader] block count mismatch: extracted ${blocks.length}, rendered ${unique.size}`
+        );
+      }
     });
     return () => cancelAnimationFrame(raf);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, sectionIndex, pageCount, blocks]);
+  }, [blocks]);
 
   /* ------------------------------- selection ------------------------------ */
   useEffect(() => {
-    const container = viewportRef.current;
+    const container = scrollRef.current;
     if (!container) return;
     const handleSelection = () => {
       const sel = window.getSelection();
@@ -929,37 +854,8 @@ const PaginatedReader = ({
   /* -------------------------------- gestures ------------------------------ */
   const touchRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const lastTouchRef = useRef(0);
-  /** While a Page-Mode image is zoomed in, gestures pan instead of flipping. */
-  const [pageZoomed, setPageZoomed] = useState(false);
-
-  useEffect(() => {
-    setPageZoomed(false);
-  }, [sectionIndex]);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    touchRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const start = touchRef.current;
-    touchRef.current = null;
-    lastTouchRef.current = Date.now();
-    if (!start || pageZoomed) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) {
-      flip(dx < 0 ? 1 : -1);
-      return;
-    }
-    if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && Date.now() - start.time < 400) {
-      handleTap(t.clientX, e.currentTarget as HTMLElement);
-    }
-  };
 
   const handleTap = (clientX: number, host: HTMLElement) => {
-    if (pageZoomed) return;
     if (window.getSelection()?.isCollapsed === false) return;
     const rect = host.getBoundingClientRect();
     const ratio = (clientX - rect.left) / Math.max(rect.width, 1);
@@ -968,38 +864,69 @@ const PaginatedReader = ({
     else onTap?.();
   };
 
-  const isCover = isCoverSection;
   const sidePadding = MARGIN_STEPS[settings.margin] ?? 26;
-
 
   return (
     <div
-      ref={viewportRef}
-      className={cn("relative h-full w-full overflow-hidden select-text", className)}
+      ref={scrollRef}
+      onScroll={handleScroll}
+      className={cn(
+        "relative h-full w-full select-text overflow-y-auto overflow-x-hidden",
+        className
+      )}
       style={{
         backgroundColor: theme.bg,
         color: theme.text,
         fontFamily: READER_FONT_STACKS[settings.font],
-        touchAction: "pan-y",
-        contain: "strict",
+        // Continuous vertical scrolling — never locked, never clipped.
+        WebkitOverflowScrolling: "touch",
+        overscrollBehavior: "contain",
+        scrollbarWidth: "none",
+        ["--reader-vh" as string]: `${Math.max(viewportHeight, 200)}px`,
+      } as React.CSSProperties}
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        touchRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
       }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onTouchEnd={(e) => {
+        const start = touchRef.current;
+        touchRef.current = null;
+        lastTouchRef.current = Date.now();
+        if (!start) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - start.x;
+        const dy = t.clientY - start.y;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          flip(dx < 0 ? 1 : -1);
+          return;
+        }
+        if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && Date.now() - start.time < 400) {
+          handleTap(t.clientX, e.currentTarget as HTMLElement);
+        }
+      }}
       onClick={(event) => {
-        // The reader owns its own tap handling — never let it bubble to the
-        // page-level toggle (that would double-fire the controls).
         event.stopPropagation();
         const target = event.target as HTMLElement;
         if (target.closest("[data-reader-toolbar]")) return;
-        // Touch devices already handled the tap in touchend.
+        if (target.closest('[data-page-image="zoomed"]')) return;
         if (Date.now() - lastTouchRef.current < 700) return;
         handleTap(event.clientX, event.currentTarget);
       }}
     >
-      {isCover ? (
+      <div
+        ref={contentRef}
+        dir={book.meta.dir}
+        style={{
+          maxWidth: MAX_CONTENT_WIDTH[settings.margin] ?? 700,
+          marginInline: "auto",
+          paddingInline: sidePadding,
+          paddingBlock: 20,
+        }}
+      >
+        {/* Cover is simply the first thing in the flowing document. */}
         <div
-          className="flex h-full w-full flex-col items-center justify-center gap-5 px-8 text-center"
-          style={{ paddingBlock: 24 }}
+          className="flex w-full flex-col items-center justify-center gap-5 text-center"
+          style={{ minHeight: "min(78vh, var(--reader-vh, 78vh))" }}
         >
           {coverUrl ? (
             <img
@@ -1007,7 +934,7 @@ const PaginatedReader = ({
               alt={title ? `${title} cover` : "Book cover"}
               decoding="async"
               style={{
-                maxHeight: "62%",
+                maxHeight: "52vh",
                 maxWidth: "78%",
                 objectFit: "contain",
                 borderRadius: 10,
@@ -1027,86 +954,37 @@ const PaginatedReader = ({
               {title || book.meta.title || "Untitled"}
             </h1>
             {(author || book.meta.author) && (
-              <p
-                style={{
-                  marginTop: 10,
-                  fontSize: `${settings.fontSize}px`,
-                  color: theme.muted,
-                }}
-              >
+              <p style={{ marginTop: 10, fontSize: `${settings.fontSize}px`, color: theme.muted }}>
                 {author || book.meta.author}
               </p>
             )}
           </div>
         </div>
-      ) : isPageMode ? (
-        /* Page Mode — original page rendered as a fitted image (no reflow). */
-        <div style={{ position: "absolute", inset: 0, padding: 8 }}>
-          <PageImage
-            block={activeSection.blocks[0] as ImageBlock}
-            label={`Page ${activeSection.blocks[0]?.page ?? ""}`}
-            onZoomChange={setPageZoomed}
+
+        {/* The whole book — one continuous document, every block exactly once. */}
+        {blocks.map((block) => (
+          <BlockSlot
+            key={block.id}
+            block={block}
+            settings={settings}
+            highlights={highlightsByBlock.get(block.id) ?? EMPTY_HIGHLIGHTS}
+            searchQuery={searchQuery}
+            virtualize={virtualize}
           />
-        </div>
-      ) : (
+        ))}
 
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            paddingBlock: 20,
-            paddingInline: sidePadding,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              height: "100%",
-              maxWidth: MAX_CONTENT_WIDTH[settings.margin] ?? 700,
-              marginInline: "auto",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              ref={columnsRef}
-              dir={book.meta.dir}
-              style={{
-                height: "100%",
-                width: columnWidth,
-                columnWidth: `${columnWidth}px`,
-                columnGap: `${COLUMN_GAP}px`,
-                columnFill: "auto",
-                transform: `translateX(${-page * step}px)`,
-                transition: "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)",
-                willChange: "transform",
-                // Published so figures can cap their height against the real
-                // page box instead of an auto-height parent.
-                ["--reader-page-h" as string]: `${Math.max(size.height - 40, 160)}px`,
-              } as React.CSSProperties}
-            >
-              {activeSection?.blocks.map((block) => (
-                <BlockView
-                  key={block.id}
-                  block={block}
-                  settings={settings}
-                  highlights={highlightsByBlock.get(block.id) ?? EMPTY_HIGHLIGHTS}
-                  searchQuery={searchQuery}
-                  onImageReady={remeasure}
-                />
-              ))}
-            </div>
-
-          </div>
-        </div>
-      )}
+        {/* Breathing room so the final paragraph is always fully reachable. */}
+        <div aria-hidden style={{ height: "18vh" }} />
+      </div>
 
       {selection && onCreateHighlight && (
         <div
           data-reader-toolbar
-          className="absolute z-50 flex items-center gap-1 rounded-full px-1.5 py-1 shadow-lg"
+          className="fixed z-50 flex items-center gap-1 rounded-full px-1.5 py-1 shadow-lg"
           style={{
-            top: Math.max(selection.top, 8),
-            left: selection.left,
+            top: Math.max((scrollRef.current?.getBoundingClientRect().top ?? 0) + selection.top, 8),
+            left:
+              (scrollRef.current?.getBoundingClientRect().left ?? 0) + selection.left,
             transform: "translateX(-50%)",
             backgroundColor:
               settings.theme === "light" || settings.theme === "sepia" ? "#1f2430" : "#2b2f36",
