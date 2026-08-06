@@ -39,6 +39,14 @@ function makeBook(count: number): ReflowBook {
   };
 }
 
+// jsdom has no ResizeObserver / rAF-driven layout.
+(globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver =
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
 
