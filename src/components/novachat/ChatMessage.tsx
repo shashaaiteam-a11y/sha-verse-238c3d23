@@ -135,7 +135,6 @@ const ChatMessage = ({
               </div>
             )}
             <ReactMarkdown
-              urlTransform={(url) => url}
               components={{
                 img({ src, alt }) {
                   if (!src) return null;

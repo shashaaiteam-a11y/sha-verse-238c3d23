@@ -109,24 +109,18 @@ export const useBookInteractions = (bookId?: string) => {
     mutationFn: async () => {
       if (!user?.id || !bookId) throw new Error("Not authenticated");
 
+      // Counters are maintained server-side by a trigger on `likes`,
+      // so the client only writes the like row itself.
       if (isLiked) {
-        // Unlike
         await (supabase as any)
           .from("likes")
           .delete()
           .eq("book_id", bookId)
           .eq("user_id", user.id);
-
-        // Use atomic decrement function (prevents race conditions)
-        await (supabase as any).rpc('decrement_book_likes', { book_id: bookId });
       } else {
-        // Like
         await (supabase as any)
           .from("likes")
           .insert({ book_id: bookId, user_id: user.id });
-
-        // Use atomic increment function (prevents race conditions)
-        await (supabase as any).rpc('increment_book_likes', { book_id: bookId });
       }
     },
     onSuccess: () => {
