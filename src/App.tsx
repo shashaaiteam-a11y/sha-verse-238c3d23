@@ -90,7 +90,6 @@ const HelpSupport = lazy(() => import("./pages/HelpSupport"));
 const PrivacyCenter = lazy(() => import("./pages/PrivacyCenter"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/Offline"));
-const AdminSeed = lazy(() => import("./pages/AdminSeed"));
 const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
 const MovionComingSoon = lazy(() => import("./pages/MovionComingSoon"));
 const Pages = lazy(() => import("./pages/Pages"));
@@ -339,7 +338,6 @@ const App = () => (
                           path="/privacy-center"
                           element={<ProtectedRoute>{withSuspense(PrivacyCenter)}</ProtectedRoute>}
                         />
-                        <Route path="/admin/seed" element={<AdminRoute>{withSuspense(AdminSeed)}</AdminRoute>} />
                         <Route path="/pages" element={<ProtectedRoute>{withSuspense(Pages)}</ProtectedRoute>} />
                         <Route
                           path="/pages/:pageId"
