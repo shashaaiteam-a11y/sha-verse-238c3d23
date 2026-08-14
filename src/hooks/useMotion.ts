@@ -249,49 +249,23 @@ export const useFollowCreator = (creatorId?: string) => {
     mutationFn: async () => {
       if (!user || !creatorId) throw new Error('Not authenticated');
 
+      // subscribers_count is maintained server-side by a trigger on subscriptions
       if (isFollowing) {
         await supabase
           .from('subscriptions')
           .delete()
           .eq('channel_id', creatorId)
           .eq('user_id', user.id);
-        
-        // Decrement count
-        const { data: channel } = await supabase
-          .from('channels')
-          .select('subscribers_count')
-          .eq('id', creatorId)
-          .single();
-        
-        if (channel) {
-          await supabase
-            .from('channels')
-            .update({ subscribers_count: Math.max(0, (channel.subscribers_count || 0) - 1) })
-            .eq('id', creatorId);
-        }
-        
+
         toast.success('Unfollowed creator');
       } else {
         await supabase
           .from('subscriptions')
           .insert({ channel_id: creatorId, user_id: user.id });
-        
-        // Increment count
-        const { data: channel } = await supabase
-          .from('channels')
-          .select('subscribers_count')
-          .eq('id', creatorId)
-          .single();
-        
-        if (channel) {
-          await supabase
-            .from('channels')
-            .update({ subscribers_count: (channel.subscribers_count || 0) + 1 })
-            .eq('id', creatorId);
-        }
-        
+
         toast.success('Now following!');
       }
+
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['following-creator', creatorId] });
