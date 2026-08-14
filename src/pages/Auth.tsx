@@ -140,11 +140,22 @@ const Auth = () => {
       // Native app (Android/iOS): use native Google account picker → idToken.
       // This avoids the /~oauth webview redirect that 404s in standalone builds.
       if (shouldUseNativeGoogle()) {
-        await nativeGoogleSignIn();
-        toast({ title: 'Welcome back!', description: 'Successfully logged in with Google' });
-        navigate('/');
-        return;
+        try {
+          await nativeGoogleSignIn();
+          toast({ title: 'Welcome back!', description: 'Successfully logged in with Google' });
+          navigate('/');
+          return;
+        } catch (nativeError: any) {
+          const msg = String(nativeError?.message ?? nativeError ?? '');
+          const pluginMissing =
+            nativeError?.code === 'UNIMPLEMENTED' ||
+            /not implemented|unimplemented|not available/i.test(msg);
+          // Plugin missing in this build → fall through to the managed web OAuth
+          // flow instead of dead-ending the user.
+          if (!pluginMissing) throw nativeError;
+        }
       }
+
 
       // Web: Lovable managed OAuth (unchanged).
       const result = await lovable.auth.signInWithOAuth('google', {
