@@ -159,19 +159,14 @@ export const useIncrementMotionView = () => {
 
   return useMutation({
     mutationFn: async (motionId: string) => {
-      const { data: motion } = await supabase
-        .from('videos')
-        .select('views_count')
-        .eq('id', motionId)
-        .single();
-      
-      if (motion) {
-        await supabase
-          .from('videos')
-          .update({ views_count: (motion.views_count || 0) + 1 })
-          .eq('id', motionId);
-      }
+      // views_count is maintained server-side by a trigger on video_views
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      await supabase
+        .from('video_views')
+        .insert({ video_id: motionId, user_id: auth.user.id });
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['motions'] });
     },
