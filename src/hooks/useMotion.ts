@@ -199,45 +199,19 @@ export const useMotionReaction = (motionId?: string) => {
     mutationFn: async () => {
       if (!user || !motionId) throw new Error('Not authenticated');
 
+      // likes_count is maintained server-side by a trigger on likes
       if (hasReacted) {
         await supabase
           .from('likes')
           .delete()
           .eq('video_id', motionId)
           .eq('user_id', user.id);
-        
-        // Decrement count
-        const { data: motion } = await supabase
-          .from('videos')
-          .select('likes_count')
-          .eq('id', motionId)
-          .single();
-        
-        if (motion) {
-          await supabase
-            .from('videos')
-            .update({ likes_count: Math.max(0, (motion.likes_count || 0) - 1) })
-            .eq('id', motionId);
-        }
       } else {
         await supabase
           .from('likes')
           .insert({ video_id: motionId, user_id: user.id, reaction_type: 'react' });
-        
-        // Increment count
-        const { data: motion } = await supabase
-          .from('videos')
-          .select('likes_count')
-          .eq('id', motionId)
-          .single();
-        
-        if (motion) {
-          await supabase
-            .from('videos')
-            .update({ likes_count: (motion.likes_count || 0) + 1 })
-            .eq('id', motionId);
-        }
       }
+
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['motion-reaction', motionId] });
