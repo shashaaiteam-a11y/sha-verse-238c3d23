@@ -16,7 +16,23 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://www.sha-verse.com',
     cleartext: true,
+    // ⚠️ ZAROORI: in domains par navigation WEBVIEW ke andar hi hoga.
+    // Ye list na ho to Capacitor har URL ko "external" maan kar
+    // Chrome / system browser me khol deta hai (yahi bug tha).
+    allowNavigation: [
+      'sha-verse.com',
+      '*.sha-verse.com',
+      'www.sha-verse.com',
+      '*.lovable.app',
+      '*.lovableproject.com',
+      '*.supabase.co',
+      'accounts.google.com',
+      '*.googleusercontent.com',
+      '*.google.com',
+      '*.gstatic.com',
+    ],
   },
+
   // Native WebView background matches app theme so overscroll bounce
   // never shows a white flash (Facebook / WhatsApp / YouTube pattern).
   backgroundColor: '#0F172A',
