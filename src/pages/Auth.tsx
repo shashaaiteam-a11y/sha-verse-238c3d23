@@ -153,8 +153,14 @@ const Auth = () => {
           // Plugin missing in this build → fall through to the managed web OAuth
           // flow instead of dead-ending the user.
           if (!pluginMissing) throw nativeError;
+          console.warn('[GoogleAuth] Native plugin unavailable, using web OAuth fallback:', msg);
+          toast({
+            title: 'Using browser sign-in',
+            description: 'Native Google picker is unavailable in this build.',
+          });
         }
       }
+
 
 
       // Web: Lovable managed OAuth (unchanged).
