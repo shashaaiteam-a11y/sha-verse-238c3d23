@@ -356,11 +356,13 @@ export const useNovaChat = () => {
         return { role: m.role, content: isLast ? m.content : sanitizeContent(m.content) };
       });
 
-      // Resolve the functions base from the initialized Supabase client so it never
+      // Resolve the functions base from the initialized backend client so the URL never
       // becomes "undefined/..." when the env var is missing in a built bundle.
-      const functionsBase =
-        (supabase as any)?.functionsUrl?.replace(/\/$/, '') ||
-        `${((supabase as any)?.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')}/functions/v1`;
+      // Note: client.functionsUrl can be a URL object, so always coerce to string.
+      const rawFunctionsUrl = (supabase as any)?.functionsUrl;
+      const functionsBase = rawFunctionsUrl
+        ? String(rawFunctionsUrl).replace(/\/$/, '')
+        : `${String((supabase as any)?.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')}/functions/v1`;
       const url = `${functionsBase}/novachat-ai`;
       const accessToken = session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
