@@ -356,7 +356,12 @@ export const useNovaChat = () => {
         return { role: m.role, content: isLast ? m.content : sanitizeContent(m.content) };
       });
 
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/novachat-ai`;
+      // Resolve the functions base from the initialized Supabase client so it never
+      // becomes "undefined/..." when the env var is missing in a built bundle.
+      const functionsBase =
+        (supabase as any)?.functionsUrl?.replace(/\/$/, '') ||
+        `${((supabase as any)?.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')}/functions/v1`;
+      const url = `${functionsBase}/novachat-ai`;
       const accessToken = session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
       const resp = await fetch(url, {
