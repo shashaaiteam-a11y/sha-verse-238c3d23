@@ -1,133 +1,146 @@
-# Fix: APK me Google account picker ki jagah web "Sign in to continue to sha-verse.com" page
+# "Using browser sign-in / Native Google picker is unavailable in this build"
 
-## Kya ho raha hai
-Aapko jo screen dikh rahi hai wo **web OAuth page** hai (Chrome Custom Tab).
-Iska matlab: native plugin (`@capgo/capacitor-social-login`) APK me kaam nahi kar
-raha, isliye app apne **web fallback** par chali gayi (`src/pages/Auth.tsx`).
+## Ye message aata kyun hai?
 
-Native Google picker (aapke phone ke gmail accounts ki list) tabhi khulega jab
-teeno cheezein sahi hon:
+App ka JS code Google button dabate hi ye check karta hai:
 
-1. Plugin native module APK me compile ho (Gradle build success).
-2. Google Cloud me **Android OAuth client** bana ho — package name + SHA-1.
-3. `GOOGLE_WEB_CLIENT_ID` (Web client) app aur Lovable Cloud dono me same ho.
+```ts
+Capacitor.isPluginAvailable("SocialLogin")
+```
 
-Abhi 99% chance (1) ya (2) missing hai.
+Agar ye `false` aaya → matlab **APK ke andar SocialLogin ka NATIVE (Java/Kotlin)
+module maujood hi nahi hai**. Tab app crash hone ke bajaye web OAuth par gir
+jaata hai aur wahi toast dikhata hai.
+
+Important: ye **Google Cloud ka issue nahi** hai. Aapka Android client
+(`com.shaverse.app` + SHA-1 `EE:68:...:32:C1`) aur Web client dono bilkul sahi
+hain (screenshots verify ho gaye). Problem purely Android build side ki hai.
+
+Ab toast me exact diagnostic bhi print hota hai, jaise:
+
+```
+platform=android | native=true | SocialLoginRegistered=false | webClientId=set
+```
+
+- `SocialLoginRegistered=false` → plugin APK me nahi hai (99% yahi case hai).
+- `SocialLoginRegistered=true` par phir bhi error → tab Google Cloud / client ID side dekho.
 
 ---
 
-## Step 1 — Plugin native module install karo
+## Code me kya kiya gaya (aur kyun)
 
-PC par project folder me:
+1. `src/config/googleAuth.ts`
+   - `GOOGLE_WEB_CLIENT_ID` (pehle se sahi tha).
+   - **naya**: `GOOGLE_ANDROID_CLIENT_ID`, `GOOGLE_ANDROID_SHA1`,
+     `ANDROID_PACKAGE_NAME` — sirf reference/debug ke liye.
+   - ⚠️ Android client ID plugin ko **jaan-boojh kar pass nahi kiya jata**.
+     Google ka native flow hamesha **Web client ID** leta hai; Android client
+     ka kaam sirf itna hai ki Play Services aapke APK (package + SHA-1) ko
+     pehchan le. idToken ka `aud` Web client ID hi rehta hai, aur Lovable Cloud
+     usi se verify karta hai. Agar Android client ID pass kar dete to
+     `invalid audience` error aata.
+
+2. `src/lib/auth/nativeGoogleAuth.ts`
+   - `isNativeGooglePluginAvailable()` — call karne se **pehle** plugin
+     registration check.
+   - `nativeGoogleDiagnostics()` — exact reason string.
+
+3. `src/pages/Auth.tsx`
+   - Fallback toast ab reason dikhata hai, generic message nahi.
+
+⚠️ App `server.url = https://www.sha-verse.com` load karta hai, isliye ye JS
+changes tabhi phone par dikhenge jab aap Lovable se **Publish** karoge.
+
+---
+
+## Fix (Android side) — step by step
+
+### 1. Plugin sync
 
 ```bash
 npm install
-npm run build
 npx cap sync android
 ```
 
-Output me ye line dikhni chahiye:
+Output me ye line **honi hi chahiye**:
+
 ```
-√ Found 9 Capacitor plugins for android:
+√ Found N Capacitor plugins for android:
    ...
    @capgo/capacitor-social-login@7.x.x
 ```
-Agar ye plugin list me **nahi** hai → sync fail hua hai, dobara chalao.
 
-## Step 2 — Gradle errors fix (duplicate kotlin classes)
+Na dikhe → `node_modules` delete karke `npm install` dobara.
 
-`android-patches/GOOGLE_SIGNIN_FIX.md` ke 4 patches lagao:
-- `android/variables.gradle` → kotlin_version = '2.0.21', compileSdk 35
-- `android/build.gradle` → resolutionStrategy force kotlin-stdlib + androidTest disable
-- `android/app/build.gradle` → Java 17 + jvmTarget 17
-- `android/gradle.properties` → jvmargs 4096m
+### 2. Verify karo ki plugin register hua (sabse pakka check)
 
-Phir Android Studio me: **File → Sync Project with Gradle Files** →
-**Build → Clean Project** → **Build → Rebuild Project**.
+Ye 2 files khol kar dekho:
 
-Build Output me ye dikhna chahiye:
+- `android/app/src/main/assets/capacitor.plugins.json` me ye entry honi chahiye:
+
+```json
+{ "pkg": "@capgo/capacitor-social-login", "classpath": "ee.forgr.capacitor.social.login.SocialLoginPlugin" }
+```
+
+- `android/capacitor.settings.gradle` me:
+
+```gradle
+include ':capgo-capacitor-social-login'
+project(':capgo-capacitor-social-login').projectDir = new File('../node_modules/@capgo/capacitor-social-login/android')
+```
+
+- `android/app/capacitor.build.gradle` me:
+
+```gradle
+implementation project(':capgo-capacitor-social-login')
+```
+
+In teeno me se koi bhi missing = sync properly nahi hua.
+
+### 3. Gradle build errors fix
+
+`android-patches/GOOGLE_SIGNIN_FIX.md` ke 4 patches lagao (Kotlin 2.0.21,
+compileSdk 35, Java 17, androidTest disable). Kyunki agar
+`:capgo-capacitor-social-login` module compile fail karta hai to Android Studio
+kabhi-kabhi **purani APK** install kar deta hai — jisme plugin nahi hota.
+
+Build Output me literally ye line dhoondo:
+
 ```
 :capgo-capacitor-social-login:compileDebugKotlin   ✓
 BUILD SUCCESSFUL
 ```
-Jab tak ye line nahi aati, native picker nahi khulega.
 
-## Step 3 — SHA-1 fingerprint nikaalo (SABSE ZAROORI)
+### 4. Purani APK hatao (ye step log log skip karte hain)
 
-Android Studio ke neeche **Terminal** tab kholo, project root me:
+Phone me **Settings → Apps → Sha-Verse → Uninstall**.
+Fir Android Studio: **Build → Clean Project → Rebuild Project → ▶ Run**.
 
-```bash
-cd android
-./gradlew signingReport        # Windows: gradlew.bat signingReport
+### 5. Logcat se confirm
+
+Android Studio → Logcat → filter `Capacitor`:
+
+```
+Capacitor: Loading plugin: SocialLogin
 ```
 
-Output me `Variant: debug` wale block se copy karo:
-```
-SHA1: A1:B2:C3:...:FF
-```
-(Play Store release ke liye: Play Console → Setup → App integrity →
-**App signing key certificate** ka SHA-1 bhi add karna hoga.)
+Ye line aaye = fix ho gaya, native picker khulega.
+Na aaye = step 2 wali files me plugin missing hai.
 
-## Step 4 — Google Cloud Console me Android client banao
+---
 
-1. https://console.cloud.google.com → apna project select karo.
-2. Left menu → **APIs & Services → Credentials**.
-3. Upar **+ CREATE CREDENTIALS → OAuth client ID**.
-4. Application type: **Android**.
-5. Name: `Sha-Verse Android`
-6. Package name: `com.shaverse.app`
-7. SHA-1 certificate fingerprint: Step 3 wala SHA-1 paste karo.
-8. **CREATE**.
+## Google Cloud — already correct (koi change nahi chahiye)
 
-Debug aur release dono SHA-1 ke liye alag-alag Android client banao (ya baad me
-add karo). Bina iske native picker `DEVELOPER_ERROR (10)` deta hai aur app web
-page par gir jaati hai — bilkul wahi jo aapko dikh raha hai.
-
-⚠️ Android client ka client ID app me **paste nahi karna**. App me sirf
-**Web client ID** rehta hai (`src/config/googleAuth.ts`) — yahi correct hai.
-
-## Step 5 — Web client ID verify
-
-`src/config/googleAuth.ts`:
-```
-GOOGLE_WEB_CLIENT_ID = "1045450930549-7km1bdvipje80098fa6tajfm9936n3nv.apps.googleusercontent.com"
-```
-Ye exact same ID Lovable Cloud → Users → Authentication Settings → Google me bhi
-honi chahiye. Alag hui to `signInWithIdToken` "invalid audience" dega.
-
-## Step 6 — Rebuild aur test
-
-```bash
-npm run build
-npx cap sync android
-npx cap run android
-```
-
-App me Google button dabao:
-- ✅ Sahi: neeche se **bottom sheet** khulti hai jisme aapke phone ke gmail
-  accounts list hote hain.
-- ❌ Galat: Chrome khulta hai "Sign in — to continue to sha-verse.com".
-
-## Debug kaise karein
-
-Phone USB se connected rakho, PC Chrome me `chrome://inspect` kholo →
-apne app ka WebView **inspect** → Console tab. Google button dabao aur error
-dekho:
-
-| Console message | Matlab | Fix |
+| Cheez | Value | Status |
 |---|---|---|
-| `"SocialLogin" plugin is not implemented on android` | plugin compile nahi hua | Step 1 + 2 |
-| `DEVELOPER_ERROR` / `code 10` | SHA-1 / package name mismatch | Step 3 + 4 |
-| `12501` / `canceled` | user ne cancel kiya | normal |
-| `invalid audience` / `Unacceptable audience` | Web client ID mismatch | Step 5 |
-| `Using browser sign-in` toast | fallback chala | Step 1–4 dobara |
+| Web client ID | `1045450930549-7km1bdvipje80098fa6tajfm9936n3nv...` | ✅ code + Lovable Cloud dono me |
+| Android client ID | `1045450930549-p11fcoehj7esm5n94ih5g7jreve8pevv...` | ✅ sirf Cloud me, code me nahi |
+| Package name | `com.shaverse.app` | ✅ |
+| Debug SHA-1 | `EE:68:B0:33:BA:C6:B6:C9:46:59:68:DA:9A:9E:1B:E1:69:77:32:C1` | ✅ |
 
-App me ab ek toast bhi aayega ("Using browser sign-in") jab native picker
-unavailable ho — isse turant pata chal jayega ki fallback chala hai.
+Play Store release ke liye **ek aur** Android client banana hoga Play Console →
+App integrity → **App signing key certificate** wale SHA-1 ke saath, warna
+release APK me picker `DEVELOPER_ERROR (10)` dega.
 
-## Note
-Web fallback bhi **kaam karta hai** — login ho jaata hai, session set hota hai.
-Ye sirf UX ka farq hai. Play Store launch se pehle native picker chalu karna
-better hai, par ye blocker nahi hai.
-
-AdMob ya koi bhi doosri cheez in steps se affect nahi hoti.
+AdMob (`ca-app-pub-2928763177849470~4226601339`) ya koi doosri cheez in steps se
+affect nahi hoti.
