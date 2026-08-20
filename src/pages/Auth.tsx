@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { Loader2, Mail, Phone, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { SEO } from '@/components/seo/SEO';
 import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
-import { shouldUseNativeGoogle, nativeGoogleSignIn } from "@/lib/auth/nativeGoogleAuth";
+import { shouldUseNativeGoogle, nativeGoogleSignIn, nativeGoogleDiagnostics } from "@/lib/auth/nativeGoogleAuth";
 import { useAuth } from '@/contexts/AuthContext';
 
 // Validation schemas
@@ -149,16 +149,21 @@ const Auth = () => {
           const msg = String(nativeError?.message ?? nativeError ?? '');
           const pluginMissing =
             nativeError?.code === 'UNIMPLEMENTED' ||
-            /not implemented|unimplemented|not available/i.test(msg);
+            /not implemented|unimplemented|not available|not registered/i.test(msg);
           // Plugin missing in this build → fall through to the managed web OAuth
           // flow instead of dead-ending the user.
           if (!pluginMissing) throw nativeError;
-          console.warn('[GoogleAuth] Native plugin unavailable, using web OAuth fallback:', msg);
+          console.warn(
+            '[GoogleAuth] Native plugin unavailable, using web OAuth fallback:',
+            msg,
+            nativeGoogleDiagnostics(),
+          );
           toast({
             title: 'Using browser sign-in',
-            description: 'Native Google picker is unavailable in this build.',
+            description: `Native picker missing — ${nativeGoogleDiagnostics()}`,
           });
         }
+
       }
 
 
