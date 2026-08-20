@@ -9,6 +9,8 @@ async function ensureInitialized() {
   if (initialized) return;
   await SocialLogin.initialize({
     google: {
+      // ⚠️ Hamesha WEB client ID. Android client ID yahan NAHI aata —
+      // Google Play Services APK ko SHA-1 + package name se pehchanta hai.
       webClientId: GOOGLE_WEB_CLIENT_ID,
       ...(GOOGLE_IOS_CLIENT_ID ? { iOSClientId: GOOGLE_IOS_CLIENT_ID } : {}),
       // "online" mode is required so Google returns an idToken we can hand
@@ -28,6 +30,29 @@ export function shouldUseNativeGoogle(): boolean {
 }
 
 /**
+ * Kya SocialLogin ka NATIVE module is APK me actually compile hua hai?
+ *
+ * Capacitor har registered plugin ko `capacitor.plugins.json` se load karta
+ * hai. Agar `npx cap sync android` nahi chala, ya plugin ka Gradle module
+ * build fail ho gaya, to plugin JS me to import ho jata hai lekin native
+ * side missing rehta hai → "plugin is not implemented on android".
+ * Isse hum PEHLE hi detect kar lete hain, call fail hone ka wait nahi karte.
+ */
+export function isNativeGooglePluginAvailable(): boolean {
+  return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("SocialLogin");
+}
+
+/** Diagnostic string — toast/console me exact reason dikhane ke liye. */
+export function nativeGoogleDiagnostics(): string {
+  return [
+    `platform=${Capacitor.getPlatform()}`,
+    `native=${Capacitor.isNativePlatform()}`,
+    `SocialLoginRegistered=${Capacitor.isPluginAvailable("SocialLogin")}`,
+    `webClientId=${GOOGLE_WEB_CLIENT_ID ? "set" : "MISSING"}`,
+  ].join(" | ");
+}
+
+/**
  * Native Google sign-in for Capacitor (Android / iOS).
  *
  * Flow: open native Google account picker → get idToken → exchange it with
@@ -39,6 +64,14 @@ export async function nativeGoogleSignIn(): Promise<void> {
     throw new Error(
       "Google Web Client ID set nahi hai. src/config/googleAuth.ts me GOOGLE_WEB_CLIENT_ID paste karo."
     );
+  }
+
+  if (!isNativeGooglePluginAvailable()) {
+    const err = new Error(
+      `SocialLogin native module APK me registered nahi hai (${nativeGoogleDiagnostics()})`
+    ) as Error & { code?: string };
+    err.code = "UNIMPLEMENTED";
+    throw err;
   }
 
   await ensureInitialized();
@@ -61,7 +94,9 @@ export async function nativeGoogleSignIn(): Promise<void> {
       | undefined);
 
   if (!idToken) {
-    throw new Error("Google se idToken nahi mila. Setup (Web client ID) check karo.");
+    throw new Error(
+      "Google se idToken nahi mila. Google Cloud me Android client (package com.shaverse.app + SHA-1) aur Web client ID check karo."
+    );
   }
 
   const { error } = await supabase.auth.signInWithIdToken({
