@@ -119,8 +119,9 @@ android.enableJetifier=false
 
 ```bash
 npm install
-npm run build
+npm run build            # ⚠️ ZAROORI — bina dist/ ke cap sync plugin add hi nahi karta
 npx cap sync android
+node scripts/verify-social-login.mjs   # proof: plugin registered hai ya nahi
 cd android
 ./gradlew clean            # Windows: gradlew.bat clean
 cd ..
@@ -132,13 +133,14 @@ Project**, phir **Build → Rebuild Project**, phir green ▶ Run.
 
 ## Verify
 
-Build Output me ab dikhna chahiye:
+Build Output me ab dikhna chahiye (plugin **Java** hai, Kotlin nahi):
 ```
-:capgo-capacitor-social-login:compileDebugKotlin   ✓
+:capgo-capacitor-social-login:compileDebugJavaWithJavac   ✓
 BUILD SUCCESSFUL
 ```
 App me Google button dabao → **native Google account picker** khulna chahiye
 (browser nahi). Agar phir bhi error aaye to `chrome://inspect` → Console dekho.
+
 
 ## Agar plugin fix na ho paye
 
