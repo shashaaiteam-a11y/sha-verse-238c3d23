@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "990900245490",
+    "project_id": "sha-verse-supabase-34eb2",
+    "storage_bucket": "sha-verse-supabase-34eb2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:990900245490:android:9a103061b9629480cf916b",
+        "android_client_info": {
+          "package_name": "com.shaverse.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_Uf7TWnAw8MDgKBazm6NGNZqlFF6mi5Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

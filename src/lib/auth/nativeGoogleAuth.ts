@@ -12,6 +12,8 @@ async function ensureInitialized() {
       // ⚠️ Hamesha WEB client ID. Android client ID yahan NAHI aata —
       // Google Play Services APK ko SHA-1 + package name se pehchanta hai.
       webClientId: GOOGLE_WEB_CLIENT_ID,
+      clientId: GOOGLE_WEB_CLIENT_ID,
+      serverClientId: GOOGLE_WEB_CLIENT_ID,
       ...(GOOGLE_IOS_CLIENT_ID ? { iOSClientId: GOOGLE_IOS_CLIENT_ID } : {}),
       // "online" mode is required so Google returns an idToken we can hand
       // to Supabase via signInWithIdToken.

@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sha-Verse</string>
+    <string name="title_activity_main">Sha-Verse</string>
+    <string name="package_name">com.shaverse.app</string>
+    <string name="custom_url_scheme">com.shaverse.app</string>
+    <string name="server_client_id">1045450930549-7km1bdvipje80098fa6tajfm9936n3nv.apps.googleusercontent.com</string>
+</resources>
