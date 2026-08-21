@@ -82,16 +82,18 @@ subprojects {
 
 ## 3. `android/app/build.gradle` — `android { ... }` block ke andar
 
+⚠️ **Java 17 mat karo.** `@capgo/capacitor-social-login` 7.20.0 apne module ko
+**Java 21** se compile karta hai, aur Capacitor khud `android/app/capacitor.build.gradle`
+me `sourceCompatibility/targetCompatibility = VERSION_21` likhta hai. Agar app
+module 17 par force karoge to "class file has wrong version" error milega.
+
 ```gradle
 android {
     namespace "com.shaverse.app"
     compileSdk rootProject.ext.compileSdkVersion
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions { jvmTarget = '17' }
+    // compileOptions mat likho — capacitor.build.gradle (auto-generated)
+    // pehle se Java 21 set karta hai. Android Studio JDK 21 (JBR) use kare.
 
     packaging {
         resources {
@@ -101,6 +103,7 @@ android {
     }
 }
 ```
+
 
 ## 4. `android/gradle.properties`
 
