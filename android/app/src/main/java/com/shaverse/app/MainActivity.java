@@ -12,10 +12,12 @@ import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // Capacitor 7 automatically registers plugins from capacitor.build.gradle
-        // We only add this if auto-registration fails.
+        // Register before BridgeActivity creates the Capacitor bridge. This is a
+        // durable fallback for APKs where capacitor.plugins.json was not copied
+        // during sync; registering after super.onCreate() is too late because the
+        // bridge and its plugin map already exist at that point.
         registerPlugin(SocialLoginPlugin.class);
+        super.onCreate(savedInstanceState);
     }
 
     @Override

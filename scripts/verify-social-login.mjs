@@ -35,6 +35,27 @@ function check(label, file, needle) {
   }
 }
 
+function checkManualRegistrationOrder() {
+  const file = "android/app/src/main/java/com/shaverse/app/MainActivity.java";
+  const p = path.join(root, file);
+  if (!fs.existsSync(p)) {
+    bad(`Native fallback registration: MISSING FILE ${file}`);
+    failures++;
+    return;
+  }
+
+  const txt = fs.readFileSync(p, "utf8");
+  const registerAt = txt.indexOf("registerPlugin(SocialLoginPlugin.class)");
+  const superAt = txt.indexOf("super.onCreate(savedInstanceState)");
+  if (registerAt !== -1 && superAt !== -1 && registerAt < superAt) {
+    ok("Native fallback registration runs before bridge creation");
+    return;
+  }
+
+  bad("Native fallback registration must run before super.onCreate(savedInstanceState)");
+  failures++;
+}
+
 console.log("\nSHA-VERSE — SocialLogin native registration check\n");
 
 // 0. dependency present
@@ -59,7 +80,15 @@ if (!fs.existsSync(path.join(root, "android"))) {
   failures++;
 } else {
   ok("android/ project exists");
-  check("Plugin listed for the Capacitor bridge", "android/app/src/main/assets/capacitor.plugins.json", "ee.forgr.capacitor.social.login.SocialLoginPlugin");
+  const registryPath = path.join(root, "android/app/src/main/assets/capacitor.plugins.json");
+  const registryHasPlugin = fs.existsSync(registryPath) &&
+    fs.readFileSync(registryPath, "utf8").includes("ee.forgr.capacitor.social.login.SocialLoginPlugin");
+  if (registryHasPlugin) {
+    ok("Plugin listed for the Capacitor bridge (android/app/src/main/assets/capacitor.plugins.json)");
+  } else {
+    console.log("  ! Generated plugin registry is missing SocialLogin; checking the native fallback");
+    checkManualRegistrationOrder();
+  }
   check("Gradle module included", "android/capacitor.settings.gradle", "capgo-capacitor-social-login");
   check("Gradle dependency wired", "android/app/capacitor.build.gradle", "implementation project(':capgo-capacitor-social-login')");
   check("Web assets copied", "android/app/src/main/assets/capacitor.config.json", "appId");
