@@ -107,6 +107,67 @@ Phir Android Studio me:
 5. ▶ Run
 6. Logcat filter `Capacitor` → `Loading plugin: SocialLogin` line aani chahiye = 100% confirm.
 
+## Final native fallback fix (22 Aug 2026)
+
+Ek aur concrete bug fix kiya gaya hai: `MainActivity.java` me manual
+`registerPlugin(SocialLoginPlugin.class)` pehle `super.onCreate(...)` ke **baad**
+tha. Capacitor 7 me `super.onCreate(...)` bridge ko create karke plugin map ko
+finalize kar deta hai, isliye uske baad registration karna too late tha.
+
+Ab exact order ye hai:
+
+```java
+registerPlugin(SocialLoginPlugin.class);
+super.onCreate(savedInstanceState);
+```
+
+Is fallback ka matlab: generated `capacitor.plugins.json` kisi stale/missed sync
+ki wajah se APK me na bhi aaye, tab bhi SocialLogin bridge create hone se pehle
+register ho jayega. Gradle module dependency phir bhi required hai aur repo me
+already wired hai.
+
+`android/app/build.gradle` ka Java 17 override bhi remove kar diya gaya hai.
+Generated `android/app/capacitor.build.gradle` Java 21 use karta hai, jo plugin
+7.20.0 ke saath consistent hai. Android Studio me **Gradle JDK 21** select karo:
+
+1. File → Settings → Build, Execution, Deployment → Build Tools → Gradle.
+2. Gradle JDK → Android Studio ka bundled JBR 21 (ya installed JDK 21).
+3. Apply → OK.
+
+### Is fix ke baad exact clean install
+
+Project root me terminal kholo (jis folder me `package.json` hai), phir:
+
+```bash
+npm install
+npm run build
+npx cap sync android
+node scripts/verify-social-login.mjs
+cd android
+gradlew.bat clean assembleDebug
+```
+
+macOS/Linux par last command:
+
+```bash
+./gradlew clean assembleDebug
+```
+
+Verifier me generated registry ya native fallback, Gradle module, dependency aur
+copied config sab successful hone chahiye. Build ke baad:
+
+1. Phone → Settings → Apps → Sha-Verse → Uninstall.
+2. Android Studio me **File → Sync Project with Gradle Files**.
+3. **Build → Rebuild Project**.
+4. Fresh app Run karo; purani APK ko dobara install mat karo.
+5. Logcat me `Capacitor` filter karke plugin load verify karo.
+
+`google-services.json` is plugin registration ko fix nahi karta. Woh Firebase
+services configuration hai. `SocialLoginRegistered=false` JavaScript credentials
+ya Firebase file se pehle ka native bridge problem hota hai. Android OAuth client
+(package + SHA-1) picker ke next authentication stage ke liye zaroori hai, lekin
+plugin ko bridge me register nahi karta.
+
 Agar Gradle me duplicate-Kotlin ya `checkDebugAndroidTestAarMetadata` error aaye
 to `android-patches/GOOGLE_SIGNIN_FIX.md` ke patches lagao (Java 17 wala hissa
 ab hata diya gaya hai — Java 21 chahiye).
