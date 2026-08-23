@@ -100,14 +100,14 @@ In teeno me se koi bhi missing = sync properly nahi hua.
 ### 3. Gradle build errors fix
 
 `android-patches/GOOGLE_SIGNIN_FIX.md` ke 4 patches lagao (Kotlin 2.0.21,
-compileSdk 35, Java 17, androidTest disable). Kyunki agar
+compileSdk 35, Java 21/JBR 21, androidTest disable). Kyunki agar
 `:capgo-capacitor-social-login` module compile fail karta hai to Android Studio
 kabhi-kabhi **purani APK** install kar deta hai — jisme plugin nahi hota.
 
 Build Output me literally ye line dhoondo:
 
 ```
-:capgo-capacitor-social-login:compileDebugKotlin   ✓
+:capgo-capacitor-social-login:compileDebugJavaWithJavac   ✓
 BUILD SUCCESSFUL
 ```
 

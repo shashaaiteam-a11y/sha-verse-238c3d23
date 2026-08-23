@@ -1,6 +1,7 @@
 package com.shaverse.app;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -12,6 +13,12 @@ import androidx.core.app.ActivityCompat;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebChromeClient;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginHandle;
+
+import ee.forgr.capacitor.social.login.GoogleProvider;
+import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
+import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 
 /**
  * Sha-Verse MainActivity — FINAL FIXED VERSION (v2)
@@ -27,12 +34,15 @@ import com.getcapacitor.BridgeWebChromeClient;
  *
  * Path: android/app/src/main/java/com/shaverse/app/MainActivity.java
  */
-public class MainActivity extends BridgeActivity {
+public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
 
     private static final int PERMISSION_REQUEST_CODE = 4242;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // This must run before super.onCreate(): Capacitor creates and freezes
+        // the native bridge plugin map inside BridgeActivity.onCreate().
+        registerPlugin(SocialLoginPlugin.class);
         super.onCreate(savedInstanceState);
 
         // 1) Runtime permissions
@@ -100,5 +110,26 @@ public class MainActivity extends BridgeActivity {
                 }
             });
         }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode >= GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MIN &&
+                requestCode < GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MAX) {
+            PluginHandle pluginHandle = getBridge().getPlugin("SocialLogin");
+            if (pluginHandle != null) {
+                Plugin plugin = pluginHandle.getInstance();
+                if (plugin instanceof SocialLoginPlugin) {
+                    ((SocialLoginPlugin) plugin).handleGoogleLoginIntent(requestCode, data);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void IHaveModifiedTheMainActivityForTheUseWithSocialLoginPlugin() {
+        // Marker required by the SocialLogin Google authorization flow.
     }
 }
