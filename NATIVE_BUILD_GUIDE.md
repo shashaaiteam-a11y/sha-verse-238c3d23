@@ -5,7 +5,7 @@ Run all commands on **your own PC** (Windows / Mac / Linux). Lovable sandbox can
 ## Prerequisites
 - **Node.js 18+** and **npm**
 - **Android Studio** (latest) — installs Android SDK, build tools, emulator
-- **JDK 17** (Android Studio bundles one)
+- **JDK 21** (select Android Studio's bundled JBR 21 under Gradle JDK)
 - A **physical Android phone** with Developer Options + USB Debugging ON _(recommended over emulator for testing AdMob)_
 
 ---
@@ -64,8 +64,10 @@ npx capacitor-assets generate --android
 2. Verify connection: `adb devices` should list it.
 3. Run:
    ```bash
+npm install
    npm run build
    npx cap sync android
+node scripts/verify-social-login.mjs
    npx cap run android
    ```
 
