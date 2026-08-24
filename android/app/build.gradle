@@ -24,7 +24,7 @@ android {
     defaultConfig {
         applicationId "com.shaverse.app"
         minSdkVersion 23
-        targetSdkVersion 35
+        targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 9
         versionName "1.1.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
