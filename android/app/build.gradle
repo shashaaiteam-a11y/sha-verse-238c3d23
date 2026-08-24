@@ -5,6 +5,15 @@ android {
     namespace "com.shaverse.app"
     compileSdk rootProject.ext.compileSdkVersion
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = "21"
+    }
+
     packaging {
         resources {
             excludes += ['META-INF/*.kotlin_module', 'META-INF/DEPENDENCIES']
@@ -15,9 +24,9 @@ android {
     defaultConfig {
         applicationId "com.shaverse.app"
         minSdkVersion 23
-        targetSdkVersion 35
-        versionCode 1
-        versionName "1.0"
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 9
+        versionName "1.1.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -52,18 +61,6 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
-
-configurations.all {
-    resolutionStrategy {
-        // Fix for "androidx.browser:browser:1.9.0 requires AGP 8.9" error
-        force 'androidx.browser:browser:1.8.0'
-        
-        // Force these to prevent SDK 36 requirements
-        force 'androidx.core:core:1.13.1'
-        force 'androidx.core:core-ktx:1.13.1'
-        force 'androidx.annotation:annotation:1.8.0'
-    }
-}
 
 try {
     def servicesJSON = file('google-services.json')

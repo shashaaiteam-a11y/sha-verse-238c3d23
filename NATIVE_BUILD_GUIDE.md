@@ -4,7 +4,7 @@ Run all commands on **your own PC** (Windows / Mac / Linux). Lovable sandbox can
 
 ## Prerequisites
 - **Node.js 18+** and **npm**
-- **Android Studio** (latest) — installs Android SDK, build tools, emulator
+- **Android Studio** (latest) — install Android SDK Platform 36 and its build tools
 - **JDK 21** (select Android Studio's bundled JBR 21 under Gradle JDK)
 - A **physical Android phone** with Developer Options + USB Debugging ON _(recommended over emulator for testing AdMob)_
 
@@ -101,7 +101,31 @@ npx cap sync android   # copies dist/ + plugin updates into android/
 npx cap run android
 ```
 
-> **Hot reload**: while `server.url` is in `capacitor.config.ts`, the installed app loads live from the Lovable preview — you don't need to rebuild for UI changes. Native plugin / config changes still require `cap sync`.
+> The production app uses the bundled `dist/` inside Capacitor. This is intentional: the installed app opens in its native WebView instead of redirecting startup to Chrome. Every web-code release therefore needs a fresh build and sync.
+
+## Step 8 — Create the Play Store replacement bundle
+
+The currently published release uses version code **8**. This project now uses
+version code **9**, targets Android API **36**, and must be uploaded as a new AAB:
+
+```bash
+git pull
+npm install
+npm run android:sync
+cd android
+gradlew.bat clean bundleRelease
+```
+
+On macOS/Linux, use `./gradlew clean bundleRelease`. Before building in Android
+Studio, set **Settings → Build Tools → Gradle → Gradle JDK** to **JDK 21**, open
+**SDK Manager**, and install **Android 16 / API 36**. Then use **Sync Project with
+Gradle Files**. Do not press Cancel while Gradle is resolving dependencies.
+
+The signed bundle is created through **Build → Generate Signed Bundle / APK →
+Android App Bundle**. Use the same production signing key as version code 8,
+upload the new AAB to Play Console, test it in an internal track, and then roll
+it out to Production. An already-installed version 8 cannot receive these fixes
+until Play Store delivers version 9.
 
 ## Troubleshooting
 
@@ -109,7 +133,7 @@ npx cap run android
 |---|---|
 | App crashes on launch | AdMob App ID missing from `AndroidManifest.xml`. |
 | `npx cap run android` says "no devices" | `adb devices` empty → re-enable USB debugging, change USB cable, or revoke + re-authorize on phone. |
-| White screen | Wrong `server.url` or missing internet. Check phone wifi & re-sync. |
+| App opens Chrome at startup | Confirm `capacitor.config.ts` has no `server.url`, then run `npm run android:sync` and install version code 9. |
 | "SDK location not found" | Open project in Android Studio once (`npx cap open android`) so it auto-creates `local.properties`. |
 | Gradle build slow first time | Normal — downloads ~1.5 GB of dependencies. |
 
