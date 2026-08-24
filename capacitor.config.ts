@@ -4,34 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.shaverse.app',
   appName: 'Sha-Verse',
   webDir: 'dist',
-  // 🌐 LIVE MODE — WebToNative jaisa behaviour.
-  // App ab bundled purani `dist/` ke bajaye seedha LIVE website load karega,
-  // bilkul WebToNative APK ki tarah (jo sha-verse.com load karta hai).
-  // Faida: hamesha latest code, module-switch animation + video thumbnail
-  // sab website jaisa hi chalega. Zaroorat: internet connection.
-  //
-  // Agar tum PURI OFFLINE standalone app chahte ho (internet ke bina),
-  // to niche wale `server` block ko comment kar do — phir bundled `dist/`
-  // use hogi (lekin uske liye har baar fresh `npm run build` zaroori hai).
-  server: {
-    url: 'https://www.sha-verse.com',
-    cleartext: true,
-    // ⚠️ ZAROORI: in domains par navigation WEBVIEW ke andar hi hoga.
-    // Ye list na ho to Capacitor har URL ko "external" maan kar
-    // Chrome / system browser me khol deta hai (yahi bug tha).
-    allowNavigation: [
-      'sha-verse.com',
-      '*.sha-verse.com',
-      'www.sha-verse.com',
-      '*.lovable.app',
-      '*.lovableproject.com',
-      '*.supabase.co',
-      'accounts.google.com',
-      '*.googleusercontent.com',
-      '*.google.com',
-      '*.gstatic.com',
-    ],
-  },
+  // Production builds must boot the bundled webDir in Capacitor's WebView.
+  // Never add server.url here: it is a live-reload override and can hand app
+  // startup/navigation to the public website or external browser.
 
   // Native WebView background matches app theme so overscroll bounce
   // never shows a white flash (Facebook / WhatsApp / YouTube pattern).
