@@ -107,13 +107,25 @@ export async function nativeGoogleSignIn(): Promise<void> {
     throw e;
   }
 
+  let res: unknown;
+  try {
+    res = await SocialLogin.login({
+      provider: "google",
+      options: {
+        scopes: ["email", "profile"],
+      },
+    });
+  } catch (e) {
+    if (isUnimplemented(e)) {
+      const err = new Error(
+        `SocialLogin native module APK me registered nahi hai (${nativeGoogleDiagnostics()})`
+      ) as Error & { code?: string };
+      err.code = "UNIMPLEMENTED";
+      throw err;
+    }
+    throw e;
+  }
 
-  const res = await SocialLogin.login({
-    provider: "google",
-    options: {
-      scopes: ["email", "profile"],
-    },
-  });
 
   // The plugin returns the Google credentials inside `result`. idToken shape
   // can vary slightly across versions, so read defensively.
