@@ -55,12 +55,31 @@ export function nativeGoogleDiagnostics(): string {
   ].join(" | ");
 }
 
+/** True when the thrown error means the native module is not in the APK. */
+function isUnimplemented(e: unknown): boolean {
+  const err = e as { code?: string; message?: string } | undefined;
+  const msg = String(err?.message ?? e ?? "").toLowerCase();
+  return (
+    err?.code === "UNIMPLEMENTED" ||
+    msg.includes("not implemented") ||
+    msg.includes("not available") ||
+    msg.includes("plugin is not")
+  );
+}
+
 /**
  * Native Google sign-in for Capacitor (Android / iOS).
  *
  * Flow: open native Google account picker → get idToken → exchange it with
  * Lovable Cloud (Supabase) via signInWithIdToken. No webview, no /~oauth
  * redirect, so no 404 inside the standalone app.
+ *
+ * ⚠️ We do NOT gate on Capacitor.isPluginAvailable("SocialLogin"). That flag
+ * reads Capacitor.PluginHeaders, which stays empty when the generated
+ * capacitor.plugins.json is missing from the APK — even though the plugin is
+ * registered natively in MainActivity and calls work fine. Gating on it forced
+ * a browser fallback on perfectly good builds. Instead we call the plugin and
+ * only fall back when the bridge itself answers UNIMPLEMENTED.
  */
 export async function nativeGoogleSignIn(): Promise<void> {
   if (!GOOGLE_WEB_CLIENT_ID) {
@@ -69,22 +88,44 @@ export async function nativeGoogleSignIn(): Promise<void> {
     );
   }
 
-  if (!isNativeGooglePluginAvailable()) {
-    const err = new Error(
-      `SocialLogin native module APK me registered nahi hai (${nativeGoogleDiagnostics()})`
-    ) as Error & { code?: string };
+  if (!Capacitor.isNativePlatform()) {
+    const err = new Error("Not a native platform") as Error & { code?: string };
     err.code = "UNIMPLEMENTED";
     throw err;
   }
 
-  await ensureInitialized();
+  try {
+    await ensureInitialized();
+  } catch (e) {
+    if (isUnimplemented(e)) {
+      const err = new Error(
+        `SocialLogin native module APK me registered nahi hai (${nativeGoogleDiagnostics()})`
+      ) as Error & { code?: string };
+      err.code = "UNIMPLEMENTED";
+      throw err;
+    }
+    throw e;
+  }
 
-  const res = await SocialLogin.login({
-    provider: "google",
-    options: {
-      scopes: ["email", "profile"],
-    },
-  });
+  let res: unknown;
+  try {
+    res = await SocialLogin.login({
+      provider: "google",
+      options: {
+        scopes: ["email", "profile"],
+      },
+    });
+  } catch (e) {
+    if (isUnimplemented(e)) {
+      const err = new Error(
+        `SocialLogin native module APK me registered nahi hai (${nativeGoogleDiagnostics()})`
+      ) as Error & { code?: string };
+      err.code = "UNIMPLEMENTED";
+      throw err;
+    }
+    throw e;
+  }
+
 
   // The plugin returns the Google credentials inside `result`. idToken shape
   // can vary slightly across versions, so read defensively.
