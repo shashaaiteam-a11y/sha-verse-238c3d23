@@ -716,11 +716,24 @@ const PaginatedReader = ({
   const report = useCallback(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
-    const pageH = Math.max(scroller.clientHeight - 24, 1);
-    const totalPages = Math.max(1, Math.ceil(scroller.scrollHeight / pageH));
-    const page = Math.min(totalPages, Math.floor(scroller.scrollTop / pageH) + 1);
-    const maxScroll = Math.max(scroller.scrollHeight - scroller.clientHeight, 1);
-    const percent = Math.min(100, Math.round((scroller.scrollTop / maxScroll) * 100));
+
+    let page: number;
+    let totalPages: number;
+    let percent: number;
+
+    if (paged) {
+      const engine = pagedRef.current;
+      totalPages = Math.max(1, engine?.totalPages() ?? 1);
+      page = Math.min(totalPages, Math.max(1, engine?.page() ?? 1));
+      percent = totalPages > 1 ? Math.round(((page - 1) / (totalPages - 1)) * 100) : 0;
+    } else {
+      const pageH = Math.max(scroller.clientHeight - 24, 1);
+      totalPages = Math.max(1, Math.ceil(scroller.scrollHeight / pageH));
+      page = Math.min(totalPages, Math.floor(scroller.scrollTop / pageH) + 1);
+      const maxScroll = Math.max(scroller.scrollHeight - scroller.clientHeight, 1);
+      percent = Math.min(100, Math.round((scroller.scrollTop / maxScroll) * 100));
+    }
+
 
     const node = visibleBlockElement();
     const id = node?.dataset.blockId;
