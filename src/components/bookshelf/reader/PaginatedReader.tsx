@@ -614,7 +614,27 @@ const PaginatedReader = ({
     const content = contentRef.current;
     if (!scroller || !content) return null;
     const nodes = content.querySelectorAll<HTMLElement>("[data-block-id]");
-    const top = scroller.getBoundingClientRect().top + 4;
+    const viewport = scroller.getBoundingClientRect();
+
+    if (paged) {
+      // In columns a single block can be fragmented across two pages, so the
+      // first fragment that reaches into the current page wins.
+      const left = viewport.left + 4;
+      const right = viewport.right - 4;
+      let fallback: HTMLElement | null = null;
+      for (const node of Array.from(nodes)) {
+        fallback = fallback ?? node;
+        const rects = node.getClientRects();
+        const list = rects.length ? Array.from(rects) : [node.getBoundingClientRect()];
+        for (const rect of list) {
+          if (rect.width === 0 && rect.height === 0) continue;
+          if (rect.right >= left && rect.left <= right) return node;
+        }
+      }
+      return fallback;
+    }
+
+    const top = viewport.top + 4;
     let fallback: HTMLElement | null = null;
     for (const node of Array.from(nodes)) {
       const rect = node.getBoundingClientRect();
@@ -622,7 +642,7 @@ const PaginatedReader = ({
       if (rect.bottom >= top) return node;
     }
     return fallback;
-  }, []);
+  }, [paged]);
 
   const captureAnchor = useCallback(() => {
     const scroller = scrollRef.current;
@@ -632,25 +652,37 @@ const PaginatedReader = ({
     if (!id) return;
     anchorRef.current = {
       id,
-      offset: node.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
+      // Paged mode anchors to the page that holds the block; there is no
+      // meaningful vertical offset to preserve across a re-columnisation.
+      offset: paged
+        ? 0
+        : node.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
     };
-  }, [visibleBlockElement]);
+  }, [paged, visibleBlockElement]);
 
-  const scrollToBlock = useCallback((blockId: string, offset = 0) => {
-    const scroller = scrollRef.current;
-    const content = contentRef.current;
-    if (!scroller || !content) return false;
-    const node = content.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`);
-    if (!node) return false;
-    const delta =
-      node.getBoundingClientRect().top - scroller.getBoundingClientRect().top - offset;
-    restoringRef.current = true;
-    scroller.scrollTop += delta;
-    requestAnimationFrame(() => {
-      restoringRef.current = false;
-    });
-    return true;
-  }, []);
+  const scrollToBlock = useCallback(
+    (blockId: string, offset = 0) => {
+      if (paged) {
+        // Restoration is a correction, never an animated page turn.
+        return pagedRef.current?.goToBlock(blockId, false) ?? false;
+      }
+      const scroller = scrollRef.current;
+      const content = contentRef.current;
+      if (!scroller || !content) return false;
+      const node = content.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`);
+      if (!node) return false;
+      const delta =
+        node.getBoundingClientRect().top - scroller.getBoundingClientRect().top - offset;
+      restoringRef.current = true;
+      scroller.scrollTop += delta;
+      requestAnimationFrame(() => {
+        restoringRef.current = false;
+      });
+      return true;
+    },
+    [paged]
+  );
+
 
   // Typography / geometry changed → text truly reflows, and we land on the very
   // same sentence the reader was looking at (never a scaled or zoomed page).
