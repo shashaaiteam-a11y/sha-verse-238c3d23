@@ -93,6 +93,8 @@ const PagedFlow = forwardRef<PagedFlowHandle, Props>(
       dir,
       viewportRef,
       contentRef,
+      gap = DEFAULT_PAGE_GAP,
+      verticalPadding = 20,
       contentStyle,
       className,
       style,
@@ -136,21 +138,29 @@ const PagedFlow = forwardRef<PagedFlowHandle, Props>(
       const content = contentRef.current;
       if (!viewport || !content) return;
 
-      const pageWidth = Math.max(viewport.clientWidth, 1);
-      const height = Math.max(viewport.clientHeight, 1);
-      const step = pageWidth + PAGE_GAP;
+      // One page step == the full viewport width. The gutter between two pages
+      // doubles as the left/right margin of each page, so the visible column is
+      // narrower than the viewport by exactly one gutter.
+      const viewportWidth = Math.max(viewport.clientWidth, 1);
+      const columnWidth = Math.max(viewportWidth - gap, 1);
+      const height = Math.max(viewport.clientHeight - verticalPadding * 2, 1);
+      const step = viewportWidth;
       stepRef.current = step;
 
-      content.style.setProperty("--pf-page-w", `${pageWidth}px`);
-      content.style.width = `${pageWidth}px`;
+      content.style.setProperty("--pf-page-w", `${columnWidth}px`);
+      content.style.width = `${columnWidth}px`;
       content.style.height = `${height}px`;
+      content.style.marginInline = `${gap / 2}px`;
+      content.style.marginBlock = `${verticalPadding}px`;
 
       if (imageMode) {
         content.style.columnWidth = "";
         content.style.columnGap = "";
+        content.style.gap = `${gap}px`;
       } else {
-        content.style.columnWidth = `${pageWidth}px`;
-        content.style.columnGap = `${PAGE_GAP}px`;
+        content.style.gap = "";
+        content.style.columnWidth = `${columnWidth}px`;
+        content.style.columnGap = `${gap}px`;
       }
 
       // Column geometry is not always reflected exactly by scrollWidth, so the
@@ -164,11 +174,12 @@ const PagedFlow = forwardRef<PagedFlowHandle, Props>(
         extent = Math.max(extent, rect.right - contentLeft);
       }
 
-      totalRef.current = Math.max(1, Math.round((extent + PAGE_GAP) / step));
+      totalRef.current = Math.max(1, Math.round((extent + gap) / step));
       pageRef.current = Math.min(Math.max(pageRef.current, 0), totalRef.current - 1);
       applyTransform(false);
       emit();
-    }, [applyTransform, contentRef, emit, imageMode, viewportRef]);
+    }, [applyTransform, contentRef, emit, gap, imageMode, verticalPadding, viewportRef]);
+
 
     const goToPage = useCallback(
       (index: number, animate = true) => {
