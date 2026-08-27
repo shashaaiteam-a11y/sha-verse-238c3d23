@@ -940,6 +940,157 @@ const PaginatedReader = ({
 
   const sidePadding = MARGIN_STEPS[settings.margin] ?? 26;
 
+  /* --------------------------------- render -------------------------------- */
+  /** One document, rendered identically in both modes. */
+  const documentBody = (
+    <>
+      {/* Cover is simply the first thing in the flowing document. */}
+      <div
+        className="flex w-full flex-col items-center justify-center gap-5 text-center"
+        style={
+          paged
+            ? { height: "100%", breakAfter: "column", breakInside: "avoid" }
+            : { minHeight: "min(78vh, var(--reader-vh, 78vh))" }
+        }
+      >
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt={title ? `${title} cover` : "Book cover"}
+            decoding="async"
+            style={{
+              maxHeight: "52vh",
+              maxWidth: "78%",
+              objectFit: "contain",
+              borderRadius: 10,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.28)",
+            }}
+          />
+        ) : null}
+        <div>
+          <h1
+            style={{
+              fontSize: `${settings.fontSize * 1.7}px`,
+              lineHeight: 1.25,
+              fontWeight: 700,
+              margin: 0,
+            }}
+          >
+            {title || book.meta.title || "Untitled"}
+          </h1>
+          {(author || book.meta.author) && (
+            <p style={{ marginTop: 10, fontSize: `${settings.fontSize}px`, color: theme.muted }}>
+              {author || book.meta.author}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* The whole book — one continuous document, every block exactly once. */}
+      {blocks.map((block) => (
+        <BlockSlot
+          key={block.id}
+          block={block}
+          settings={settings}
+          highlights={highlightsByBlock.get(block.id) ?? EMPTY_HIGHLIGHTS}
+          searchQuery={searchQuery}
+          virtualize={virtualize}
+        />
+      ))}
+
+      {/* Breathing room so the final paragraph is always fully reachable. */}
+      <div aria-hidden style={{ height: paged ? 1 : "18vh" }} />
+    </>
+  );
+
+  const selectionToolbar =
+    selection && onCreateHighlight ? (
+      <div
+        data-reader-toolbar
+        className="fixed z-50 flex items-center gap-1 rounded-full px-1.5 py-1 shadow-lg"
+        style={{
+          top: Math.max((scrollRef.current?.getBoundingClientRect().top ?? 0) + selection.top, 8),
+          left: (scrollRef.current?.getBoundingClientRect().left ?? 0) + selection.left,
+          transform: "translateX(-50%)",
+          backgroundColor:
+            settings.theme === "light" || settings.theme === "sepia" ? "#1f2430" : "#2b2f36",
+          color: "#fff",
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
+          onClick={() => {
+            onCreateHighlight({ ...selection, withNote: false });
+            clearSelection();
+          }}
+        >
+          <Highlighter className="h-3.5 w-3.5" /> Highlight
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
+          onClick={() => {
+            onCreateHighlight({ ...selection, withNote: true });
+            clearSelection();
+          }}
+        >
+          <StickyNote className="h-3.5 w-3.5" /> Note
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
+          onClick={() => {
+            void navigator.clipboard?.writeText(selection.text);
+            clearSelection();
+          }}
+        >
+          <Copy className="h-3.5 w-3.5" /> Copy
+        </button>
+        <button
+          type="button"
+          aria-label="Dismiss"
+          className="rounded-full p-1.5 hover:bg-white/15"
+          onClick={clearSelection}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    ) : null;
+
+  if (paged) {
+    return (
+      <>
+        <PagedFlow
+          ref={pagedRef}
+          settings={settings}
+          imageMode={imageMode}
+          dir={book.meta.dir}
+          viewportRef={scrollRef}
+          contentRef={contentRef}
+          gap={sidePadding * 2}
+          verticalPadding={20}
+          className={className}
+          style={{
+            backgroundColor: theme.bg,
+            color: theme.text,
+            fontFamily: READER_FONT_STACKS[settings.font],
+            ["--reader-vh" as string]: `${Math.max(viewportHeight, 200)}px`,
+          } as React.CSSProperties}
+          onTap={onTap}
+          onChange={() => {
+            if (!restoringRef.current) captureAnchor();
+            report();
+          }}
+        >
+          {documentBody}
+        </PagedFlow>
+        {selectionToolbar}
+      </>
+    );
+  }
+
   return (
     <div
       ref={scrollRef}
@@ -997,59 +1148,15 @@ const PaginatedReader = ({
           paddingBlock: 20,
         }}
       >
-        {/* Cover is simply the first thing in the flowing document. */}
-        <div
-          className="flex w-full flex-col items-center justify-center gap-5 text-center"
-          style={{ minHeight: "min(78vh, var(--reader-vh, 78vh))" }}
-        >
-          {coverUrl ? (
-            <img
-              src={coverUrl}
-              alt={title ? `${title} cover` : "Book cover"}
-              decoding="async"
-              style={{
-                maxHeight: "52vh",
-                maxWidth: "78%",
-                objectFit: "contain",
-                borderRadius: 10,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.28)",
-              }}
-            />
-          ) : null}
-          <div>
-            <h1
-              style={{
-                fontSize: `${settings.fontSize * 1.7}px`,
-                lineHeight: 1.25,
-                fontWeight: 700,
-                margin: 0,
-              }}
-            >
-              {title || book.meta.title || "Untitled"}
-            </h1>
-            {(author || book.meta.author) && (
-              <p style={{ marginTop: 10, fontSize: `${settings.fontSize}px`, color: theme.muted }}>
-                {author || book.meta.author}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* The whole book — one continuous document, every block exactly once. */}
-        {blocks.map((block) => (
-          <BlockSlot
-            key={block.id}
-            block={block}
-            settings={settings}
-            highlights={highlightsByBlock.get(block.id) ?? EMPTY_HIGHLIGHTS}
-            searchQuery={searchQuery}
-            virtualize={virtualize}
-          />
-        ))}
-
-        {/* Breathing room so the final paragraph is always fully reachable. */}
-        <div aria-hidden style={{ height: "18vh" }} />
+        {documentBody}
       </div>
+      {selectionToolbar}
+    </div>
+  );
+};
+
+export default PaginatedReader;
+
 
       {selection && onCreateHighlight && (
         <div
