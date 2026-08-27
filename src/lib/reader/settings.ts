@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 
 export type ReaderTheme = "light" | "sepia" | "dark" | "black";
 export type ReaderFont = "serif" | "sans" | "dyslexic";
+/** "paged" = horizontal, one screen per page. "scroll" = continuous vertical. */
+export type ReadingMode = "paged" | "scroll";
 
 export interface ReaderSettings {
   theme: ReaderTheme;
@@ -18,6 +20,10 @@ export interface ReaderSettings {
   justify: boolean;
   /** Extra letter/word spacing for accessibility. */
   looseSpacing: boolean;
+  /** Horizontal paged reading vs continuous scrolling. */
+  readingMode: ReadingMode;
+  /** Animate the horizontal page turn (paged mode only). */
+  pageAnimation: boolean;
 }
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
@@ -29,7 +35,10 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   paragraphSpacing: 0.9,
   justify: false,
   looseSpacing: false,
+  readingMode: "paged",
+  pageAnimation: true,
 };
+
 
 const STORAGE_KEY = "shaverse:reader-settings:v1";
 

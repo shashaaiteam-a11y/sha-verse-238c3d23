@@ -10,6 +10,7 @@ import {
   type ReaderFont,
   type ReaderSettings,
   type ReaderTheme,
+  type ReadingMode,
 } from "@/lib/reader/settings";
 
 interface Props {
@@ -25,8 +26,42 @@ const FONT_LABELS: Record<ReaderFont, string> = {
   dyslexic: "Easy",
 };
 
+const READING_MODES: { value: ReadingMode; label: string }[] = [
+  { value: "paged", label: "Paged" },
+  { value: "scroll", label: "Scrolling" },
+];
+
 const ReaderSettingsPanel = ({ settings, onChange, onReset }: Props) => (
   <div className="space-y-6 py-4">
+    <div>
+      <p className="mb-3 text-sm font-medium">Reading mode</p>
+      <div className="grid grid-cols-2 gap-2">
+        {READING_MODES.map((mode) => (
+          <Button
+            key={mode.value}
+            variant={settings.readingMode === mode.value ? "default" : "outline"}
+            onClick={() => onChange("readingMode", mode.value)}
+            aria-pressed={settings.readingMode === mode.value}
+          >
+            {mode.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+
+    {settings.readingMode === "paged" && (
+      <div className="flex items-center justify-between">
+        <label htmlFor="reader-page-animation" className="text-sm font-medium">
+          Page turn animation
+        </label>
+        <Switch
+          id="reader-page-animation"
+          checked={settings.pageAnimation}
+          onCheckedChange={(checked) => onChange("pageAnimation", checked)}
+        />
+      </div>
+    )}
+
     <div>
       <p className="mb-3 text-sm font-medium">Theme</p>
       <div className="grid grid-cols-4 gap-2">

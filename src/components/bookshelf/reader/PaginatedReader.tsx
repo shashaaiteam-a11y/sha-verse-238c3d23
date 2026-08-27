@@ -21,11 +21,14 @@ import type { Block, Highlight, ImageBlock, ReflowBook } from "@/lib/reader/type
 import { isHiddenMetadata, normalizeReaderText } from "@/lib/reader/sanitize";
 import { isBoilerplate, isGarbageLine } from "@/lib/reader/quality";
 
+import PagedFlow, { type PagedFlowHandle } from "@/components/bookshelf/reader/PagedFlow";
+
 import {
   READER_FONT_STACKS,
   READER_THEMES,
   type ReaderSettings,
 } from "@/lib/reader/settings";
+
 
 export interface ReaderLocation {
   blockIndex: number;
@@ -509,6 +512,10 @@ const PaginatedReader = ({
   const theme = READER_THEMES[settings.theme];
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const pagedRef = useRef<PagedFlowHandle>(null);
+  /** Horizontal, one-screen-per-page reading. Scroll mode is the fallback. */
+  const paged = settings.readingMode === "paged";
+
 
   const [selection, setSelection] = useState<{
     blockId: string;
@@ -537,7 +544,16 @@ const PaginatedReader = ({
     return out;
   }, [book.blocks]);
 
-  const virtualize = blocks.length > VIRTUALIZE_THRESHOLD;
+  // Offscreen skipping breaks CSS column measurement, so it stays scroll-only.
+  const virtualize = !paged && blocks.length > VIRTUALIZE_THRESHOLD;
+
+  /** Scanned / rasterised book: one existing page image becomes one page. */
+  const imageMode = useMemo(() => {
+    if (!blocks.length) return false;
+    const pages = blocks.filter((b) => b.type === "image" && b.fullPage).length;
+    return pages >= Math.max(1, Math.round(blocks.length * 0.6));
+  }, [blocks]);
+
 
   // O(1) id lookups — linear scans here ran on every scroll frame.
   const blockIndexById = useMemo(() => {
@@ -598,7 +614,27 @@ const PaginatedReader = ({
     const content = contentRef.current;
     if (!scroller || !content) return null;
     const nodes = content.querySelectorAll<HTMLElement>("[data-block-id]");
-    const top = scroller.getBoundingClientRect().top + 4;
+    const viewport = scroller.getBoundingClientRect();
+
+    if (paged) {
+      // In columns a single block can be fragmented across two pages, so the
+      // first fragment that reaches into the current page wins.
+      const left = viewport.left + 4;
+      const right = viewport.right - 4;
+      let fallback: HTMLElement | null = null;
+      for (const node of Array.from(nodes)) {
+        fallback = fallback ?? node;
+        const rects = node.getClientRects();
+        const list = rects.length ? Array.from(rects) : [node.getBoundingClientRect()];
+        for (const rect of list) {
+          if (rect.width === 0 && rect.height === 0) continue;
+          if (rect.right >= left && rect.left <= right) return node;
+        }
+      }
+      return fallback;
+    }
+
+    const top = viewport.top + 4;
     let fallback: HTMLElement | null = null;
     for (const node of Array.from(nodes)) {
       const rect = node.getBoundingClientRect();
@@ -606,7 +642,7 @@ const PaginatedReader = ({
       if (rect.bottom >= top) return node;
     }
     return fallback;
-  }, []);
+  }, [paged]);
 
   const captureAnchor = useCallback(() => {
     const scroller = scrollRef.current;
@@ -616,25 +652,37 @@ const PaginatedReader = ({
     if (!id) return;
     anchorRef.current = {
       id,
-      offset: node.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
+      // Paged mode anchors to the page that holds the block; there is no
+      // meaningful vertical offset to preserve across a re-columnisation.
+      offset: paged
+        ? 0
+        : node.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
     };
-  }, [visibleBlockElement]);
+  }, [paged, visibleBlockElement]);
 
-  const scrollToBlock = useCallback((blockId: string, offset = 0) => {
-    const scroller = scrollRef.current;
-    const content = contentRef.current;
-    if (!scroller || !content) return false;
-    const node = content.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`);
-    if (!node) return false;
-    const delta =
-      node.getBoundingClientRect().top - scroller.getBoundingClientRect().top - offset;
-    restoringRef.current = true;
-    scroller.scrollTop += delta;
-    requestAnimationFrame(() => {
-      restoringRef.current = false;
-    });
-    return true;
-  }, []);
+  const scrollToBlock = useCallback(
+    (blockId: string, offset = 0) => {
+      if (paged) {
+        // Restoration is a correction, never an animated page turn.
+        return pagedRef.current?.goToBlock(blockId, false) ?? false;
+      }
+      const scroller = scrollRef.current;
+      const content = contentRef.current;
+      if (!scroller || !content) return false;
+      const node = content.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`);
+      if (!node) return false;
+      const delta =
+        node.getBoundingClientRect().top - scroller.getBoundingClientRect().top - offset;
+      restoringRef.current = true;
+      scroller.scrollTop += delta;
+      requestAnimationFrame(() => {
+        restoringRef.current = false;
+      });
+      return true;
+    },
+    [paged]
+  );
+
 
   // Typography / geometry changed → text truly reflows, and we land on the very
   // same sentence the reader was looking at (never a scaled or zoomed page).
@@ -656,9 +704,11 @@ const PaginatedReader = ({
     settings.justify,
     settings.looseSpacing,
     settings.theme,
+    settings.readingMode,
     viewportHeight,
     scrollToBlock,
   ]);
+
 
   /* ------------------------- progress + location -------------------------- */
   const reportRef = useRef(0);
@@ -666,11 +716,24 @@ const PaginatedReader = ({
   const report = useCallback(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
-    const pageH = Math.max(scroller.clientHeight - 24, 1);
-    const totalPages = Math.max(1, Math.ceil(scroller.scrollHeight / pageH));
-    const page = Math.min(totalPages, Math.floor(scroller.scrollTop / pageH) + 1);
-    const maxScroll = Math.max(scroller.scrollHeight - scroller.clientHeight, 1);
-    const percent = Math.min(100, Math.round((scroller.scrollTop / maxScroll) * 100));
+
+    let page: number;
+    let totalPages: number;
+    let percent: number;
+
+    if (paged) {
+      const engine = pagedRef.current;
+      totalPages = Math.max(1, engine?.totalPages() ?? 1);
+      page = Math.min(totalPages, Math.max(1, engine?.page() ?? 1));
+      percent = totalPages > 1 ? Math.round(((page - 1) / (totalPages - 1)) * 100) : 0;
+    } else {
+      const pageH = Math.max(scroller.clientHeight - 24, 1);
+      totalPages = Math.max(1, Math.ceil(scroller.scrollHeight / pageH));
+      page = Math.min(totalPages, Math.floor(scroller.scrollTop / pageH) + 1);
+      const maxScroll = Math.max(scroller.scrollHeight - scroller.clientHeight, 1);
+      percent = Math.min(100, Math.round((scroller.scrollTop / maxScroll) * 100));
+    }
+
 
     const node = visibleBlockElement();
     const id = node?.dataset.blockId;
@@ -701,8 +764,10 @@ const PaginatedReader = ({
     chapterMarks,
     onLocationChange,
     onPaginationChange,
+    paged,
     visibleBlockElement,
   ]);
+
 
   const handleScroll = useCallback(() => {
     if (reportRef.current) return;
@@ -726,19 +791,28 @@ const PaginatedReader = ({
   }, []);
 
   /* ------------------------------- navigation ------------------------------ */
-  /** A "page turn" is nothing but a viewport move — content is never split. */
-  const flip = useCallback((delta: number) => {
-    const scroller = scrollRef.current;
-    if (!scroller || !delta) return;
-    const pageH = Math.max(scroller.clientHeight - 24, 1);
-    scroller.scrollTo({
-      top: Math.max(
-        0,
-        Math.min(scroller.scrollHeight - scroller.clientHeight, scroller.scrollTop + delta * pageH)
-      ),
-      behavior: "smooth",
-    });
-  }, []);
+  /** A "page turn" is a viewport move (scroll) or a column shift (paged). */
+  const flip = useCallback(
+    (delta: number) => {
+      if (!delta) return;
+      if (paged) {
+        pagedRef.current?.flip(delta);
+        return;
+      }
+      const scroller = scrollRef.current;
+      if (!scroller) return;
+      const pageH = Math.max(scroller.clientHeight - 24, 1);
+      scroller.scrollTo({
+        top: Math.max(
+          0,
+          Math.min(scroller.scrollHeight - scroller.clientHeight, scroller.scrollTop + delta * pageH)
+        ),
+        behavior: "smooth",
+      });
+    },
+    [paged]
+  );
+
 
   const navTokenRef = useRef(0);
   useEffect(() => {
@@ -866,6 +940,157 @@ const PaginatedReader = ({
 
   const sidePadding = MARGIN_STEPS[settings.margin] ?? 26;
 
+  /* --------------------------------- render -------------------------------- */
+  /** One document, rendered identically in both modes. */
+  const documentBody = (
+    <>
+      {/* Cover is simply the first thing in the flowing document. */}
+      <div
+        className="flex w-full flex-col items-center justify-center gap-5 text-center"
+        style={
+          paged
+            ? { height: "100%", breakAfter: "column", breakInside: "avoid" }
+            : { minHeight: "min(78vh, var(--reader-vh, 78vh))" }
+        }
+      >
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt={title ? `${title} cover` : "Book cover"}
+            decoding="async"
+            style={{
+              maxHeight: "52vh",
+              maxWidth: "78%",
+              objectFit: "contain",
+              borderRadius: 10,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.28)",
+            }}
+          />
+        ) : null}
+        <div>
+          <h1
+            style={{
+              fontSize: `${settings.fontSize * 1.7}px`,
+              lineHeight: 1.25,
+              fontWeight: 700,
+              margin: 0,
+            }}
+          >
+            {title || book.meta.title || "Untitled"}
+          </h1>
+          {(author || book.meta.author) && (
+            <p style={{ marginTop: 10, fontSize: `${settings.fontSize}px`, color: theme.muted }}>
+              {author || book.meta.author}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* The whole book — one continuous document, every block exactly once. */}
+      {blocks.map((block) => (
+        <BlockSlot
+          key={block.id}
+          block={block}
+          settings={settings}
+          highlights={highlightsByBlock.get(block.id) ?? EMPTY_HIGHLIGHTS}
+          searchQuery={searchQuery}
+          virtualize={virtualize}
+        />
+      ))}
+
+      {/* Breathing room so the final paragraph is always fully reachable. */}
+      <div aria-hidden style={{ height: paged ? 1 : "18vh" }} />
+    </>
+  );
+
+  const selectionToolbar =
+    selection && onCreateHighlight ? (
+      <div
+        data-reader-toolbar
+        className="fixed z-50 flex items-center gap-1 rounded-full px-1.5 py-1 shadow-lg"
+        style={{
+          top: Math.max((scrollRef.current?.getBoundingClientRect().top ?? 0) + selection.top, 8),
+          left: (scrollRef.current?.getBoundingClientRect().left ?? 0) + selection.left,
+          transform: "translateX(-50%)",
+          backgroundColor:
+            settings.theme === "light" || settings.theme === "sepia" ? "#1f2430" : "#2b2f36",
+          color: "#fff",
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
+          onClick={() => {
+            onCreateHighlight({ ...selection, withNote: false });
+            clearSelection();
+          }}
+        >
+          <Highlighter className="h-3.5 w-3.5" /> Highlight
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
+          onClick={() => {
+            onCreateHighlight({ ...selection, withNote: true });
+            clearSelection();
+          }}
+        >
+          <StickyNote className="h-3.5 w-3.5" /> Note
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
+          onClick={() => {
+            void navigator.clipboard?.writeText(selection.text);
+            clearSelection();
+          }}
+        >
+          <Copy className="h-3.5 w-3.5" /> Copy
+        </button>
+        <button
+          type="button"
+          aria-label="Dismiss"
+          className="rounded-full p-1.5 hover:bg-white/15"
+          onClick={clearSelection}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    ) : null;
+
+  if (paged) {
+    return (
+      <>
+        <PagedFlow
+          ref={pagedRef}
+          settings={settings}
+          imageMode={imageMode}
+          dir={book.meta.dir}
+          viewportRef={scrollRef}
+          contentRef={contentRef}
+          gap={sidePadding * 2}
+          verticalPadding={20}
+          className={className}
+          style={{
+            backgroundColor: theme.bg,
+            color: theme.text,
+            fontFamily: READER_FONT_STACKS[settings.font],
+            ["--reader-vh" as string]: `${Math.max(viewportHeight, 200)}px`,
+          } as React.CSSProperties}
+          onTap={onTap}
+          onChange={() => {
+            if (!restoringRef.current) captureAnchor();
+            report();
+          }}
+        >
+          {documentBody}
+        </PagedFlow>
+        {selectionToolbar}
+      </>
+    );
+  }
+
   return (
     <div
       ref={scrollRef}
@@ -923,115 +1148,9 @@ const PaginatedReader = ({
           paddingBlock: 20,
         }}
       >
-        {/* Cover is simply the first thing in the flowing document. */}
-        <div
-          className="flex w-full flex-col items-center justify-center gap-5 text-center"
-          style={{ minHeight: "min(78vh, var(--reader-vh, 78vh))" }}
-        >
-          {coverUrl ? (
-            <img
-              src={coverUrl}
-              alt={title ? `${title} cover` : "Book cover"}
-              decoding="async"
-              style={{
-                maxHeight: "52vh",
-                maxWidth: "78%",
-                objectFit: "contain",
-                borderRadius: 10,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.28)",
-              }}
-            />
-          ) : null}
-          <div>
-            <h1
-              style={{
-                fontSize: `${settings.fontSize * 1.7}px`,
-                lineHeight: 1.25,
-                fontWeight: 700,
-                margin: 0,
-              }}
-            >
-              {title || book.meta.title || "Untitled"}
-            </h1>
-            {(author || book.meta.author) && (
-              <p style={{ marginTop: 10, fontSize: `${settings.fontSize}px`, color: theme.muted }}>
-                {author || book.meta.author}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* The whole book — one continuous document, every block exactly once. */}
-        {blocks.map((block) => (
-          <BlockSlot
-            key={block.id}
-            block={block}
-            settings={settings}
-            highlights={highlightsByBlock.get(block.id) ?? EMPTY_HIGHLIGHTS}
-            searchQuery={searchQuery}
-            virtualize={virtualize}
-          />
-        ))}
-
-        {/* Breathing room so the final paragraph is always fully reachable. */}
-        <div aria-hidden style={{ height: "18vh" }} />
+        {documentBody}
       </div>
-
-      {selection && onCreateHighlight && (
-        <div
-          data-reader-toolbar
-          className="fixed z-50 flex items-center gap-1 rounded-full px-1.5 py-1 shadow-lg"
-          style={{
-            top: Math.max((scrollRef.current?.getBoundingClientRect().top ?? 0) + selection.top, 8),
-            left:
-              (scrollRef.current?.getBoundingClientRect().left ?? 0) + selection.left,
-            transform: "translateX(-50%)",
-            backgroundColor:
-              settings.theme === "light" || settings.theme === "sepia" ? "#1f2430" : "#2b2f36",
-            color: "#fff",
-          }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
-            onClick={() => {
-              onCreateHighlight({ ...selection, withNote: false });
-              clearSelection();
-            }}
-          >
-            <Highlighter className="h-3.5 w-3.5" /> Highlight
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
-            onClick={() => {
-              onCreateHighlight({ ...selection, withNote: true });
-              clearSelection();
-            }}
-          >
-            <StickyNote className="h-3.5 w-3.5" /> Note
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs hover:bg-white/15"
-            onClick={() => {
-              void navigator.clipboard?.writeText(selection.text);
-              clearSelection();
-            }}
-          >
-            <Copy className="h-3.5 w-3.5" /> Copy
-          </button>
-          <button
-            type="button"
-            aria-label="Dismiss"
-            className="rounded-full p-1.5 hover:bg-white/15"
-            onClick={clearSelection}
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      {selectionToolbar}
     </div>
   );
 };
