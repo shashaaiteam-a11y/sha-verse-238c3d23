@@ -791,19 +791,28 @@ const PaginatedReader = ({
   }, []);
 
   /* ------------------------------- navigation ------------------------------ */
-  /** A "page turn" is nothing but a viewport move — content is never split. */
-  const flip = useCallback((delta: number) => {
-    const scroller = scrollRef.current;
-    if (!scroller || !delta) return;
-    const pageH = Math.max(scroller.clientHeight - 24, 1);
-    scroller.scrollTo({
-      top: Math.max(
-        0,
-        Math.min(scroller.scrollHeight - scroller.clientHeight, scroller.scrollTop + delta * pageH)
-      ),
-      behavior: "smooth",
-    });
-  }, []);
+  /** A "page turn" is a viewport move (scroll) or a column shift (paged). */
+  const flip = useCallback(
+    (delta: number) => {
+      if (!delta) return;
+      if (paged) {
+        pagedRef.current?.flip(delta);
+        return;
+      }
+      const scroller = scrollRef.current;
+      if (!scroller) return;
+      const pageH = Math.max(scroller.clientHeight - 24, 1);
+      scroller.scrollTo({
+        top: Math.max(
+          0,
+          Math.min(scroller.scrollHeight - scroller.clientHeight, scroller.scrollTop + delta * pageH)
+        ),
+        behavior: "smooth",
+      });
+    },
+    [paged]
+  );
+
 
   const navTokenRef = useRef(0);
   useEffect(() => {
