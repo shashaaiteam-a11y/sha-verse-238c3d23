@@ -5,3 +5,7 @@ project_id = "plmhjuqedtkiffzhberf"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.create-conversation]
+    verify_jwt = true
+  [functions.seed-demo-data]
+    verify_jwt = true

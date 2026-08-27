@@ -61,7 +61,7 @@ const PrivacyCenter = () => {
     setDownloading(true);
     try {
       const [profileRes, postsRes, friendsRes, savedRes] = await Promise.all([
-        supabase.from('profiles').select('id, username, display_name, bio, avatar_url, cover_url, location, website, created_at, updated_at, work, education, hometown, current_city, facebook_url, instagram_url, twitter_url, hobbies, about_me, privacy, provider, last_login, is_verified, is_deactivated, deactivated_at').eq('id', user.id).single(),
+        supabase.from('profiles').select('id, username, display_name, bio, avatar_url, cover_url, location, website, created_at, updated_at, work, education, facebook_url, instagram_url, twitter_url, hobbies, about_me, privacy, provider, last_login, is_verified, is_deactivated, deactivated_at').eq('id', user.id).single(),
         supabase.from('posts').select('id,content,image_url,created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('friendships').select('id,friend_id,status,created_at').eq('user_id', user.id),
         supabase.from('saved_posts').select('id,post_id,group_post_id,created_at').eq('user_id', user.id),
