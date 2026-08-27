@@ -512,6 +512,10 @@ const PaginatedReader = ({
   const theme = READER_THEMES[settings.theme];
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const pagedRef = useRef<PagedFlowHandle>(null);
+  /** Horizontal, one-screen-per-page reading. Scroll mode is the fallback. */
+  const paged = settings.readingMode === "paged";
+
 
   const [selection, setSelection] = useState<{
     blockId: string;
