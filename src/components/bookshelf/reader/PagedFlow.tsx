@@ -109,16 +109,22 @@ const PagedFlow = forwardRef<PagedFlowHandle, Props>(
     const stepRef = useRef(1);
     const changeRef = useRef(onChange);
     changeRef.current = onChange;
+    /** Last emitted geometry — prevents feedback loops with parent state. */
+    const emittedRef = useRef<string>("");
 
-    const emit = useCallback(() => {
+    const emit = useCallback((force = false) => {
       const total = totalRef.current;
       const page = pageRef.current;
+      const key = `${page}/${total}`;
+      if (!force && key === emittedRef.current) return;
+      emittedRef.current = key;
       changeRef.current?.({
         page: page + 1,
         totalPages: total,
         percent: total > 1 ? Math.round((page / (total - 1)) * 100) : 0,
       });
     }, []);
+
 
     const applyTransform = useCallback(
       (animate: boolean) => {
