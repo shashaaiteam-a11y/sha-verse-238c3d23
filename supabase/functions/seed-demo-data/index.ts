@@ -186,7 +186,47 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // --- Authorization: admins only ---------------------------------------
+    // This function writes with the service-role key (bypasses RLS), so it
+    // must never be callable anonymously. Verify the caller's JWT and confirm
+    // the admin role server-side before doing anything else.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user: caller }, error: callerError } = await authClient.auth.getUser();
+    if (callerError || !caller) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: isAdmin, error: roleError } = await supabase.rpc('has_role', {
+      _user_id: caller.id,
+      _role: 'admin',
+    });
+
+    if (roleError || isAdmin !== true) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
 
     const { action, count } = await req.json();
 
