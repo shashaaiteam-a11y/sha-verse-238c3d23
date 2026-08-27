@@ -140,7 +140,7 @@ export const StartupSplash = () => {
           will-change: opacity;
         }
         @media (prefers-reduced-motion: reduce) {
-          .sv-splash-logo, .sv-splash-glow {
+          .sv-splash-logo, .sv-splash-glow, .sv-splash-tagline {
             animation: none !important;
             opacity: 1 !important;
             transform: none !important;
@@ -148,7 +148,11 @@ export const StartupSplash = () => {
         }
       `}</style>
       <div className="sv-splash-glow" />
-      <img src={logo} alt="" className="sv-splash-logo" draggable={false} />
+      <div className="sv-splash-stack">
+        <img src={logo} alt="" className="sv-splash-logo" draggable={false} />
+        <p className="sv-splash-tagline">SHA-VERSE: The Next Generation</p>
+      </div>
+
     </div>
   );
 };
