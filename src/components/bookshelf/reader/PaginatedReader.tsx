@@ -764,8 +764,10 @@ const PaginatedReader = ({
     chapterMarks,
     onLocationChange,
     onPaginationChange,
+    paged,
     visibleBlockElement,
   ]);
+
 
   const handleScroll = useCallback(() => {
     if (reportRef.current) return;
