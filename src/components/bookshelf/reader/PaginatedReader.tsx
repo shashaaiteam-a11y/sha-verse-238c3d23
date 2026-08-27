@@ -704,9 +704,11 @@ const PaginatedReader = ({
     settings.justify,
     settings.looseSpacing,
     settings.theme,
+    settings.readingMode,
     viewportHeight,
     scrollToBlock,
   ]);
+
 
   /* ------------------------- progress + location -------------------------- */
   const reportRef = useRef(0);
