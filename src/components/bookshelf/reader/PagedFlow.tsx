@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import type { ReaderSettings } from "@/lib/reader/settings";
 
 /** Gutter between two pages, in px. */
-export const PAGE_GAP = 32;
+export const DEFAULT_PAGE_GAP = 32;
 
 export interface PagedFlowHandle {
   /** Move by whole pages. */
@@ -48,6 +48,10 @@ interface Props {
   dir?: string;
   viewportRef: RefObject<HTMLDivElement>;
   contentRef: RefObject<HTMLDivElement>;
+  /** Total horizontal gutter between two pages (side margin × 2). */
+  gap?: number;
+  /** Top/bottom breathing room inside each page. */
+  verticalPadding?: number;
   contentStyle?: CSSProperties;
   className?: string;
   style?: CSSProperties;
@@ -55,6 +59,7 @@ interface Props {
   onTap?: () => void;
   onChange?: (info: { page: number; totalPages: number; percent: number }) => void;
 }
+
 
 const PAGED_CSS = `
 .pf-content[data-mode="columns"] { column-fill: auto; }
