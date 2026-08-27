@@ -83,6 +83,30 @@ export const StartupSplash = () => {
           0%   { opacity: 1; }
           100% { opacity: 0; }
         }
+        @keyframes sv-text-in {
+          0%   { opacity: 0; transform: translateY(12px); letter-spacing: 0.24em; }
+          100% { opacity: 1; transform: translateY(0); letter-spacing: 0.08em; }
+        }
+        .sv-splash-stack {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 22px;
+        }
+        .sv-splash-tagline {
+          margin: 0;
+          font-size: clamp(13px, 3.6vw, 18px);
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          text-align: center;
+          white-space: nowrap;
+          color: rgba(226,236,255,0.92);
+          text-shadow: 0 2px 18px rgba(96,165,250,0.45);
+          opacity: 0;
+          animation: sv-text-in 700ms cubic-bezier(0.22,1,0.36,1) 1000ms forwards;
+          will-change: transform, opacity;
+        }
         .sv-splash-logo {
           width: min(38vw, 148px);
           height: min(38vw, 148px);
@@ -96,6 +120,7 @@ export const StartupSplash = () => {
           box-shadow: 0 10px 40px -10px rgba(0,0,0,0.6);
           will-change: transform, opacity;
         }
+
         .sv-splash-glow {
           position: absolute;
           width: min(90vw, 480px);
