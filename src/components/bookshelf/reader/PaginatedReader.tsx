@@ -21,11 +21,14 @@ import type { Block, Highlight, ImageBlock, ReflowBook } from "@/lib/reader/type
 import { isHiddenMetadata, normalizeReaderText } from "@/lib/reader/sanitize";
 import { isBoilerplate, isGarbageLine } from "@/lib/reader/quality";
 
+import PagedFlow, { type PagedFlowHandle } from "@/components/bookshelf/reader/PagedFlow";
+
 import {
   READER_FONT_STACKS,
   READER_THEMES,
   type ReaderSettings,
 } from "@/lib/reader/settings";
+
 
 export interface ReaderLocation {
   blockIndex: number;
