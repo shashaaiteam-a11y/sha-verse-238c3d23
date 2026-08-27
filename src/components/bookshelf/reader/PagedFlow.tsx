@@ -267,17 +267,10 @@ const PagedFlow = forwardRef<PagedFlowHandle, Props>(
       return () => observer.disconnect();
     }, [measure, viewportRef]);
 
-    /* Keyboard page turns (desktop). */
-    useEffect(() => {
-      const onKey = (event: KeyboardEvent) => {
-        const target = event.target as HTMLElement | null;
-        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
-        if (event.key === "ArrowRight" || event.key === "PageDown") goToPage(pageRef.current + 1);
-        else if (event.key === "ArrowLeft" || event.key === "PageUp") goToPage(pageRef.current - 1);
-      };
-      window.addEventListener("keydown", onKey);
-      return () => window.removeEventListener("keydown", onKey);
-    }, [goToPage]);
+    /* Keyboard page turns are owned by the reader shell (BookReader), which
+       calls flip() through the imperative handle — no listener here, otherwise
+       one key press would turn two pages. */
+
 
     /* Swipe + tap zones. Never fires while the user is selecting text. */
     const touchRef = useRef<{ x: number; y: number; time: number } | null>(null);
