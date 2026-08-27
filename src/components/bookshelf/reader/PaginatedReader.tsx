@@ -544,7 +544,16 @@ const PaginatedReader = ({
     return out;
   }, [book.blocks]);
 
-  const virtualize = blocks.length > VIRTUALIZE_THRESHOLD;
+  // Offscreen skipping breaks CSS column measurement, so it stays scroll-only.
+  const virtualize = !paged && blocks.length > VIRTUALIZE_THRESHOLD;
+
+  /** Scanned / rasterised book: one existing page image becomes one page. */
+  const imageMode = useMemo(() => {
+    if (!blocks.length) return false;
+    const pages = blocks.filter((b) => b.type === "image" && b.fullPage).length;
+    return pages >= Math.max(1, Math.round(blocks.length * 0.6));
+  }, [blocks]);
+
 
   // O(1) id lookups — linear scans here ran on every scroll frame.
   const blockIndexById = useMemo(() => {
