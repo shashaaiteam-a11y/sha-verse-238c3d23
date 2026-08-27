@@ -14,11 +14,11 @@ export const useProfile = (userId?: string) => {
       if (!targetUserId) return null;
 
       // Sensitive PII columns (phone, birthdate, gender, relationship_status,
-      // phone_number) are protected at the column level. They are fetched
-      // separately through a privacy-aware function so they are only revealed
-      // to the owner or to users allowed by the profile's privacy settings.
+      // phone_number, hometown, current_city) are protected at the column level.
+      // They are fetched separately through a privacy-aware function so they are
+      // only revealed to the owner or to users allowed by the privacy settings.
       const NON_SENSITIVE_COLUMNS =
-        'id, username, display_name, bio, avatar_url, cover_url, location, website, created_at, updated_at, work, education, hometown, current_city, facebook_url, instagram_url, twitter_url, hobbies, about_me, privacy, provider, last_login, is_verified, is_deactivated, deactivated_at';
+        'id, username, display_name, bio, avatar_url, cover_url, location, website, created_at, updated_at, work, education, facebook_url, instagram_url, twitter_url, hobbies, about_me, privacy, provider, last_login, is_verified, is_deactivated, deactivated_at';
 
       const { data, error } = await supabase
         .from('profiles')
