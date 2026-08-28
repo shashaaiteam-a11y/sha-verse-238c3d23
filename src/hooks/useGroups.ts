@@ -57,7 +57,8 @@ export const useGroups = () => {
         .from('groups')
         .select(GROUP_SELECT)
         .order('members_count', { ascending: false })
-        .limit(50);
+        .limit(200);
+
       if (error) throw error;
       return data || [];
     },
