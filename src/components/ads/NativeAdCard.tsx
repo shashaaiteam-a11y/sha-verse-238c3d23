@@ -17,6 +17,7 @@ import { recordAdImpression } from "@/lib/ads/adAnalytics";
 import type { AdPlacement } from "@/lib/ads/adTypes";
 import { cn } from "@/lib/utils";
 import { ADS_HIDDEN } from "@/lib/ads/adConfig";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 interface NativeAdCardProps {
   placement: AdPlacement;

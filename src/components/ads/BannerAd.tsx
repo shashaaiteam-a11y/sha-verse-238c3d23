@@ -9,6 +9,7 @@ import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression } from "@/lib/ads/adAnalytics";
 import type { AdPlacement } from "@/lib/ads/adTypes";
 import { cn } from "@/lib/utils";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 interface BannerAdProps {
   placement: AdPlacement;
@@ -38,6 +39,8 @@ const BannerAd = ({ placement, className, dismissible = true, _forceShow = true 
   }, []);
 
   if (!shouldRender || closed) return null;
+  // On native, real ads are served by the AdMob SDK banner — never show the web placeholder.
+  if (isNative()) return null;
 
   return (
     <div

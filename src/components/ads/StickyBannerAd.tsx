@@ -9,6 +9,7 @@ import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression } from "@/lib/ads/adAnalytics";
 import type { AdPlacement } from "@/lib/ads/adTypes";
 import { cn } from "@/lib/utils";
+import { isNative, showBanner, releaseBanner } from "@/lib/ads/nativeAdMob";
 
 interface StickyBannerAdProps {
   placement: AdPlacement;
