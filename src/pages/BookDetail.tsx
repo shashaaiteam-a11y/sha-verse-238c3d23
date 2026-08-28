@@ -65,19 +65,27 @@ const BookDetail = () => {
     enabled: !!bookId,
   });
 
-  // Fetch channel metrics (total views and downloads from all books in the channel)
+  // Fetch channel metrics (scoped strictly to this book's channel_id)
+  const channelId: string | undefined = book?.channel?.id;
   const { data: channelMetrics } = useQuery({
-    queryKey: ["channelMetrics", book?.channel?.id],
+    queryKey: ["channelMetrics", channelId],
     queryFn: async () => {
-      if (!book?.channel?.id) return null;
+      if (!channelId) return null;
 
-      const { data, error } = await supabase
-        .from("books")
-        .select("views_count, downloads_count")
-        .eq("channel_id", book.channel.id);
+      const [booksRes, subsRes] = await Promise.all([
+        supabase
+          .from("books")
+          .select("views_count, downloads_count")
+          .eq("channel_id", channelId),
+        supabase
+          .from("subscriptions")
+          .select("id", { count: "exact", head: true })
+          .eq("channel_id", channelId),
+      ]);
 
-      if (error) throw error;
+      if (booksRes.error) throw booksRes.error;
 
+      const data = booksRes.data;
       const totalViews = data?.reduce((sum, b) => sum + (b.views_count || 0), 0) || 0;
       const totalDownloads = data?.reduce((sum, b) => sum + (b.downloads_count || 0), 0) || 0;
 
@@ -85,11 +93,14 @@ const BookDetail = () => {
         totalBooks: data?.length || 0,
         totalViews,
         totalDownloads,
-        subscribers: book.channel.subscribers_count || 0,
+        subscribers: subsRes.error
+          ? (book?.channel?.subscribers_count || 0)
+          : (subsRes.count ?? 0),
       };
     },
-    enabled: !!book?.channel?.id,
+    enabled: !!channelId,
   });
+
 
   // Setup Realtime Subscriptions for ALL live stats
   useEffect(() => {
