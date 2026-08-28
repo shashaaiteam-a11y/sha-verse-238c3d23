@@ -85,6 +85,10 @@ const NativeAdCard = ({ placement, className, compact, _forceShow = true }: Nati
     return null;
   }
 
+  // On native the AdMob SDK serves real ads (banner/rewarded) — no web placeholder card.
+  if (isNative()) return null;
+
+
   return (
     <Card
       className={cn(
