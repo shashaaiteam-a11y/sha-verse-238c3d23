@@ -24,7 +24,7 @@ const ALLOWED_MODELS = new Set([
   "openai/gpt-5-nano",
 ]);
 
-const IMAGE_MODEL = "google/gemini-2.5-flash-image-preview";
+const IMAGE_MODEL = "google/gemini-3-pro-image";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
