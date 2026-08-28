@@ -24,7 +24,7 @@ const ALLOWED_MODELS = new Set([
   "openai/gpt-5-nano",
 ]);
 
-const IMAGE_MODEL = "google/gemini-2.5-flash-image-preview";
+const IMAGE_MODEL = "google/gemini-3-pro-image";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
         ? lastUserMsg.content
         : lastUserMsg?.content.find((p) => p.type === "text")?.text ?? "";
 
-      const imgResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const imgResp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -158,13 +158,26 @@ Deno.serve(async (req) => {
       }
 
       const imgData = await imgResp.json();
-      const imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      const text = imgData.choices?.[0]?.message?.content || "Here is your generated image:";
+      const b64 = imgData?.data?.[0]?.b64_json;
+      const imageUrl = b64
+        ? `data:image/png;base64,${b64}`
+        : imgData?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      // A refusal comes back as plain assistant text with no image data.
+      const refusal = imgData?.choices?.[0]?.message?.content;
+      const text = (imageUrl ? refusal : null) || "Here is your generated image:";
 
       if (!imageUrl) {
         console.error("No image returned from gateway:", JSON.stringify(imgData).slice(0, 500));
-        return jsonResponse({ error: "Image generation returned no image. Please try again." }, 500);
+        return jsonResponse(
+          {
+            error: typeof refusal === "string" && refusal.trim()
+              ? refusal
+              : "The image could not be generated. Try rephrasing your prompt.",
+          },
+          422
+        );
       }
+
 
       // Return as fake SSE stream so frontend parser works uniformly.
       // Send the text first, then the image markdown in a separate event so the
