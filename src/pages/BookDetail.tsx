@@ -72,15 +72,16 @@ const BookDetail = () => {
     queryFn: async () => {
       if (!channelId) return null;
 
-      const [booksRes, subsRes] = await Promise.all([
+      const [booksRes, channelRes] = await Promise.all([
         supabase
           .from("books")
           .select("views_count, downloads_count")
           .eq("channel_id", channelId),
         supabase
-          .from("subscriptions")
-          .select("id", { count: "exact", head: true })
-          .eq("channel_id", channelId),
+          .from("channels")
+          .select("subscribers_count")
+          .eq("id", channelId)
+          .maybeSingle(),
       ]);
 
       if (booksRes.error) throw booksRes.error;
@@ -93,9 +94,8 @@ const BookDetail = () => {
         totalBooks: data?.length || 0,
         totalViews,
         totalDownloads,
-        subscribers: subsRes.error
-          ? (book?.channel?.subscribers_count || 0)
-          : (subsRes.count ?? 0),
+        subscribers:
+          (channelRes.data as any)?.subscribers_count ?? (book?.channel?.subscribers_count || 0),
       };
     },
     enabled: !!channelId,
