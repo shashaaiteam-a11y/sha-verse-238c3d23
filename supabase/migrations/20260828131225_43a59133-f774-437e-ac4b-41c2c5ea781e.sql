@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.admin_approve_group_post(uuid, uuid) TO authenticated;
