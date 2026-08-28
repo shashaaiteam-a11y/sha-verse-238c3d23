@@ -105,11 +105,11 @@ const BookDetail = () => {
   // Setup Realtime Subscriptions for ALL live stats
   useEffect(() => {
     if (!bookId) return;
-    const channelId = book?.channel?.id;
 
     // Master realtime channel — listens to books, likes, ratings, subscriptions, comments
     const realtimeChannel = supabase
-      .channel(`book-detail-realtime-${bookId}`)
+      .channel(`book-detail-realtime-${bookId}-${Math.random().toString(36).slice(2, 10)}`)
+
       // 1. Book row itself (views, likes_count, downloads_count, rating_avg etc)
       .on(
         'postgres_changes',
