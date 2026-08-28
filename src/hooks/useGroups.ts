@@ -113,13 +113,17 @@ export const useGroups = () => {
 
       const trimmedName = payload.name.trim();
 
-      // Pre-check for duplicate name (case-insensitive)
+      // Pre-check for duplicate name among THIS user's own groups only.
+      // Uniqueness is scoped to (creator_id, lower(name)) in the database — a global
+      // check was impossible to do correctly from the client anyway, because RLS hides
+      // other people's private groups.
       const { data: existing } = await (supabase
         .from('groups') as any)
         .select('id')
+        .eq('creator_id', user.id)
         .ilike('name', trimmedName)
         .maybeSingle();
-      if (existing) throw new Error('A group with this name already exists. Please choose a different name.');
+      if (existing) throw new Error('You already have a group with this name. Please choose a different name.');
 
       const privacyValue = payload.privacy || 'public';
       const { data: group, error: groupError } = await (supabase
@@ -141,7 +145,7 @@ export const useGroups = () => {
         .single();
       if (groupError) {
         if (groupError.code === '23505' || /duplicate|unique/i.test(groupError.message || '')) {
-          throw new Error('A group with this name already exists. Please choose a different name.');
+          throw new Error('You already have a group with this name. Please choose a different name.');
         }
         throw groupError;
       }
