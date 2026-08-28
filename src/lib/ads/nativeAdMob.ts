@@ -33,9 +33,16 @@ export async function initAdMob(): Promise<void> {
   }
 }
 
+/** Tracks how many mounted components currently want the sticky banner. */
+let bannerRefs = 0;
+let bannerVisible = false;
+
 export async function showBanner(adUnitId: string): Promise<void> {
   if (!isNative()) return;
+  bannerRefs += 1;
+  if (bannerVisible) return;
   try {
+    await initAdMob();
     const { AdMob, BannerAdSize, BannerAdPosition } = await import('@capacitor-community/admob');
     await AdMob.showBanner({
       adId: adUnitId,
@@ -44,11 +51,24 @@ export async function showBanner(adUnitId: string): Promise<void> {
       margin: 0,
       isTesting: USE_TEST_ADS,
     });
+    bannerVisible = true;
+    // eslint-disable-next-line no-console
+    console.log('[AdMob] banner shown', adUnitId);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[AdMob] showBanner failed', err);
   }
 }
+
+/** Called on unmount — only removes the banner when no component needs it. */
+export async function releaseBanner(): Promise<void> {
+  if (!isNative()) return;
+  bannerRefs = Math.max(0, bannerRefs - 1);
+  if (bannerRefs > 0 || !bannerVisible) return;
+  bannerVisible = false;
+  await hideBanner();
+}
+
 
 export async function hideBanner(): Promise<void> {
   if (!isNative()) return;
