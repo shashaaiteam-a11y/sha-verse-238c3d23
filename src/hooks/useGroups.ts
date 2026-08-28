@@ -145,7 +145,7 @@ export const useGroups = () => {
         .single();
       if (groupError) {
         if (groupError.code === '23505' || /duplicate|unique/i.test(groupError.message || '')) {
-          throw new Error('A group with this name already exists. Please choose a different name.');
+          throw new Error('You already have a group with this name. Please choose a different name.');
         }
         throw groupError;
       }
