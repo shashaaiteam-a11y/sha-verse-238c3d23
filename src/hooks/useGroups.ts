@@ -207,7 +207,8 @@ export const useGroups = () => {
         throw new Error('You are the group creator/admin.');
       }
 
-      const needsRequest = group.is_private; // Like Facebook: public = instant join, private = request
+      // Private groups OR groups requiring admin approval → join request
+      const needsRequest = group.is_private || group.require_join_approval === true;
 
       if (!needsRequest) {
         // Check if already a member
