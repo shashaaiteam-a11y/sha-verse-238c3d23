@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.validate_payout_amount() FROM PUBLIC, anon, authenticated;
