@@ -161,19 +161,21 @@ const Groups = () => {
       ).values()
     );
 
-    // Discover groups: only those user has NOT joined/requested/created
+    // Discover groups: only those user has NOT joined/requested/created —
+    // newest first so freshly created groups surface immediately.
 
-    const discoverGroupsList = (suggestedGroups as any[] || []).filter(
+    const discoverGroupsList = (suggestedGroups as any[] || [])
+      .filter(
+        (g: any) =>
+          !joinedGroupIds.has(g.id) &&
+          !pendingRequestGroupIds.has(g.id) &&
+          g.creator_id !== user?.id
+      )
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      );
 
-      (g: any) =>
-
-        !joinedGroupIds.has(g.id) &&
-
-        !pendingRequestGroupIds.has(g.id) &&
-
-        g.creator_id !== user?.id
-
-    );
 
     // Search logic for All tab — server-side so groups outside the local
     // pool (created by other users, low member counts) are also found.
