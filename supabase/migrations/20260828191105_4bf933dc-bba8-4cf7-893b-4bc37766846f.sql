@@ -1,0 +1,2 @@
+ALTER TABLE public.subscriptions REPLICA IDENTITY FULL;
+ALTER TABLE public.book_ratings REPLICA IDENTITY FULL;
