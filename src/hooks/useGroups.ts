@@ -48,22 +48,32 @@ export const useGroups = () => {
     enabled: !!user,
   });
 
-  // Fetch all groups for Discover — no exclusion, show everything
+  // Fetch all visible groups — popular AND newest merged, so freshly created
+  // groups (1 member) are never pushed out of the pool by popular ones.
   const { data: suggestedGroups, isLoading: suggestedLoading } = useQuery({
     queryKey: ['suggested-groups', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from('groups')
-        .select(GROUP_SELECT)
-        .order('members_count', { ascending: false })
-        .limit(200);
-
-      if (error) throw error;
-      return data || [];
+      const [popular, newest] = await Promise.all([
+        supabase
+          .from('groups')
+          .select(GROUP_SELECT)
+          .order('members_count', { ascending: false })
+          .limit(200),
+        supabase
+          .from('groups')
+          .select(GROUP_SELECT)
+          .order('created_at', { ascending: false })
+          .limit(200),
+      ]);
+      if (popular.error) throw popular.error;
+      if (newest.error) throw newest.error;
+      const merged = [...(newest.data || []), ...(popular.data || [])];
+      return Array.from(new Map(merged.map((g: any) => [g.id, g])).values());
     },
     enabled: !!user,
   });
+
 
   // Fetch group IDs where user has a pending join request
   const { data: pendingRequestGroups } = useQuery({
