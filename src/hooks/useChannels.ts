@@ -317,7 +317,9 @@ export const useChannelRealtime = (channelType: 'video' | 'books' = 'video') => 
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'channel_subscriptions',
+        // REALTIME-FIX: `channel_subscriptions` does not exist — the real table
+        // holding channel subscriptions is `subscriptions`.
+        table: 'subscriptions',
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['channels', channelType] });
         queryClient.invalidateQueries({ queryKey: ['my-channel'] });
