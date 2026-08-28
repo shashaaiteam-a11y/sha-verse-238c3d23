@@ -283,9 +283,20 @@ export const useBookInteractions = (bookId?: string) => {
           queryClient.invalidateQueries({ queryKey: ['book-ratings', bookId] });
           queryClient.invalidateQueries({ queryKey: ['book-user-rating', bookId] });
           queryClient.invalidateQueries({ queryKey: ['book', bookId] });
+          queryClient.invalidateQueries({ queryKey: ['books', 'detail', bookId] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'books', filter: `id=eq.${bookId}` },
+        () => {
+          // Live counters: views, downloads, likes, comments, ratings
+          queryClient.invalidateQueries({ queryKey: ['book', bookId] });
+          queryClient.invalidateQueries({ queryKey: ['books', 'detail', bookId] });
         }
       )
       .subscribe();
+
 
     return () => {
       supabase.removeChannel(channel);
