@@ -9,6 +9,7 @@ import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression } from "@/lib/ads/adAnalytics";
 import type { AdPlacement } from "@/lib/ads/adTypes";
 import { cn } from "@/lib/utils";
+import { isNative, showBanner, releaseBanner } from "@/lib/ads/nativeAdMob";
 
 interface StickyBannerAdProps {
   placement: AdPlacement;
@@ -33,7 +34,20 @@ const StickyBannerAd = ({ placement, className }: StickyBannerAdProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 📱 Native (Android/iOS): show the REAL AdMob adaptive banner overlay.
+  useEffect(() => {
+    if (!isNative() || !shouldRender || closed || !adUnitId) return;
+    showBanner(adUnitId);
+    return () => {
+      releaseBanner();
+    };
+  }, [shouldRender, closed, adUnitId]);
+
   if (!shouldRender || closed) return null;
+
+  // On native the AdMob SDK draws the banner itself — no DOM placeholder.
+  if (isNative()) return null;
+
 
   return (
     <div

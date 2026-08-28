@@ -17,6 +17,7 @@ import { recordAdImpression } from "@/lib/ads/adAnalytics";
 import type { AdPlacement } from "@/lib/ads/adTypes";
 import { cn } from "@/lib/utils";
 import { ADS_HIDDEN } from "@/lib/ads/adConfig";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 interface NativeAdCardProps {
   placement: AdPlacement;
@@ -83,6 +84,10 @@ const NativeAdCard = ({ placement, className, compact, _forceShow = true }: Nati
   if (!effectiveShouldRender || dismissed) {
     return null;
   }
+
+  // On native the AdMob SDK serves real ads (banner/rewarded) — no web placeholder card.
+  if (isNative()) return null;
+
 
   return (
     <Card
