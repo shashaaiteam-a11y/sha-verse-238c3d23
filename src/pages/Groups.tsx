@@ -152,13 +152,14 @@ const Groups = () => {
 
     const joinedGroupsList = (myGroups as any[] || []).map((m: any) => m.groups).filter(Boolean);
 
-    // Created groups: only those user has created
-
-    const createdGroupsList = (myGroups as any[] || []).filter(
-
-      (m: any) => m.role === 'admin' || m.groups?.creator_id === user?.id
-
-    ).map((m: any) => m.groups).filter(Boolean);
+    // Created groups: only those the current user actually created
+    const createdGroupsList = Array.from(
+      new Map(
+        allGroupsDeduped
+          .filter((g: any) => g?.creator_id === user?.id)
+          .map((g: any) => [g.id, g])
+      ).values()
+    );
 
     // Discover groups: only those user has NOT joined/requested/created
 
@@ -174,23 +175,45 @@ const Groups = () => {
 
     );
 
-    // Search logic for All tab
+    // Search logic for All tab — server-side so groups outside the local
+    // pool (created by other users, low member counts) are also found.
 
-    const searchTerm = headerSearch.trim().toLowerCase();
+    const searchTerm = headerSearch.trim();
 
-    const searchResults = searchTerm
+  const { data: remoteSearchResults } = useQuery({
+    queryKey: ["groups-search", searchTerm.toLowerCase()],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
+      const escaped = searchTerm.replace(/[%_,]/g, (m: string) => `\\${m}`);
+      const { data, error } = await sb
+        .from("groups")
+        .select(GROUP_SELECT)
+        .or(`name.ilike.%${escaped}%,description.ilike.%${escaped}%`)
+        .order("members_count", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: searchTerm.length > 0,
+    staleTime: 15_000,
+  });
 
-      ? allGroupsDeduped.filter(
+  const searchResults = searchTerm
+    ? Array.from(
+        new Map(
+          [
+            ...allGroupsDeduped.filter(
+              (g: any) =>
+                g.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                g.description?.toLowerCase().includes(searchTerm.toLowerCase())
+            ),
+            ...((remoteSearchResults as any[]) || []),
+          ].map((g: any) => [g.id, g])
+        ).values()
+      )
+    : allGroupsDeduped;
 
-          (g: any) =>
-
-            g.name?.toLowerCase().includes(searchTerm) ||
-
-            g.description?.toLowerCase().includes(searchTerm)
-
-        )
-
-      : allGroupsDeduped;
 
 
 
