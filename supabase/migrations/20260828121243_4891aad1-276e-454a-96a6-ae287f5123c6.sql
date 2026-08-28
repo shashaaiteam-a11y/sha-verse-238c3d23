@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.groups_creator_name_unique_ci;
