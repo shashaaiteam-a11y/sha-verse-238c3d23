@@ -152,7 +152,7 @@ const BookDetail = () => {
     let channelRealtimeSub: any = null;
     if (channelId) {
       channelRealtimeSub = supabase
-        .channel(`book-channel-realtime-${channelId}`)
+        .channel(`book-channel-realtime-${channelId}-${Math.random().toString(36).slice(2, 10)}`)
         // Channel row updates (subscriber_count changes)
         .on(
           'postgres_changes',
