@@ -115,7 +115,7 @@ export const StartupSplash = () => {
           transform: scale(0.9);
           animation:
             sv-logo-in 600ms cubic-bezier(0.22,1,0.36,1) 200ms forwards,
-            sv-breathe 4200ms ease-in-out 1500ms 1;
+            sv-breathe 2200ms ease-in-out 800ms 1;
           box-shadow: 0 10px 40px -10px rgba(0,0,0,0.6);
           will-change: transform, opacity;
         }
