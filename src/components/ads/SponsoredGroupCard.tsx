@@ -19,6 +19,7 @@ import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression } from "@/lib/ads/adAnalytics";
 
 import { cn } from "@/lib/utils";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 
 
@@ -53,6 +54,14 @@ const SponsoredGroupCard = ({ className }: SponsoredGroupCardProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
 
   }, []);
+
+
+
+  // On native (Android/iOS) real AdMob ads are served by the SDK — never show the web placeholder card.
+
+
+
+  if (isNative()) return null;
 
 
 

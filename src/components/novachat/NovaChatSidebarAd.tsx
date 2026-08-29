@@ -16,6 +16,7 @@ import {
   getAdUnitForPlacement,
 } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 /**
  * Native ad for the NovaChat sidebar conversation list.
@@ -67,6 +68,10 @@ const NovaChatSidebarAd = ({ className }: NovaChatSidebarAdProps) => {
     registerImpression(adUnitId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // On native (Android/iOS) real AdMob ads are served by the SDK — never show the web placeholder card.
+
+  if (isNative()) return null;
 
   if (dismissed) return null;
 

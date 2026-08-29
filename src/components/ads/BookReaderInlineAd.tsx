@@ -16,6 +16,7 @@ import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression, recordAdClick } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
 import { ADS_HIDDEN } from "@/lib/ads/adConfig";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 /**
  * 📖 BookReader Inline Ad
@@ -68,6 +69,8 @@ const THEME_STYLES: Record<string, { bg: string; border: string; text: string; m
 
 const BookReaderInlineAd = (props: BookReaderInlineAdProps) => {
   // 🙈 GLOBAL SWITCH: hide this ad when ads are turned off.
+  // On native (Android/iOS) real AdMob ads are served by the SDK — never show the web placeholder card.
+  if (isNative()) return null;
   if (ADS_HIDDEN) return null;
   return <BookReaderInlineAdInner {...props} />;
 };

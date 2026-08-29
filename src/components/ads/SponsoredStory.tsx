@@ -13,6 +13,7 @@ import { useAdFrequency } from "@/hooks/useAdFrequency";
 import { useAdTargeting } from "@/hooks/useAdTargeting";
 import { recordAdImpression, recordAdClick } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 interface SponsoredStoryProps {
   className?: string;
@@ -48,6 +49,10 @@ const SponsoredStory = ({
     registerImpression(adUnitId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // On native (Android/iOS) real AdMob ads are served by the SDK — never show the web placeholder card.
+
+  if (isNative()) return null;
 
   if (!shouldRender || hidden) return null;
 
