@@ -8,7 +8,7 @@ import logo from "@/assets/sha-verse-logo.jpeg";
  * Shows once per browser session (sessionStorage).
  */
 const SESSION_KEY = "__sv_splash_shown__";
-const TOTAL_MS = 5000;
+const TOTAL_MS = 3000;
 const FADE_OUT_MS = 420;
 
 export const StartupSplash = () => {
@@ -30,8 +30,7 @@ export const StartupSplash = () => {
       /* ignore */
     }
 
-    const reduce =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
     const fadeAt = reduce ? 500 : TOTAL_MS - FADE_OUT_MS;
     const unmountAt = reduce ? 500 + FADE_OUT_MS : TOTAL_MS;
@@ -152,7 +151,6 @@ export const StartupSplash = () => {
         <img src={logo} alt="" className="sv-splash-logo" draggable={false} />
         <p className="sv-splash-tagline">SHA-VERSE: The Next Generation</p>
       </div>
-
     </div>
   );
 };
