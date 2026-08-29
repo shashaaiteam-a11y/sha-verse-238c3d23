@@ -25,7 +25,7 @@ export const USE_TEST_ADS = true;
  * rules, or components are removed — flipping this back to `false` brings
  * everything back exactly as it is now.
  */
-export const ADS_HIDDEN = true;
+export const ADS_HIDDEN = false;
 
 // ✅ Google official test IDs — safe to click, no ban risk
 const TEST_AD_IDS = {
