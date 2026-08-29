@@ -20,6 +20,7 @@ import {
 } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
 import { ADS_HIDDEN } from "@/lib/ads/adConfig";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 /**
  * GroupNativeAd
@@ -50,6 +51,8 @@ const POOL = [
 
 const GroupNativeAd = ({ variant = "list", className }: GroupNativeAdProps) => {
   // 🙈 GLOBAL SWITCH: hide this ad when ads are turned off.
+  // On native (Android/iOS) real AdMob ads are served by the SDK — never show the web placeholder card.
+  if (isNative()) return null;
   if (ADS_HIDDEN) return null;
   return <GroupNativeAdInner variant={variant} className={className} />;
 };
