@@ -13,7 +13,7 @@
  *   4. Build & ship
  */
 
-export const USE_TEST_ADS = false;
+export const USE_TEST_ADS = true;
 
 /**
  * 🙈 GLOBAL ADS VISIBILITY SWITCH
@@ -25,7 +25,7 @@ export const USE_TEST_ADS = false;
  * rules, or components are removed — flipping this back to `false` brings
  * everything back exactly as it is now.
  */
-export const ADS_HIDDEN = false;
+export const ADS_HIDDEN = true;
 
 // ✅ Google official test IDs — safe to click, no ban risk
 const TEST_AD_IDS = {
