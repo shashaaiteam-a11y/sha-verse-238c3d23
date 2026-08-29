@@ -135,7 +135,7 @@ export const StartupSplash = () => {
           filter: blur(8px);
           animation:
             sv-glow-in 900ms ease-out 900ms forwards,
-            sv-glow-out 700ms ease-in 4100ms forwards;
+            sv-glow-out 500ms ease-in 2300ms forwards;
           will-change: opacity;
         }
         @media (prefers-reduced-motion: reduce) {
