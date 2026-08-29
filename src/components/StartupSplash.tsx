@@ -103,7 +103,7 @@ export const StartupSplash = () => {
           color: rgba(226,236,255,0.92);
           text-shadow: 0 2px 18px rgba(96,165,250,0.45);
           opacity: 0;
-          animation: sv-text-in 700ms cubic-bezier(0.22,1,0.36,1) 1000ms forwards;
+          animation: sv-text-in 600ms cubic-bezier(0.22,1,0.36,1) 500ms forwards;
           will-change: transform, opacity;
         }
         .sv-splash-logo {
