@@ -18,6 +18,7 @@
     <!-- Core -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <!-- Camera + Mic (voice / video call, voice messages) -->
     <uses-permission android:name="android.permission.CAMERA" />
