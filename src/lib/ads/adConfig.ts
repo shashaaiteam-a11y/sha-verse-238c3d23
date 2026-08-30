@@ -13,7 +13,7 @@
  *   4. Build & ship
  */
 
-export const USE_TEST_ADS = true;
+export const USE_TEST_ADS = false;
 
 /**
  * 🙈 GLOBAL ADS VISIBILITY SWITCH
