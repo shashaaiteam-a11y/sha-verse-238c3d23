@@ -499,8 +499,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       } else {
         setInitializing(true);
         try {
-          const conversationId = await startConversation.mutateAsync(initialUserId);
+          const { conversationId, isRequest } = await startConversation.mutateAsync(initialUserId);
           setSelectedConversation({ id: conversationId, otherMembers: [] });
+          if (isRequest) {
+            toast.info("You're not friends yet — your message will arrive as a request.");
+          }
+
         } catch (error: any) {
           console.error('Failed to create conversation:', error);
           // Surface the real reason (e.g. "You can only message your friends.")
