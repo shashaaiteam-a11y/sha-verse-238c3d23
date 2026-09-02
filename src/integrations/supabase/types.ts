@@ -6083,6 +6083,10 @@ export type Database = {
       }
       increment_book_likes: { Args: { book_id: string }; Returns: undefined }
       increment_book_views: { Args: { book_id: string }; Returns: undefined }
+      increment_creator_badge_motions: {
+        Args: { _channel_id: string }
+        Returns: undefined
+      }
       increment_member_warnings: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: undefined
