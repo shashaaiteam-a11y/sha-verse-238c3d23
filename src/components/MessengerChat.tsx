@@ -759,6 +759,70 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
         {/* Conversations List */}
         <ScrollArea className="flex-1">
+          {messageRequests && messageRequests.length > 0 && (
+            <div className="border-b border-border">
+              <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Message requests ({messageRequests.length})
+              </div>
+              {messageRequests.map((req: any) => {
+                const requester = req.otherMembers?.[0];
+                return (
+                  <div key={req.id} className="flex items-center gap-3 px-4 py-2">
+                    <Avatar className="w-10 h-10 flex-shrink-0">
+                      <AvatarImage src={requester?.avatar_url || undefined} />
+                      <AvatarFallback>
+                        {requester?.display_name?.[0]?.toUpperCase() || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {requester?.display_name || 'Someone'}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {req.lastMessage?.content || 'Wants to start a chat'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        className="h-8 px-3"
+                        disabled={respondToRequest.isPending}
+                        onClick={() =>
+                          respondToRequest.mutate(
+                            { conversationId: req.id, accept: true },
+                            {
+                              onSuccess: () => toast.success('Message request accepted'),
+                              onError: (e: any) => toast.error(e?.message || 'Failed to accept'),
+                            }
+                          )
+                        }
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 px-3"
+                        disabled={respondToRequest.isPending}
+                        onClick={() =>
+                          respondToRequest.mutate(
+                            { conversationId: req.id, accept: false },
+                            {
+                              onSuccess: () => toast.success('Request deleted'),
+                              onError: (e: any) => toast.error(e?.message || 'Failed to delete'),
+                            }
+                          )
+                        }
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {conversationsLoading ? (
             <div className="flex items-center justify-center p-8">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
