@@ -130,10 +130,15 @@ serve(async (req) => {
 
     }
 
-    // Create new conversation
+    // Create new conversation (pending = message request when not friends)
     const { data: newConvo, error: convoError } = await serviceClient
       .from("conversations")
-      .insert({ is_group: false, created_by: user.id })
+      .insert({
+        is_group: false,
+        created_by: user.id,
+        request_status: isRequest ? "pending" : "accepted",
+        requested_by: isRequest ? user.id : null,
+      })
       .select()
       .single();
 
@@ -156,9 +161,10 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ conversationId: newConvo.id }),
+      JSON.stringify({ conversationId: newConvo.id, isRequest }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("Error:", error);
     return new Response(
