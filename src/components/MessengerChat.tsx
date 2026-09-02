@@ -1279,7 +1279,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         onOpenChange={setShowUserSearch}
         onSelectUser={async (selectedUser) => {
           try {
-            const conversationId = await startConversation.mutateAsync(selectedUser.id);
+            const { conversationId, isRequest } = await startConversation.mutateAsync(selectedUser.id);
 
             // Try existing conversation first
             const existing = conversations?.find((c: any) => c.id === conversationId);
@@ -1298,10 +1298,15 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 last_message_at: new Date().toISOString(),
               } as any);
             }
-            toast.success(`Chat started with ${selectedUser.display_name}`);
+            if (isRequest) {
+              toast.info(`${selectedUser.display_name} isn't your friend yet — this will be sent as a message request.`);
+            } else {
+              toast.success(`Chat started with ${selectedUser.display_name}`);
+            }
           } catch (error: any) {
             toast.error(error?.message || 'Failed to start conversation');
           }
+
 
         }}
       />
