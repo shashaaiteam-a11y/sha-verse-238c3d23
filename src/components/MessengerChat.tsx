@@ -49,7 +49,7 @@ interface MessengerChatProps {
 export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { conversations, isLoading: conversationsLoading, startConversation } = useConversations();
+  const { conversations, isLoading: conversationsLoading, startConversation, messageRequests, respondToRequest } = useConversations();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [initializing, setInitializing] = useState(false);
