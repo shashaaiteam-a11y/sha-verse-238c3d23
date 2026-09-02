@@ -22,10 +22,13 @@ export const useConversations = () => {
             title,
             is_group,
             created_at,
-            updated_at
+            updated_at,
+            request_status,
+            requested_by
           )
         `)
         .eq('user_id', user.id);
+
 
       if (error) throw error;
       if (!data || data.length === 0) return [];
@@ -80,8 +83,14 @@ export const useConversations = () => {
       const conversationsWithMembers = data.map((cm: any) => ({
         ...cm.conversations,
         otherMembers: membersByConversation[cm.conversation_id] || [],
-        lastMessage: lastMessageByConversation[cm.conversation_id] || null
+        lastMessage: lastMessageByConversation[cm.conversation_id] || null,
+        // Pending request that THIS user received (someone who isn't a friend messaged them)
+        isIncomingRequest:
+          cm.conversations?.request_status === 'pending' &&
+          cm.conversations?.requested_by !== user.id,
+        isPendingRequest: cm.conversations?.request_status === 'pending',
       }));
+
 
       return conversationsWithMembers;
     },
@@ -113,7 +122,7 @@ export const useConversations = () => {
         throw new Error(result.error || 'Failed to start conversation');
       }
 
-      return result.conversationId;
+      return { conversationId: result.conversationId, isRequest: !!result.isRequest };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
@@ -164,9 +173,31 @@ export const useConversations = () => {
     };
   }, [user?.id, queryClient]);
 
+  // Accept or delete an incoming message request
+  const respondToRequest = useMutation({
+    mutationFn: async ({ conversationId, accept }: { conversationId: string; accept: boolean }) => {
+      const { error } = await supabase.rpc('respond_message_request', {
+        _conversation_id: conversationId,
+        _accept: accept,
+      });
+      if (error) throw error;
+      return conversationId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+    },
+  });
+
+  const chats = conversations?.filter((c: any) => !c.isIncomingRequest) || [];
+  const messageRequests = conversations?.filter((c: any) => c.isIncomingRequest) || [];
+
   return {
     conversations,
+    chats,
+    messageRequests,
     isLoading,
-    startConversation
+    startConversation,
+    respondToRequest
   };
+
 };

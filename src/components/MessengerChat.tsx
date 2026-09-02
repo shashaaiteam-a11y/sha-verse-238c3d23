@@ -49,7 +49,7 @@ interface MessengerChatProps {
 export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { conversations, isLoading: conversationsLoading, startConversation } = useConversations();
+  const { conversations, isLoading: conversationsLoading, startConversation, messageRequests, respondToRequest } = useConversations();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [initializing, setInitializing] = useState(false);
@@ -499,8 +499,12 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
       } else {
         setInitializing(true);
         try {
-          const conversationId = await startConversation.mutateAsync(initialUserId);
+          const { conversationId, isRequest } = await startConversation.mutateAsync(initialUserId);
           setSelectedConversation({ id: conversationId, otherMembers: [] });
+          if (isRequest) {
+            toast.info("You're not friends yet — your message will arrive as a request.");
+          }
+
         } catch (error: any) {
           console.error('Failed to create conversation:', error);
           // Surface the real reason (e.g. "You can only message your friends.")
@@ -522,10 +526,13 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   // to the top instantly via realtime invalidation in useConversations().
   const filteredConversations = conversations
     ?.filter((convo: any) => {
+      // Incoming message requests live in their own section until accepted
+      if (convo.isIncomingRequest) return false;
       const otherUser = convo.otherMembers?.[0];
       if (!searchQuery) return true;
       return otherUser?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
     })
+
     .slice()
     .sort((a: any, b: any) => {
       const ta = new Date(a.lastMessage?.created_at || a.updated_at || a.created_at || 0).getTime();
@@ -752,6 +759,70 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
         {/* Conversations List */}
         <ScrollArea className="flex-1">
+          {messageRequests && messageRequests.length > 0 && (
+            <div className="border-b border-border">
+              <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Message requests ({messageRequests.length})
+              </div>
+              {messageRequests.map((req: any) => {
+                const requester = req.otherMembers?.[0];
+                return (
+                  <div key={req.id} className="flex items-center gap-3 px-4 py-2">
+                    <Avatar className="w-10 h-10 flex-shrink-0">
+                      <AvatarImage src={requester?.avatar_url || undefined} />
+                      <AvatarFallback>
+                        {requester?.display_name?.[0]?.toUpperCase() || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {requester?.display_name || 'Someone'}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {req.lastMessage?.content || 'Wants to start a chat'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        className="h-8 px-3"
+                        disabled={respondToRequest.isPending}
+                        onClick={() =>
+                          respondToRequest.mutate(
+                            { conversationId: req.id, accept: true },
+                            {
+                              onSuccess: () => toast.success('Message request accepted'),
+                              onError: (e: any) => toast.error(e?.message || 'Failed to accept'),
+                            }
+                          )
+                        }
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 px-3"
+                        disabled={respondToRequest.isPending}
+                        onClick={() =>
+                          respondToRequest.mutate(
+                            { conversationId: req.id, accept: false },
+                            {
+                              onSuccess: () => toast.success('Request deleted'),
+                              onError: (e: any) => toast.error(e?.message || 'Failed to delete'),
+                            }
+                          )
+                        }
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {conversationsLoading ? (
             <div className="flex items-center justify-center p-8">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -1275,7 +1346,7 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         onOpenChange={setShowUserSearch}
         onSelectUser={async (selectedUser) => {
           try {
-            const conversationId = await startConversation.mutateAsync(selectedUser.id);
+            const { conversationId, isRequest } = await startConversation.mutateAsync(selectedUser.id);
 
             // Try existing conversation first
             const existing = conversations?.find((c: any) => c.id === conversationId);
@@ -1294,10 +1365,15 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
                 last_message_at: new Date().toISOString(),
               } as any);
             }
-            toast.success(`Chat started with ${selectedUser.display_name}`);
+            if (isRequest) {
+              toast.info(`${selectedUser.display_name} isn't your friend yet — this will be sent as a message request.`);
+            } else {
+              toast.success(`Chat started with ${selectedUser.display_name}`);
+            }
           } catch (error: any) {
             toast.error(error?.message || 'Failed to start conversation');
           }
+
 
         }}
       />

@@ -1195,6 +1195,8 @@ export type Database = {
           id: string
           is_group: boolean | null
           metadata: Json | null
+          request_status: string
+          requested_by: string | null
           title: string | null
           updated_at: string | null
         }
@@ -1204,6 +1206,8 @@ export type Database = {
           id?: string
           is_group?: boolean | null
           metadata?: Json | null
+          request_status?: string
+          requested_by?: string | null
           title?: string | null
           updated_at?: string | null
         }
@@ -1213,6 +1217,8 @@ export type Database = {
           id?: string
           is_group?: boolean | null
           metadata?: Json | null
+          request_status?: string
+          requested_by?: string | null
           title?: string | null
           updated_at?: string | null
         }
@@ -6153,6 +6159,10 @@ export type Database = {
       record_story_view: { Args: { p_story_id: string }; Returns: undefined }
       refresh_friend_suggestions_for_active_users: {
         Args: never
+        Returns: undefined
+      }
+      respond_message_request: {
+        Args: { _accept: boolean; _conversation_id: string }
         Returns: undefined
       }
       subscribe_to_channel: {

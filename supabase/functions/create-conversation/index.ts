@@ -89,12 +89,10 @@ serve(async (req) => {
       );
     }
 
-    if (areFriends !== true) {
-      return new Response(
-        JSON.stringify({ error: "You can only message your friends." }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Non-friends are allowed, but the conversation starts as a message request
+    // that the receiver must accept before it becomes a normal chat.
+    const isRequest = areFriends !== true;
+
 
     // Check if conversation already exists
     const { data: existingConvos } = await serviceClient
@@ -114,24 +112,33 @@ serve(async (req) => {
       if (otherMember && otherMember.length > 0) {
         const { data: convoDetails } = await serviceClient
           .from("conversations")
-          .select("id, is_group")
+          .select("id, is_group, request_status")
           .eq("id", otherMember[0].conversation_id)
           .eq("is_group", false)
           .maybeSingle();
 
         if (convoDetails) {
           return new Response(
-            JSON.stringify({ conversationId: convoDetails.id }),
+            JSON.stringify({
+              conversationId: convoDetails.id,
+              isRequest: convoDetails.request_status === "pending",
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
       }
+
     }
 
-    // Create new conversation
+    // Create new conversation (pending = message request when not friends)
     const { data: newConvo, error: convoError } = await serviceClient
       .from("conversations")
-      .insert({ is_group: false, created_by: user.id })
+      .insert({
+        is_group: false,
+        created_by: user.id,
+        request_status: isRequest ? "pending" : "accepted",
+        requested_by: isRequest ? user.id : null,
+      })
       .select()
       .single();
 
@@ -154,9 +161,10 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ conversationId: newConvo.id }),
+      JSON.stringify({ conversationId: newConvo.id, isRequest }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("Error:", error);
     return new Response(
