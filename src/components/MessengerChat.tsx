@@ -1295,9 +1295,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               } as any);
             }
             toast.success(`Chat started with ${selectedUser.display_name}`);
-          } catch (error) {
-            toast.error('Failed to start conversation');
+          } catch (error: any) {
+            toast.error(error?.message || 'Failed to start conversation');
           }
+
         }}
       />
 
