@@ -112,18 +112,22 @@ serve(async (req) => {
       if (otherMember && otherMember.length > 0) {
         const { data: convoDetails } = await serviceClient
           .from("conversations")
-          .select("id, is_group")
+          .select("id, is_group, request_status")
           .eq("id", otherMember[0].conversation_id)
           .eq("is_group", false)
           .maybeSingle();
 
         if (convoDetails) {
           return new Response(
-            JSON.stringify({ conversationId: convoDetails.id }),
+            JSON.stringify({
+              conversationId: convoDetails.id,
+              isRequest: convoDetails.request_status === "pending",
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
       }
+
     }
 
     // Create new conversation
