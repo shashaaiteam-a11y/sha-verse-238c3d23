@@ -173,9 +173,31 @@ export const useConversations = () => {
     };
   }, [user?.id, queryClient]);
 
+  // Accept or delete an incoming message request
+  const respondToRequest = useMutation({
+    mutationFn: async ({ conversationId, accept }: { conversationId: string; accept: boolean }) => {
+      const { error } = await supabase.rpc('respond_message_request', {
+        _conversation_id: conversationId,
+        _accept: accept,
+      });
+      if (error) throw error;
+      return conversationId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+    },
+  });
+
+  const chats = conversations?.filter((c: any) => !c.isIncomingRequest) || [];
+  const messageRequests = conversations?.filter((c: any) => c.isIncomingRequest) || [];
+
   return {
     conversations,
+    chats,
+    messageRequests,
     isLoading,
-    startConversation
+    startConversation,
+    respondToRequest
   };
+
 };
