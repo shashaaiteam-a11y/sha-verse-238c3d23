@@ -122,7 +122,7 @@ export const useConversations = () => {
         throw new Error(result.error || 'Failed to start conversation');
       }
 
-      return result.conversationId;
+      return { conversationId: result.conversationId, isRequest: !!result.isRequest };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
