@@ -89,12 +89,10 @@ serve(async (req) => {
       );
     }
 
-    if (areFriends !== true) {
-      return new Response(
-        JSON.stringify({ error: "You can only message your friends." }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Non-friends are allowed, but the conversation starts as a message request
+    // that the receiver must accept before it becomes a normal chat.
+    const isRequest = areFriends !== true;
+
 
     // Check if conversation already exists
     const { data: existingConvos } = await serviceClient
