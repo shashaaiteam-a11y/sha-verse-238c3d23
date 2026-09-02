@@ -526,10 +526,13 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
   // to the top instantly via realtime invalidation in useConversations().
   const filteredConversations = conversations
     ?.filter((convo: any) => {
+      // Incoming message requests live in their own section until accepted
+      if (convo.isIncomingRequest) return false;
       const otherUser = convo.otherMembers?.[0];
       if (!searchQuery) return true;
       return otherUser?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
     })
+
     .slice()
     .sort((a: any, b: any) => {
       const ta = new Date(a.lastMessage?.created_at || a.updated_at || a.created_at || 0).getTime();
