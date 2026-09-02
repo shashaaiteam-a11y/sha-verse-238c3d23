@@ -335,22 +335,14 @@ export const useUploadMotion = () => {
 
       if (error) throw error;
 
-      // Update badge motion count
-      const { data: badge } = await supabase
-        .from('creator_badges')
-        .select('total_motions')
-        .eq('channel_id', channelId)
-        .single();
-
-      if (badge) {
-        await supabase
-          .from('creator_badges')
-          .update({ 
-            total_motions: (badge.total_motions || 0) + 1,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('channel_id', channelId);
+      // Update badge motion count (owner-scoped RPC; direct updates are blocked by a DB guard)
+      const { error: badgeError } = await supabase.rpc('increment_creator_badge_motions', {
+        _channel_id: channelId,
+      });
+      if (badgeError) {
+        console.error('Failed to update creator badge motion count', badgeError);
       }
+
 
       return motion;
     },
