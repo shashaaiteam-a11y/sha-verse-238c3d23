@@ -501,11 +501,16 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
         try {
           const conversationId = await startConversation.mutateAsync(initialUserId);
           setSelectedConversation({ id: conversationId, otherMembers: [] });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to create conversation:', error);
+          // Surface the real reason (e.g. "You can only message your friends.")
+          // and fall back to the chat list instead of leaving a blank screen.
+          toast.error(error?.message || 'Failed to start conversation');
+          setSelectedConversation(null);
         } finally {
           setInitializing(false);
         }
+
       }
     };
     
@@ -1290,9 +1295,10 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
               } as any);
             }
             toast.success(`Chat started with ${selectedUser.display_name}`);
-          } catch (error) {
-            toast.error('Failed to start conversation');
+          } catch (error: any) {
+            toast.error(error?.message || 'Failed to start conversation');
           }
+
         }}
       />
 
