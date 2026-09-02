@@ -22,10 +22,13 @@ export const useConversations = () => {
             title,
             is_group,
             created_at,
-            updated_at
+            updated_at,
+            request_status,
+            requested_by
           )
         `)
         .eq('user_id', user.id);
+
 
       if (error) throw error;
       if (!data || data.length === 0) return [];
