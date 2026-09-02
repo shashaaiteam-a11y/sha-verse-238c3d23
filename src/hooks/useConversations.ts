@@ -83,8 +83,14 @@ export const useConversations = () => {
       const conversationsWithMembers = data.map((cm: any) => ({
         ...cm.conversations,
         otherMembers: membersByConversation[cm.conversation_id] || [],
-        lastMessage: lastMessageByConversation[cm.conversation_id] || null
+        lastMessage: lastMessageByConversation[cm.conversation_id] || null,
+        // Pending request that THIS user received (someone who isn't a friend messaged them)
+        isIncomingRequest:
+          cm.conversations?.request_status === 'pending' &&
+          cm.conversations?.requested_by !== user.id,
+        isPendingRequest: cm.conversations?.request_status === 'pending',
       }));
+
 
       return conversationsWithMembers;
     },
