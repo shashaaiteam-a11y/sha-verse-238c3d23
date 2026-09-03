@@ -1187,42 +1187,14 @@ export const MessengerChat = ({ isOpen, onClose, initialUserId }: MessengerChatP
 
                             {metadata?.mediaUrl && !isDeleted && (
                               <div className="mb-2">
-                                {metadata.mediaType === 'image' && (
-                                  <img
-                                    src={metadata.mediaUrl}
-                                    alt="Shared image"
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="rounded-lg max-w-full cursor-pointer hover:opacity-90"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (!inSelectionMode) window.open(metadata.mediaUrl, '_blank');
-                                    }}
-                                  />
-                                )}
-                                {metadata.mediaType === 'video' && (
-                                  <video
-                                    src={metadata.mediaUrl}
-                                    controls
-                                    preload="none"
-                                    playsInline
-                                    className="rounded-lg max-w-full"
-                                  />
-                                )}
-                                {metadata.mediaType === 'file' && (
-                                  <a
-                                    href={metadata.mediaUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => inSelectionMode && e.preventDefault()}
-                                    className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg hover:bg-secondary text-foreground"
-                                  >
-                                    <FileText className="w-8 h-8 text-primary" />
-                                    <span className="text-sm underline">Download File</span>
-                                  </a>
-                                )}
+                                <ChatMediaAttachment
+                                  mediaUrl={metadata.mediaUrl}
+                                  mediaType={metadata.mediaType}
+                                  disableOpen={inSelectionMode}
+                                />
                               </div>
                             )}
+
 
                             {isDeleted ? (
                               <p className="text-sm text-muted-foreground flex items-center gap-1">
