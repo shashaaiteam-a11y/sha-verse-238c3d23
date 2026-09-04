@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Play, Volume2, VolumeX, RotateCcw } from "lucide-react";
+import { Play, Volume2, VolumeX, RotateCcw, Maximize } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVideoAutoPlay } from "@/hooks/useVideoAutoPlay";
 import {
@@ -121,6 +121,36 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
     e.stopPropagation();
     setErrored(false);
     setReloadKey((k) => k + 1);
+  }, []);
+
+  // Fullscreen toggle — true fullscreen on the SAME video element.
+  // Exiting fullscreen (system back/close) returns to the exact same
+  // screen/scroll position automatically; playback state is untouched.
+  const toggleFullscreen = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const v = videoRef.current as (HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void;
+      webkitRequestFullscreen?: () => void;
+    }) | null;
+    if (!v) return;
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
+      } else if (v.requestFullscreen) {
+        v.requestFullscreen().catch(() => {
+          // Fallbacks for older WebViews / iOS-style players
+          if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+          else v.webkitRequestFullscreen?.();
+        });
+      } else if (v.webkitEnterFullscreen) {
+        v.webkitEnterFullscreen();
+      } else {
+        v.webkitRequestFullscreen?.();
+      }
+    } catch {
+      v.webkitEnterFullscreen?.();
+    }
   }, []);
 
   const showPlayOverlay = !started && !autoPlayEnabled;
