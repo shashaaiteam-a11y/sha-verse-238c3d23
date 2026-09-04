@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Play, Volume2, VolumeX, RotateCcw } from "lucide-react";
+import { Play, Volume2, VolumeX, RotateCcw, Maximize } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVideoAutoPlay } from "@/hooks/useVideoAutoPlay";
 import {
@@ -123,6 +123,36 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
     setReloadKey((k) => k + 1);
   }, []);
 
+  // Fullscreen toggle — true fullscreen on the SAME video element.
+  // Exiting fullscreen (system back/close) returns to the exact same
+  // screen/scroll position automatically; playback state is untouched.
+  const toggleFullscreen = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const v = videoRef.current as (HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void;
+      webkitRequestFullscreen?: () => void;
+    }) | null;
+    if (!v) return;
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
+      } else if (v.requestFullscreen) {
+        v.requestFullscreen().catch(() => {
+          // Fallbacks for older WebViews / iOS-style players
+          if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+          else v.webkitRequestFullscreen?.();
+        });
+      } else if (v.webkitEnterFullscreen) {
+        v.webkitEnterFullscreen();
+      } else {
+        v.webkitRequestFullscreen?.();
+      }
+    } catch {
+      v.webkitEnterFullscreen?.();
+    }
+  }, []);
+
   const showPlayOverlay = !started && !autoPlayEnabled;
   const isPointerThrough = previewOnly;
 
@@ -180,6 +210,23 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
           ) : (
             <VolumeX className="w-5 h-5" />
           )}
+        </button>
+      )}
+
+      {/* Fullscreen toggle — videos only, isolated add-on; visible on all displayed videos */}
+      {!previewOnly && !errored && (
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label="Fullscreen video"
+          className={cn(
+            "absolute top-3 right-3 z-10 w-10 h-10 rounded-full",
+            "bg-black/60 backdrop-blur-sm text-white shadow-lg",
+            "flex items-center justify-center",
+            "hover:bg-black/75 active:scale-95 transition-all"
+          )}
+        >
+          <Maximize className="w-5 h-5" />
         </button>
       )}
 
