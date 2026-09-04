@@ -213,6 +213,23 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
         </button>
       )}
 
+      {/* Fullscreen toggle — videos only, isolated add-on; visible on all displayed videos */}
+      {!previewOnly && !errored && (
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label="Fullscreen video"
+          className={cn(
+            "absolute top-3 right-3 z-10 w-10 h-10 rounded-full",
+            "bg-black/60 backdrop-blur-sm text-white shadow-lg",
+            "flex items-center justify-center",
+            "hover:bg-black/75 active:scale-95 transition-all"
+          )}
+        >
+          <Maximize className="w-5 h-5" />
+        </button>
+      )}
+
       {/* Error / retry overlay */}
       {errored && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 text-white text-sm gap-3 z-20">
