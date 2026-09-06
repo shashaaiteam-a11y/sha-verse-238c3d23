@@ -106,6 +106,25 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
     });
   };
 
+  // Tap/click the video itself to toggle play/pause (social-feed behaviour).
+  // Buttons (speaker, fullscreen) stopPropagation, so they never reach here.
+  const handleVideoTap = useCallback((e: React.MouseEvent<HTMLVideoElement>) => {
+    if (previewOnly) return;
+    // Ignore clicks on native controls / any element other than the video itself.
+    if (e.target !== e.currentTarget) return;
+    e.stopPropagation();
+
+    const v = videoRef.current;
+    if (!v) return;
+
+    if (v.paused || v.ended) {
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
+  }, [previewOnly]);
+
+
   const toggleSound = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -167,6 +186,7 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
         playsInline
         preload="metadata"
         muted={!started && !soundOn}
+        onClick={previewOnly ? undefined : handleVideoTap}
         className={cn(
           "w-full h-full",
           aspect === "contain" ? "object-contain" : "object-cover"
