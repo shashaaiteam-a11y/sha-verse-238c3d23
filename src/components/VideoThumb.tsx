@@ -186,6 +186,7 @@ export const VideoThumb = ({ src, poster, className, aspect = "cover", previewOn
         playsInline
         preload="metadata"
         muted={!started && !soundOn}
+        onClick={previewOnly ? undefined : handleVideoTap}
         className={cn(
           "w-full h-full",
           aspect === "contain" ? "object-contain" : "object-cover"
