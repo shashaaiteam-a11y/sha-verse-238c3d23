@@ -4115,6 +4115,84 @@ export type Database = {
         }
         Relationships: []
       }
+      push_delivery_log: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          error_code: string | null
+          error_detail: string | null
+          id: string
+          notification_id: string
+          status: string
+          token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          error_code?: string | null
+          error_detail?: string | null
+          id?: string
+          notification_id: string
+          status: string
+          token: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          error_code?: string | null
+          error_detail?: string | null
+          id?: string
+          notification_id?: string
+          status?: string
+          token?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      push_tokens: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          device_id: string | null
+          device_label: string | null
+          enabled: boolean
+          id: string
+          last_seen_at: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          device_id?: string | null
+          device_label?: string | null
+          enabled?: boolean
+          id?: string
+          last_seen_at?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          device_id?: string | null
+          device_label?: string | null
+          enabled?: boolean
+          id?: string
+          last_seen_at?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reader_bookmarks: {
         Row: {
           book_id: string
@@ -5305,6 +5383,7 @@ export type Database = {
           id: string
           last_seen_visibility: string | null
           online_status_visibility: string | null
+          push_enabled: boolean
           read_receipts_enabled: boolean | null
           updated_at: string | null
           user_id: string
@@ -5314,6 +5393,7 @@ export type Database = {
           id?: string
           last_seen_visibility?: string | null
           online_status_visibility?: string | null
+          push_enabled?: boolean
           read_receipts_enabled?: boolean | null
           updated_at?: string | null
           user_id: string
@@ -5323,6 +5403,7 @@ export type Database = {
           id?: string
           last_seen_visibility?: string | null
           online_status_visibility?: string | null
+          push_enabled?: boolean
           read_receipts_enabled?: boolean | null
           updated_at?: string | null
           user_id?: string
@@ -6194,6 +6275,7 @@ export type Database = {
           id: string
           last_seen_visibility: string | null
           online_status_visibility: string | null
+          push_enabled: boolean
           read_receipts_enabled: boolean | null
           updated_at: string | null
           user_id: string
