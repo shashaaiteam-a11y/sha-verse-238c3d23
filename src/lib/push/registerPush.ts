@@ -42,16 +42,23 @@ export const saveToken = async (token: string, platform: PushPlatform): Promise<
   if (!userId) return;
 
   const deviceId = getDeviceId();
+  const tokenSuffix = token.slice(-8); // Only log last 8 chars for security
+
+  console.log('[push] saveToken - platform:', platform, 'token suffix:', tokenSuffix);
 
   // A device's token can rotate — clear the old row for this device first.
-  await supabase
+  const deleteResult = await supabase
     .from('push_tokens')
     .delete()
     .eq('user_id', userId)
     .eq('device_id', deviceId)
     .neq('token', token);
 
-  await supabase.from('push_tokens').upsert(
+  if (deleteResult.error) {
+    console.error('[push] saveToken - delete error:', deleteResult.error);
+  }
+
+  const upsertResult = await supabase.from('push_tokens').upsert(
     {
       user_id: userId,
       token,
@@ -63,6 +70,12 @@ export const saveToken = async (token: string, platform: PushPlatform): Promise<
     },
     { onConflict: 'token' },
   );
+
+  if (upsertResult.error) {
+    console.error('[push] saveToken - upsert error:', upsertResult.error);
+  } else {
+    console.log('[push] saveToken - upsert success for platform:', platform);
+  }
 };
 
 /** Detach this device from the current account (called on logout). */
@@ -71,6 +84,48 @@ export const removeCurrentDeviceToken = async (): Promise<void> => {
   const userId = auth?.user?.id;
   if (!userId) return;
   await supabase.from('push_tokens').delete().eq('user_id', userId).eq('device_id', getDeviceId());
+};
+
+/** Query and log push_tokens for the current user for debugging */
+export const debugPushTokens = async (): Promise<void> => {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth?.user?.id;
+  if (!userId) {
+    console.log('[push] debugPushTokens - no user logged in');
+    return;
+  }
+
+  const deviceId = getDeviceId();
+  console.log('[push] debugPushTokens - user_id:', userId, 'device_id:', deviceId);
+
+  const { data: tokens, error } = await supabase
+    .from('push_tokens')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('device_id', deviceId);
+
+  if (error) {
+    console.error('[push] debugPushTokens - query error:', error);
+    return;
+  }
+
+  if (!tokens || tokens.length === 0) {
+    console.log('[push] debugPushTokens - NO TOKENS FOUND for this device');
+    return;
+  }
+
+  console.log('[push] debugPushTokens - found', tokens.length, 'token(s) for this device');
+  tokens.forEach((token, index) => {
+    const tokenSuffix = token.token.slice(-8); // Only log last 8 chars for security
+    console.log(`[push] debugPushTokens - token ${index + 1}:`, {
+      platform: token.platform,
+      enabled: token.enabled,
+      token_suffix: tokenSuffix,
+      last_seen_at: token.last_seen_at,
+      created_at: token.created_at,
+      device_label: token.device_label,
+    });
+  });
 };
 
 // ------------------------------------------------------------------ native
@@ -102,6 +157,8 @@ const registerNative = async (
   return await new Promise<PushRegisterResult>((resolve) => {
     let settled = false;
     PushNotifications.addListener('registration', (t) => {
+      const tokenSuffix = t.value.slice(-8); // Only log last 8 chars for security
+      console.log('[push] registration success - platform:', platform, 'token suffix:', tokenSuffix);
       onToken(t.value, platform);
       if (!settled) {
         settled = true;
@@ -109,14 +166,17 @@ const registerNative = async (
       }
     });
     PushNotifications.addListener('registrationError', (err) => {
+      console.error('[push] registration error:', err);
       if (!settled) {
         settled = true;
         resolve({ status: 'error', message: String(err?.error ?? 'registration failed') });
       }
     });
+    console.log('[push] calling PushNotifications.register() for platform:', platform);
     PushNotifications.register();
     setTimeout(() => {
       if (!settled) {
+        console.error('[push] registration timed out for platform:', platform);
         settled = true;
         resolve({ status: 'error', message: 'registration timed out' });
       }
@@ -158,6 +218,9 @@ const registerWeb = async (): Promise<PushRegisterResult> => {
  */
 export const registerPush = async (): Promise<PushRegisterResult> => {
   try {
+    const platform = isNativePush() ? (Capacitor.getPlatform() === 'ios' ? 'ios' : 'android') : 'web';
+    console.log('[push] registerPush called - platform:', platform, 'isNativePush:', isNativePush());
+
     if (isNativePush()) {
       return await registerNative((token, platform) => {
         void saveToken(token, platform);

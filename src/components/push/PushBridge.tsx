@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/contexts/AuthContext';
-import { registerPush, removeCurrentDeviceToken, isNativePush } from '@/lib/push/registerPush';
+import { registerPush, removeCurrentDeviceToken, isNativePush, debugPushTokens } from '@/lib/push/registerPush';
 import { resolvePushPath } from '@/lib/push/handlePushTap';
 
 export const PushBridge = () => {
@@ -45,6 +45,9 @@ export const PushBridge = () => {
       const result = await registerPush();
       if (result.status !== 'registered') {
         console.info('[push] not registered:', result.status);
+      } else {
+        // Query push_tokens table to verify token was saved
+        await debugPushTokens();
       }
     })();
   }, [user?.id]);
