@@ -47,6 +47,7 @@ import { AppBackButtonHandler } from "./components/AppBackButtonHandler";
 import { useAuth } from "./contexts/AuthContext";
 import { AdProvider } from "./contexts/AdContext";
 import { ChatPresenceBridge } from "./components/chat/ChatPresenceBridge";
+import { PushBridge } from "./components/push/PushBridge";
 import { GlobalCallHost } from "./modules/chats/components/GlobalCallHost";
 import { AdSenseLoader } from "./components/web/AdSenseLoader";
 import { SiteFooter } from "./components/web/SiteFooter";
@@ -224,6 +225,7 @@ const App = () => (
             <MobileProvider>
               <AdProvider>
                 <ChatPresenceBridge />
+                <PushBridge />
                 <ModulePrefetcher />
                 <AppBackButtonHandler />
                 <GlobalCallHost>

@@ -56,6 +56,13 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Push notifications (FCM) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="sha_verse_default" />
+
     </application>
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 </manifest>

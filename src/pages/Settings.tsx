@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { ProfileSettingsDialog } from "@/components/profile/ProfileSettingsDialog";
+import { PushNotificationSetting } from "@/components/push/PushNotificationSetting";
 import { useToast } from "@/components/ui/use-toast";
 
 const Settings = () => {
@@ -187,6 +188,9 @@ const Settings = () => {
             </Card>
           </div>
         ))}
+
+        {/* Push notifications (system alerts when the app is closed) */}
+        <PushNotificationSetting />
 
         {/* Logout Button */}
         <Card className="mt-6">
