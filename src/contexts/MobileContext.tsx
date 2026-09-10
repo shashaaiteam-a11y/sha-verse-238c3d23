@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Network } from '@capacitor/network';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 
 interface MobileContextType {
   isOnline: boolean;
@@ -26,14 +28,14 @@ const getScreenSize = (width: number): 'xs' | 'sm' | 'md' | 'lg' | 'xl' => {
 };
 
 export const MobileProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { resolvedTheme } = useTheme();
   const [isOnline, setIsOnline] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [screenSize, setScreenSize] = useState<'xs' | 'sm' | 'md' | 'lg' | 'xl'>('md');
   
-  const isCapacitor = typeof window !== 'undefined' && 
-    (window as any).Capacitor !== undefined;
+  const isCapacitor = Capacitor.isNativePlatform();
 
   useEffect(() => {
     // Initialize Capacitor plugins
@@ -43,9 +45,6 @@ export const MobileProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           // Hide splash screen after app loads
           await SplashScreen.hide();
           
-          // Set status bar style
-          await StatusBar.setStyle({ style: Style.Light });
-          await StatusBar.setBackgroundColor({ color: '#2563eb' });
         } catch (error) {
           console.log('Capacitor plugins not available:', error);
         }
@@ -94,6 +93,18 @@ export const MobileProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       Network.removeAllListeners();
     };
   }, [isCapacitor]);
+
+  // Android 15+ owns the transparent edge-to-edge system-bar backgrounds.
+  // Only synchronize icon contrast with SHA-VERSE's active light/dark theme.
+  useEffect(() => {
+    if (!isCapacitor || !resolvedTheme) return;
+
+    StatusBar.setStyle({
+      style: resolvedTheme === 'dark' ? Style.Dark : Style.Light,
+    }).catch((error) => {
+      console.log('Status bar style not available:', error);
+    });
+  }, [isCapacitor, resolvedTheme]);
 
   // Redirect to offline page when connection is lost
   useEffect(() => {

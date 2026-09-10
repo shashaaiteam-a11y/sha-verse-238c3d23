@@ -14,6 +14,9 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: "#0F172A",
     allowMixedContent: true,
+    // Capacitor 7 applies system-bar and display-cutout margins only where
+    // Android 15+ enforces edge-to-edge, without changing older Android layouts.
+    adjustMarginsForEdgeToEdge: "auto",
   },
   ios: {
     backgroundColor: "#0F172A",
@@ -25,11 +28,9 @@ const config: CapacitorConfig = {
       initializeForTesting: false,
     },
     StatusBar: {
-      // App content extends behind the status bar so env(safe-area-inset-top)
-      // returns a real value on Android (matches Facebook / WhatsApp / YouTube behavior).
-      overlaysWebView: true,
+      // System-bar backgrounds are owned by Android's edge-to-edge rendering.
+      // The plugin remains only for light/dark icon appearance.
       style: "DEFAULT",
-      backgroundColor: "#00000000",
     },
     SocialLogin: {
       google: {
