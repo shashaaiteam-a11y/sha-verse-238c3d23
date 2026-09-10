@@ -209,7 +209,22 @@ Deno.serve(async (req) => {
           data: { path, notification_id: notification.id, type: notification.type ?? '' },
           android: {
             priority: 'HIGH',
-            notification: { channel_id: 'sha_verse_default', default_sound: true },
+            ttl: '86400s',
+            direct_boot_ok: true,
+            notification: {
+              channel_id: 'sha_verse_default',
+              default_sound: true,
+              default_vibrate_timings: true,
+              notification_priority: 'PRIORITY_MAX',
+              visibility: 'PUBLIC',
+              icon: 'ic_stat_notify',
+              tag: notification.id,
+              click_action: 'FCM_PLUGIN_ACTIVITY',
+            },
+          },
+          apns: {
+            headers: { 'apns-priority': '10', 'apns-push-type': 'alert' },
+            payload: { aps: { sound: 'default', badge: 1, 'content-available': 1 } },
           },
           webpush: {
             fcm_options: { link: path },
