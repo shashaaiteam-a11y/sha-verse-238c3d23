@@ -219,7 +219,6 @@ Deno.serve(async (req) => {
               visibility: 'PUBLIC',
               icon: 'ic_stat_notify',
               tag: notification.id,
-              click_action: 'FCM_PLUGIN_ACTIVITY',
             },
           },
           apns: {
