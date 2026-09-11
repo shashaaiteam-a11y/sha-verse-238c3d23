@@ -521,8 +521,8 @@ const BookReader = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="min-w-0">
-              <h1 className="font-semibold truncate max-w-[46vw] sm:max-w-[240px] text-sm sm:text-base">{book.title}</h1>
-              <p className="truncate max-w-[46vw] sm:max-w-[240px] text-[11px] text-muted-foreground">
+              <h1 className="font-semibold truncate max-w-[26vw] sm:max-w-[240px] text-sm sm:text-base">{book.title}</h1>
+              <p className="truncate max-w-[26vw] sm:max-w-[240px] text-[11px] text-muted-foreground">
                 {isReaderMode && readerPagination.chapterTitle
                   ? readerPagination.chapterTitle
                   : book.author}
@@ -576,15 +576,34 @@ const BookReader = () => {
               )}
             </Button>
 
-            {/* TOC */}
-            <Button variant="ghost" size="icon" onClick={() => { setShowToc(!showToc); setShowBookmarks(false); }}>
+            {/* TOC (desktop inline; mobile inside overflow menu) */}
+            <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={() => { setShowToc(!showToc); setShowBookmarks(false); }}>
               <List className="w-5 h-5" />
             </Button>
 
-            {/* Bookmarks List */}
-            <Button variant="ghost" size="icon" onClick={() => { setShowBookmarks(!showBookmarks); setShowToc(false); }}>
+            {/* Bookmarks List (desktop inline; mobile inside overflow menu) */}
+            <Button variant="ghost" size="icon" className="hidden sm:flex" onClick={() => { setShowBookmarks(!showBookmarks); setShowToc(false); }}>
               <Bookmark className="w-5 h-5" />
             </Button>
+
+            {/* Mobile overflow menu: TOC + Bookmarks list */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="sm:hidden" aria-label="More options">
+                  <MoreVertical className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-[60]">
+                <DropdownMenuItem onClick={() => { setShowToc(true); setShowBookmarks(false); }}>
+                  <List className="w-4 h-4 mr-2" />
+                  Table of Contents
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setShowBookmarks(true); setShowToc(false); }}>
+                  <Bookmark className="w-4 h-4 mr-2" />
+                  Bookmarks
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Settings */}
             <Sheet>
