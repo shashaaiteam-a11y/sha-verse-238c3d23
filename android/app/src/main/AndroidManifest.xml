@@ -59,7 +59,7 @@
         <!-- Push notifications (FCM) -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="sha_verse_default" />
+            android:value="sha_verse_alerts_v2" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_stat_notify" />

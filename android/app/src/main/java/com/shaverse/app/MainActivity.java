@@ -17,7 +17,7 @@ import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
     /** Must match the FCM default channel declared in AndroidManifest.xml. */
-    private static final String PUSH_CHANNEL_ID = "sha_verse_default";
+    private static final String PUSH_CHANNEL_ID = "sha_verse_alerts_v2";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -41,7 +41,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null || manager.getNotificationChannel(PUSH_CHANNEL_ID) != null) return;
         NotificationChannel channel = new NotificationChannel(
-            PUSH_CHANNEL_ID, "SHA-VERSE", NotificationManager.IMPORTANCE_HIGH);
+            PUSH_CHANNEL_ID, "SHA-VERSE Alerts", NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Likes, comments, messages, friend requests and updates");
         channel.enableVibration(true);
         channel.enableLights(true);
