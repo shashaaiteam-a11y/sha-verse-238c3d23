@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
             ttl: '86400s',
             direct_boot_ok: true,
             notification: {
-              channel_id: 'sha_verse_default',
+              channel_id: 'sha_verse_alerts_v2',
               default_sound: true,
               default_vibrate_timings: true,
               notification_priority: 'PRIORITY_MAX',

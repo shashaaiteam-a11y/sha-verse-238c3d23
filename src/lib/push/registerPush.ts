@@ -90,8 +90,8 @@ const registerNative = async (
   // Android 8+ needs an explicit channel, matching the manifest default.
   if (platform === 'android') {
     await PushNotifications.createChannel({
-      id: 'sha_verse_default',
-      name: 'SHA-VERSE',
+      id: 'sha_verse_alerts_v2',
+      name: 'SHA-VERSE Alerts',
       description: 'Likes, comments, messages, friend requests and updates',
       importance: 5,
       visibility: 1,
