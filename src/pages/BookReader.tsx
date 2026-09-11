@@ -16,8 +16,14 @@ import { loadAnchor, saveAnchor } from "@/lib/reader/cache";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Moon, Sun, Bookmark, BookmarkCheck, Settings,
   ZoomIn, ZoomOut, Book, List, X, FileText, Type, Minus, Plus, Palette,
-  Search, BookOpen, ScanLine, Loader2
+  Search, BookOpen, ScanLine, Loader2, MoreVertical
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
