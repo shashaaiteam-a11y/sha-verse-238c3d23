@@ -19,6 +19,7 @@ import type {
 
 import { REFLOW_MODEL_VERSION } from "./types";
 import { assessPageText, isBoilerplate, isGarbageLine } from "./quality";
+import { repairSmallCaps } from "./sanitize";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -124,7 +125,7 @@ function buildLines(items: any[]): Line[] {
     const sizes = ordered.map((i) => i.size);
     const last = ordered[ordered.length - 1];
     return {
-      text: text.replace(/\s+/g, " ").trim(),
+      text: repairSmallCaps(text.replace(/\s+/g, " ").trim()),
       x: ordered[0].x,
       right: last.x + last.width,
       y: ordered[0].y,

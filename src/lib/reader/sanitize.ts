@@ -58,6 +58,20 @@ export function normalizeReaderText(input: string): string {
   return text.replace(/[ \t\u00A0]{2,}/g, " ").trim();
 }
 
+/**
+ * Repair small-caps titles that PDFs emit as separated glyphs
+ * (`F OREWORD`, `K YLE W ILLIAM B ISHOP`) so they read as real words.
+ * Applied only to fully upper-case lines, so normal prose like
+ * "A NASA report" is never touched.
+ */
+export function repairSmallCaps(line: string): string {
+  const text = line.trim();
+  if (!text || text.length > 140) return line;
+  if (/[a-z]/.test(text)) return line;
+  if (!/\b[A-Z]\s+[A-Z]{2,}/.test(text)) return line;
+  return text.replace(/\b([A-Z])\s+([A-Z]{2,})/g, "$1$2");
+}
+
 const METADATA_PATTERNS: RegExp[] = [
   /^%%?(PDF|EOF)/i,
   /^\d+\s+\d+\s+obj\b/,

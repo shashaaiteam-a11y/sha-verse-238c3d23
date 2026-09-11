@@ -74,6 +74,15 @@ const PAGED_CSS = `
   -webkit-column-break-inside: avoid;
   page-break-inside: avoid;
 }
+.pf-content[data-mode="columns"] p { orphans: 2; widows: 2; }
+.pf-content[data-mode="columns"] h1,
+.pf-content[data-mode="columns"] h2,
+.pf-content[data-mode="columns"] h3,
+.pf-content[data-mode="columns"] h4 {
+  break-after: avoid;
+  -webkit-column-break-after: avoid;
+  page-break-after: avoid;
+}
 .pf-content[data-mode="images"] { display: flex; align-items: center; }
 .pf-content[data-mode="images"] > * {
   flex: 0 0 var(--pf-page-w);
@@ -149,7 +158,13 @@ const PagedFlow = forwardRef<PagedFlowHandle, Props>(
       // narrower than the viewport by exactly one gutter.
       const viewportWidth = Math.max(viewport.clientWidth, 1);
       const columnWidth = Math.max(viewportWidth - gap, 1);
-      const height = Math.max(viewport.clientHeight - verticalPadding * 2, 1);
+      const available = Math.max(viewport.clientHeight - verticalPadding * 2, 1);
+      // Snap the column height to a whole number of text lines so a page can
+      // never end on a half-clipped line (Google Play Books behaviour).
+      const lineBox = Math.max(settings.fontSize * settings.lineHeight, 1);
+      const height = imageMode
+        ? available
+        : Math.max(Math.floor(available / lineBox) * lineBox, lineBox);
       const step = viewportWidth;
       stepRef.current = step;
 
@@ -184,7 +199,17 @@ const PagedFlow = forwardRef<PagedFlowHandle, Props>(
       pageRef.current = Math.min(Math.max(pageRef.current, 0), totalRef.current - 1);
       applyTransform(false);
       emit();
-    }, [applyTransform, contentRef, emit, gap, imageMode, verticalPadding, viewportRef]);
+    }, [
+      applyTransform,
+      contentRef,
+      emit,
+      gap,
+      imageMode,
+      settings.fontSize,
+      settings.lineHeight,
+      verticalPadding,
+      viewportRef,
+    ]);
 
 
     const goToPage = useCallback(

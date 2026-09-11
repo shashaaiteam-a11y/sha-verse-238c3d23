@@ -115,4 +115,4 @@ export interface Highlight {
   createdAt: number;
 }
 
-export const REFLOW_MODEL_VERSION = 5;
+export const REFLOW_MODEL_VERSION = 6;
