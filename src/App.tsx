@@ -114,7 +114,7 @@ const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 //
 // Sirf yeh ek line badalni hai. Save karo → app apne aap update ho jayega.
 // ============================================================================
-const MOVION_ENABLED = true;
+const MOVION_ENABLED = false;
 
 // Movion routes decide which component to render based on the switch above.
 const MovionRoot = MOVION_ENABLED ? Movion : MovionComingSoon;
