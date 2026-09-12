@@ -68,8 +68,11 @@ export function repairSmallCaps(line: string): string {
   const text = line.trim();
   if (!text || text.length > 140) return line;
   if (/[a-z]/.test(text)) return line;
-  if (!/\b[A-Z]\s+[A-Z]{2,}/.test(text)) return line;
-  return text.replace(/\b([A-Z])\s+([A-Z]{2,})/g, "$1$2");
+  // Split-glyph small-caps pattern: a single non-word letter followed by a
+  // spaced capital cluster ("F OREWORD"). "A"/"I" are real one-letter words
+  // ("A JOURNEY HOME", "I AM LEGEND") and must never be glued to the next word.
+  if (!/\b[B-HJ-Z]\s+[A-Z]{2,}/.test(text)) return line;
+  return text.replace(/\b([B-HJ-Z])\s+([A-Z]{2,})/g, "$1$2");
 }
 
 const METADATA_PATTERNS: RegExp[] = [
