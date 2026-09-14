@@ -375,8 +375,9 @@ const MovionWatch = () => {
                 setIsVideoError(false);
               }}
               onTimeUpdate={(e) => {
-                if (isScrubbing) return;
                 const el = e.currentTarget;
+                watchTracker.onTimeUpdate(el.currentTime);
+                if (isScrubbing) return;
                 setCurrentTime(el.currentTime);
                 const dur = isFinite(el.duration) && el.duration > 0 ? el.duration : totalDuration;
                 if (dur) setProgress((el.currentTime / dur) * 100);
