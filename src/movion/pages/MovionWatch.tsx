@@ -391,7 +391,15 @@ const MovionWatch = () => {
               }}
               onError={() => setIsVideoError(true)}
               onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
+              onPause={() => {
+                setIsPlaying(false);
+                watchTracker.onPause();
+              }}
+              onEnded={() => {
+                setIsPlaying(false);
+                watchTracker.onPause();
+              }}
+              onSeeking={() => watchTracker.onPause()}
             />
 
             {/* Unavailable state */}
