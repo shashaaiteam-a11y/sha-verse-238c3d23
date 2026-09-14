@@ -1,5 +1,6 @@
 // Movion Watch Page - Live with Supabase + Related Videos Algorithm
 import { useState, useRef, useEffect } from "react";
+import Hls from "hls.js";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ThumbsUp, ThumbsDown, Share2, Download, MoreVertical, 
@@ -71,6 +72,14 @@ const MovionWatch = () => {
   const [midRollShown, setMidRollShown] = useState(false);
   const [showMidRoll, setShowMidRoll] = useState(false);
   const [adFreeUntil, setAdFreeUntil] = useState<Date | null>(null);
+  // YouTube-style seek bar state
+  const seekBarRef = useRef<HTMLDivElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [bufferedPercent, setBufferedPercent] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [hoverRatio, setHoverRatio] = useState<number | null>(null);
+  const [isVideoError, setIsVideoError] = useState(false);
 
   // Rewarded ad for 1 hour ad-free watching
   const { watchAd: watchAdFreeAd, isWatching: isWatchingAdFree } = useRewardedAd({
@@ -89,18 +98,54 @@ const MovionWatch = () => {
 
   const isAdFree = adFreeUntil && adFreeUntil > new Date();
   
-  // Reload and play video when videoId changes
+  // Attach source (direct MP4 or HLS) and play when video changes
   useEffect(() => {
-    if (videoRef.current && video) {
-      videoRef.current.load();
-      videoRef.current.play().catch(() => {});
-      setProgress(0);
-      setIsPlaying(true);
-      setPreRollDone(false);
-      setMidRollShown(false);
-      setShowMidRoll(false);
+    const el = videoRef.current;
+    if (!el || !video) return;
+
+    const direct = video.video_url || '';
+    const hlsUrl = video.hls_url || '';
+    let hls: Hls | null = null;
+
+    setIsVideoError(false);
+    setProgress(0);
+    setCurrentTime(0);
+    setVideoDuration(video.duration || 0);
+    setBufferedPercent(0);
+    setIsPlaying(true);
+    setPreRollDone(false);
+    setMidRollShown(false);
+    setShowMidRoll(false);
+
+    const isHls = (url: string) => url.toLowerCase().includes('.m3u8');
+
+    if (direct && !isHls(direct)) {
+      el.src = direct;
+      el.load();
+    } else {
+      const streamUrl = isHls(direct) ? direct : hlsUrl;
+      if (streamUrl) {
+        if (el.canPlayType('application/vnd.apple.mpegurl')) {
+          el.src = streamUrl;
+          el.load();
+        } else if (Hls.isSupported()) {
+          hls = new Hls({ enableWorker: true });
+          hls.loadSource(streamUrl);
+          hls.attachMedia(el);
+        } else {
+          setIsVideoError(true);
+        }
+      } else {
+        setIsVideoError(true);
+      }
     }
-  }, [video?.id]);
+
+    el.play().catch(() => {});
+
+    return () => {
+      hls?.destroy();
+    };
+  }, [video?.id, video?.video_url, video?.hls_url]);
 
   // Trigger mid-roll at 50% for videos 3+ minutes
   useEffect(() => {
@@ -244,6 +289,58 @@ const MovionWatch = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // ---- YouTube-style seek bar helpers ----
+  const totalDuration = videoDuration || video.duration || 0;
+
+  const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || seconds < 0) seconds = 0;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return h > 0
+      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+      : `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const ratioFromEvent = (clientX: number) => {
+    const rect = seekBarRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return 0;
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  };
+
+  const seekToRatio = (ratio: number) => {
+    const el = videoRef.current;
+    if (!el || !totalDuration) return;
+    const time = ratio * totalDuration;
+    el.currentTime = time;
+    setCurrentTime(time);
+    setProgress((time / totalDuration) * 100);
+  };
+
+  const handleSeekPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    setIsScrubbing(true);
+    const ratio = ratioFromEvent(e.clientX);
+    setHoverRatio(ratio);
+    seekToRatio(ratio);
+  };
+
+  const handleSeekPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const ratio = ratioFromEvent(e.clientX);
+    setHoverRatio(ratio);
+    if (isScrubbing) seekToRatio(ratio);
+  };
+
+  const handleSeekPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbing) return;
+    try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    setIsScrubbing(false);
+  };
+
+  const playedPercent = totalDuration ? Math.min(100, (currentTime / totalDuration) * 100) : 0;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-[1800px] mx-auto flex flex-col lg:flex-row gap-6 p-4">
@@ -253,10 +350,9 @@ const MovionWatch = () => {
           <div className="relative aspect-video bg-black rounded-xl overflow-hidden group">
             <video
               ref={videoRef}
-              src={video.hls_url || video.video_url}
               poster={video.thumbnail_url}
               className="w-full h-full object-contain"
-              autoPlay
+              playsInline
               onClick={() => {
                 if (videoRef.current) {
                   if (videoRef.current.paused) {
@@ -266,9 +362,37 @@ const MovionWatch = () => {
                   }
                 }
               }}
+              onLoadedMetadata={(e) => {
+                const el = e.currentTarget;
+                if (isFinite(el.duration)) setVideoDuration(el.duration);
+                setIsVideoError(false);
+              }}
+              onTimeUpdate={(e) => {
+                if (isScrubbing) return;
+                const el = e.currentTarget;
+                setCurrentTime(el.currentTime);
+                const dur = isFinite(el.duration) && el.duration > 0 ? el.duration : totalDuration;
+                if (dur) setProgress((el.currentTime / dur) * 100);
+              }}
+              onProgress={(e) => {
+                const el = e.currentTarget;
+                const dur = isFinite(el.duration) && el.duration > 0 ? el.duration : totalDuration;
+                if (!dur || el.buffered.length === 0) return;
+                const end = el.buffered.end(el.buffered.length - 1);
+                setBufferedPercent(Math.min(100, (end / dur) * 100));
+              }}
+              onError={() => setIsVideoError(true)}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
             />
+
+            {/* Unavailable state */}
+            {isVideoError && (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/80 text-white">
+                <p className="font-semibold">Video unavailable</p>
+                <p className="text-xs text-white/60">This video source can’t be played right now.</p>
+              </div>
+            )}
 
             {/* Pre-roll Ad Overlay - Skip if ad-free */}
             {!preRollDone && !isAdFree && (
@@ -286,18 +410,57 @@ const MovionWatch = () => {
             )}
 
             {/* Video Controls Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-              {/* Progress Bar */}
-              <div className="w-full h-1 bg-white/30 rounded-full mb-3 cursor-pointer">
-                <div 
-                  className="h-full bg-red-600 rounded-full relative"
-                  style={{ width: `${progress}%` }}
-                >
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full" />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-3 pt-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+              {/* Progress / Seek Bar */}
+              <div
+                ref={seekBarRef}
+                role="slider"
+                aria-label="Seek"
+                aria-valuemin={0}
+                aria-valuemax={Math.round(totalDuration)}
+                aria-valuenow={Math.round(currentTime)}
+                tabIndex={0}
+                className="relative w-full py-3 -my-1 cursor-pointer touch-none select-none group/seek"
+                onPointerDown={handleSeekPointerDown}
+                onPointerMove={handleSeekPointerMove}
+                onPointerUp={handleSeekPointerUp}
+                onPointerCancel={handleSeekPointerUp}
+                onPointerLeave={() => { if (!isScrubbing) setHoverRatio(null); }}
+                onKeyDown={(e) => {
+                  if (!totalDuration) return;
+                  if (e.key === 'ArrowRight') { e.preventDefault(); seekToRatio(Math.min(1, (currentTime + 5) / totalDuration)); }
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); seekToRatio(Math.max(0, (currentTime - 5) / totalDuration)); }
+                }}
+              >
+                <div className="relative h-1 w-full rounded-full bg-white/30 overflow-hidden group-hover/seek:h-1.5 transition-all">
+                  {/* Buffered */}
+                  <div
+                    className="absolute inset-y-0 left-0 bg-white/50"
+                    style={{ width: `${bufferedPercent}%` }}
+                  />
+                  {/* Played */}
+                  <div
+                    className="absolute inset-y-0 left-0 bg-red-600"
+                    style={{ width: `${playedPercent}%` }}
+                  />
                 </div>
+                {/* Scrub handle */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-600 shadow transition-transform"
+                  style={{ left: `${playedPercent}%`, transform: `translate(-50%, -50%) scale(${isScrubbing ? 1.3 : 1})` }}
+                />
+                {/* Timestamp preview */}
+                {hoverRatio !== null && totalDuration > 0 && (
+                  <div
+                    className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded bg-black/85 text-white text-[11px] font-medium pointer-events-none whitespace-nowrap"
+                    style={{ left: `${hoverRatio * 100}%` }}
+                  >
+                    {formatTime(hoverRatio * totalDuration)}
+                  </div>
+                )}
               </div>
-              
-              <div className="flex items-center justify-between">
+
+              <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-3">
                   <button onClick={() => {
                     if (videoRef.current) {
@@ -314,7 +477,9 @@ const MovionWatch = () => {
                   }}>
                     {isMuted ? <VolumeX className="w-6 h-6 text-white" /> : <Volume2 className="w-6 h-6 text-white" />}
                   </button>
-                  <span className="text-white text-sm">{formatDuration(video.duration)}</span>
+                  <span className="text-white text-xs sm:text-sm tabular-nums">
+                    {formatTime(currentTime)} / {formatTime(totalDuration)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Settings className="w-5 h-5 text-white cursor-pointer" />
