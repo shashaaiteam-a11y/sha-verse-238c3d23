@@ -34,6 +34,7 @@ import { ShareDialog } from "@/components/ShareDialog";
 import CommentItem from "@/movion/components/CommentItem";
 import { VideoPreRollAd, VideoMidRollAd, RewardedAdButton } from "@/components/ads";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
+import { useWatchTracker } from "@/lib/movion/useWatchTracker";
 
 const MovionWatch = () => {
   const { videoId } = useParams();
@@ -45,7 +46,7 @@ const MovionWatch = () => {
   
   // Supabase hooks
   const { video, isLoading: videoLoading } = useVideo(videoId);
-  const { videos: allVideos, incrementView } = useVideos();
+  const { videos: allVideos } = useVideos();
   const { comments, addComment, isLoading: commentsLoading } = useVideoComments(videoId);
   const { isLiked, isDisliked, toggleLike, toggleDislike } = useVideoLike(videoId);
   const addToHistory = useAddToHistory();
@@ -158,11 +159,10 @@ const MovionWatch = () => {
     }
   }, [progress, video, midRollShown]);
 
-  // Add to history and increment views on mount
+  // Add to history on mount (views are counted server-side by the watch tracker)
   useEffect(() => {
     if (video && user) {
       addToHistory.mutate({ videoId: video.id });
-      incrementView.mutate(video.id);
     }
   }, [video?.id, user?.id]);
   
