@@ -83,6 +83,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         recordEngagement(video, videoRef.current.currentTime, false);
         videoRef.current.pause();
       }
+      watchTracker.onPause();
       setIsPlaying(false);
       setProgress(0);
     }
@@ -148,7 +149,11 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
           loop 
           playsInline 
           muted={isMuted}
-          onTimeUpdate={() => setProgress((videoRef.current?.currentTime || 0) / (videoRef.current?.duration || 1) * 100)}
+          onTimeUpdate={() => {
+            const t = videoRef.current?.currentTime || 0;
+            setProgress((t / (videoRef.current?.duration || 1)) * 100);
+            if (isActive && !videoRef.current?.paused) watchTracker.onTimeUpdate(t);
+          }}
           onWaiting={() => setIsLoading(true)}
           onPlaying={() => {
             setIsLoading(false);
