@@ -350,10 +350,9 @@ const MovionWatch = () => {
           <div className="relative aspect-video bg-black rounded-xl overflow-hidden group">
             <video
               ref={videoRef}
-              src={video.hls_url || video.video_url}
               poster={video.thumbnail_url}
               className="w-full h-full object-contain"
-              autoPlay
+              playsInline
               onClick={() => {
                 if (videoRef.current) {
                   if (videoRef.current.paused) {
@@ -363,9 +362,37 @@ const MovionWatch = () => {
                   }
                 }
               }}
+              onLoadedMetadata={(e) => {
+                const el = e.currentTarget;
+                if (isFinite(el.duration)) setVideoDuration(el.duration);
+                setIsVideoError(false);
+              }}
+              onTimeUpdate={(e) => {
+                if (isScrubbing) return;
+                const el = e.currentTarget;
+                setCurrentTime(el.currentTime);
+                const dur = isFinite(el.duration) && el.duration > 0 ? el.duration : totalDuration;
+                if (dur) setProgress((el.currentTime / dur) * 100);
+              }}
+              onProgress={(e) => {
+                const el = e.currentTarget;
+                const dur = isFinite(el.duration) && el.duration > 0 ? el.duration : totalDuration;
+                if (!dur || el.buffered.length === 0) return;
+                const end = el.buffered.end(el.buffered.length - 1);
+                setBufferedPercent(Math.min(100, (end / dur) * 100));
+              }}
+              onError={() => setIsVideoError(true)}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
             />
+
+            {/* Unavailable state */}
+            {isVideoError && (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/80 text-white">
+                <p className="font-semibold">Video unavailable</p>
+                <p className="text-xs text-white/60">This video source can’t be played right now.</p>
+              </div>
+            )}
 
             {/* Pre-roll Ad Overlay - Skip if ad-free */}
             {!preRollDone && !isAdFree && (
@@ -383,18 +410,57 @@ const MovionWatch = () => {
             )}
 
             {/* Video Controls Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-              {/* Progress Bar */}
-              <div className="w-full h-1 bg-white/30 rounded-full mb-3 cursor-pointer">
-                <div 
-                  className="h-full bg-red-600 rounded-full relative"
-                  style={{ width: `${progress}%` }}
-                >
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full" />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-3 pt-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+              {/* Progress / Seek Bar */}
+              <div
+                ref={seekBarRef}
+                role="slider"
+                aria-label="Seek"
+                aria-valuemin={0}
+                aria-valuemax={Math.round(totalDuration)}
+                aria-valuenow={Math.round(currentTime)}
+                tabIndex={0}
+                className="relative w-full py-3 -my-1 cursor-pointer touch-none select-none group/seek"
+                onPointerDown={handleSeekPointerDown}
+                onPointerMove={handleSeekPointerMove}
+                onPointerUp={handleSeekPointerUp}
+                onPointerCancel={handleSeekPointerUp}
+                onPointerLeave={() => { if (!isScrubbing) setHoverRatio(null); }}
+                onKeyDown={(e) => {
+                  if (!totalDuration) return;
+                  if (e.key === 'ArrowRight') { e.preventDefault(); seekToRatio(Math.min(1, (currentTime + 5) / totalDuration)); }
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); seekToRatio(Math.max(0, (currentTime - 5) / totalDuration)); }
+                }}
+              >
+                <div className="relative h-1 w-full rounded-full bg-white/30 overflow-hidden group-hover/seek:h-1.5 transition-all">
+                  {/* Buffered */}
+                  <div
+                    className="absolute inset-y-0 left-0 bg-white/50"
+                    style={{ width: `${bufferedPercent}%` }}
+                  />
+                  {/* Played */}
+                  <div
+                    className="absolute inset-y-0 left-0 bg-red-600"
+                    style={{ width: `${playedPercent}%` }}
+                  />
                 </div>
+                {/* Scrub handle */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-600 shadow transition-transform"
+                  style={{ left: `${playedPercent}%`, transform: `translate(-50%, -50%) scale(${isScrubbing ? 1.3 : 1})` }}
+                />
+                {/* Timestamp preview */}
+                {hoverRatio !== null && totalDuration > 0 && (
+                  <div
+                    className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded bg-black/85 text-white text-[11px] font-medium pointer-events-none whitespace-nowrap"
+                    style={{ left: `${hoverRatio * 100}%` }}
+                  >
+                    {formatTime(hoverRatio * totalDuration)}
+                  </div>
+                )}
               </div>
-              
-              <div className="flex items-center justify-between">
+
+              <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-3">
                   <button onClick={() => {
                     if (videoRef.current) {
@@ -411,7 +477,9 @@ const MovionWatch = () => {
                   }}>
                     {isMuted ? <VolumeX className="w-6 h-6 text-white" /> : <Volume2 className="w-6 h-6 text-white" />}
                   </button>
-                  <span className="text-white text-sm">{formatDuration(video.duration)}</span>
+                  <span className="text-white text-xs sm:text-sm tabular-nums">
+                    {formatTime(currentTime)} / {formatTime(totalDuration)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Settings className="w-5 h-5 text-white cursor-pointer" />
