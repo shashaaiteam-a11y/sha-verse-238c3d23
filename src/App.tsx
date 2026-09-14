@@ -94,7 +94,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/Offline"));
 const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
 const MovionComingSoon = lazy(() => import("./pages/MovionComingSoon"));
-const MovionGate = lazy(() => import("./components/MovionGate"));
+
 const Pages = lazy(() => import("./pages/Pages"));
 const PageDetail = lazy(() => import("./pages/PageDetail"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
@@ -292,14 +292,14 @@ const App = () => (
                             </ProtectedRoute>
                           }
                         />
-                        <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionRoot)}</ProtectedRoute>} />
+                        <Route path="/movion/*" element={<ProtectedRoute>{withMovionGate(withSuspense(MovionRoot))}</ProtectedRoute>} />
                         <Route
                           path="/video/:videoId"
-                          element={<ProtectedRoute>{withSuspense(MovionWatch)}</ProtectedRoute>}
+                          element={<ProtectedRoute>{withMovionGate(withSuspense(MovionWatch))}</ProtectedRoute>}
                         />
                         <Route
                           path="/channel/:channelId"
-                          element={<ProtectedRoute>{withSuspense(MovionChannel)}</ProtectedRoute>}
+                          element={<ProtectedRoute>{withMovionGate(withSuspense(MovionChannel))}</ProtectedRoute>}
                         />
                         <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
                         <Route
@@ -356,7 +356,7 @@ const App = () => (
                           path="/pages/:pageId/admin"
                           element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>}
                         />
-                        <Route path="/motion" element={<ProtectedRoute>{withSuspense(MotionRoute)}</ProtectedRoute>} />
+                        <Route path="/motion" element={<ProtectedRoute>{withMovionGate(withSuspense(MotionRoute))}</ProtectedRoute>} />
                         <Route
                           path="/post/:postId"
                           element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>}
