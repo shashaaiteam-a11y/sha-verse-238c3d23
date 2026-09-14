@@ -122,7 +122,6 @@ const MovionRoot = Movion;
 const MovionWatch = VideoWatch;
 const MovionChannel = ChannelPage;
 const MotionRoute = Motion;
-const ComingSoonFallback = MovionComingSoon;
 
 const queryClient = new QueryClient({
   defaultOptions: {
