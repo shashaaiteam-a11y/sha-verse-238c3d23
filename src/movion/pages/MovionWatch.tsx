@@ -289,6 +289,58 @@ const MovionWatch = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // ---- YouTube-style seek bar helpers ----
+  const totalDuration = videoDuration || video.duration || 0;
+
+  const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || seconds < 0) seconds = 0;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return h > 0
+      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+      : `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const ratioFromEvent = (clientX: number) => {
+    const rect = seekBarRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return 0;
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  };
+
+  const seekToRatio = (ratio: number) => {
+    const el = videoRef.current;
+    if (!el || !totalDuration) return;
+    const time = ratio * totalDuration;
+    el.currentTime = time;
+    setCurrentTime(time);
+    setProgress((time / totalDuration) * 100);
+  };
+
+  const handleSeekPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    setIsScrubbing(true);
+    const ratio = ratioFromEvent(e.clientX);
+    setHoverRatio(ratio);
+    seekToRatio(ratio);
+  };
+
+  const handleSeekPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const ratio = ratioFromEvent(e.clientX);
+    setHoverRatio(ratio);
+    if (isScrubbing) seekToRatio(ratio);
+  };
+
+  const handleSeekPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbing) return;
+    try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    setIsScrubbing(false);
+  };
+
+  const playedPercent = totalDuration ? Math.min(100, (currentTime / totalDuration) * 100) : 0;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-[1800px] mx-auto flex flex-col lg:flex-row gap-6 p-4">
