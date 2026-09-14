@@ -1,5 +1,6 @@
 // Movion Watch Page - Live with Supabase + Related Videos Algorithm
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import Hls from "hls.js";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ThumbsUp, ThumbsDown, Share2, Download, MoreVertical, 
