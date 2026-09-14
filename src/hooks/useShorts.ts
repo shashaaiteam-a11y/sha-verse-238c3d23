@@ -48,7 +48,13 @@ export const useShorts = () => {
         .limit(50);
       
       if (error) throw error;
-      return (data || []).map(transformVideoData);
+      // Skip seed/demo rows whose media URLs don't exist (they render as "Video unavailable")
+      const isPlayable = (v: any) => {
+        const url: string = v.video_url || v.hls_url || '';
+        if (!url) return false;
+        return !url.includes('sample-videos.com');
+      };
+      return (data || []).filter(isPlayable).map(transformVideoData);
     },
   });
 
