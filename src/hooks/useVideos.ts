@@ -69,20 +69,10 @@ export const useVideos = () => {
     },
   });
 
-  const incrementView = useMutation({
-    mutationFn: async (videoId: string) => {
-      // Insert into video_views — trigger auto-updates videos.views_count
-      await supabase
-        .from('video_views')
-        .insert({ video_id: videoId });
-    },
-    onSuccess: (_, videoId) => {
-      // 🚀 Targeted invalidation: only the specific video, not all videos
-      queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-    },
-  });
+  // NOTE: views are counted server-side only (record_watch_progress RPC).
+  // No client-side view increment exists here by design.
 
-  return { videos, trendingVideos, isLoading, incrementView };
+  return { videos, trendingVideos, isLoading };
 };
 
 export const useVideo = (videoId?: string) => {
