@@ -116,11 +116,13 @@ const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 // ============================================================================
 const MOVION_ENABLED = false;
 
-// Movion routes decide which component to render based on the switch above.
-const MovionRoot = MOVION_ENABLED ? Movion : MovionComingSoon;
-const MovionWatch = MOVION_ENABLED ? VideoWatch : MovionComingSoon;
-const MovionChannel = MOVION_ENABLED ? ChannelPage : MovionComingSoon;
-const MotionRoute = MOVION_ENABLED ? Motion : MovionComingSoon;
+// When the switch is OFF, Movion is still LIVE for admin users only
+// (everyone else keeps seeing the Coming Soon page) — handled by MovionGate.
+const MovionRoot = Movion;
+const MovionWatch = VideoWatch;
+const MovionChannel = ChannelPage;
+const MotionRoute = Motion;
+const ComingSoonFallback = MovionComingSoon;
 
 const queryClient = new QueryClient({
   defaultOptions: {
