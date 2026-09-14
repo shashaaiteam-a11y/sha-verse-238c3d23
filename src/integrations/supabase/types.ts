@@ -5690,6 +5690,56 @@ export type Database = {
           },
         ]
       }
+      video_watch_sessions: {
+        Row: {
+          counted_view: boolean
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          is_short: boolean
+          max_position_seconds: number
+          session_key: string
+          updated_at: string
+          user_id: string | null
+          video_id: string
+          watched_seconds: number
+        }
+        Insert: {
+          counted_view?: boolean
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          is_short?: boolean
+          max_position_seconds?: number
+          session_key: string
+          updated_at?: string
+          user_id?: string | null
+          video_id: string
+          watched_seconds?: number
+        }
+        Update: {
+          counted_view?: boolean
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          is_short?: boolean
+          max_position_seconds?: number
+          session_key?: string
+          updated_at?: string
+          user_id?: string | null
+          video_id?: string
+          watched_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_watch_sessions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       videos: {
         Row: {
           category: string | null
@@ -6090,6 +6140,22 @@ export type Database = {
         Returns: undefined
       }
       get_book_file_hash: { Args: { _book_id: string }; Returns: string }
+      get_channel_watch_analytics: {
+        Args: { _channel_id: string }
+        Returns: {
+          avg_percent_viewed: number
+          avg_view_duration_seconds: number
+          comments: number
+          duration_seconds: number
+          is_short: boolean
+          likes: number
+          title: string
+          unique_viewers: number
+          video_id: string
+          views: number
+          watch_seconds: number
+        }[]
+      }
       get_conversation_unread_counts: {
         Args: never
         Returns: {
@@ -6238,6 +6304,17 @@ export type Database = {
         }[]
       }
       record_story_view: { Args: { p_story_id: string }; Returns: undefined }
+      record_watch_progress: {
+        Args: {
+          _delta_seconds: number
+          _duration_seconds?: number
+          _is_short?: boolean
+          _position_seconds: number
+          _session_key: string
+          _video_id: string
+        }
+        Returns: Json
+      }
       refresh_friend_suggestions_for_active_users: {
         Args: never
         Returns: undefined

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
+import { MovionGate } from "./components/MovionGate";
 import { BottomNav } from "./components/BottomNav";
 import { RealtimeStatus } from "./components/RealtimeStatus";
 import { GlobalVideoManager } from "./components/GlobalVideoManager";
@@ -93,6 +94,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/Offline"));
 const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
 const MovionComingSoon = lazy(() => import("./pages/MovionComingSoon"));
+
 const Pages = lazy(() => import("./pages/Pages"));
 const PageDetail = lazy(() => import("./pages/PageDetail"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
@@ -116,11 +118,12 @@ const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 // ============================================================================
 const MOVION_ENABLED = false;
 
-// Movion routes decide which component to render based on the switch above.
-const MovionRoot = MOVION_ENABLED ? Movion : MovionComingSoon;
-const MovionWatch = MOVION_ENABLED ? VideoWatch : MovionComingSoon;
-const MovionChannel = MOVION_ENABLED ? ChannelPage : MovionComingSoon;
-const MotionRoute = MOVION_ENABLED ? Motion : MovionComingSoon;
+// When the switch is OFF, Movion is still LIVE for admin users only
+// (everyone else keeps seeing the Coming Soon page) — handled by MovionGate.
+const MovionRoot = Movion;
+const MovionWatch = VideoWatch;
+const MovionChannel = ChannelPage;
+const MotionRoute = Motion;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -157,10 +160,14 @@ const withSuspense = (Component: React.ComponentType) => (
   </Suspense>
 );
 
+// Movion is live for everyone when the switch is ON, otherwise admins only.
+const withMovionGate = (node: React.ReactNode) =>
+  MOVION_ENABLED ? <>{node}</> : <MovionGate>{node}</MovionGate>;
+
 // Primary module roots handled by the keep-alive shell (mounted once, kept alive).
 const keepAliveModules = [
   { path: "/", element: <Home /> },
-  { path: "/movion", element: <MovionRoot /> },
+  { path: "/movion", element: withMovionGate(<MovionRoot />) },
   { path: "/novachat", element: <NovaChat /> },
   { path: "/bookshelf", element: <Bookshelf /> },
   { path: "/groups", element: <Groups /> },
@@ -285,14 +292,14 @@ const App = () => (
                             </ProtectedRoute>
                           }
                         />
-                        <Route path="/movion/*" element={<ProtectedRoute>{withSuspense(MovionRoot)}</ProtectedRoute>} />
+                        <Route path="/movion/*" element={<ProtectedRoute>{withMovionGate(withSuspense(MovionRoot))}</ProtectedRoute>} />
                         <Route
                           path="/video/:videoId"
-                          element={<ProtectedRoute>{withSuspense(MovionWatch)}</ProtectedRoute>}
+                          element={<ProtectedRoute>{withMovionGate(withSuspense(MovionWatch))}</ProtectedRoute>}
                         />
                         <Route
                           path="/channel/:channelId"
-                          element={<ProtectedRoute>{withSuspense(MovionChannel)}</ProtectedRoute>}
+                          element={<ProtectedRoute>{withMovionGate(withSuspense(MovionChannel))}</ProtectedRoute>}
                         />
                         <Route path="/novachat/share/:token" element={withSuspense(NovaChatShare)} />
                         <Route
@@ -349,7 +356,7 @@ const App = () => (
                           path="/pages/:pageId/admin"
                           element={<ProtectedRoute>{withSuspense(PageAdmin)}</ProtectedRoute>}
                         />
-                        <Route path="/motion" element={<ProtectedRoute>{withSuspense(MotionRoute)}</ProtectedRoute>} />
+                        <Route path="/motion" element={<ProtectedRoute>{withMovionGate(withSuspense(MotionRoute))}</ProtectedRoute>} />
                         <Route
                           path="/post/:postId"
                           element={<ProtectedRoute>{withSuspense(PostDetail)}</ProtectedRoute>}

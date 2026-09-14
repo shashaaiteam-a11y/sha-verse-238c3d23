@@ -10,7 +10,7 @@ import { MovionVideo } from '../types';
 import { useMovionStore } from '../store';
 import { cn } from '@/lib/utils';
 import SubscribeButton from './SubscribeButton';
-import { useVideos } from '@/hooks/useVideos';
+import { useWatchTracker } from '@/lib/movion/useWatchTracker';
 import { useVideoLike } from '@/hooks/useVideoLikes';
 import { useVideoComments } from '@/hooks/useVideoComments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,7 +47,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 }) => {
   const navigate = useNavigate();
   const { recordEngagement, emitEvent } = useMovionStore();
-  const { incrementView } = useVideos();
+  const watchTracker = useWatchTracker({ videoId: video.id, isShort: true });
   const { isLiked, isDisliked, toggleLike, toggleDislike } = useVideoLike(video.id);
   const { comments, addComment } = useVideoComments(video.id);
   const { user } = useAuth();
@@ -65,7 +65,6 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
   useEffect(() => {
     if (isActive) {
       emitEvent({ type: 'watch_started', videoId: video.id });
-      incrementView.mutate(video.id);
       if (videoRef.current) {
         setHasError(false);
         videoRef.current.load();
@@ -84,6 +83,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         recordEngagement(video, videoRef.current.currentTime, false);
         videoRef.current.pause();
       }
+      watchTracker.onPause();
       setIsPlaying(false);
       setProgress(0);
     }
@@ -149,7 +149,11 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
           loop 
           playsInline 
           muted={isMuted}
-          onTimeUpdate={() => setProgress((videoRef.current?.currentTime || 0) / (videoRef.current?.duration || 1) * 100)}
+          onTimeUpdate={() => {
+            const t = videoRef.current?.currentTime || 0;
+            setProgress((t / (videoRef.current?.duration || 1)) * 100);
+            if (isActive && !videoRef.current?.paused) watchTracker.onTimeUpdate(t);
+          }}
           onWaiting={() => setIsLoading(true)}
           onPlaying={() => {
             setIsLoading(false);
