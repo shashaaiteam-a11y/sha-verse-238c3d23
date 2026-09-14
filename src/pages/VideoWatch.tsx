@@ -21,6 +21,7 @@ import { useIsSubscribed, useToggleSubscription } from "@/hooks/useSubscriptions
 import { useAddToHistory, useUpdateWatchProgress } from "@/hooks/useWatchHistory";
 import { useIsSaved, useToggleSaved } from "@/hooks/useSavedVideos";
 import { useVideoQualities, useTranscodingJob } from "@/hooks/useVideoQualities";
+import { useWatchTracker } from "@/lib/movion/useWatchTracker";
 import { usePlaylists, useAddToPlaylist, useCreatePlaylist } from "@/hooks/usePlaylists";
 import { useAuth } from "@/contexts/AuthContext";
 import { VideoCard } from '@/components/movion/VideoCard';
