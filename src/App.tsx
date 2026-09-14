@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
+import { MovionGate } from "./components/MovionGate";
 import { BottomNav } from "./components/BottomNav";
 import { RealtimeStatus } from "./components/RealtimeStatus";
 import { GlobalVideoManager } from "./components/GlobalVideoManager";
