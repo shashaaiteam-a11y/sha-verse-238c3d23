@@ -71,6 +71,14 @@ const MovionWatch = () => {
   const [midRollShown, setMidRollShown] = useState(false);
   const [showMidRoll, setShowMidRoll] = useState(false);
   const [adFreeUntil, setAdFreeUntil] = useState<Date | null>(null);
+  // YouTube-style seek bar state
+  const seekBarRef = useRef<HTMLDivElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [bufferedPercent, setBufferedPercent] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [hoverRatio, setHoverRatio] = useState<number | null>(null);
+  const [isVideoError, setIsVideoError] = useState(false);
 
   // Rewarded ad for 1 hour ad-free watching
   const { watchAd: watchAdFreeAd, isWatching: isWatchingAdFree } = useRewardedAd({
@@ -89,18 +97,54 @@ const MovionWatch = () => {
 
   const isAdFree = adFreeUntil && adFreeUntil > new Date();
   
-  // Reload and play video when videoId changes
+  // Attach source (direct MP4 or HLS) and play when video changes
   useEffect(() => {
-    if (videoRef.current && video) {
-      videoRef.current.load();
-      videoRef.current.play().catch(() => {});
-      setProgress(0);
-      setIsPlaying(true);
-      setPreRollDone(false);
-      setMidRollShown(false);
-      setShowMidRoll(false);
+    const el = videoRef.current;
+    if (!el || !video) return;
+
+    const direct = video.video_url || '';
+    const hlsUrl = video.hls_url || '';
+    let hls: Hls | null = null;
+
+    setIsVideoError(false);
+    setProgress(0);
+    setCurrentTime(0);
+    setVideoDuration(video.duration || 0);
+    setBufferedPercent(0);
+    setIsPlaying(true);
+    setPreRollDone(false);
+    setMidRollShown(false);
+    setShowMidRoll(false);
+
+    const isHls = (url: string) => url.toLowerCase().includes('.m3u8');
+
+    if (direct && !isHls(direct)) {
+      el.src = direct;
+      el.load();
+    } else {
+      const streamUrl = isHls(direct) ? direct : hlsUrl;
+      if (streamUrl) {
+        if (el.canPlayType('application/vnd.apple.mpegurl')) {
+          el.src = streamUrl;
+          el.load();
+        } else if (Hls.isSupported()) {
+          hls = new Hls({ enableWorker: true });
+          hls.loadSource(streamUrl);
+          hls.attachMedia(el);
+        } else {
+          setIsVideoError(true);
+        }
+      } else {
+        setIsVideoError(true);
+      }
     }
-  }, [video?.id]);
+
+    el.play().catch(() => {});
+
+    return () => {
+      hls?.destroy();
+    };
+  }, [video?.id, video?.video_url, video?.hls_url]);
 
   // Trigger mid-roll at 50% for videos 3+ minutes
   useEffect(() => {
