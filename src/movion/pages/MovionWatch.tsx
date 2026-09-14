@@ -34,6 +34,7 @@ import { ShareDialog } from "@/components/ShareDialog";
 import CommentItem from "@/movion/components/CommentItem";
 import { VideoPreRollAd, VideoMidRollAd, RewardedAdButton } from "@/components/ads";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
+import { useWatchTracker } from "@/lib/movion/useWatchTracker";
 
 const MovionWatch = () => {
   const { videoId } = useParams();
@@ -45,7 +46,7 @@ const MovionWatch = () => {
   
   // Supabase hooks
   const { video, isLoading: videoLoading } = useVideo(videoId);
-  const { videos: allVideos, incrementView } = useVideos();
+  const { videos: allVideos } = useVideos();
   const { comments, addComment, isLoading: commentsLoading } = useVideoComments(videoId);
   const { isLiked, isDisliked, toggleLike, toggleDislike } = useVideoLike(videoId);
   const addToHistory = useAddToHistory();
@@ -59,6 +60,13 @@ const MovionWatch = () => {
   
   // Algorithm-powered related videos
   const relatedVideos = useRelatedVideos(video, allVideos, 10);
+
+  // Server-validated view counting + batched watch-time tracking
+  const watchTracker = useWatchTracker({
+    videoId,
+    isShort: false,
+    duration: video?.duration || undefined,
+  });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -158,11 +166,10 @@ const MovionWatch = () => {
     }
   }, [progress, video, midRollShown]);
 
-  // Add to history and increment views on mount
+  // Add to history on mount (views are counted server-side by the watch tracker)
   useEffect(() => {
     if (video && user) {
       addToHistory.mutate({ videoId: video.id });
-      incrementView.mutate(video.id);
     }
   }, [video?.id, user?.id]);
   
@@ -368,8 +375,9 @@ const MovionWatch = () => {
                 setIsVideoError(false);
               }}
               onTimeUpdate={(e) => {
-                if (isScrubbing) return;
                 const el = e.currentTarget;
+                watchTracker.onTimeUpdate(el.currentTime);
+                if (isScrubbing) return;
                 setCurrentTime(el.currentTime);
                 const dur = isFinite(el.duration) && el.duration > 0 ? el.duration : totalDuration;
                 if (dur) setProgress((el.currentTime / dur) * 100);
@@ -383,7 +391,15 @@ const MovionWatch = () => {
               }}
               onError={() => setIsVideoError(true)}
               onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
+              onPause={() => {
+                setIsPlaying(false);
+                watchTracker.onPause();
+              }}
+              onEnded={() => {
+                setIsPlaying(false);
+                watchTracker.onPause();
+              }}
+              onSeeking={() => watchTracker.onPause()}
             />
 
             {/* Unavailable state */}
