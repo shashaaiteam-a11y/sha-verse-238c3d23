@@ -60,6 +60,13 @@ const MovionWatch = () => {
   
   // Algorithm-powered related videos
   const relatedVideos = useRelatedVideos(video, allVideos, 10);
+
+  // Server-validated view counting + batched watch-time tracking
+  const watchTracker = useWatchTracker({
+    videoId,
+    isShort: false,
+    duration: video?.duration || undefined,
+  });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
