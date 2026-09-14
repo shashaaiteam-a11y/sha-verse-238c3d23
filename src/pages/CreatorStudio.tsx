@@ -27,12 +27,14 @@ import {
 import { UploadVideoDialog } from "@/components/movion/UploadVideoDialog";
 import { CreatorEarningsDashboard } from "@/components/movion/CreatorEarningsDashboard";
 import { format, subDays } from "date-fns";
+import { useChannelWatchAnalytics } from "@/hooks/useChannelWatchAnalytics";
 
 const CreatorStudio = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { channel, isLoading: channelLoading } = useMyChannel();
   const { videos } = useChannelVideos(channel?.id);
+  const watchAnalytics = useChannelWatchAnalytics(channel?.id);
   const [selectedTab, setSelectedTab] = useState("dashboard");
 
   // Fetch analytics data
@@ -67,7 +69,8 @@ const CreatorStudio = () => {
   const totalViews = videos?.reduce((sum, v) => sum + (v.views_count || 0), 0) || 0;
   const totalLikes = videos?.reduce((sum, v) => sum + (v.likes_count || 0), 0) || 0;
   const totalComments = videos?.reduce((sum, v) => sum + (v.comments_count || 0), 0) || 0;
-  const totalWatchTime = analytics?.reduce((sum, a) => sum + (a.watch_time_seconds || 0), 0) || 0;
+  const analyticsWatchTime = analytics?.reduce((sum, a) => sum + (a.watch_time_seconds || 0), 0) || 0;
+  const totalWatchTime = watchAnalytics.totals.watchSeconds || analyticsWatchTime;
   const totalRevenue = analytics?.reduce((sum, a) => sum + (a.estimated_revenue_cents || 0), 0) || 0;
 
   const formatDuration = (seconds: number) => {
