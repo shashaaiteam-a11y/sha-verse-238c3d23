@@ -158,10 +158,14 @@ const withSuspense = (Component: React.ComponentType) => (
   </Suspense>
 );
 
+// Movion is live for everyone when the switch is ON, otherwise admins only.
+const withMovionGate = (node: React.ReactNode) =>
+  MOVION_ENABLED ? <>{node}</> : <MovionGate>{node}</MovionGate>;
+
 // Primary module roots handled by the keep-alive shell (mounted once, kept alive).
 const keepAliveModules = [
   { path: "/", element: <Home /> },
-  { path: "/movion", element: <MovionRoot /> },
+  { path: "/movion", element: withMovionGate(<MovionRoot />) },
   { path: "/novachat", element: <NovaChat /> },
   { path: "/bookshelf", element: <Bookshelf /> },
   { path: "/groups", element: <Groups /> },
