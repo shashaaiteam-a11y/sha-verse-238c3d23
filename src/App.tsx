@@ -93,6 +93,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const OfflinePage = lazy(() => import("./pages/Offline"));
 const MovionAdmin = lazy(() => import("./modules/movion/pages/MovionAdmin"));
 const MovionComingSoon = lazy(() => import("./pages/MovionComingSoon"));
+const MovionGate = lazy(() => import("./components/MovionGate"));
 const Pages = lazy(() => import("./pages/Pages"));
 const PageDetail = lazy(() => import("./pages/PageDetail"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
