@@ -81,17 +81,23 @@ const VideoWatch = () => {
   const isSaved = useIsSaved(videoId);
   const toggleSaved = useToggleSaved();
 
-  // Increment view count and add to history on mount
-  const { incrementView } = useVideos();
+  // Add to history on mount (views are counted server-side by watch tracker)
   useEffect(() => {
     if (videoId) {
-      incrementView.mutate(videoId);
       addToHistory.mutate({ videoId });
     }
   }, [videoId]);
 
+  // Server-validated view counting + batched watch-time tracking
+  const watchTracker = useWatchTracker({
+    videoId,
+    isShort: false,
+    duration: video?.duration || undefined,
+  });
+
   // Handle time update for watch progress
   const handleTimeUpdate = (currentTime: number, duration: number) => {
+    watchTracker.onTimeUpdate(currentTime);
     if (videoId && duration > 0) {
       // Debounce updates - only save every 10 seconds
       if (Math.floor(currentTime) % 10 === 0) {
