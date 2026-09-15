@@ -131,29 +131,16 @@ class GroupServiceClass extends BaseService {
     avatarUrl?: string;
     coverUrl?: string;
   }): Promise<ServiceResult<Group>> {
-    const userId = await this.requireAuth();
+    await this.requireAuth();
 
-    const { data, error } = await this.supabase
-      .from('groups')
-      .insert({
-        name: params.name,
-        description: params.description,
-        is_private: params.isPrivate || false,
-        avatar_url: params.avatarUrl,
-        cover_url: params.coverUrl,
-        creator_id: userId,
-      })
-      .select()
-      .single();
-
-    if (!error && data) {
-      // Add creator as admin member
-      await this.supabase.from('group_members').insert({
-        group_id: data.id,
-        user_id: userId,
-        role: 'admin',
-      });
-    }
+    // Single transactional server call — group + creator admin membership.
+    const { data, error } = await (this.supabase.rpc as any)('create_group_with_owner', {
+      _name: params.name.trim(),
+      _description: params.description ?? null,
+      _privacy: params.isPrivate ? 'private' : 'public',
+      _avatar_url: params.avatarUrl ?? null,
+      _cover_url: params.coverUrl ?? null,
+    });
 
     return this.handleResponse(data as Group, error);
   }
