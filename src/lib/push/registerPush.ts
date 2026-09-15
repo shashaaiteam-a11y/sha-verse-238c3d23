@@ -65,10 +65,17 @@ export const saveToken = async (token: string, platform: PushPlatform): Promise<
   );
 };
 
-/** Detach this device from the current account (called on logout). */
-export const removeCurrentDeviceToken = async (): Promise<void> => {
-  const { data: auth } = await supabase.auth.getUser();
-  const userId = auth?.user?.id;
+/**
+ * Detach this device from an account. Call this BEFORE `auth.signOut()` and
+ * pass the known user id — after sign-out there is no session left to
+ * authorise the delete, so the row would silently survive.
+ */
+export const removeCurrentDeviceToken = async (knownUserId?: string): Promise<void> => {
+  let userId = knownUserId;
+  if (!userId) {
+    const { data: auth } = await supabase.auth.getUser();
+    userId = auth?.user?.id;
+  }
   if (!userId) return;
   await supabase.from('push_tokens').delete().eq('user_id', userId).eq('device_id', getDeviceId());
 };
