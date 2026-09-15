@@ -110,7 +110,7 @@ const Profile = () => {
 
   
 
-  const { profile, isLoading } = useProfile(userId);
+  const { profile, isLoading, error: profileError, refetch: refetchProfile } = useProfile(userId);
 
   // Posts now use infinite scroll (cursor-based) — no manual page state.
 
@@ -895,6 +895,35 @@ const Profile = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
 
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+
+      </div>
+
+    );
+
+  }
+
+
+
+  // A failed load (network / permission) is not the same as a missing profile.
+  if (profileError) {
+
+    return (
+
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-subtle px-6 text-center">
+
+        <p className="text-muted-foreground mb-4">
+
+          We couldn't load this profile right now. Please check your connection and try again.
+
+        </p>
+
+        <div className="flex gap-3">
+
+          <Button onClick={() => refetchProfile()}>Try again</Button>
+
+          <Button variant="outline" onClick={() => navigate('/')}>Go Home</Button>
+
+        </div>
 
       </div>
 

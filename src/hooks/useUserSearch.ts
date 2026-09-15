@@ -28,15 +28,29 @@ export const useUserSearch = () => {
     queryFn: async () => {
       if (!debouncedTerm || debouncedTerm.length < 2) return [];
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, username, avatar_url, bio')
-        .or(`display_name.ilike.%${debouncedTerm}%,username.ilike.%${debouncedTerm}%`)
-        .neq('id', user?.id || '')
-        .limit(20);
+      // Two separate typed filters instead of one hand-built `.or()` string —
+      // user text never becomes part of a PostgREST filter expression.
+      const pattern = `%${debouncedTerm}%`;
+      const base = () =>
+        supabase
+          .from('profiles')
+          .select('id, display_name, username, avatar_url, bio')
+          .neq('id', user?.id || '')
+          .limit(20);
 
-      if (error) throw error;
-      return data || [];
+      const [byName, byUsername] = await Promise.all([
+        base().ilike('display_name', pattern),
+        base().ilike('username', pattern),
+      ]);
+
+      if (byName.error) throw byName.error;
+      if (byUsername.error) throw byUsername.error;
+
+      const merged = new Map<string, (typeof byName.data)[number]>();
+      [...(byName.data || []), ...(byUsername.data || [])].forEach((row) => {
+        if (!merged.has(row.id)) merged.set(row.id, row);
+      });
+      return Array.from(merged.values()).slice(0, 20);
     },
     enabled: !!debouncedTerm && debouncedTerm.length >= 2,
   });

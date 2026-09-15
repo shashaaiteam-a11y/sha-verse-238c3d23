@@ -37,26 +37,43 @@ export const useMovionSearch = (query: string) => {
     try {
       const term = q.toLowerCase().trim();
 
-      // Search videos (title, description, category)
-      const { data: videos } = await supabase
-        .from('videos')
-        .select(`
-          id,
-          title,
-          thumbnail_url,
-          category,
-          channel_id,
-          is_short,
-          channels:channel_id (
+      // Search videos with separate typed filters (title / description /
+      // category) instead of a hand-built `.or()` string, so user text never
+      // becomes part of a PostgREST filter expression.
+      const pattern = `%${term}%`;
+      const videoQuery = () =>
+        supabase
+          .from('videos')
+          .select(`
             id,
-            name,
-            avatar_url
-          )
-        `)
-        .or(`title.ilike.%${term}%,description.ilike.%${term}%,category.ilike.%${term}%`)
-        .eq('is_short', false)
-        .order('views_count', { ascending: false })
-        .limit(8);
+            title,
+            thumbnail_url,
+            category,
+            channel_id,
+            is_short,
+            channels:channel_id (
+              id,
+              name,
+              avatar_url
+            )
+          `)
+          .eq('is_short', false)
+          .order('views_count', { ascending: false })
+          .limit(8);
+
+      const [byTitle, byDescription, byCategory] = await Promise.all([
+        videoQuery().ilike('title', pattern),
+        videoQuery().ilike('description', pattern),
+        videoQuery().ilike('category', pattern),
+      ]);
+
+      const videoMap = new Map<string, any>();
+      [...(byTitle.data || []), ...(byDescription.data || []), ...(byCategory.data || [])].forEach(
+        (v: any) => {
+          if (!videoMap.has(v.id)) videoMap.set(v.id, v);
+        },
+      );
+      const videos = Array.from(videoMap.values()).slice(0, 8);
 
       // Search channels by name
       const { data: channels } = await supabase

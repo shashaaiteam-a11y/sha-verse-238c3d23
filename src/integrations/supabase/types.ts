@@ -6115,6 +6115,44 @@ export type Database = {
       }
       cleanup_expired_stories: { Args: never; Returns: undefined }
       comment_likes_count: { Args: { p_comment_id: string }; Returns: number }
+      create_group_with_owner: {
+        Args: {
+          _avatar_url?: string
+          _category?: string
+          _country?: string
+          _cover_url?: string
+          _description?: string
+          _language?: string
+          _name: string
+          _privacy?: string
+          _rules?: string
+        }
+        Returns: {
+          avatar_url: string | null
+          category: string | null
+          country: string | null
+          cover_url: string | null
+          created_at: string | null
+          creator_id: string
+          description: string | null
+          id: string
+          is_private: boolean | null
+          language: string | null
+          members_count: number | null
+          name: string
+          posts_count: number | null
+          privacy: string | null
+          require_join_approval: boolean | null
+          require_post_approval: boolean | null
+          rules: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "groups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_notification: {
         Args: {
           notif_body?: string

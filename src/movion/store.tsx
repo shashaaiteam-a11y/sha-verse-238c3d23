@@ -6,7 +6,7 @@ import {
   NotificationLevel, VideoType, AnalyticsEvent, MovionSubscription, 
   ToastMessage, MovionNotification, UserEventLog 
 } from './types';
-import { MOCK_VIDEOS, MOCK_CHANNELS } from './constants';
+
 import { prioritizeVideos, prioritizePulse, prioritizeSubscriptions, getRelatedVideos } from './algorithms';
 
 const DEFAULT_CHANNEL: MovionChannel = {
@@ -101,16 +101,14 @@ export const MovionStoreProvider: React.FC<{ children: ReactNode }> = ({ childre
     } catch { return DEFAULT_CHANNEL; }
   });
 
+  // Channels of record live in the database; this only tracks the local
+  // user's own channel shell so UI helpers keep working.
   const [allChannels, setAllChannels] = useState<MovionChannel[]>(() => {
     try {
       const savedUserChannel = localStorage.getItem('movion_user_channel');
       const parsedUserChannel = savedUserChannel ? JSON.parse(savedUserChannel) : DEFAULT_CHANNEL;
-      const baseChannels = [...MOCK_CHANNELS];
-      if (!baseChannels.find(c => c.id === parsedUserChannel.id)) {
-        baseChannels.push(parsedUserChannel);
-      }
-      return baseChannels;
-    } catch { return [...MOCK_CHANNELS]; }
+      return [parsedUserChannel];
+    } catch { return [DEFAULT_CHANNEL]; }
   });
 
   // Subscriptions
@@ -118,7 +116,8 @@ export const MovionStoreProvider: React.FC<{ children: ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem('movion_subscriptions_v2');
       if (saved) return JSON.parse(saved);
-      return { "c1": { channelId: "c1", subscribedAt: Date.now(), notificationLevel: 'ALL' } };
+      // No seeded subscription — real subscriptions come from the database.
+      return {};
     } catch { return {}; }
   });
 
@@ -150,31 +149,14 @@ export const MovionStoreProvider: React.FC<{ children: ReactNode }> = ({ childre
     try { return JSON.parse(localStorage.getItem('movion_search_history') || '[]'); } catch { return []; }
   });
 
-  // Analytics
+  // Analytics — local session cache only. Real metrics (views, watch time,
+  // retention) are computed server-side; nothing is seeded or randomised here.
   const [videoAnalytics, setVideoAnalytics] = useState<Record<string, VideoAnalytics>>(() => {
     try {
       const saved = localStorage.getItem('movion_analytics_v4');
       if (saved) return JSON.parse(saved);
     } catch {}
-    
-    const initial: Record<string, VideoAnalytics> = {};
-    MOCK_VIDEOS.forEach(v => {
-      initial[v.id] = {
-        views: v.views,
-        likes: v.likes,
-        dislikes: v.dislikes || 0,
-        shares: Math.floor(v.views * 0.01),
-        commentsCount: Math.floor(v.views * 0.005),
-        watchTimeSeconds: v.views * 180,
-        averageRetention: 0.4 + Math.random() * 0.3,
-        replays: 0,
-        engagementSpeed: Math.random(),
-        subscribersGained: Math.floor(v.views * 0.002),
-        uploadTimestampMs: Date.now() - (Math.random() * 86400000 * 30),
-        dailyViews: Array.from({length: 7}, () => Math.floor(v.views / 7))
-      };
-    });
-    return initial;
+    return {};
   });
 
   // Comments
@@ -460,7 +442,9 @@ export const MovionStoreProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, []);
 
   // Algorithm-powered feeds
-  const allVideos = useMemo(() => [...MOCK_VIDEOS, ...userVideos].filter(v => !hiddenVideos.includes(v.id)), [userVideos, hiddenVideos]);
+  // Only real, user-owned videos. Feed data of record lives in the database
+  // and is read through the Supabase hooks, never from this store.
+  const allVideos = useMemo(() => userVideos.filter(v => !hiddenVideos.includes(v.id)), [userVideos, hiddenVideos]);
 
   const getHomeFeed = useCallback((category?: string) => {
     return prioritizeVideos(allVideos, Object.keys(subscriptions), history, searchQuery, category);

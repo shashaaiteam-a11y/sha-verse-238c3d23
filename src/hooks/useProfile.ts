@@ -8,7 +8,7 @@ export const useProfile = (userId?: string) => {
   const queryClient = useQueryClient();
   const targetUserId = userId || user?.id;
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, error, refetch } = useQuery({
     queryKey: ['profile', targetUserId],
     queryFn: async () => {
       if (!targetUserId) return null;
@@ -20,13 +20,17 @@ export const useProfile = (userId?: string) => {
       const NON_SENSITIVE_COLUMNS =
         'id, username, display_name, bio, avatar_url, cover_url, location, website, created_at, updated_at, work, education, facebook_url, instagram_url, twitter_url, hobbies, about_me, privacy, provider, last_login, is_verified, is_deactivated, deactivated_at';
 
+      // maybeSingle(): a genuinely missing profile returns null instead of
+      // throwing, so a real failure (network / permission) stays an error and
+      // is never shown to the user as "User not found".
       const { data, error } = await supabase
         .from('profiles')
         .select(NON_SENSITIVE_COLUMNS)
         .eq('id', targetUserId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) return null;
 
       let privateFields: Record<string, any> = {};
       const { data: priv } = await supabase.rpc('get_profile_private_fields', {
@@ -69,5 +73,5 @@ export const useProfile = (userId?: string) => {
     };
   }, [targetUserId, queryClient]);
 
-  return { profile, isLoading };
+  return { profile, isLoading, error, refetch };
 };

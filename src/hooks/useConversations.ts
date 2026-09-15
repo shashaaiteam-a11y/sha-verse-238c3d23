@@ -106,8 +106,20 @@ export const useConversations = () => {
         throw new Error('Please log in to send messages');
       }
 
+      // Resolve the functions URL from the central Supabase client itself.
+      // Relying on a separate env var can yield an empty base, which sends the
+      // request to the website and returns HTML ("Unexpected token '<'").
+      const client = supabase as unknown as { functionsUrl?: string; supabaseUrl?: string };
+      const base = (
+        client.functionsUrl ||
+        `${String(client.supabaseUrl || import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')}/functions/v1`
+      ).replace(/\/$/, '');
+      if (!/^https?:\/\//.test(base)) {
+        throw new Error('Messaging service is unavailable right now. Please try again.');
+      }
+
       // Use edge function to create conversation (bypasses RLS issues)
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-conversation`, {
+      const response = await fetch(`${base}/create-conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,8 +128,19 @@ export const useConversations = () => {
         body: JSON.stringify({ otherUserId }),
       });
 
-      const result = await response.json();
-      
+      // Never parse blindly — a proxy/HTML error page would crash JSON parsing.
+      const raw = await response.text();
+      let result: { conversationId?: string; isRequest?: boolean; error?: string } = {};
+      try {
+        result = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error(
+          response.ok
+            ? 'Unexpected response from the messaging service. Please try again.'
+            : `Messaging service error (${response.status}). Please try again.`,
+        );
+      }
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to start conversation');
       }
