@@ -116,7 +116,8 @@ export const MovionStoreProvider: React.FC<{ children: ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem('movion_subscriptions_v2');
       if (saved) return JSON.parse(saved);
-      return { "c1": { channelId: "c1", subscribedAt: Date.now(), notificationLevel: 'ALL' } };
+      // No seeded subscription — real subscriptions come from the database.
+      return {};
     } catch { return {}; }
   });
 
