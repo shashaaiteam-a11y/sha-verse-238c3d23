@@ -80,7 +80,8 @@ export const PushBridge = () => {
           navigate(resolvePushPath(action.notification?.data as Record<string, unknown>));
         },
       );
-      await PushNotifications.removeAllDeliveredNotifications().catch(() => undefined);
+      // Note: the tray is intentionally NOT wiped on app open (Facebook-style).
+      // Individual notifications are dismissed by the OS when the user taps them.
       cleanup = () => {
         void received.remove();
         void actioned.remove();
