@@ -155,14 +155,10 @@ Deno.serve(async (req) => {
     // Caller authentication: only the database dispatch trigger (which carries the
     // internal shared secret) may invoke this function. Nothing else can send pushes.
     const presented = req.headers.get('x-push-dispatch-secret') ?? '';
-    const { data: secretRow } = await admin
-      .schema('private')
-      .from('app_secrets')
-      .select('value')
-      .eq('key', 'push_dispatch_secret')
-      .maybeSingle();
-    const expected = secretRow?.value ?? '';
-    if (!expected || presented !== expected) {
+    const { data: secretOk, error: secretErr } = await admin.rpc('verify_push_dispatch_secret', {
+      _secret: presented,
+    });
+    if (secretErr || secretOk !== true) {
       return json({ error: 'Forbidden' }, 403);
     }
 
