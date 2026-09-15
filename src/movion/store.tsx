@@ -460,7 +460,9 @@ export const MovionStoreProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, []);
 
   // Algorithm-powered feeds
-  const allVideos = useMemo(() => [...MOCK_VIDEOS, ...userVideos].filter(v => !hiddenVideos.includes(v.id)), [userVideos, hiddenVideos]);
+  // Only real, user-owned videos. Feed data of record lives in the database
+  // and is read through the Supabase hooks, never from this store.
+  const allVideos = useMemo(() => userVideos.filter(v => !hiddenVideos.includes(v.id)), [userVideos, hiddenVideos]);
 
   const getHomeFeed = useCallback((category?: string) => {
     return prioritizeVideos(allVideos, Object.keys(subscriptions), history, searchQuery, category);
