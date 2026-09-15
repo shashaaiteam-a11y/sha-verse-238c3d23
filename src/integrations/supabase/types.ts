@@ -5692,6 +5692,8 @@ export type Database = {
       }
       video_watch_sessions: {
         Row: {
+          accepted_seconds: number
+          content_seconds: number | null
           counted_view: boolean
           created_at: string
           duration_seconds: number | null
@@ -5705,6 +5707,8 @@ export type Database = {
           watched_seconds: number
         }
         Insert: {
+          accepted_seconds?: number
+          content_seconds?: number | null
           counted_view?: boolean
           created_at?: string
           duration_seconds?: number | null
@@ -5718,6 +5722,8 @@ export type Database = {
           watched_seconds?: number
         }
         Update: {
+          accepted_seconds?: number
+          content_seconds?: number | null
           counted_view?: boolean
           created_at?: string
           duration_seconds?: number | null
@@ -6304,14 +6310,6 @@ export type Database = {
         }[]
       }
       record_story_view: { Args: { p_story_id: string }; Returns: undefined }
-      set_video_reaction: {
-        Args: { _video_id: string; _reaction: string | null }
-        Returns: Json
-      }
-      record_watch_session: {
-        Args: { _video_id: string; _session_key: string; _total_seconds: number; _position_seconds: number; _content_seconds?: number; _viewer_id?: string }
-        Returns: Json
-      }
       record_watch_progress: {
         Args: {
           _delta_seconds: number
@@ -6323,6 +6321,17 @@ export type Database = {
         }
         Returns: Json
       }
+      record_watch_session: {
+        Args: {
+          _content_seconds?: number
+          _position_seconds: number
+          _session_key: string
+          _total_seconds: number
+          _video_id: string
+          _viewer_id?: string
+        }
+        Returns: Json
+      }
       refresh_friend_suggestions_for_active_users: {
         Args: never
         Returns: undefined
@@ -6330,6 +6339,10 @@ export type Database = {
       respond_message_request: {
         Args: { _accept: boolean; _conversation_id: string }
         Returns: undefined
+      }
+      set_video_reaction: {
+        Args: { _reaction: string; _video_id: string }
+        Returns: Json
       }
       subscribe_to_channel: {
         Args: { target_channel_id: string }
