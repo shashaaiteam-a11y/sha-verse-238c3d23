@@ -6,7 +6,7 @@ import {
   NotificationLevel, VideoType, AnalyticsEvent, MovionSubscription, 
   ToastMessage, MovionNotification, UserEventLog 
 } from './types';
-import { MOCK_VIDEOS, MOCK_CHANNELS } from './constants';
+
 import { prioritizeVideos, prioritizePulse, prioritizeSubscriptions, getRelatedVideos } from './algorithms';
 
 const DEFAULT_CHANNEL: MovionChannel = {
