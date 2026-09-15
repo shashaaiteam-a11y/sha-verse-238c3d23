@@ -71,6 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     stopSessionRevocationWatcher();
     clearDeviceToken();
+    // Detach this device's push token while the session is still valid —
+    // after signOut the row is no longer writable by this client.
+    await removeCurrentDeviceToken(user?.id).catch(() => undefined);
     await supabase.auth.signOut();
     navigate('/auth');
   };
