@@ -114,43 +114,28 @@ export const useGroups = () => {
     mutationFn: async (payload: CreateGroupPayload) => {
       if (!user) throw new Error('Not authenticated');
 
-      // Free user cap at 5 groups
-      const { count } = await supabase
-        .from('group_members')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('role', 'admin');
-      if ((count || 0) >= 5) throw new Error('You can create a maximum of 5 groups.');
+      // One transactional server call: the group and the creator's admin
+      // membership are created together, or nothing at all is created.
+      // The 5-group cap and the name check are enforced server-side too.
+      const { data: group, error: groupError } = await (supabase.rpc as any)('create_group_with_owner', {
+        _name: payload.name.trim(),
+        _description: payload.description ?? null,
+        _privacy: payload.privacy || 'public',
+        _avatar_url: payload.avatarUrl || null,
+        _cover_url: payload.coverUrl || null,
+        _category: payload.category || 'General',
+        _language: payload.language || null,
+        _country: payload.country || null,
+        _rules: payload.rules || null,
+      });
 
-      const trimmedName = payload.name.trim();
-
-      // Group names are intentionally NOT unique — groups are identified by their UUID.
-
-      const privacyValue = payload.privacy || 'public';
-      const { data: group, error: groupError } = await (supabase
-        .from('groups') as any)
-        .insert({
-          name: trimmedName,
-          description: payload.description,
-          is_private: privacyValue !== 'public',
-          privacy: privacyValue,
-          creator_id: user.id,
-          avatar_url: payload.avatarUrl || null,
-          cover_url: payload.coverUrl || null,
-          category: payload.category || 'General',
-          language: payload.language || null,
-          country: payload.country || null,
-          rules: payload.rules || null,
-        })
-        .select()
-        .single();
-      if (groupError) throw groupError;
-
-
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .insert({ group_id: group.id, user_id: user.id, role: 'admin' });
-      if (memberError) throw memberError;
+      if (groupError) {
+        const msg = groupError.message || '';
+        if (msg.includes('GROUP_LIMIT_REACHED')) throw new Error('You can create a maximum of 5 groups.');
+        if (msg.includes('GROUP_NAME_REQUIRED')) throw new Error('Please enter a group name.');
+        if (msg.includes('AUTH_REQUIRED')) throw new Error('Please log in to create a group.');
+        throw groupError;
+      }
 
       return group;
     },
