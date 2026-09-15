@@ -265,7 +265,13 @@ export const useGroups = () => {
         .delete()
         .eq('group_id', groupId)
         .eq('user_id', user.id);
-      if (error) throw error;
+      if (error) {
+        // The server blocks a creator from leaving their own group.
+        if ((error.message || '').includes('GROUP_OWNER_CANNOT_LEAVE')) {
+          throw new Error('You created this group. Transfer ownership or delete the group instead.');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-groups'] });
