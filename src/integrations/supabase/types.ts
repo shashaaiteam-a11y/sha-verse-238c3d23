@@ -6385,6 +6385,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      verify_push_dispatch_secret: {
+        Args: { _secret: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
