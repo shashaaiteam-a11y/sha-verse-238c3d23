@@ -150,31 +150,14 @@ export const MovionStoreProvider: React.FC<{ children: ReactNode }> = ({ childre
     try { return JSON.parse(localStorage.getItem('movion_search_history') || '[]'); } catch { return []; }
   });
 
-  // Analytics
+  // Analytics — local session cache only. Real metrics (views, watch time,
+  // retention) are computed server-side; nothing is seeded or randomised here.
   const [videoAnalytics, setVideoAnalytics] = useState<Record<string, VideoAnalytics>>(() => {
     try {
       const saved = localStorage.getItem('movion_analytics_v4');
       if (saved) return JSON.parse(saved);
     } catch {}
-    
-    const initial: Record<string, VideoAnalytics> = {};
-    MOCK_VIDEOS.forEach(v => {
-      initial[v.id] = {
-        views: v.views,
-        likes: v.likes,
-        dislikes: v.dislikes || 0,
-        shares: Math.floor(v.views * 0.01),
-        commentsCount: Math.floor(v.views * 0.005),
-        watchTimeSeconds: v.views * 180,
-        averageRetention: 0.4 + Math.random() * 0.3,
-        replays: 0,
-        engagementSpeed: Math.random(),
-        subscribersGained: Math.floor(v.views * 0.002),
-        uploadTimestampMs: Date.now() - (Math.random() * 86400000 * 30),
-        dailyViews: Array.from({length: 7}, () => Math.floor(v.views / 7))
-      };
-    });
-    return initial;
+    return {};
   });
 
   // Comments
