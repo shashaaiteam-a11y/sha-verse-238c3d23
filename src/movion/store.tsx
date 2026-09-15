@@ -101,16 +101,14 @@ export const MovionStoreProvider: React.FC<{ children: ReactNode }> = ({ childre
     } catch { return DEFAULT_CHANNEL; }
   });
 
+  // Channels of record live in the database; this only tracks the local
+  // user's own channel shell so UI helpers keep working.
   const [allChannels, setAllChannels] = useState<MovionChannel[]>(() => {
     try {
       const savedUserChannel = localStorage.getItem('movion_user_channel');
       const parsedUserChannel = savedUserChannel ? JSON.parse(savedUserChannel) : DEFAULT_CHANNEL;
-      const baseChannels = [...MOCK_CHANNELS];
-      if (!baseChannels.find(c => c.id === parsedUserChannel.id)) {
-        baseChannels.push(parsedUserChannel);
-      }
-      return baseChannels;
-    } catch { return [...MOCK_CHANNELS]; }
+      return [parsedUserChannel];
+    } catch { return [DEFAULT_CHANNEL]; }
   });
 
   // Subscriptions
