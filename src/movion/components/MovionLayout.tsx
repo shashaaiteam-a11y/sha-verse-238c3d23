@@ -1,3 +1,4 @@
+import { useMovionRealtime } from '@/hooks/useMovionRealtime';
 // Movion Layout Component
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
@@ -23,6 +24,7 @@ export const MovionLayout: React.FC<MovionLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  useMovionRealtime();
   const { searchQuery, setSearchQuery, addToSearchHistory } = useMovionStore();
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [isNotifOpen, setIsNotifOpen] = useState(false);

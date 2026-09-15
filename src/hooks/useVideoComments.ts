@@ -51,6 +51,7 @@ export const useVideoComments = (videoId?: string) => {
       // comments_count is auto-synced by database trigger
       return data;
     },
+    onError: (error) => { toast.error(error.message || 'Unable to save comment'); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });
@@ -69,6 +70,7 @@ export const useVideoComments = (videoId?: string) => {
       if (error) throw error;
       // comments_count is auto-synced by database trigger
     },
+    onError: (error) => { toast.error(error.message || 'Unable to save comment'); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['video-comments', videoId] });
       queryClient.invalidateQueries({ queryKey: ['video', videoId] });

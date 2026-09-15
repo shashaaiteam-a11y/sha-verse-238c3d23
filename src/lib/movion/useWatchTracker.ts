@@ -1,103 +1,52 @@
-/**
- * MOVION watch tracker (isolated to the Movion/video module).
- *
- * - Accumulates ONLY real, active playback time on the client.
- * - Flushes batched progress to the server every 15s and on
- *   pause / end / tab-hide / unmount.
- * - The server (record_watch_progress) decides when a view counts,
- *   deduplicates rapid re-watches and stores watch-time analytics.
- */
-import { useCallback, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useCallback, useEffect, useMemo } from 'react';
+import { sendWatchReport } from './watchOutbox';
+import { useAuth } from '@/contexts/AuthContext';
+import { useModuleVisible } from '@/lib/navigation/moduleVisibility';
+import { PlaybackSample, WatchSession } from './watchSession';
 
-const FLUSH_INTERVAL_MS = 15000;
-const MAX_TICK_SECONDS = 2; // ignore seeks / jumps
+interface Options { videoId?: string; isShort?: boolean; duration?: number; enabled?: boolean }
 
-const makeSessionKey = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
-
-interface Options {
-  videoId?: string;
-  isShort?: boolean;
-  duration?: number;
-}
-
-export const useWatchTracker = ({ videoId, isShort = false, duration }: Options) => {
-  const sessionKeyRef = useRef<string>(makeSessionKey());
-  const pendingRef = useRef(0);
-  const positionRef = useRef(0);
-  const lastTimeRef = useRef<number | null>(null);
-  const inFlightRef = useRef(false);
-
-  // New logical session whenever the video changes
-  useEffect(() => {
-    sessionKeyRef.current = makeSessionKey();
-    pendingRef.current = 0;
-    positionRef.current = 0;
-    lastTimeRef.current = null;
-  }, [videoId]);
+export const useWatchTracker = ({ videoId, enabled = true }: Options) => {
+  const { user } = useAuth();
+  const visible = useModuleVisible();
+  // In-flight requests retain their original video and account across navigation.
+  const session = useMemo(() => videoId && user?.id ? new WatchSession(videoId, user.id) : null, [videoId, user?.id]);
 
   const flush = useCallback(async () => {
-    if (!videoId) return;
-    const delta = Math.round(pendingRef.current);
-    if (delta <= 0 || inFlightRef.current) return;
-
-    pendingRef.current -= delta;
-    inFlightRef.current = true;
+    if (!session || ((!enabled || !visible) && session.seconds === 0)) return;
     try {
-      await supabase.rpc('record_watch_progress', {
-        _video_id: videoId,
-        _session_key: sessionKeyRef.current,
-        _delta_seconds: delta,
-        _position_seconds: Math.round(positionRef.current),
-        _duration_seconds: duration && duration > 0 ? Math.round(duration) : null,
-        _is_short: isShort,
-      });
+      await session.flush((total, position, content) => sendWatchReport({
+        userId: session.userId, videoId: session.videoId, sessionKey: session.key, total, position, content,
+      }));
     } catch {
-      // best-effort; time is not re-queued to avoid inflation
-    } finally {
-      inFlightRef.current = false;
+      // The persisted outbox retries after navigation, reconnect and reload.
     }
-  }, [videoId, duration, isShort]);
+  }, [session, enabled, visible]);
 
-  /** Call from the <video> onTimeUpdate handler while playing. */
-  const onTimeUpdate = useCallback((currentTime: number) => {
-    if (!Number.isFinite(currentTime)) return;
-    positionRef.current = Math.max(positionRef.current, currentTime);
-    const last = lastTimeRef.current;
-    lastTimeRef.current = currentTime;
-    if (last === null) return;
-    const delta = currentTime - last;
-    if (delta > 0 && delta <= MAX_TICK_SECONDS) {
-      pendingRef.current += delta;
-    }
-  }, []);
+  const onTimeUpdate = useCallback((media: PlaybackSample) => {
+    session?.sample(media, enabled && visible && document.visibilityState === 'visible');
+  }, [session, visible, enabled]);
 
-  /** Call on pause / ended / becoming inactive. */
-  const onPause = useCallback(() => {
-    lastTimeRef.current = null;
-    void flush();
-  }, [flush]);
+  const onPause = useCallback(() => { session?.reset(); void flush(); }, [session, flush]);
 
-  // Periodic batched flush + lifecycle safety nets
+  useEffect(() => { if (!visible || !enabled) onPause(); }, [visible, enabled, onPause]);
+
   useEffect(() => {
-    if (!videoId) return;
-    const interval = setInterval(() => void flush(), FLUSH_INTERVAL_MS);
-    const onHide = () => {
-      if (document.visibilityState === 'hidden') {
-        lastTimeRef.current = null;
-        void flush();
-      }
-    };
-    document.addEventListener('visibilitychange', onHide);
-    window.addEventListener('pagehide', onHide);
+    if (!session || !visible || !enabled) return;
+    void flush(); // Establish server time before accumulating playback.
+    const timer = setInterval(() => void flush(), 5000);
+    const onVisibility = () => { session.reset(); void flush(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPause);
+    window.addEventListener('online', onVisibility);
     return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onHide);
-      window.removeEventListener('pagehide', onHide);
-      void flush();
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPause);
+      window.removeEventListener('online', onVisibility);
+      onPause();
     };
-  }, [videoId, flush]);
+  }, [session, visible, enabled, flush, onPause]);
 
   return { onTimeUpdate, onPause, flush };
 };

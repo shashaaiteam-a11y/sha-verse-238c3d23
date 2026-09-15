@@ -7,7 +7,8 @@ import {
   Send, X, Flag, EyeOff, Download
 } from 'lucide-react';
 import { MovionVideo } from '../types';
-import { useMovionStore } from '../store';
+import { useModuleVisible } from '@/lib/navigation/moduleVisibility';
+import Hls from 'hls.js';
 import { cn } from '@/lib/utils';
 import SubscribeButton from './SubscribeButton';
 import { useWatchTracker } from '@/lib/movion/useWatchTracker';
@@ -46,8 +47,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
   onNotInterested
 }) => {
   const navigate = useNavigate();
-  const { recordEngagement, emitEvent } = useMovionStore();
-  const watchTracker = useWatchTracker({ videoId: video.id, isShort: true });
+  const visible = useModuleVisible();
+  const watchTracker = useWatchTracker({ videoId: video.id, isShort: true, enabled: isActive });
   const { isLiked, isDisliked, toggleLike, toggleDislike } = useVideoLike(video.id);
   const { comments, addComment } = useVideoComments(video.id);
   const { user } = useAuth();
@@ -62,12 +63,22 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [commentText, setCommentText] = useState('');
 
+  const source = (shouldPreload || isActive) ? video.videoUrl : '';
   useEffect(() => {
-    if (isActive) {
-      emitEvent({ type: 'watch_started', videoId: video.id });
+    const el = videoRef.current;
+    if (!el || !source) return;
+    let hls: Hls | undefined;
+    if (source.includes('.m3u8') && !el.canPlayType('application/vnd.apple.mpegurl') && Hls.isSupported()) {
+      hls = new Hls(); hls.loadSource(source); hls.attachMedia(el);
+      hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) { setHasError(true); setIsLoading(false); } });
+    } else { el.src = source; }
+    return () => { el.pause(); hls?.destroy(); el.removeAttribute('src'); el.load(); };
+  }, [source]);
+
+  useEffect(() => {
+    if (isActive && visible) {
       if (videoRef.current) {
         setHasError(false);
-        videoRef.current.load();
         videoRef.current.play()
           .then(() => {
             setIsPlaying(true);
@@ -80,14 +91,13 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
       }
     } else {
       if (videoRef.current) {
-        recordEngagement(video, videoRef.current.currentTime, false);
         videoRef.current.pause();
       }
       watchTracker.onPause();
       setIsPlaying(false);
       setProgress(0);
     }
-  }, [isActive, video.id]);
+  }, [isActive, video.id, visible]);
 
   const handleVideoClick = (e: React.MouseEvent) => {
     if (e.detail === 2) {
@@ -96,7 +106,7 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
       setTimeout(() => setShowHeart(false), 800);
     } else {
       if (videoRef.current?.paused) {
-        videoRef.current.play();
+        void videoRef.current.play().catch(() => setIsPlaying(false));
         setIsPlaying(true);
       } else {
         videoRef.current?.pause();
@@ -113,8 +123,8 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
 
   const handleAddComment = () => {
     if (!commentText.trim() || !user) return;
-    addComment.mutate(commentText.trim());
-    setCommentText('');
+    const submitted = commentText;
+    addComment.mutate(submitted.trim(), { onSuccess: () => setCommentText(current => current === submitted ? '' : current) });
   };
 
   const handleLike = (e: React.MouseEvent) => {
@@ -144,7 +154,6 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
         <video
           key={video.id}
           ref={videoRef}
-          src={shouldPreload || isActive ? video.videoUrl : ""}
           className="h-full w-full object-cover cursor-pointer"
           loop 
           playsInline 
@@ -152,14 +161,16 @@ export const ShortsPlayer: React.FC<ShortsPlayerProps> = ({
           onTimeUpdate={() => {
             const t = videoRef.current?.currentTime || 0;
             setProgress((t / (videoRef.current?.duration || 1)) * 100);
-            if (isActive && !videoRef.current?.paused) watchTracker.onTimeUpdate(t);
+            if (videoRef.current) watchTracker.onTimeUpdate({ currentTime: t, paused: !isActive || videoRef.current.paused, seeking: videoRef.current.seeking, playbackRate: videoRef.current.playbackRate });
           }}
           onWaiting={() => setIsLoading(true)}
           onPlaying={() => {
             setIsLoading(false);
             setHasError(false);
           }}
-          onEnded={() => emitEvent({ type: 'video_replay', videoId: video.id })}
+          onPause={() => { setIsPlaying(false); watchTracker.onPause(); }}
+          onSeeking={watchTracker.onPause}
+          onEnded={watchTracker.onPause}
           onClick={handleVideoClick}
           onCanPlay={() => {
             setIsLoading(false);

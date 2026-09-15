@@ -3,6 +3,8 @@ import { HLSVideoPlayer } from "./HLSVideoPlayer";
 import { VideoPreRollAd } from "@/components/ads";
 import { VideoMidRollAd } from "@/components/ads";
 
+import { PlaybackSample } from '@/lib/movion/watchSession';
+
 interface VideoQuality {
   resolution: string;
   video_url: string;
@@ -18,6 +20,8 @@ interface VideoPlayerWithAdsProps {
   poster?: string;
   duration?: number; // in seconds
   onTimeUpdate?: (currentTime: number, duration: number) => void;
+  onPlaybackSample?: (media: PlaybackSample) => void;
+  onPlaybackPause?: () => void;
 }
 
 /**
@@ -31,7 +35,7 @@ export const VideoPlayerWithAds = ({
   qualities = [],
   poster,
   duration = 0,
-  onTimeUpdate,
+  onTimeUpdate, onPlaybackSample, onPlaybackPause,
 }: VideoPlayerWithAdsProps) => {
   const [showPreRoll, setShowPreRoll] = useState(true);
   const [showMidRoll, setShowMidRoll] = useState(false);
@@ -90,7 +94,7 @@ export const VideoPlayerWithAds = ({
       )}
 
       {/* Main Video Player */}
-      {!showPreRoll && !showMidRoll && (
+      {(
         <HLSVideoPlayer
           videoUrl={videoUrl}
           hlsUrl={hlsUrl}
@@ -98,6 +102,9 @@ export const VideoPlayerWithAds = ({
           poster={poster}
           autoPlay={videoStarted}
           onTimeUpdate={handleTimeUpdate}
+          paused={showPreRoll || showMidRoll}
+          onPlaybackSample={onPlaybackSample}
+          onPlaybackPause={onPlaybackPause}
         />
       )}
     </div>

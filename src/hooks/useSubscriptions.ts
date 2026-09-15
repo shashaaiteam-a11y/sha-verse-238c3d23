@@ -66,7 +66,7 @@ export const useSubscriptions = () => {
   }, [user?.id, queryClient]);
 
   const { data: subscribedVideos } = useQuery({
-    queryKey: ['subscribed-videos', user?.id],
+    queryKey: ['subscribed-videos', user?.id, (subscriptions || []).map(s => s.channel_id).sort()],
     queryFn: async () => {
       if (!user || !subscriptions?.length) return [];
 
@@ -95,7 +95,7 @@ export const useSubscriptions = () => {
     enabled: !!user && !!subscriptions?.length,
   });
 
-  return { subscriptions, subscribedVideos, isLoading };
+  return { subscriptions, subscribedVideos: subscriptions?.length ? subscribedVideos : [], isLoading };
 };
 
 export const useIsSubscribed = (channelId?: string) => {
@@ -213,13 +213,14 @@ export const useToggleSubscription = () => {
       queryClient.setQueryData(['is-subscribed', channelId, user?.id], context?.previousSubscribed);
       queryClient.setQueryData(['channel', channelId], context?.previousChannel);
     },
-    onSettled: (_, __, { isSubscribed }) => {
+    onSuccess: (_, { isSubscribed }) => { toast.success(isSubscribed ? 'Unsubscribed' : 'Subscribed!'); },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
       queryClient.invalidateQueries({ queryKey: ['is-subscribed'] });
       queryClient.invalidateQueries({ queryKey: ['channel'] });
       queryClient.invalidateQueries({ queryKey: ['books', 'subscribed'] });
       queryClient.invalidateQueries({ queryKey: ['books', 'feed'] });
-      toast.success(isSubscribed ? 'Unsubscribed' : 'Subscribed!');
+      queryClient.invalidateQueries({ queryKey: ['subscribed-videos'] });
     },
   });
 };

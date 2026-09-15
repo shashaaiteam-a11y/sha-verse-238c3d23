@@ -4,7 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Play, CheckCircle2, Clock, ListPlus, MoreVertical } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MovionVideo } from '../types';
-import { useMovionStore } from '../store';
+import { useMyChannel } from '@/hooks/useChannels';
+import { VideoDeleteDialog } from '@/components/movion/VideoDeleteDialog';
 import { useIsInWatchLater, useToggleWatchLater } from '@/hooks/useWatchLater';
 import { useIsSaved, useToggleSave } from '@/hooks/useVideoSave';
 import { useHiddenVideos } from '@/hooks/useHiddenVideos';
@@ -30,7 +31,8 @@ export const VideoCard: React.FC<VideoCardProps> = ({
   activeMenuId,
   onMenuToggle 
 }) => {
-  const { userChannel, deleteVideo } = useMovionStore();
+  const { channel: userChannel } = useMyChannel();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const { user } = useAuth();
   const { hideVideo, unhideVideo, isHidden: checkIsHidden } = useHiddenVideos();
   const { showUndoSnackbar } = useUndo();
@@ -46,7 +48,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
   
-  const isOwner = video.channelId === userChannel.id;
+  const isOwner = video.channelId === userChannel?.id;
   const isHidden = checkIsHidden(video.id);
   const showMenu = activeMenuId === video.id;
 
@@ -104,11 +106,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
     setShareOpen(true);
   };
 
-  const handleDelete = () => {
-    if (confirm('Delete this video forever?')) {
-      deleteVideo(video.id);
-    }
-  };
+  const handleDelete = () => setDeleteOpen(true);
 
   const handleDownload = () => {
     if (video.videoUrl) {
@@ -289,6 +287,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
       </div>
     </div>
     {shareDialogEl}
+    <VideoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} video={video} />
     </>
   );
 };

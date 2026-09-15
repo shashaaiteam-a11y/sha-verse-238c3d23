@@ -1,198 +1,68 @@
 import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useModuleVisible } from '@/lib/navigation/moduleVisibility';
+import { retryWatchReports } from '@/lib/movion/watchOutbox';
+import { createRealtimeBatch } from '@/lib/movion/realtimeBatch';
 
-/**
- * MOVION Realtime Hook
- * Subscribes to realtime changes for instant UI updates without refresh
- */
+const videoKeys = ['video', 'videos', 'shorts', 'long-videos', 'trending-videos', 'channel-videos',
+  'subscribed-videos', 'video-analytics', 'creator-stats', 'channel-watch-analytics'];
+const channelKeys = ['channel', 'channels', 'my-channel', 'my-creator-channel', 'movion-subscriber-count',
+  'subscriptions', ...videoKeys];
+const subscriptionKeys = ['subscriptions', 'is-subscribed', 'subscribed-videos', ...channelKeys];
+const allKeys = [...subscriptionKeys, 'watch-history', 'watch-later', 'is-watch-later', 'saved-videos',
+  'is-saved', 'playlists', 'video-like', 'video-dislike', 'video-comments', 'studio-all-comments'];
+const connections = new WeakMap<QueryClient, Map<string, { refs: number; close: () => void }>>();
+
+/** One shared connection per cache/account, even when several Movion components need updates. */
 export const useMovionRealtime = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-
+  const visible = useModuleVisible();
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
-
-    // 🚀 OPTIMIZATION: Debounced invalidations to prevent storms
-    let timeoutId: NodeJS.Timeout | null = null;
-    const DEBOUNCE_MS = 2000;
-
-    const debouncedInvalidate = (keys: string[][]) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        keys.forEach(key => queryClient.invalidateQueries({ queryKey: key }));
-      }, DEBOUNCE_MS);
-    };
-
-    // Create a single channel for all MOVION realtime subscriptions
-    // Unique suffix prevents reusing an already-subscribed channel on re-mount
-    const channel = supabase
-      .channel(`movion-realtime-${user.id}-${Math.random().toString(36).slice(2)}`)
-      // Watch History changes
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'watch_history',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          debouncedInvalidate([['watch-history', user.id]]);
+    if (!visible) return;
+    let clients = connections.get(queryClient);
+    if (!clients) { clients = new Map(); connections.set(queryClient, clients); }
+    const key = userId || 'public';
+    let connection = clients.get(key);
+    if (!connection) {
+      const batch = createRealtimeBatch(key => { void queryClient.invalidateQueries({ queryKey: [key] }); });
+      const channel = supabase.channel(`movion-${key}-${crypto.randomUUID()}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, () => batch.add(videoKeys))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'channels' }, () => batch.add(channelKeys))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => batch.add(['video-comments', 'studio-all-comments', ...videoKeys]));
+      if (userId) {
+        const privateTables: Record<string, string[]> = {
+          watch_history: ['watch-history'], watch_later: ['watch-later', 'is-watch-later'],
+          saved_videos: ['saved-videos', 'is-saved'], playlists: ['playlists'],
+          likes: ['video-like', 'video-dislike', ...videoKeys],
+          video_dislikes: ['video-like', 'video-dislike', ...videoKeys],
+          subscriptions: subscriptionKeys,
+        };
+        for (const [table, keys] of Object.entries(privateTables)) {
+          channel.on('postgres_changes', { event: '*', schema: 'public', table, filter: `user_id=eq.${userId}` }, () => batch.add(keys));
         }
-      )
-      // Watch Later changes
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'watch_later',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          debouncedInvalidate([['watch-later', user.id], ['is-watch-later']]);
-        }
-      )
-      // Saved Videos changes
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'saved_videos',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          debouncedInvalidate([['saved-videos', user.id], ['is-saved']]);
-        }
-      )
-      // Playlists changes
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'playlists',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['playlists', user.id] });
-        }
-      )
-      // Subscriptions changes - for real-time subscriber counts
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'subscriptions',
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
-          queryClient.invalidateQueries({ queryKey: ['is-subscribed'] });
-          queryClient.invalidateQueries({ queryKey: ['channel'] });
-        }
-      )
-      // Channels changes - for real-time subscriber counts
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'channels',
-        },
-        (payload) => {
-          const channelId = payload.new?.id;
-          if (channelId) {
-            queryClient.invalidateQueries({ queryKey: ['channel', channelId] });
-          }
-          queryClient.invalidateQueries({ queryKey: ['channel'] });
-        }
-      )
-      // Video likes changes - for real-time like counts
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'likes',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['video-like'] });
-          queryClient.invalidateQueries({ queryKey: ['video'] });
-          queryClient.invalidateQueries({ queryKey: ['videos'] });
-        }
-      )
-      .subscribe();
-
+        channel.on('postgres_changes', { event: '*', schema: 'public', table: 'video_analytics' }, () => batch.add(['channel-watch-analytics', 'video-analytics']));
+      }
+      channel.subscribe(status => {
+        // Initial connect and every reconnect reconcile events missed while disconnected.
+        if (status === 'SUBSCRIBED') { batch.add(allKeys); if (userId) void retryWatchReports(userId); }
+      });
+      const catchUp = () => { batch.add(allKeys); if (userId) void retryWatchReports(userId); };
+      const retryTimer = userId ? setInterval(() => void retryWatchReports(userId), 15000) : undefined;
+      window.addEventListener('online', catchUp);
+      connection = { refs: 0, close: () => {
+        clearInterval(retryTimer); batch.dispose(); window.removeEventListener('online', catchUp); void supabase.removeChannel(channel);
+      } };
+      clients.set(key, connection);
+    }
+    connection.refs++;
     return () => {
-      supabase.removeChannel(channel);
+      if (--connection.refs === 0) { connection.close(); clients.delete(key); }
     };
-  }, [user, queryClient]);
+  }, [queryClient, userId, visible]);
 };
 
-/**
- * Hook for global video updates (new videos, trending changes, real-time counts)
- */
-export const useGlobalVideoRealtime = () => {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`movion-global-videos-${Math.random().toString(36).slice(2)}`)
-      // New video uploads
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'videos',
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['videos'] });
-          queryClient.invalidateQueries({ queryKey: ['shorts'] });
-        }
-      )
-      // Video updates (likes, views, etc.)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'videos',
-        },
-        (payload) => {
-          // Update specific video cache
-          const videoId = payload.new?.id;
-          if (videoId) {
-            queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-          }
-          queryClient.invalidateQueries({ queryKey: ['videos'] });
-        }
-      )
-      // Channel updates (subscriber counts)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'channels',
-        },
-        (payload) => {
-          const channelId = payload.new?.id;
-          if (channelId) {
-            queryClient.invalidateQueries({ queryKey: ['channel', channelId] });
-          }
-          queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
-};
+export const useGlobalVideoRealtime = useMovionRealtime;

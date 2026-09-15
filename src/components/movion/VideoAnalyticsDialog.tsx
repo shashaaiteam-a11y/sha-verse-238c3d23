@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,9 @@ import {
   Globe, MapPin, TrendingUp, Users, Calendar
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+
+import { useChannelWatchAnalytics } from "@/hooks/useChannelWatchAnalytics";
 
 interface VideoAnalyticsDialogProps {
   open: boolean;
@@ -32,45 +34,7 @@ interface VideoAnalyticsDialogProps {
   } | null;
 }
 
-// Simulated geographic data (in production, this would come from real analytics)
-const generateGeoData = (totalViews: number) => {
-  const countries = [
-    { name: "India", code: "IN", percentage: 45 },
-    { name: "United States", code: "US", percentage: 20 },
-    { name: "Pakistan", code: "PK", percentage: 12 },
-    { name: "Bangladesh", code: "BD", percentage: 8 },
-    { name: "United Kingdom", code: "GB", percentage: 5 },
-    { name: "Canada", code: "CA", percentage: 4 },
-    { name: "Australia", code: "AU", percentage: 3 },
-    { name: "Other", code: "XX", percentage: 3 },
-  ];
-  
-  return countries.map(c => ({
-    ...c,
-    views: Math.round((totalViews * c.percentage) / 100),
-  }));
-};
-
-const generateStateData = (countryViews: number) => {
-  const states = [
-    { name: "Maharashtra", percentage: 25 },
-    { name: "Delhi", percentage: 18 },
-    { name: "Karnataka", percentage: 15 },
-    { name: "Tamil Nadu", percentage: 12 },
-    { name: "Uttar Pradesh", percentage: 10 },
-    { name: "Gujarat", percentage: 8 },
-    { name: "West Bengal", percentage: 7 },
-    { name: "Other", percentage: 5 },
-  ];
-  
-  return states.map(s => ({
-    ...s,
-    views: Math.round((countryViews * s.percentage) / 100),
-  }));
-};
-
 export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyticsDialogProps) {
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch real-time video stats
@@ -81,12 +45,13 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
       
       const { data, error } = await (supabase
         .from('videos') as any)
-        .select('views_count, likes_count, comments_count, duration, created_at')
+        .select('channel_id, views_count, likes_count, comments_count, duration, created_at')
         .eq('id', video.id)
         .single();
         
       if (error) throw error;
       return data as {
+        channel_id: string;
         views_count?: number;
         likes_count?: number;
         comments_count?: number;
@@ -98,51 +63,12 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
     refetchInterval: 5000, // Real-time updates every 5 seconds
   });
 
-  // Fetch comments count
-  const { data: commentsData } = useQuery({
-    queryKey: ['video-comments-count', video?.id],
-    queryFn: async () => {
-      if (!video?.id) return { count: 0 };
-      
-      const { count, error } = await supabase
-        .from('comments')
-        .select('*', { count: 'exact', head: true })
-        .eq('video_id', video.id);
-        
-      if (error) throw error;
-      return { count: count || 0 };
-    },
-    enabled: !!video?.id && open,
-    refetchInterval: 5000,
-  });
-
-  // Fetch likes count
-  const { data: likesData } = useQuery({
-    queryKey: ['video-likes-count', video?.id],
-    queryFn: async () => {
-      if (!video?.id) return { count: 0 };
-      
-      const { count, error } = await supabase
-        .from('likes')
-        .select('*', { count: 'exact', head: true })
-        .eq('video_id', video.id);
-        
-      if (error) throw error;
-      return { count: count || 0 };
-    },
-    enabled: !!video?.id && open,
-    refetchInterval: 5000,
-  });
-
+  const analytics = useChannelWatchAnalytics(open ? liveStats?.channel_id : undefined);
+  const measured = analytics.rows.find(row => row.video_id === video?.id);
   const stats = liveStats || video;
-  const views = (stats as any)?.views_count || 0;
-  const likes = likesData?.count || (stats as any)?.likes_count || 0;
-  const comments = commentsData?.count || (stats as any)?.comments_count || 0;
-  const shares = (stats as any)?.shares_count || 0;
-  
-  const geoData = generateGeoData(views);
-  const indiaViews = geoData.find(g => g.code === 'IN')?.views || 0;
-  const stateData = generateStateData(indiaViews);
+  const views = stats?.views_count ?? 0;
+  const likes = stats?.likes_count ?? 0;
+  const comments = stats?.comments_count ?? 0;
 
   const formatCount = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -166,10 +92,8 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
     });
   };
 
-  // Calculate estimated watch time
-  const avgWatchPercentage = 0.65; // Assume 65% average watch time
-  const videoDuration = (stats as any)?.duration || 60;
-  const totalWatchMinutes = Math.round((views * videoDuration * avgWatchPercentage) / 60);
+  const videoDuration = stats?.duration ?? 0;
+  const totalWatchMinutes = Math.floor(Number(measured?.watch_seconds ?? 0) / 60);
   const watchHours = Math.floor(totalWatchMinutes / 60);
   const watchMins = totalWatchMinutes % 60;
 
@@ -244,9 +168,9 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                     <CardContent className="pt-4 pb-3">
                       <div className="flex items-center gap-2 text-muted-foreground mb-1">
                         <Share2 className="w-4 h-4" />
-                        <span className="text-xs">Shares</span>
+                        <span className="text-xs">Shares (not tracked)</span>
                       </div>
-                      <p className="text-2xl font-bold">{formatCount(shares)}</p>
+                      <p className="text-2xl font-bold">—</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -261,7 +185,7 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-3xl font-bold">{watchHours}</span>
+                      <span className="text-3xl font-bold">{analytics.error ? "Unavailable" : analytics.isLoading ? "…" : watchHours}</span>
                       <span className="text-muted-foreground">hours</span>
                       <span className="text-xl font-bold">{watchMins}</span>
                       <span className="text-muted-foreground">minutes</span>
@@ -319,17 +243,7 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {geoData.map((country) => (
-                  <div key={country.code}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">{country.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatCount(country.views)} ({country.percentage}%)
-                      </span>
-                    </div>
-                    <Progress value={country.percentage} className="h-2" />
-                  </div>
-                ))}
+                <p className="text-sm text-muted-foreground">Country analytics are not collected yet.</p>
               </CardContent>
             </Card>
 
@@ -342,17 +256,7 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {stateData.map((state) => (
-                  <div key={state.name}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">{state.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {formatCount(state.views)} ({state.percentage}%)
-                      </span>
-                    </div>
-                    <Progress value={state.percentage} className="h-2" />
-                  </div>
-                ))}
+                <p className="text-sm text-muted-foreground">State analytics are not collected yet.</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -380,8 +284,8 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                   </div>
                   <div className="p-4 bg-secondary rounded-lg">
                     <Share2 className="w-6 h-6 mx-auto mb-2 text-purple-500" />
-                    <p className="text-2xl font-bold">{formatCount(shares)}</p>
-                    <p className="text-xs text-muted-foreground">Shares</p>
+                    <p className="text-2xl font-bold">—</p>
+                    <p className="text-xs text-muted-foreground">Shares (not tracked)</p>
                   </div>
                 </div>
 
@@ -394,7 +298,7 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                         {views > 0 ? (likes / views * 100).toFixed(2) : 0}%
                       </span>
                     </div>
-                    <Progress value={views > 0 ? Math.min((likes / views * 100) * 10, 100) : 0} className="h-2" />
+                    <Progress value={views > 0 ? Math.min((likes / views * 100), 100) : 0} className="h-2" />
                   </div>
                   
                   <div>
@@ -404,17 +308,17 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                         {views > 0 ? (comments / views * 100).toFixed(2) : 0}%
                       </span>
                     </div>
-                    <Progress value={views > 0 ? Math.min((comments / views * 100) * 50, 100) : 0} className="h-2" />
+                    <Progress value={views > 0 ? Math.min((comments / views * 100), 100) : 0} className="h-2" />
                   </div>
                   
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="text-sm">Share Rate</span>
                       <span className="text-sm font-medium">
-                        {views > 0 ? (shares / views * 100).toFixed(2) : 0}%
+                        Not tracked
                       </span>
                     </div>
-                    <Progress value={views > 0 ? Math.min((shares / views * 100) * 100, 100) : 0} className="h-2" />
+                    <Progress value={0} className="h-2" />
                   </div>
                 </div>
               </CardContent>
@@ -432,13 +336,13 @@ export function VideoAnalyticsDialog({ open, onOpenChange, video }: VideoAnalyti
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-secondary rounded-lg">
                     <p className="text-3xl font-bold text-primary">{formatCount(views)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Total Reach</p>
+                    <p className="text-xs text-muted-foreground mt-1">Video views</p>
                   </div>
                   <div className="text-center p-4 bg-secondary rounded-lg">
                     <p className="text-3xl font-bold text-primary">
-                      {views > 0 ? Math.round((likes + comments + shares) / views * 1000) / 10 : 0}%
+                      {views > 0 ? Math.round((likes + comments) / views * 1000) / 10 : 0}%
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">Interaction Rate</p>
+                    <p className="text-xs text-muted-foreground mt-1">Likes + comments per view</p>
                   </div>
                 </div>
               </CardContent>

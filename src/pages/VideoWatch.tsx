@@ -77,17 +77,8 @@ const VideoWatch = () => {
   const [showShareDialog, setShowShareDialog] = useState(false);
 
   // Watch history and saved
-  const addToHistory = useAddToHistory();
-  const updateWatchProgress = useUpdateWatchProgress();
   const isSaved = useIsSaved(videoId);
   const toggleSaved = useToggleSaved();
-
-  // Add to history on mount (views are counted server-side by watch tracker)
-  useEffect(() => {
-    if (videoId) {
-      addToHistory.mutate({ videoId });
-    }
-  }, [videoId]);
 
   // Server-validated view counting + batched watch-time tracking
   const watchTracker = useWatchTracker({
@@ -95,17 +86,6 @@ const VideoWatch = () => {
     isShort: false,
     duration: video?.duration || undefined,
   });
-
-  // Handle time update for watch progress
-  const handleTimeUpdate = (currentTime: number, duration: number) => {
-    watchTracker.onTimeUpdate(currentTime);
-    if (videoId && duration > 0) {
-      // Debounce updates - only save every 10 seconds
-      if (Math.floor(currentTime) % 10 === 0) {
-        updateWatchProgress.mutate({ videoId, currentTime, duration });
-      }
-    }
-  };
 
   const handleSaveVideo = () => {
     if (videoId) {
@@ -192,7 +172,9 @@ const VideoWatch = () => {
               qualities={qualities}
               poster={video.thumbnail_url || undefined}
               duration={video.duration || 0}
-              onTimeUpdate={handleTimeUpdate}
+              onPlaybackSample={watchTracker.onTimeUpdate}
+              onPlaybackPause={watchTracker.onPause}
+              key={videoId}
             />
           ) : video.thumbnail_url ? (
             <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">

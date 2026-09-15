@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMovionRealtime } from '@/hooks/useMovionRealtime';
 import { supabase } from '@/integrations/supabase/client';
 
 // Transform Supabase video data to component-compatible format
@@ -15,6 +15,7 @@ const transformVideoData = (video: any) => {
     ...video,
     thumbnail: video.thumbnail_url || 'https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=400',
     videoUrl: video.video_url || video.hls_url || '',
+    duration_seconds: video.duration,
     duration: formatDuration(video.duration),
     channelName: video.channels?.name || 'Unknown Channel',
     channelAvatar: video.channels?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${video.channel_id}`,
@@ -26,7 +27,7 @@ const transformVideoData = (video: any) => {
 };
 
 export const useShorts = () => {
-  const queryClient = useQueryClient();
+  useMovionRealtime();
 
   const { data: shorts, isLoading } = useQuery({
     queryKey: ['shorts'],
@@ -57,47 +58,6 @@ export const useShorts = () => {
       return (data || []).filter(isPlayable).map(transformVideoData);
     },
   });
-
-  // 🚀 OPTIMIZATION: Debounced realtime to prevent video update storms
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null = null;
-    const DEBOUNCE_MS = 3000;
-
-    const debouncedInvalidate = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['shorts'] });
-        queryClient.invalidateQueries({ queryKey: ['long-videos'] });
-      }, DEBOUNCE_MS);
-    };
-
-    const realtimeChannelName = `shorts-realtime:${Date.now()}:${Math.random()
-      .toString(36)
-      .slice(2)}`;
-
-    const channel = supabase
-      .channel(realtimeChannelName)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'videos',
-      }, () => {
-        debouncedInvalidate();
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'videos',
-      }, () => {
-        debouncedInvalidate();
-      })
-      .subscribe();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
 
   return { shorts, isLoading };
 };

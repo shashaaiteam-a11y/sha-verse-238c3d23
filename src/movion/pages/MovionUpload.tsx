@@ -1,5 +1,5 @@
 // Movion Upload Page - Live with Supabase
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Upload, FileVideo, Image, X, Globe, Lock, Eye, Loader2, AlertCircle
@@ -80,25 +80,19 @@ const MovionUpload = () => {
     video.onloadedmetadata = () => {
       setVideoDuration(Math.round(video.duration));
       setIsShort(video.duration <= 60);
-      URL.revokeObjectURL(video.src);
+      video.removeAttribute("src");
+      video.load();
     };
     video.src = url;
     
-    // Simulate progress for UX
-    setIsUploading(true);
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 20;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        setIsUploading(false);
-        setStep("details");
-      }
-      setUploadProgress(progress);
-    }, 300);
+    setIsUploading(false);
+    setUploadProgress(0);
+    setStep("details");
   };
-  
+
+  useEffect(() => () => { if (videoPreview) URL.revokeObjectURL(videoPreview); }, [videoPreview]);
+  useEffect(() => () => { if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview); }, [thumbnailPreview]);
+
   const handleThumbnailSelect = (file: File) => {
     setThumbnailFile(file);
     setThumbnailPreview(URL.createObjectURL(file));
@@ -134,6 +128,7 @@ const MovionUpload = () => {
       return;
     }
     
+    if (visibility !== "public") { toast.error("Private and unlisted uploads are not available yet."); return; }
     try {
       await uploadVideo.mutateAsync({
         title,
@@ -144,9 +139,9 @@ const MovionUpload = () => {
         duration: videoDuration,
         isShort,
         category: category || undefined,
+        tags: tags.split(",").map(tag => tag.trim()).filter(Boolean),
       });
       
-      toast.success("Video uploaded successfully!");
       navigate("/movion");
     } catch (error) {
       console.error(error);
@@ -465,7 +460,10 @@ const MovionUpload = () => {
                   key={option.value}
                   className={`flex items-start gap-4 p-4 border rounded-lg cursor-pointer transition-colors
                     ${visibility === option.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
-                  onClick={() => setVisibility(option.value as any)}
+                  role="radio"
+                  aria-checked={visibility === option.value}
+                  aria-disabled={option.value !== "public"}
+                  onClick={() => { if (option.value === "public") setVisibility("public"); }}
                 >
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5
                     ${visibility === option.value ? "border-primary" : "border-muted-foreground"}`}
@@ -479,7 +477,7 @@ const MovionUpload = () => {
                       <option.icon className="w-5 h-5" />
                       <span className="font-medium">{option.title}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{option.desc}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{option.value === "public" ? option.desc : "Not available yet — uploads are public."}</p>
                   </div>
                 </div>
               ))}
@@ -489,17 +487,17 @@ const MovionUpload = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Allow comments</p>
-                  <p className="text-sm text-muted-foreground">Let viewers add comments</p>
+                  <p className="text-sm text-muted-foreground">Comments are enabled for public uploads</p>
                 </div>
-                <Switch checked={allowComments} onCheckedChange={setAllowComments} />
+                <Switch checked={allowComments} disabled aria-label="Comments are enabled for public uploads" />
               </div>
               
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Show like counts</p>
-                  <p className="text-sm text-muted-foreground">Display number of likes</p>
+                  <p className="text-sm text-muted-foreground">Like counts are shown for public uploads</p>
                 </div>
-                <Switch checked={showLikeCounts} onCheckedChange={setShowLikeCounts} />
+                <Switch checked={showLikeCounts} disabled aria-label="Like counts are shown for public uploads" />
               </div>
             </div>
             

@@ -12,26 +12,27 @@ export interface SubscribeButtonProps {
 }
 
 export function SubscribeButton({ channelId, className = '' }: SubscribeButtonProps) {
-  const { isSubscribed, subscriberCount, isLoading, error, toggleSubscription } = 
+  const { isSubscribed, subscriberCount, isLoading, isOwnChannel, error, toggleSubscription } =
     useMovionSubscriptions({ channelId });
   const { toast } = useToast();
 
   const handleClick = async () => {
     try {
-      await toggleSubscription();
-      
-      const message = isSubscribed 
-        ? 'Unsubscribed from this channel' 
+      const subscribed = await toggleSubscription();
+      if (subscribed === undefined) return;
+
+      const message = !subscribed
+        ? 'Unsubscribed from this channel'
         : 'Subscribed to this channel';
-      
+
       toast({
-        title: isSubscribed ? 'Unsubscribed' : 'Subscribed',
+        title: subscribed ? 'Subscribed' : 'Unsubscribed',
         description: message,
       });
     } catch (err) {
       toast({
         title: 'Error',
-        description: error || 'Something went wrong',
+        description: err instanceof Error ? err.message : 'Unable to update subscription',
         variant: 'destructive',
       });
     }
@@ -42,9 +43,9 @@ export function SubscribeButton({ channelId, className = '' }: SubscribeButtonPr
       {/* Subscribe Button */}
       <button
         onClick={handleClick}
-        disabled={isLoading}
+        disabled={isLoading || isOwnChannel}
         className={`
-          px-6 py-2 rounded-full font-semibold 
+          px-6 py-2 rounded-full font-semibold
           transition-all duration-300
           flex items-center gap-2
           ${
@@ -58,7 +59,7 @@ export function SubscribeButton({ channelId, className = '' }: SubscribeButtonPr
         <Heart
           className={`w-5 h-5 ${isSubscribed ? 'fill-current' : ''}`}
         />
-        {isLoading ? 'Processing...' : isSubscribed ? 'Subscribed' : 'Subscribe'}
+        {isOwnChannel ? 'Your channel' : isLoading ? 'Processing...' : isSubscribed ? 'Subscribed' : 'Subscribe'}
       </button>
 
       {/* Subscriber Count */}

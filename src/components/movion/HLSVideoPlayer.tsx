@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Hls from "hls.js";
 import { Settings, Check } from "lucide-react";
 import {
@@ -8,6 +8,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+
+import { PlaybackSample } from '@/lib/movion/watchSession';
+import { useModuleVisible } from '@/lib/navigation/moduleVisibility';
 
 interface VideoQuality {
   resolution: string;
@@ -24,6 +27,9 @@ interface HLSVideoPlayerProps {
   poster?: string;
   autoPlay?: boolean;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
+  onPlaybackSample?: (media: PlaybackSample) => void;
+  onPlaybackPause?: () => void;
+  paused?: boolean;
 }
 
 export const HLSVideoPlayer = ({
@@ -32,109 +38,64 @@ export const HLSVideoPlayer = ({
   qualities = [],
   poster,
   autoPlay = false,
-  onTimeUpdate,
+  onTimeUpdate, onPlaybackSample, onPlaybackPause, paused = false,
 }: HLSVideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [currentQuality, setCurrentQuality] = useState<string>("auto");
   const [availableLevels, setAvailableLevels] = useState<{ height: number; index: number }[]>([]);
 
-  // Get ready qualities sorted by resolution
-  const readyQualities = qualities
-    .filter((q) => q.status === "ready")
-    .sort((a, b) => (b.height || 0) - (a.height || 0));
+  const visible = useModuleVisible();
+  const blocked = paused || !visible;
+  const blockedRef = useRef(blocked);
+  blockedRef.current = blocked;
+  const autoPlayRef = useRef(autoPlay);
+  autoPlayRef.current = autoPlay;
+  const readyQualities = useMemo(() => qualities.filter(q => q.status === 'ready')
+    .sort((a,b) => (b.height || 0) - (a.height || 0)), [qualities]);
+  const directSource = currentQuality === 'auto' ? videoUrl : readyQualities.find(q => q.resolution === currentQuality)?.video_url || videoUrl;
+  const source = hlsUrl || directSource;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !source) return;
+    const position = video.currentTime;
+    const resume = !video.paused || autoPlayRef.current;
+    const restore = () => {
+      if (position > 0 && Number.isFinite(video.duration)) video.currentTime = Math.min(position,video.duration);
+      if (resume && !blockedRef.current) void video.play().catch(() => {});
+    };
+    video.addEventListener('loadedmetadata', restore, { once: true });
+    let hls: Hls | undefined;
+    if (source.includes('.m3u8') && !video.canPlayType('application/vnd.apple.mpegurl') && Hls.isSupported()) {
+      hls = new Hls({ enableWorker: true, backBufferLength: 90 });
+      hlsRef.current = hls;
+      hls.loadSource(source); hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        setAvailableLevels(data.levels.map((level,index) => ({ height: level.height,index })));
+      });
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal && videoUrl && videoUrl !== source) {
+          hls?.destroy(); hlsRef.current = null; setAvailableLevels([]);
+          video.src = videoUrl;
+        }
+      });
+    } else { video.src = source; }
+    return () => { video.removeEventListener('loadedmetadata', restore); hls?.destroy(); hlsRef.current = null; };
+  }, [source, videoUrl]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    if (blocked) video.pause();
+    else if (autoPlay) void video.play().catch(() => {});
+  }, [blocked, autoPlay]);
 
-    // If HLS URL is available and browser supports HLS.js
-    if (hlsUrl && Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90,
-      });
-
-      hlsRef.current = hls;
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-        const levels = data.levels.map((level, index) => ({
-          height: level.height,
-          index,
-        }));
-        setAvailableLevels(levels);
-        
-        if (autoPlay) {
-          video.play().catch(console.error);
-        }
-      });
-
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          console.error("HLS fatal error:", data);
-          // Fallback to direct video URL
-          video.src = videoUrl;
-        }
-      });
-
-      return () => {
-        hls.destroy();
-        hlsRef.current = null;
-      };
-    } 
-    // Native HLS support (Safari)
-    else if (hlsUrl && video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsUrl;
-      if (autoPlay) {
-        video.play().catch(console.error);
-      }
-    }
-    // Fallback to direct video or quality selection
-    else {
-      const selectedQuality = readyQualities.find((q) => q.resolution === currentQuality);
-      video.src = selectedQuality?.video_url || videoUrl;
-      if (autoPlay) {
-        video.play().catch(console.error);
-      }
-    }
-  }, [hlsUrl, videoUrl, autoPlay]);
-
-  // Handle quality change for non-HLS
   useEffect(() => {
-    if (hlsRef.current && currentQuality !== "auto") {
-      const level = availableLevels.find((l) => `${l.height}p` === currentQuality);
-      if (level !== undefined) {
-        hlsRef.current.currentLevel = level.index;
-      }
-    } else if (hlsRef.current && currentQuality === "auto") {
-      hlsRef.current.currentLevel = -1; // Auto
-    } else if (!hlsRef.current && videoRef.current) {
-      // Direct quality switching for non-HLS
-      const selectedQuality = readyQualities.find((q) => q.resolution === currentQuality);
-      if (selectedQuality) {
-        const currentTime = videoRef.current.currentTime;
-        videoRef.current.src = selectedQuality.video_url;
-        videoRef.current.currentTime = currentTime;
-        videoRef.current.play().catch(console.error);
-      }
-    }
-  }, [currentQuality, availableLevels, readyQualities]);
-
-  // Time update handler
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !onTimeUpdate) return;
-
-    const handleTimeUpdate = () => {
-      onTimeUpdate(video.currentTime, video.duration);
-    };
-
-    video.addEventListener("timeupdate", handleTimeUpdate);
-    return () => video.removeEventListener("timeupdate", handleTimeUpdate);
-  }, [onTimeUpdate]);
+    if (!hlsRef.current) return;
+    hlsRef.current.currentLevel = currentQuality === 'auto' ? -1 :
+      (availableLevels.find(level => `${level.height}p` === currentQuality)?.index ?? -1);
+  }, [currentQuality, availableLevels]);
 
   const qualityOptions = hlsRef.current
     ? [
@@ -159,6 +120,11 @@ export const HLSVideoPlayer = ({
         controls
         poster={poster}
         playsInline
+        onTimeUpdate={e => { onPlaybackSample?.(e.currentTarget); onTimeUpdate?.(e.currentTarget.currentTime, e.currentTarget.duration); }}
+        onPause={onPlaybackPause}
+        onSeeking={onPlaybackPause}
+        onEnded={onPlaybackPause}
+        onPlay={e => { if (blocked) e.currentTarget.pause(); }}
       />
 
       {/* Quality selector overlay */}
