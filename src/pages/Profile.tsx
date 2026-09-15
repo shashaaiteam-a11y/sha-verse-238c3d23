@@ -110,7 +110,7 @@ const Profile = () => {
 
   
 
-  const { profile, isLoading } = useProfile(userId);
+  const { profile, isLoading, error: profileError, refetch: refetchProfile } = useProfile(userId);
 
   // Posts now use infinite scroll (cursor-based) — no manual page state.
 
