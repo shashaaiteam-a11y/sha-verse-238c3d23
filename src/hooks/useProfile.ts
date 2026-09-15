@@ -8,7 +8,7 @@ export const useProfile = (userId?: string) => {
   const queryClient = useQueryClient();
   const targetUserId = userId || user?.id;
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, error, refetch } = useQuery({
     queryKey: ['profile', targetUserId],
     queryFn: async () => {
       if (!targetUserId) return null;
@@ -73,5 +73,5 @@ export const useProfile = (userId?: string) => {
     };
   }, [targetUserId, queryClient]);
 
-  return { profile, isLoading };
+  return { profile, isLoading, error, refetch };
 };
