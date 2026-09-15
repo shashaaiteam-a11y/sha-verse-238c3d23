@@ -34,19 +34,34 @@ export const PushBridge = () => {
     }
     hadUser.current = true;
     if (registeredFor.current === user.id) return;
-    registeredFor.current = user.id;
 
     // Native: register immediately (OS prompt). Web: only if already granted —
     // a fresh permission prompt needs a user gesture, handled in Settings.
+    let cancelled = false;
     void (async () => {
       if (!isNativePush()) {
         if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
       }
-      const result = await registerPush();
-      if (result.status !== 'registered') {
-        console.info('[push] not registered:', result.status);
+      // Transient failures (no network, FCM hiccup) must not block a retry,
+      // so the "already registered" marker is only set after a real success.
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
+        const result = await registerPush();
+        if (result.status === 'registered') {
+          registeredFor.current = user.id;
+          return;
+        }
+        if (result.status !== 'error') {
+          console.info('[push] not registered:', result.status);
+          return; // denied / unsupported / not-configured — retrying won't help
+        }
+        console.info('[push] registration error, will retry:', result.message);
+        await new Promise((r) => setTimeout(r, 2000 * 2 ** attempt));
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   // Native listeners: foreground receipt + tap navigation.
