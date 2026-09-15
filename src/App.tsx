@@ -116,7 +116,7 @@ const PromoteInfo = lazy(() => import("./pages/PromoteInfo"));
 //
 // Sirf yeh ek line badalni hai. Save karo → app apne aap update ho jayega.
 // ============================================================================
-const MOVION_ENABLED = false;
+const MOVION_ENABLED = true;
 
 // When the switch is OFF, Movion is still LIVE for admin users only
 // (everyone else keeps seeing the Coming Soon page) — handled by MovionGate.

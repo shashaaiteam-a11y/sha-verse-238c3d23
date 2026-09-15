@@ -9,9 +9,12 @@ import { recordSwipeAway } from '@/hooks/useMovionAlgorithms';
 import { ShortsPlayer } from '../components';
 import { Loader2 } from 'lucide-react';
 import { ShortsScrollAd } from '@/components/ads';
+import { useModuleVisible } from '@/lib/navigation/moduleVisibility';
 
 const MovionShorts: React.FC = () => {
   const { videoId } = useParams();
+  const visible = useModuleVisible();
+  const [activeAdId, setActiveAdId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { shorts, isLoading } = useShorts();
   
@@ -22,7 +25,16 @@ const MovionShorts: React.FC = () => {
   const { hiddenVideos, hideVideo } = useHiddenVideos();
 
   // Apply pulse algorithm for smart ordering (with hidden filter)
-  const shortsVideos = usePrioritizedPulse(shorts, hiddenVideos);
+  const rankedVideos = usePrioritizedPulse(shorts, hiddenVideos);
+  const orderRef = useRef<string[]>([]);
+  // Keep the playing item in place while realtime updates refresh its counters.
+  const shortsVideos = useMemo(() => {
+    const byId = new Map(rankedVideos.map(video => [video.id, video]));
+    const known = orderRef.current.filter(id => byId.has(id));
+    const seen = new Set(known);
+    orderRef.current = [...known, ...rankedVideos.filter(video => !seen.has(video.id)).map(video => video.id)];
+    return orderRef.current.map(id => byId.get(id)!);
+  }, [rankedVideos]);
 
   const [activeId, setActiveId] = useState<string>(videoId || '');
   const [isGlobalMuted, setIsGlobalMuted] = useState(true);
@@ -32,8 +44,8 @@ const MovionShorts: React.FC = () => {
 
   // Set initial active ID when shorts load
   useEffect(() => {
-    if (!activeId && shortsVideos.length > 0) {
-      setActiveId(videoId || shortsVideos[0]?.id || '');
+    if ((!activeId || !shortsVideos.some(video => video.id === activeId)) && shortsVideos.length > 0) {
+      setActiveId(shortsVideos.some(video => video.id === videoId) ? videoId! : shortsVideos[0]?.id || '');
     }
   }, [shortsVideos, videoId, activeId]);
 
@@ -64,6 +76,7 @@ const MovionShorts: React.FC = () => {
   }, [navigate]);
 
   useEffect(() => {
+    if (!visible) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown' && activeIndex < shortsVideos.length - 1) scrollToId(shortsVideos[activeIndex + 1].id);
       else if (e.key === 'ArrowUp' && activeIndex > 0) scrollToId(shortsVideos[activeIndex - 1].id);
@@ -81,14 +94,22 @@ const MovionShorts: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       containerRef.current?.removeEventListener('wheel', handleWheel);
     };
-  }, [activeIndex, shortsVideos, scrollToId]);
+  }, [activeIndex, shortsVideos, scrollToId, visible]);
 
   useEffect(() => {
+    if (!visible || isLoading || !videoId || isScrollingRef.current) return;
+    const target = Array.from(containerRef.current?.querySelectorAll('[data-id]') || []).find(el => el.getAttribute('data-id') === videoId);
+    target?.scrollIntoView({ behavior: 'auto' });
+  }, [videoId, isLoading, shortsVideos.length, visible]);
+
+  useEffect(() => {
+    if (!visible) return;
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const id = entry.target.getAttribute('data-id');
-          if (id && id !== activeId) setActiveId(id);
+          if (id?.startsWith('ad:')) setActiveAdId(id);
+          else if (id) { setActiveAdId(null); if (id !== activeId) setActiveId(id); }
         }
       });
     }, { root: containerRef.current, threshold: 0.7 });
@@ -96,7 +117,7 @@ const MovionShorts: React.FC = () => {
     const elements = containerRef.current?.querySelectorAll('[data-short-item]');
     elements?.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [activeId]);
+  }, [activeId, shortsVideos.length, isLoading, visible]);
 
   if (isLoading) {
     return (
@@ -129,7 +150,7 @@ const MovionShorts: React.FC = () => {
           <ShortsPlayer 
             key={video.id} 
             video={video} 
-            isActive={video.id === activeId} 
+            isActive={!activeAdId && video.id === activeId}
             isMuted={isGlobalMuted}
             onMuteToggle={() => setIsGlobalMuted(!isGlobalMuted)}
             shouldPreload={shouldLoadMedia}
@@ -144,9 +165,10 @@ const MovionShorts: React.FC = () => {
             <div
               key={`ad-${video.id}`}
               data-short-item
+              data-id={`ad:${video.id}`}
               className="h-full w-full snap-start"
             >
-              <ShortsScrollAd isActive={false} />
+              <ShortsScrollAd isActive={visible && activeAdId === `ad:${video.id}`} />
             </div>,
           ];
         }

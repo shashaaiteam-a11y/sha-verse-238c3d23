@@ -44,9 +44,6 @@ export const useVideos = () => {
   const { data: trendingVideos } = useQuery({
     queryKey: ['trending-videos'],
     queryFn: async () => {
-      // First refresh trending scores via RPC
-      await supabase.rpc('calculate_trending_scores');
-      
       const { data, error } = await supabase
         .from('videos')
         .select(`
@@ -178,7 +175,7 @@ export const useUploadVideo = () => {
       thumbnailFile,
       duration,
       isShort,
-      category
+      category, tags
     }: { 
       title: string; 
       description?: string; 
@@ -188,6 +185,7 @@ export const useUploadVideo = () => {
       duration?: number;
       isShort?: boolean;
       category?: string;
+      tags?: string[];
     }) => {
       if (!user) throw new Error('Not authenticated');
 
@@ -238,29 +236,12 @@ export const useUploadVideo = () => {
           duration: duration ? Math.round(duration) : null,
           is_short: isShort || false,
           category: category || null,
+          tags: tags || [],
         })
         .select()
         .single();
 
       if (error) throw error;
-
-      // Try Mux transcoding in background (optional - doesn't block upload)
-      try {
-        supabase.functions.invoke('mux-transcode', {
-          body: {
-            action: 'create-asset',
-            videoId: video.id,
-            videoUrl: videoUrlData.publicUrl,
-          },
-        }).then(({ data: muxData, error: muxError }) => {
-          if (!muxError && muxData?.playbackId) {
-            // Background poll for HLS version (optional quality improvement)
-            pollTranscodingStatus(video.id, muxData.assetId, muxData.playbackId);
-          }
-        }).catch(console.error);
-      } catch (e) {
-        console.error('Mux transcoding skipped:', e);
-      }
 
       // Create original quality entry
       await supabase.from('video_qualities').insert({
@@ -290,12 +271,33 @@ export const useUploadVideo = () => {
         });
       }
 
+      // Try Mux transcoding in background (optional - doesn't block upload)
+      try {
+        supabase.functions.invoke('mux-transcode', {
+          body: {
+            action: 'create-asset',
+            videoId: video.id,
+            videoUrl: videoUrlData.publicUrl,
+          },
+        }).then(({ data: muxData, error: muxError }) => {
+          if (muxError || !muxData?.playbackId) {
+            void supabase.from('transcoding_jobs').update({ status: 'failed', error_message: 'Optional processing unavailable; original video is playable.' }).eq('video_id', video.id).then(() => {});
+          }
+          if (!muxError && muxData?.playbackId) {
+            // Background poll for HLS version (optional quality improvement)
+            pollTranscodingStatus(video.id, muxData.assetId, muxData.playbackId);
+          }
+        }).catch(console.error);
+      } catch (e) {
+        console.error('Mux transcoding skipped:', e);
+      }
+
       return video;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
       queryClient.invalidateQueries({ queryKey: ['channel-videos'] });
-      toast.success('Video uploaded! Transcoding will begin shortly.');
+      toast.success('Video uploaded. The original is ready to watch.');
     },
     onError: (error) => {
       toast.error('Failed to upload video: ' + error.message);

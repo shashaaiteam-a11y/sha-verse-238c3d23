@@ -6304,6 +6304,14 @@ export type Database = {
         }[]
       }
       record_story_view: { Args: { p_story_id: string }; Returns: undefined }
+      set_video_reaction: {
+        Args: { _video_id: string; _reaction: string | null }
+        Returns: Json
+      }
+      record_watch_session: {
+        Args: { _video_id: string; _session_key: string; _total_seconds: number; _position_seconds: number; _content_seconds?: number; _viewer_id?: string }
+        Returns: Json
+      }
       record_watch_progress: {
         Args: {
           _delta_seconds: number

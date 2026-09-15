@@ -61,7 +61,9 @@ const applyCreatorDiversity = (videos: MovionVideo[]): MovionVideo[] => {
 
 // Transform Supabase video to MovionVideo type
 export const transformToMovionVideo = (video: any): MovionVideo => {
-  const formatDuration = (seconds?: number) => {
+  const formatDuration = (seconds?: number | string) => {
+    if (typeof seconds === 'string' && /^\d+(?::\d{2}){1,2}$/.test(seconds)) return seconds;
+    seconds = Math.max(0, Math.floor(Number(seconds) || 0));
     if (!seconds) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -91,10 +93,10 @@ export const transformToMovionVideo = (video: any): MovionVideo => {
       dislikes: video.dislikes_count || 0,
       shares: 0,
       commentsCount: video.comments_count || 0,
-      watchTimeSeconds: (video.views_count || 0) * 180,
-      averageRetention: 0.5 + Math.random() * 0.3,
-      replays: Math.floor((video.views_count || 0) * 0.1),
-      engagementSpeed: Math.random(),
+      watchTimeSeconds: Number(video.watch_time_seconds || 0),
+      averageRetention: Number(video.average_retention || 0),
+      replays: Number(video.replays || 0),
+      engagementSpeed: Number(video.engagement_score || 0),
       subscribersGained: 0,
       uploadTimestampMs: video.created_at ? new Date(video.created_at).getTime() : Date.now(),
       dailyViews: [0, 0, 0, 0, 0, 0, 0],

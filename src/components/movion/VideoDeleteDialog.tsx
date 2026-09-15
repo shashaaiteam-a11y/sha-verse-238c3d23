@@ -36,13 +36,16 @@ export const VideoDeleteDialog = ({
     
     setIsDeleting(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("videos")
         .delete()
-        .eq("id", video.id);
+        .eq("id", video.id).select("id").single();
 
-      if (error) throw error;
+      if (error || !data) throw error || new Error("Unable to delete video");
 
+      for (const key of ["video", "shorts", "long-videos", "trending-videos", "subscribed-videos", "channel-watch-analytics"]) {
+        void queryClient.invalidateQueries({ queryKey: [key] });
+      }
       // Invalidate all related queries for real-time update
       queryClient.invalidateQueries({ queryKey: ["videos"] });
       queryClient.invalidateQueries({ queryKey: ["channel-videos"] });
@@ -82,7 +85,7 @@ export const VideoDeleteDialog = ({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleDelete}
+            onClick={e => { e.preventDefault(); void handleDelete(); }}
             disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >

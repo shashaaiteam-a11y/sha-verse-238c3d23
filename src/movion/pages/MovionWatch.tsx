@@ -10,7 +10,6 @@ import {
 import { useVideo, useVideos } from "@/hooks/useVideos";
 import { useVideoLike } from "@/hooks/useVideoLikes";
 import { useVideoComments } from "@/hooks/useVideoComments";
-import { useAddToHistory, useUpdateWatchProgress } from "@/hooks/useWatchHistory";
 import { useMovionRealtime } from "@/hooks/useMovionRealtime";
 import { useRelatedVideos } from "@/hooks/useMovionAlgorithms";
 import { useIsInWatchLater, useToggleWatchLater } from "@/hooks/useWatchLater";
@@ -33,7 +32,7 @@ import { SubscribeButton } from "@/movion/components/SubscribeButton";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentItem from "@/movion/components/CommentItem";
 import { VideoPreRollAd, VideoMidRollAd, RewardedAdButton } from "@/components/ads";
-import { useRewardedAd } from "@/hooks/useRewardedAd";
+import { useModuleVisible } from "@/lib/navigation/moduleVisibility";
 import { useWatchTracker } from "@/lib/movion/useWatchTracker";
 
 const MovionWatch = () => {
@@ -49,8 +48,6 @@ const MovionWatch = () => {
   const { videos: allVideos } = useVideos();
   const { comments, addComment, isLoading: commentsLoading } = useVideoComments(videoId);
   const { isLiked, isDisliked, toggleLike, toggleDislike } = useVideoLike(videoId);
-  const addToHistory = useAddToHistory();
-  const updateProgress = useUpdateWatchProgress();
   
   // Watch Later & Save hooks
   const isInWatchLater = useIsInWatchLater(videoId);
@@ -69,6 +66,9 @@ const MovionWatch = () => {
   });
   
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
+  const visible = useModuleVisible();
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -89,29 +89,21 @@ const MovionWatch = () => {
   const [hoverRatio, setHoverRatio] = useState<number | null>(null);
   const [isVideoError, setIsVideoError] = useState(false);
 
-  // Rewarded ad for 1 hour ad-free watching
-  const { watchAd: watchAdFreeAd, isWatching: isWatchingAdFree } = useRewardedAd({
-    rewardType: 'movion_ad_free',
-    placement: 'movion_rewarded',
-  });
-
-  const handleAdFreeReward = async () => {
-    const success = await watchAdFreeAd();
-    if (success) {
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-      setAdFreeUntil(expiresAt);
-      toast.success("🎉 Ad-free for 1 hour! Enjoy uninterrupted watching.");
-    }
+  const handleAdFreeReward = () => {
+    setAdFreeUntil(new Date(Date.now() + 60 * 60 * 1000));
+    toast.success("Ad-free for 1 hour! Enjoy uninterrupted watching.");
   };
 
   const isAdFree = adFreeUntil && adFreeUntil > new Date();
   
+  const mediaSource = video?.video_url || video?.hls_url || '';
+
   // Attach source (direct MP4 or HLS) and play when video changes
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !video) return;
 
-    const direct = video.video_url || '';
+    const direct = mediaSource;
     const hlsUrl = video.hls_url || '';
     let hls: Hls | null = null;
 
@@ -140,6 +132,7 @@ const MovionWatch = () => {
           hls = new Hls({ enableWorker: true });
           hls.loadSource(streamUrl);
           hls.attachMedia(el);
+          hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) setIsVideoError(true); });
         } else {
           setIsVideoError(true);
         }
@@ -148,51 +141,30 @@ const MovionWatch = () => {
       }
     }
 
-    el.play().catch(() => {});
-
     return () => {
+      el.pause();
       hls?.destroy();
     };
-  }, [video?.id, video?.video_url, video?.hls_url]);
+  }, [video?.id, mediaSource]);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (!visible || (!preRollDone && !isAdFree) || showMidRoll) el.pause();
+    else el.play().catch(() => setIsPlaying(false));
+  }, [visible, preRollDone, isAdFree, showMidRoll, mediaSource]);
 
   // Trigger mid-roll at 50% for videos 3+ minutes
   useEffect(() => {
-    if (!video || midRollShown) return;
+    if (!video || midRollShown || isAdFree || !preRollDone) return;
     const dur = video.duration ?? 0;
     if (dur >= 180 && progress >= 50) {
       setMidRollShown(true);
       setShowMidRoll(true);
       videoRef.current?.pause();
     }
-  }, [progress, video, midRollShown]);
+  }, [progress, video, midRollShown, isAdFree, preRollDone]);
 
-  // Add to history on mount (views are counted server-side by the watch tracker)
-  useEffect(() => {
-    if (video && user) {
-      addToHistory.mutate({ videoId: video.id });
-    }
-  }, [video?.id, user?.id]);
-  
-  // Update and save progress
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (videoRef.current && video) {
-        const currentProgress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
-        setProgress(isNaN(currentProgress) ? 0 : currentProgress);
-        
-        // Save progress every 10 seconds
-        if (user && !isNaN(currentProgress) && currentProgress > 0 && videoRef.current) {
-          updateProgress.mutate({ 
-            videoId: video.id, 
-            currentTime: videoRef.current.currentTime,
-            duration: videoRef.current.duration 
-          });
-        }
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [video?.id, user?.id]);
-  
   if (videoLoading) {
     return (
       <div className="min-h-screen bg-background p-4">
@@ -246,8 +218,8 @@ const MovionWatch = () => {
       return;
     }
     if (commentText.trim()) {
-      addComment.mutate(commentText);
-      setCommentText("");
+      const submitted = commentText;
+      addComment.mutate(submitted, { onSuccess: () => setCommentText(current => current === submitted ? "" : current) });
     }
   };
 
@@ -354,7 +326,7 @@ const MovionWatch = () => {
         {/* Main Video Section */}
         <div className="flex-1">
           {/* Video Player */}
-          <div className="relative aspect-video bg-black rounded-xl overflow-hidden group">
+          <div ref={playerRef} className="relative aspect-video bg-black rounded-xl overflow-hidden group">
             <video
               ref={videoRef}
               poster={video.thumbnail_url}
@@ -376,7 +348,7 @@ const MovionWatch = () => {
               }}
               onTimeUpdate={(e) => {
                 const el = e.currentTarget;
-                watchTracker.onTimeUpdate(el.currentTime);
+                watchTracker.onTimeUpdate(el);
                 if (isScrubbing) return;
                 setCurrentTime(el.currentTime);
                 const dur = isFinite(el.duration) && el.duration > 0 ? el.duration : totalDuration;
@@ -390,7 +362,10 @@ const MovionWatch = () => {
                 setBufferedPercent(Math.min(100, (end / dur) * 100));
               }}
               onError={() => setIsVideoError(true)}
-              onPlay={() => setIsPlaying(true)}
+              onPlay={(e) => {
+                if (!visible || (!preRollDone && !isAdFree) || showMidRoll) e.currentTarget.pause();
+                else setIsPlaying(true);
+              }}
               onPause={() => {
                 setIsPlaying(false);
                 watchTracker.onPause();
@@ -480,7 +455,7 @@ const MovionWatch = () => {
                 <div className="flex items-center gap-3">
                   <button onClick={() => {
                     if (videoRef.current) {
-                      isPlaying ? videoRef.current.pause() : videoRef.current.play();
+                      isPlaying ? videoRef.current.pause() : videoRef.current.play().catch(() => setIsPlaying(false));
                     }
                   }}>
                     {isPlaying ? <Pause className="w-6 h-6 text-white" /> : <Play className="w-6 h-6 text-white" />}
@@ -498,8 +473,15 @@ const MovionWatch = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Settings className="w-5 h-5 text-white cursor-pointer" />
-                  <Maximize className="w-5 h-5 text-white cursor-pointer" onClick={() => videoRef.current?.requestFullscreen()} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild><button aria-label="Playback speed"><Settings className="w-5 h-5 text-white" /></button></DropdownMenuTrigger>
+                    <DropdownMenuContent>{[0.5, 0.75, 1, 1.25, 1.5, 2].map(rate => (
+                      <DropdownMenuItem key={rate} onClick={() => { setPlaybackRate(rate); if (videoRef.current) videoRef.current.playbackRate = rate; }}>
+                        {rate}× {playbackRate === rate ? '✓' : ''}
+                      </DropdownMenuItem>
+                    ))}</DropdownMenuContent>
+                  </DropdownMenu>
+                  <button aria-label="Fullscreen" onClick={() => playerRef.current?.requestFullscreen().catch(() => toast.error("Fullscreen unavailable"))}><Maximize className="w-5 h-5 text-white" /></button>
                 </div>
               </div>
             </div>

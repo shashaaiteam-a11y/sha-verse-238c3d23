@@ -1,173 +1,60 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useMovionRealtime } from '@/hooks/useMovionRealtime';
 
-interface UseMovionSubscriptionsProps {
-  channelId: string;
-}
-
-export function useMovionSubscriptions({ channelId }: UseMovionSubscriptionsProps) {
+export function useMovionSubscriptions({ channelId }: { channelId: string }) {
   const { user } = useAuth();
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscriberCount, setSubscriberCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // ═══════════════════════════════════════════════════════════════
-  // 1️⃣ Check if user is subscribed
-  // ═══════════════════════════════════════════════════════════════
-  useEffect(() => {
-    if (!user || !channelId) return;
-
-    const checkSubscription = async () => {
-      try {
-        const { data, error: err } = await supabase
-          .from('subscriptions')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('channel_id', channelId)
-          .single();
-
-        if (err && err.code !== 'PGRST116') throw err;
-        setIsSubscribed(!!data);
-      } catch (err: any) {
-        console.error('Error checking subscription:', err.message);
+  const userId = user?.id;
+  const queryClient = useQueryClient();
+  useMovionRealtime();
+  const queryKey = ['is-subscribed', channelId, userId];
+  const mutationKey = ['movion-subscription', channelId, userId];
+  const subscription = useQuery({
+    queryKey, enabled: !!userId && !!channelId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('subscriptions').select('id')
+        .eq('user_id', userId!).eq('channel_id', channelId).maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+  });
+  const channel = useQuery({
+    queryKey: ['movion-subscriber-count', channelId], enabled: !!channelId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('channels').select('subscribers_count,user_id')
+        .eq('id', channelId).single();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const pending = useIsMutating({ mutationKey }) > 0;
+  const mutation = useMutation({
+    mutationKey,
+    mutationFn: async (wasSubscribed: boolean) => {
+      if (!userId) throw new Error('Please sign in to subscribe');
+      if (channel.data?.user_id === userId) throw new Error('This is your channel');
+      const { error } = await supabase.rpc(wasSubscribed ? 'unsubscribe_from_channel' : 'subscribe_to_channel', { target_channel_id: channelId });
+      if (error) throw error;
+      return !wasSubscribed;
+    },
+    onSuccess: (subscribed) => { queryClient.setQueryData(queryKey, subscribed); },
+    onSettled: () => {
+      for (const key of ['is-subscribed','movion-subscriber-count','subscriptions','subscribed-videos','channel','my-channel','video']) {
+        void queryClient.invalidateQueries({ queryKey: [key] });
       }
-    };
-
-    checkSubscription();
-  }, [user, channelId]);
-
-  // ═══════════════════════════════════════════════════════════════
-  // 2️⃣ Get subscriber count + Realtime updates
-  // ═══════════════════════════════════════════════════════════════
-  useEffect(() => {
-    if (!channelId) return;
-
-    const getSubscriberCount = async () => {
-      try {
-        const { data, error: err } = await supabase
-          .from('channels')
-          .select('subscribers_count')
-          .eq('id', channelId)
-          .single();
-
-        if (err) throw err;
-        setSubscriberCount(data?.subscribers_count || 0);
-      } catch (err: any) {
-        console.error('Error getting subscriber count:', err.message);
-      }
-    };
-
-    getSubscriberCount();
-
-    // Subscribe to realtime updates with a unique name per mount.
-    // React StrictMode can mount the same hook twice before cleanup finishes;
-    // reusing `channel:${channelId}:subscriber_count` makes Supabase return the
-    // already-subscribed channel, then `.on()` throws.
-    const realtimeChannelName = `channel:${channelId}:subscriber_count:${Date.now()}:${Math.random()
-      .toString(36)
-      .slice(2)}`;
-
-    const channel = supabase
-      .channel(realtimeChannelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'channels',
-          filter: `id=eq.${channelId}`,
-        },
-        (payload: any) => {
-          console.log('✅ Subscriber count updated:', payload.new.subscribers_count);
-          setSubscriberCount(payload.new.subscribers_count);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [channelId]);
-
-  // ═══════════════════════════════════════════════════════════════
-  // 3️⃣ Subscribe function (with Optimistic UI)
-  // ═══════════════════════════════════════════════════════════════
-  const subscribe = useCallback(async () => {
-    if (!user || !channelId) return;
-
-    setIsLoading(true);
-    setIsSubscribed(true);
-    setSubscriberCount((prev) => prev + 1);
-
-    try {
-      const { error: err } = await supabase
-        .from('subscriptions')
-        .insert({
-          user_id: user.id,
-          channel_id: channelId,
-        });
-
-      if (err) throw err;
-      console.log('✅ Subscribed successfully');
-    } catch (err: any) {
-      console.error('❌ Error subscribing:', err.message);
-      setError(err.message);
-      // Rollback on error
-      setIsSubscribed(false);
-      setSubscriberCount((prev) => prev - 1);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, channelId]);
-
-  // ═══════════════════════════════════════════════════════════════
-  // 4️⃣ Unsubscribe function
-  // ═══════════════════════════════════════════════════════════════
-  const unsubscribe = useCallback(async () => {
-    if (!user || !channelId) return;
-
-    setIsLoading(true);
-    setIsSubscribed(false);
-    setSubscriberCount((prev) => prev - 1);
-
-    try {
-      const { error: err } = await supabase
-        .from('subscriptions')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('channel_id', channelId);
-
-      if (err) throw err;
-      console.log('✅ Unsubscribed successfully');
-    } catch (err: any) {
-      console.error('❌ Error unsubscribing:', err.message);
-      setError(err.message);
-      // Rollback on error
-      setIsSubscribed(true);
-      setSubscriberCount((prev) => prev + 1);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, channelId]);
-
-  // ═══════════════════════════════════════════════════════════════
-  // 5️⃣ Toggle subscribe/unsubscribe
-  // ═══════════════════════════════════════════════════════════════
-  const toggleSubscription = useCallback(async () => {
-    if (isSubscribed) {
-      await unsubscribe();
-    } else {
-      await subscribe();
-    }
-  }, [isSubscribed, subscribe, unsubscribe]);
-
+    },
+  });
   return {
-    isSubscribed,
-    subscriberCount,
-    isLoading,
-    error,
-    toggleSubscription,
+    isSubscribed: !!userId && (subscription.data ?? false),
+    subscriberCount: channel.data?.subscribers_count ?? 0,
+    isOwnChannel: !!userId && channel.data?.user_id === userId,
+    isLoading: pending || (!!userId && subscription.isPending) || channel.isPending,
+    error: mutation.error?.message || subscription.error?.message || channel.error?.message || null,
+    toggleSubscription: async () => {
+      if (queryClient.isMutating({ mutationKey })) return undefined;
+      if (userId && (!subscription.isSuccess || !channel.isSuccess)) throw new Error('Subscription status unavailable. Please retry.');
+      return mutation.mutateAsync(subscription.data ?? false);
+    },
   };
 }

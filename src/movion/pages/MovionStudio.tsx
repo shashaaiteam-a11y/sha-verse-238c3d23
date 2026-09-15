@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useMyChannel, useChannelVideos } from "@/hooks/useChannels";
-import { useCreatorStats } from "@/hooks/useCreatorDashboard";
+import { useChannelWatchAnalytics } from "@/hooks/useChannelWatchAnalytics";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +36,7 @@ const MovionStudio = () => {
   const { user } = useAuth();
   const { channel, isLoading: channelLoading } = useMyChannel();
   const { videos, isLoading: videosLoading } = useChannelVideos(channel?.id);
-  const { stats } = useCreatorStats(channel?.id);
+  const watchAnalytics = useChannelWatchAnalytics(channel?.id);
   const [activeTab, setActiveTab] = useState("dashboard");
   
   // Dialog states
@@ -50,10 +50,10 @@ const MovionStudio = () => {
   const shortVideos = channelVideos.filter((v: any) => v.is_short);
   
   // Real-time stats calculations
-  const totalViews = stats?.totalViews || channelVideos.reduce((sum: number, v: any) => sum + (v.views_count || 0), 0);
-  const totalLikes = stats?.totalReacts || channelVideos.reduce((sum: number, v: any) => sum + (v.likes_count || 0), 0);
-  const totalWatchMinutes = channelVideos.reduce((sum: number, v: any) => sum + ((v.views_count || 0) * (v.duration || 60) / 60), 0);
-  const watchHours = Math.floor(totalWatchMinutes / 60);
+  const totalViews = channelVideos.reduce((sum: number, v: any) => sum + (v.views_count || 0), 0);
+  const totalLikes = channelVideos.reduce((sum: number, v: any) => sum + (v.likes_count || 0), 0);
+  const totalWatchMinutes = watchAnalytics.totals.watchSeconds / 60;
+  const watchHours = Math.round(totalWatchMinutes / 60 * 100) / 100;
   
   const formatCount = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -610,8 +610,8 @@ const MovionStudio = () => {
               <CardContent>
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-3xl font-bold">{watchHours.toLocaleString()}</p>
-                    <p className="text-sm text-muted-foreground mt-1">Watch Hours (Total)</p>
+                    <p className="text-3xl font-bold">{watchAnalytics.error ? "Unavailable" : watchAnalytics.isLoading ? "…" : watchHours.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Recorded watch hours</p>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
                     <p className="text-3xl font-bold">{Math.round(totalWatchMinutes).toLocaleString()}</p>
