@@ -1,16 +1,18 @@
 /**
- * 🚨 SHA-VERSE ADS CONFIG — TEST MODE 🚨
+ * SHA-VERSE ADS CONFIG
  *
- * ⚠️ CRITICAL: This file controls whether real or test ads are shown.
+ * This file controls which ad unit IDs are used and whether ads render at all.
+ * The current mode is defined ONLY by the two flags below — do not describe a
+ * mode in comments, read the flags:
  *
- * RULE: Keep `USE_TEST_ADS = true` until the app is published on Play Store.
- * Clicking your own real ads = Google AdMob account PERMANENT BAN.
+ *   USE_TEST_ADS  true  → Google's official test ad units (safe to click)
+ *                 false → LIVE_AD_IDS (real inventory, real revenue)
+ *   ADS_HIDDEN    true  → nothing renders anywhere
+ *                 false → ads render normally
  *
- * To switch to production (Play Store launch only):
- *   1. Get real Ad Unit IDs from https://admob.google.com
- *   2. Paste them in `LIVE_AD_IDS` below
- *   3. Set `USE_TEST_ADS = false`
- *   4. Build & ship
+ * ⚠️ Never click your own live ads — that can permanently ban the AdMob account.
+ * When testing on a device while live IDs are active, register that device as an
+ * AdMob test device instead of flipping these flags.
  */
 
 export const USE_TEST_ADS = false;
