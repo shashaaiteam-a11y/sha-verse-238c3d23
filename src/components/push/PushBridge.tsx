@@ -3,7 +3,7 @@
  *
  *  1. Registers this device for system push once the user is signed in.
  *  2. Routes a tapped push notification to the right screen.
- *  3. Removes the device token on sign-out.
+ *  3. Retries transient registration failures when connectivity/app state recovers.
  *
  * Renders nothing and does not touch the in-app notification system.
  */
@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/contexts/AuthContext';
-import { registerPush, removeCurrentDeviceToken, isNativePush } from '@/lib/push/registerPush';
+import { registerPush, isNativePush } from '@/lib/push/registerPush';
 import { resolvePushPath } from '@/lib/push/handlePushTap';
 
 export const PushBridge = () => {
@@ -20,47 +20,78 @@ export const PushBridge = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const registeredFor = useRef<string | null>(null);
-  const hadUser = useRef(false);
 
-  // Register / unregister with the signed-in account.
+  // Register the signed-in account. AuthContext explicitly detaches the current
+  // device token BEFORE signOut while the authenticated session still exists.
   useEffect(() => {
     if (!user?.id) {
-      if (hadUser.current) {
-        hadUser.current = false;
-        void removeCurrentDeviceToken();
-      }
       registeredFor.current = null;
       return;
     }
-    hadUser.current = true;
-    if (registeredFor.current === user.id) return;
 
-    // Native: register immediately (OS prompt). Web: only if already granted —
-    // a fresh permission prompt needs a user gesture, handled in Settings.
     let cancelled = false;
-    void (async () => {
+    let inFlight = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearRetry = () => {
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = null;
+    };
+
+    const tryRegister = async () => {
+      if (cancelled || inFlight || registeredFor.current === user.id) return;
+
+      // Web permission prompts need a user gesture. Automatic registration is
+      // only attempted when permission was already granted. Native may request
+      // permission through the Capacitor plugin.
       if (!isNativePush()) {
         if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
       }
-      // Transient failures (no network, FCM hiccup) must not block a retry,
-      // so the "already registered" marker is only set after a real success.
-      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
+
+      inFlight = true;
+      clearRetry();
+
+      try {
         const result = await registerPush();
+        if (cancelled) return;
+
         if (result.status === 'registered') {
           registeredFor.current = user.id;
           return;
         }
-        if (result.status !== 'error') {
-          console.info('[push] not registered:', result.status);
-          return; // denied / unsupported / not-configured — retrying won't help
+
+        if (result.status === 'error') {
+          console.info('[push] registration error, will retry:', result.message);
+          // Keep a bounded delayed retry, while online/visibility events below
+          // provide additional recovery after longer outages or app resume.
+          retryTimer = setTimeout(() => {
+            void tryRegister();
+          }, 5000);
+          return;
         }
-        console.info('[push] registration error, will retry:', result.message);
-        await new Promise((r) => setTimeout(r, 2000 * 2 ** attempt));
+
+        console.info('[push] not registered:', result.status);
+      } finally {
+        inFlight = false;
       }
-    })();
+    };
+
+    const onOnline = () => {
+      void tryRegister();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void tryRegister();
+    };
+
+    void tryRegister();
+    window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       cancelled = true;
+      clearRetry();
+      window.removeEventListener('online', onOnline);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [user?.id]);
 
@@ -68,6 +99,7 @@ export const PushBridge = () => {
   useEffect(() => {
     if (!user?.id || !Capacitor.isNativePlatform()) return;
     let cleanup: (() => void) | undefined;
+    let disposed = false;
 
     void (async () => {
       const { PushNotifications } = await import('@capacitor/push-notifications');
@@ -80,7 +112,15 @@ export const PushBridge = () => {
           navigate(resolvePushPath(action.notification?.data as Record<string, unknown>));
         },
       );
-      // Note: the tray is intentionally NOT wiped on app open (Facebook-style).
+
+      // If this effect was disposed while the async listeners were being added,
+      // remove them immediately instead of leaking duplicate handlers.
+      if (disposed) {
+        await Promise.allSettled([received.remove(), actioned.remove()]);
+        return;
+      }
+
+      // The tray is intentionally NOT wiped on app open (Facebook-style).
       // Individual notifications are dismissed by the OS when the user taps them.
       cleanup = () => {
         void received.remove();
@@ -88,7 +128,10 @@ export const PushBridge = () => {
       };
     })();
 
-    return () => cleanup?.();
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
   }, [user?.id, navigate, queryClient]);
 
   // Web: foreground message + click-through from the service worker.
