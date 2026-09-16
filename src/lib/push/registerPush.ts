@@ -19,17 +19,22 @@ export type PushRegisterResult =
   | { status: 'error'; message: string };
 
 const DEVICE_ID_KEY = 'sha_verse_push_device_id';
+const FALLBACK_DEVICE_ID = `session-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 
 export const getDeviceId = (): string => {
   try {
     let id = localStorage.getItem(DEVICE_ID_KEY);
     if (!id) {
-      id = crypto.randomUUID();
+      id = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : FALLBACK_DEVICE_ID;
       localStorage.setItem(DEVICE_ID_KEY, id);
     }
     return id;
   } catch {
-    return 'unknown-device';
+    // Never collapse every storage-restricted device into one shared
+    // "unknown-device" identifier. Keep a stable id for this app session.
+    return FALLBACK_DEVICE_ID;
   }
 };
 
@@ -37,21 +42,24 @@ export const isNativePush = (): boolean => Capacitor.isNativePlatform();
 
 /** Upsert the token for the signed-in user and refresh its freshness stamp. */
 export const saveToken = async (token: string, platform: PushPlatform): Promise<void> => {
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+
   const userId = auth?.user?.id;
-  if (!userId) return;
+  if (!userId) throw new Error('No signed-in user available for push registration');
 
   const deviceId = getDeviceId();
 
   // A device's token can rotate — clear the old row for this device first.
-  await supabase
+  const { error: cleanupError } = await supabase
     .from('push_tokens')
     .delete()
     .eq('user_id', userId)
     .eq('device_id', deviceId)
     .neq('token', token);
+  if (cleanupError) throw cleanupError;
 
-  await supabase.from('push_tokens').upsert(
+  const { error: upsertError } = await supabase.from('push_tokens').upsert(
     {
       user_id: userId,
       token,
@@ -63,6 +71,7 @@ export const saveToken = async (token: string, platform: PushPlatform): Promise<
     },
     { onConflict: 'token' },
   );
+  if (upsertError) throw upsertError;
 };
 
 /**
@@ -73,17 +82,22 @@ export const saveToken = async (token: string, platform: PushPlatform): Promise<
 export const removeCurrentDeviceToken = async (knownUserId?: string): Promise<void> => {
   let userId = knownUserId;
   if (!userId) {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
     userId = auth?.user?.id;
   }
   if (!userId) return;
-  await supabase.from('push_tokens').delete().eq('user_id', userId).eq('device_id', getDeviceId());
+
+  const { error } = await supabase
+    .from('push_tokens')
+    .delete()
+    .eq('user_id', userId)
+    .eq('device_id', getDeviceId());
+  if (error) throw error;
 };
 
 // ------------------------------------------------------------------ native
-const registerNative = async (
-  onToken: (token: string, platform: PushPlatform) => void,
-): Promise<PushRegisterResult> => {
+const registerNative = async (): Promise<PushRegisterResult> => {
   const { PushNotifications } = await import('@capacitor/push-notifications');
 
   let permission = await PushNotifications.checkPermissions();
@@ -94,7 +108,7 @@ const registerNative = async (
 
   const platform: PushPlatform = Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
 
-  // Android 8+ needs an explicit channel, matching the manifest default.
+  // Android 8+ needs an explicit channel, matching the manifest + FCM payload.
   if (platform === 'android') {
     await PushNotifications.createChannel({
       id: 'sha_verse_alerts_v2',
@@ -108,26 +122,52 @@ const registerNative = async (
 
   return await new Promise<PushRegisterResult>((resolve) => {
     let settled = false;
-    PushNotifications.addListener('registration', (t) => {
-      onToken(t.value, platform);
-      if (!settled) {
-        settled = true;
-        resolve({ status: 'registered', token: t.value, platform });
-      }
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let registrationHandle: { remove: () => Promise<void> } | undefined;
+    let errorHandle: { remove: () => Promise<void> } | undefined;
+
+    const cleanup = async () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      await Promise.allSettled([
+        registrationHandle?.remove(),
+        errorHandle?.remove(),
+      ].filter(Boolean) as Promise<void>[]);
+    };
+
+    const finish = (result: PushRegisterResult) => {
+      if (settled) return;
+      settled = true;
+      void cleanup().finally(() => resolve(result));
+    };
+
+    void (async () => {
+      registrationHandle = await PushNotifications.addListener('registration', (t) => {
+        // Registration is not considered successful until the token is actually
+        // persisted in Supabase. This prevents PushBridge from marking a device
+        // registered after an RLS/network/upsert failure.
+        void saveToken(t.value, platform)
+          .then(() => finish({ status: 'registered', token: t.value, platform }))
+          .catch((err) => {
+            console.error('[push] token save failed', err);
+            finish({
+              status: 'error',
+              message: err instanceof Error ? err.message : String(err),
+            });
+          });
+      });
+
+      errorHandle = await PushNotifications.addListener('registrationError', (err) => {
+        finish({ status: 'error', message: String(err?.error ?? 'registration failed') });
+      });
+
+      timeoutId = setTimeout(() => {
+        finish({ status: 'error', message: 'registration timed out' });
+      }, 15000);
+
+      await PushNotifications.register();
+    })().catch((err) => {
+      finish({ status: 'error', message: err instanceof Error ? err.message : String(err) });
     });
-    PushNotifications.addListener('registrationError', (err) => {
-      if (!settled) {
-        settled = true;
-        resolve({ status: 'error', message: String(err?.error ?? 'registration failed') });
-      }
-    });
-    PushNotifications.register();
-    setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        resolve({ status: 'error', message: 'registration timed out' });
-      }
-    }, 15000);
   });
 };
 
@@ -156,23 +196,18 @@ const registerWeb = async (): Promise<PushRegisterResult> => {
     serviceWorkerRegistration: swReg,
   });
   if (!token) return { status: 'denied' };
+
+  await saveToken(token, 'web');
   return { status: 'registered', token, platform: 'web' };
 };
 
 /**
  * Register this device for push. Safe to call repeatedly — it refreshes the
- * stored token and its last_seen_at stamp on every app start.
+ * stored token and its last_seen_at stamp on every successful registration.
  */
 export const registerPush = async (): Promise<PushRegisterResult> => {
   try {
-    if (isNativePush()) {
-      return await registerNative((token, platform) => {
-        void saveToken(token, platform);
-      });
-    }
-    const result = await registerWeb();
-    if (result.status === 'registered') await saveToken(result.token, 'web');
-    return result;
+    return isNativePush() ? await registerNative() : await registerWeb();
   } catch (err) {
     console.error('[push] register failed', err);
     return { status: 'error', message: err instanceof Error ? err.message : String(err) };
