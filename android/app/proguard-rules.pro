@@ -1,4 +1,4 @@
-« ============================================================
+# ============================================================
 # SHA-VERSE R8 / ProGuard rules
 # Goal: maximise obfuscation / optimisation / shrinking scores
 # while keeping ONLY the reflection + native entry points that
