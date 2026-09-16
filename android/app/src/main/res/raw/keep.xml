@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Resource shrinking safety net.
+  These resources are referenced from Capacitor config, the splash screen
+  API and FCM meta-data rather than from Java/Kotlin code, so R8's static
+  analysis can miss them.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/splash,@drawable/ic_stat_notify,@drawable/*splash*,@mipmap/ic_launcher*,@color/*,@style/AppTheme*,@xml/*"
+    tools:shrinkMode="safe" />
