@@ -36,8 +36,13 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Google Play "App optimisation below threshold" (Obfuscation 1%) fix:
+            // R8 code shrinking + obfuscation for release builds.
+            // Resource shrinking stays OFF so Capacitor/web assets and
+            // splash/notification resources are never removed.
+            minifyEnabled true
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }

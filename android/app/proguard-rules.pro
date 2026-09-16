@@ -1,21 +1,72 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ============================================================
+# SHA-VERSE R8 / ProGuard rules
+# Goal: obfuscate + shrink app code (Google Play optimisation
+# threshold) WITHOUT breaking Capacitor, plugins, Firebase,
+# AdMob, Google Sign-In or the WebView bridge.
+# ============================================================
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep readable crash reports (mapping.txt is uploaded by Play).
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Reflection / serialization metadata used by Capacitor + GMS.
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
+-keepattributes AnnotationDefault
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ---------- Capacitor core & bridge ----------
+# Capacitor resolves plugins and @PluginMethod entries by reflection.
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+-keepclassmembers class * extends com.getcapacitor.Plugin {
+    @com.getcapacitor.PluginMethod <methods>;
+}
+-keep class com.getcapacitor.plugin.** { *; }
+
+# ---------- Cordova plugins bridged through Capacitor ----------
+-keep class org.apache.cordova.** { *; }
+-keep class * extends org.apache.cordova.CordovaPlugin { *; }
+
+# ---------- App package (Application / MainActivity, native entry points) ----------
+-keep class com.shaverse.app.** { *; }
+
+# ---------- JavaScript interfaces exposed to the WebView ----------
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# ---------- Firebase / FCM push ----------
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+-keep class * extends com.google.firebase.messaging.FirebaseMessagingService { *; }
+
+# ---------- AdMob ----------
+-keep class com.google.android.gms.ads.** { *; }
+-keep public class com.google.android.gms.ads.MobileAds { *; }
+
+# ---------- Capgo Social Login (native Google sign-in) ----------
+-keep class ee.forgr.capacitor.social.login.** { *; }
+-dontwarn ee.forgr.capacitor.social.login.**
+
+# ---------- AndroidX / Kotlin ----------
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.**
+-dontwarn org.jetbrains.annotations.**
+-dontwarn javax.annotation.**
+
+# ---------- Enums & Parcelables (reflection-based) ----------
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+-keepclassmembers class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator *;
+}
+
+# ---------- Native methods ----------
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
