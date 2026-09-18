@@ -316,6 +316,12 @@ const Home = () => {
 
           <FacebookStoriesBar />
 
+          {/* HF-STORY-03: small native ad directly below the Stories section */}
+          <div className="mb-3 sm:mb-4">
+            <NativeAdSlot placement="HF_STORY_03" slotKey="below-stories" />
+          </div>
+
+
 
 
 
@@ -345,7 +351,11 @@ const Home = () => {
 
             <NativeAdCard placement="home_feed_after_create" />
 
+            {/* HF-POST-01: real native ad below the post composer */}
+            <NativeAdSlot placement="HF_POST_01" slotKey="below-composer" />
+
           </div>
+
 
 
 
@@ -371,6 +381,7 @@ const Home = () => {
                     item={item}
                     showAd={shouldShowAd(idx)}
                     showBanner={idx >= 5 && (idx + 1) % 9 === 0}
+                    showNativeAd={(idx + 1) % 3 === 0}
                     registerAdShown={registerAdShown}
                     onShare={handleShare}
                   />
