@@ -6,7 +6,7 @@ import { useStories, StoryGroup } from "@/hooks/useStories";
 import { useAuth } from "@/contexts/AuthContext";
 import CreateStoryDialog from "./CreateStoryDialog";
 import FacebookStoryViewer from "./FacebookStoryViewer";
-import { SponsoredStory } from "@/components/ads";
+import { SponsoredStory, NativeAdSlot } from "@/components/ads";
 import { useDiscoveryAds } from "@/hooks/useDiscoveryAds";
 import { cn } from "@/lib/utils";
 
@@ -151,6 +151,16 @@ const FacebookStoriesBar = () => {
                 </div>
                 {adPositions.has(idx) && (
                   <SponsoredStory key={`ad-${idx}`} />
+                )}
+                {/* HF-STORY-01: real native sponsored tile after every 3 real stories */}
+                {(idx + 1) % 3 === 0 && (
+                  <div className="flex-shrink-0 w-[86px]">
+                    <NativeAdSlot
+                      placement="HF_STORY_01"
+                      slotKey={`story-${group.user.id}`}
+                      height={86}
+                    />
+                  </div>
                 )}
               </Fragment>
             ))}
