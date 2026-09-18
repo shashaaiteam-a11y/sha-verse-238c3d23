@@ -51,7 +51,7 @@ import AppLogoStatusRing from '@/components/promotions/AppLogoStatusRing';
 
 import AppMenu from '@/components/AppMenu';
 
-import { NativeAdCard, BannerAd, StickyBannerAd } from '@/components/ads';
+import { NativeAdCard, BannerAd, StickyBannerAd, NativeAdSlot } from '@/components/ads';
 
 import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 
@@ -63,13 +63,20 @@ type FeedRowProps = {
   item: any;
   showAd: boolean;
   showBanner: boolean;
+  /** HF-POST-02: real AdMob native ad after every 3 real posts (Android only). */
+  showNativeAd: boolean;
   registerAdShown: () => void;
   onShare: (item: any) => void;
 };
-const FeedRow = memo(({ item, showAd, showBanner, registerAdShown, onShare }: FeedRowProps) => {
+const FeedRow = memo(({ item, showAd, showBanner, showNativeAd, registerAdShown, onShare }: FeedRowProps) => {
   return (
     <div>
       <FeedCard item={item} onShare={() => onShare(item)} />
+      {showNativeAd && (
+        <div className="mt-3 sm:mt-4">
+          <NativeAdSlot placement="HF_POST_02" slotKey={`${item.type}-${item.id}`} />
+        </div>
+      )}
       {showAd && (
         <SmartAdSlot onMount={registerAdShown}>
           <div className="mt-3 sm:mt-4">
