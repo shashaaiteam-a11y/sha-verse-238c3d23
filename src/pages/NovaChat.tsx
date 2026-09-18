@@ -456,10 +456,17 @@ const NovaChat = () => {
                       )}
 
                       {isLongAiResponse && (
-                        <NovaChatInlineAd
-                          variant="after_response"
-                          contextText={message.content}
-                        />
+                        <>
+                          <NovaChatInlineAd
+                            variant="after_response"
+                            contextText={message.content}
+                          />
+                          <NativeAdSlot
+                            placement="NC_REPLY_01"
+                            slotKey={`nc-reply-${index}`}
+                            className="mx-4 my-2 w-auto"
+                          />
+                        </>
                       )}
                     </div>
                   );

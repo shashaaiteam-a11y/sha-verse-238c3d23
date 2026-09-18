@@ -91,6 +91,8 @@ const NovaChatInlineAd = ({ contextText = "", variant = "inline", className }: N
   }, []);
 
   if (dismissed) return null;
+  // On native the real AdMob native ad is rendered by the SDK — no web placeholder.
+  if (isNative()) return null;
 
   const isAfter = variant === "after_response";
 
