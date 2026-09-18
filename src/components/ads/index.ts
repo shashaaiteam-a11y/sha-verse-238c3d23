@@ -15,3 +15,5 @@ export { default as TestAdBadge } from "./TestAdBadge";
 export { TestAdSimple } from "./TestAdSimple";
 export { default as BookReaderInlineAd } from "./BookReaderInlineAd";
 export { default as SponsoredBookCard } from "./SponsoredBookCard";
+// Real AdMob Native Advanced slots (Android only; renders nothing on web)
+export { default as NativeAdSlot } from "./native/NativeAdSlot";

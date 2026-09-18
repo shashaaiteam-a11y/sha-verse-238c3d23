@@ -9,6 +9,7 @@ import com.capacitorjs.plugins.pushnotifications.PushNotificationsPlugin;
 import ee.forgr.capacitor.social.login.GoogleProvider;
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
 import ee.forgr.capacitor.social.login.SocialLoginPlugin;
+import com.shaverse.app.nativead.ShaNativeAdPlugin;
 
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
     @Override
@@ -19,6 +20,8 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         // bridge and its plugin map already exist at that point.
         registerPlugin(SocialLoginPlugin.class);
         registerPlugin(PushNotificationsPlugin.class);
+        // Google AdMob Native Advanced ads (Android only).
+        registerPlugin(ShaNativeAdPlugin.class);
         // Redundant safe fallback; the Application creates it before FCM can run.
         ShaVerseApplication.createPushChannel(this);
         super.onCreate(savedInstanceState);
