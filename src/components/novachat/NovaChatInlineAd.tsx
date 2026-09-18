@@ -13,6 +13,7 @@ import { useAds } from "@/contexts/AdContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { recordAdImpression, getAdUnitForPlacement, recordAdClick } from "@/lib/ads/adAnalytics";
 import { cn } from "@/lib/utils";
+import { isNative } from "@/lib/ads/nativeAdMob";
 
 /**
  * NovaChat-specific inline ad. Self-contained, no dependency on other module UIs.

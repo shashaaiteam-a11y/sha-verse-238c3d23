@@ -27,6 +27,7 @@ import {
 import { Conversation } from '@/hooks/useNovaChat';
 import { formatDistanceToNow } from 'date-fns';
 import NovaChatSidebarAd from './NovaChatSidebarAd';
+import { NativeAdSlot } from '@/components/ads';
 
 interface ChatSidebarProps {
   conversations: Conversation[] | undefined;
@@ -239,7 +240,14 @@ const ChatSidebar = ({
                       </div>
                       {/* Native ad after every 4th conversation in this group */}
                       {(convIdx + 1) % 4 === 0 && convIdx !== convs.length - 1 && (
-                        <NovaChatSidebarAd />
+                        <>
+                          <NovaChatSidebarAd />
+                          <NativeAdSlot
+                            placement="NC_HISTORY_01"
+                            slotKey={`nc-history-${conv.id}`}
+                            className="my-1"
+                          />
+                        </>
                       )}
                       </div>
                     ))}
