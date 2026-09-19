@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { NativeAdSlot } from "@/components/ads";
+import { isNativeAdsSupported } from "@/lib/ads/native/bridge";
 import {
   Sheet,
   SheetContent,
@@ -24,6 +25,7 @@ interface FacebookStoryViewerProps {
   allGroups: StoryGroup[];
   onClose: () => void;
   onGroupChange: (group: StoryGroup) => void;
+  onStoryCompleted: () => number;
 }
 
 const REACTIONS = ["❤️", "😂", "😮", "😢", "😡", "🔥"];
@@ -60,7 +62,8 @@ const FacebookStoryViewer = ({
   storyGroup,
   allGroups,
   onClose,
-  onGroupChange
+  onGroupChange,
+  onStoryCompleted,
 }: FacebookStoryViewerProps) => {
   const { user } = useAuth();
   const { viewStory, deleteStory, reactToStory, replyToStory, getStoryViewers, getStoryReactions, getStoryReplies } = useStories();
@@ -79,7 +82,6 @@ const FacebookStoryViewer = ({
   const [showViewers, setShowViewers] = useState(false);
   const [liveViewCount, setLiveViewCount] = useState(0);
   const [showSponsoredStory, setShowSponsoredStory] = useState(false);
-  const viewedSinceAdRef = useRef(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -313,18 +315,9 @@ const FacebookStoryViewer = ({
     }
   };
 
-  const goToNext = () => {
-    if (showSponsoredStory) {
-      setShowSponsoredStory(false);
-    } else {
-      viewedSinceAdRef.current += 1;
-      if (viewedSinceAdRef.current % 3 === 0) {
-        clearTimers();
-        setIsPaused(true);
-        setShowSponsoredStory(true);
-        return;
-      }
-    }
+  const advanceToNextStory = () => {
+    setShowSponsoredStory(false);
+    setIsPaused(false);
     if (currentIndex < storyGroup.stories.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else if (currentGroupIndex < allGroups.length - 1) {
@@ -333,6 +326,19 @@ const FacebookStoryViewer = ({
     } else {
       onClose();
     }
+  };
+
+  const goToNext = () => {
+    if (!showSponsoredStory) {
+      const completedCount = onStoryCompleted();
+      if (isNativeAdsSupported() && completedCount % 3 === 0) {
+        clearTimers();
+        setIsPaused(true);
+        setShowSponsoredStory(true);
+        return;
+      }
+    }
+    advanceToNextStory();
   };
 
   const handleDeleteStory = async () => {
@@ -793,8 +799,11 @@ const FacebookStoryViewer = ({
             <div className="w-full max-w-sm" onClick={(event) => event.stopPropagation()}>
               <NativeAdSlot
                 placement="HF_STORY_02"
-                slotKey={`viewer-${currentStory.id}-${viewedSinceAdRef.current}`}
+                slotKey={`viewer-after-${currentStory.id}`}
                 height={420}
+                onStateChange={(state) => {
+                  if (state === "failed") advanceToNextStory();
+                }}
               />
             </div>
             <Button

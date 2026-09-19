@@ -97,6 +97,9 @@ const BookReader = () => {
   // Web-only legacy reader-ad state. Android uses BS_READER_01 below.
   const [adKey, setAdKey] = useState(0);
   const [adDismissedFor, setAdDismissedFor] = useState<number | null>(null);
+  const [nativeAdPage, setNativeAdPage] = useState<number | null>(null);
+  const lastDisplayPageRef = useRef<number | null>(null);
+  const completedPagesRef = useRef(0);
 
   const { data: book, isLoading } = useQuery({
     queryKey: ["book", bookId],
@@ -152,6 +155,8 @@ const BookReader = () => {
   } = useReaderSettings();
 
   const isReaderMode = fileType === "pdf" && viewMode === "reader";
+  const observedDisplayPage = isReaderMode ? readerPagination.page : currentPage;
+  const nativeReaderAdsEnabled = isNativeAdsSupported();
 
   const reflow = useReflowBook({
     bookId,
@@ -190,7 +195,24 @@ const BookReader = () => {
 
   useEffect(() => {
     anchorRestoredRef.current = false;
+    lastDisplayPageRef.current = null;
+    completedPagesRef.current = 0;
+    setNativeAdPage(null);
   }, [bookId, isReaderMode]);
+
+  useEffect(() => {
+    if (!nativeReaderAdsEnabled || observedDisplayPage < 1) return;
+    const previousPage = lastDisplayPageRef.current;
+    lastDisplayPageRef.current = observedDisplayPage;
+    setNativeAdPage(null);
+
+    // Only a normal forward page turn completes a reading page. Restores,
+    // TOC/search jumps, slider seeks, and backwards navigation do not count.
+    if (previousPage !== null && observedDisplayPage === previousPage + 1) {
+      completedPagesRef.current += 1;
+      if (completedPagesRef.current % 2 === 0) setNativeAdPage(observedDisplayPage);
+    }
+  }, [nativeReaderAdsEnabled, observedDisplayPage]);
 
   useEffect(() => {
     if (isReaderMode && reflow.totalPages > 0) setTotalPages(reflow.totalPages);
@@ -499,8 +521,7 @@ const BookReader = () => {
   const displayTotal = isReaderMode ? readerPagination.totalPages : totalPages;
   const displayPercent = isReaderMode ? readerPagination.percent : progressPercent;
   const isCurrentPageBookmarked = isPageBookmarked(currentPage);
-  const nativeReaderAdsEnabled = isNativeAdsSupported();
-  const showNativeReaderAd = nativeReaderAdsEnabled && displayPage > 1 && displayPage % 2 === 0;
+  const showNativeReaderAd = nativeReaderAdsEnabled && nativeAdPage === displayPage;
 
   return (
     <div
@@ -1204,6 +1225,9 @@ const BookReader = () => {
               placement="BS_READER_01"
               slotKey={`reader-${book.id}-page-${displayPage}`}
               height={420}
+              onStateChange={(state) => {
+                if (state === "failed") setNativeAdPage(null);
+              }}
             />
           </div>
         </div>

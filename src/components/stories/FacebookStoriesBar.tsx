@@ -18,6 +18,7 @@ const FacebookStoriesBar = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [viewingStoryGroup, setViewingStoryGroup] = useState<StoryGroup | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const completedStoryCountRef = useRef(0);
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
@@ -210,6 +211,10 @@ const FacebookStoriesBar = () => {
           allGroups={storyGroups}
           onClose={() => setViewingStoryGroup(null)}
           onGroupChange={handleGroupChange}
+          onStoryCompleted={() => {
+            completedStoryCountRef.current += 1;
+            return completedStoryCountRef.current;
+          }}
         />
       )}
     </>
