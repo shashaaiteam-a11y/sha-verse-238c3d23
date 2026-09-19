@@ -37,7 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { NativeAdCard, RewardedAdButton } from "@/components/ads";
+import { NativeAdCard, NativeAdSlot, RewardedAdButton } from "@/components/ads";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
 
 // Component for group post reactions - Now uses full emoji chart
@@ -829,11 +829,14 @@ const GroupDetail = () => {
               </Card>
               );
 
-              // Inject native ad every 4 posts (3-4 strategy, less aggressive than 5)
-              if ((postIdx + 1) % 4 === 0 && postIdx !== posts.length - 1) {
+              // Inject a sponsored post slot after every 4 real group posts.
+              if ((postIdx + 1) % 4 === 0) {
                 return [
                   card,
-                  <NativeAdCard key={`ad-${post.id}`} placement="group_feed" />,
+                  <div key={`ad-${post.id}`}>
+                    <NativeAdCard placement="group_feed" />
+                    <NativeAdSlot placement="GR_POST_01" slotKey={`group-post-${post.id}`} />
+                  </div>,
                 ];
               }
               return [card];

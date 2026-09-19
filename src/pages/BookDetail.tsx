@@ -28,7 +28,8 @@ import BookDeletionDialog from "@/components/bookshelf/BookDeletionDialog";
 import BookReportDialog from "@/components/bookshelf/BookReportDialog";
 import { ShareDialog } from "@/components/ShareDialog";
 import CommentSection from "@/components/bookshelf/CommentSection";
-import { BannerAd, NativeAdCard } from "@/components/ads";
+import { BannerAd, NativeAdCard, NativeAdSlot } from "@/components/ads";
+import { isNativeAdsSupported } from "@/lib/ads/native/bridge";
 import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
 // BookDetail page component
@@ -530,7 +531,11 @@ const BookDetail = () => {
 
             {/* Sponsored banner under action buttons */}
             <div className="mt-4">
-              <BannerAd placement="bookshelf_detail_banner" />
+              {isNativeAdsSupported() ? (
+                <NativeAdSlot placement="BS_DETAIL_01" slotKey={`book-actions-${book.id}`} height={110} />
+              ) : (
+                <BannerAd placement="bookshelf_detail_banner" />
+              )}
             </div>
           </div>
         </div>
@@ -607,6 +612,7 @@ const BookDetail = () => {
         {/* 📚 Native Ad — sits between description and book info, high-CTR spot */}
         <div className="mb-6">
           <NativeAdCard placement="bookshelf_detail_banner" />
+          <NativeAdSlot placement="BS_DETAIL_02" slotKey={`book-description-${book.id}`} />
         </div>
 
         {/* Book Info */}
