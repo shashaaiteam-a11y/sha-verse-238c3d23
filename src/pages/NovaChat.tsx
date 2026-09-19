@@ -10,6 +10,7 @@ import ChatSidebar from '@/components/novachat/ChatSidebar';
 import WelcomeScreen from '@/components/novachat/WelcomeScreen';
 import ChatInput from '@/components/novachat/ChatInput';
 import { RewardedAdButton, BannerAd, NativeAdSlot } from '@/components/ads';
+import { isNativeAdsSupported } from '@/lib/ads/native/bridge';
 import { useRewardedAd } from '@/hooks/useRewardedAd';
 import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
 import LimitReachedModal from '@/components/novachat/LimitReachedModal';
@@ -426,15 +427,14 @@ const NovaChat = () => {
                     index !== messages.length - 1 &&
                     index - lastAdAt >= 5;
 
-                  // After long AI response (>500 chars) — high CTR spot, only when not streaming
-                  const isLongAiResponse =
+                  // One visual slot after each completed assistant reply. The native
+                  // manager separately throttles network requests and remounts.
+                  const isCompletedAiResponse =
                     message.role === 'assistant' &&
                     !isStreaming &&
-                    message.content.length > 500 &&
-                    index === messages.length - 1 &&
-                    index - lastAdAt >= 3;
+                    message.content.length > 0;
 
-                  if (showInline || isLongAiResponse) lastAdAt = index;
+                  if (showInline) lastAdAt = index;
 
                   return (
                     <div key={index}>
@@ -455,16 +455,13 @@ const NovaChat = () => {
                         />
                       )}
 
-                      {isLongAiResponse && (
+                      {isCompletedAiResponse && (
                         <>
-                          <NovaChatInlineAd
-                            variant="after_response"
-                            contextText={message.content}
-                          />
                           <NativeAdSlot
                             placement="NC_REPLY_01"
-                            slotKey={`nc-reply-${index}`}
+                            slotKey={`nc-reply-${currentConversationId ?? 'new'}-${index}`}
                             className="mx-4 my-2 w-auto"
+                            height={150}
                           />
                         </>
                       )}
@@ -507,11 +504,11 @@ const NovaChat = () => {
 
         {/* Banner Ad above input */}
 
-        <div className="px-4 py-2 border-y border-border bg-muted/30">
+        <div className="px-4 py-3 border-y border-border bg-muted/30">
 
-          <div className="max-w-3xl mx-auto flex justify-center">
+          <div className="max-w-3xl mx-auto flex flex-col justify-center gap-3">
 
-            <BannerAd placement="novachat_banner" />
+            {!isNativeAdsSupported() && <BannerAd placement="novachat_banner" />}
 
             <NativeAdSlot
               placement="NC_INPUT_01"

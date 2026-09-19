@@ -52,6 +52,7 @@ import AppLogoStatusRing from '@/components/promotions/AppLogoStatusRing';
 import AppMenu from '@/components/AppMenu';
 
 import { NativeAdCard, BannerAd, StickyBannerAd, NativeAdSlot } from '@/components/ads';
+import { isNativeAdsSupported } from '@/lib/ads/native/bridge';
 
 import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 
@@ -328,8 +329,7 @@ const Home = () => {
           {/* Ad: 320x100 banner after friend suggestions */}
 
           <div className="mb-3 sm:mb-4 flex justify-center">
-
-            <BannerAd placement="home_banner" />
+            {!isNativeAdsSupported() && <BannerAd placement="home_banner" />}
 
           </div>
 
@@ -431,11 +431,13 @@ const Home = () => {
       </PullToRefresh>
 
       {/* 📢 Sticky bottom banner — continuous low-profile earning slot */}
-      <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-30 pointer-events-auto">
-        <div className="max-w-2xl mx-auto">
-          <StickyBannerAd placement="home_banner" />
+      {!isNativeAdsSupported() && (
+        <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-30 pointer-events-auto">
+          <div className="max-w-2xl mx-auto">
+            <StickyBannerAd placement="home_banner" />
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
 

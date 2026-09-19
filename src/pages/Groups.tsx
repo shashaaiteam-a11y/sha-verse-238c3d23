@@ -75,7 +75,8 @@ const GROUP_SELECT = `id, name, description, avatar_url, cover_url, is_private, 
 
 import { GROUP_CATEGORIES } from "@/lib/constants/groupCategories";
 
-import { SponsoredGroupCard, BannerAd, GroupNativeAd } from "@/components/ads";
+import { SponsoredGroupCard, BannerAd, GroupNativeAd, NativeAdSlot } from "@/components/ads";
+import { isNativeAdsSupported } from "@/lib/ads/native/bridge";
 import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 
@@ -389,9 +390,15 @@ const Groups = () => {
           </Card>
           );
 
-          // Native ad after every 3rd group card
-          if ((idx + 1) % 3 === 0) {
-            return [card, <GroupNativeAd key={`ad-cat-${group.id}`} variant="list" />];
+          // Sponsored group card after every 4 real groups.
+          if ((idx + 1) % 4 === 0) {
+            return [
+              card,
+              <div key={`ad-cat-${group.id}`}>
+                <GroupNativeAd variant="list" />
+                <NativeAdSlot placement="GR_LIST_01" slotKey={`category-${group.id}`} />
+              </div>,
+            ];
           }
           return [card];
 
@@ -649,9 +656,15 @@ const Groups = () => {
 
           );
 
-          // Inject native ad after every 3rd group (and not as the very last item)
-          if ((idx + 1) % 3 === 0 && idx !== validMemberships.length - 1) {
-            return [card, <GroupNativeAd key={`ad-mygrp-${membership.id}`} variant="list" />];
+          // Sponsored group card after every 4 real groups.
+          if ((idx + 1) % 4 === 0) {
+            return [
+              card,
+              <div key={`ad-mygrp-${membership.id}`}>
+                <GroupNativeAd variant="list" />
+                <NativeAdSlot placement="GR_LIST_01" slotKey={`membership-${membership.id}`} />
+              </div>,
+            ];
           }
           return [card];
 
@@ -815,11 +828,15 @@ const Groups = () => {
 
 
 
-          // Inject native group ad after every 3rd card (3-4 spacing strategy)
-
-          if ((idx + 1) % 3 === 0 && idx !== suggestedGroups.length - 1) {
-
-            return [card, <GroupNativeAd key={`ad-disc-${group.id}`} variant="discover" />];
+          // Sponsored group card after every 4 real groups.
+          if ((idx + 1) % 4 === 0) {
+            return [
+              card,
+              <div key={`ad-disc-${group.id}`} className="min-w-0">
+                <GroupNativeAd variant="discover" />
+                <NativeAdSlot placement="GR_LIST_01" slotKey={`discover-${group.id}`} />
+              </div>,
+            ];
 
           }
 
@@ -1081,8 +1098,11 @@ const Groups = () => {
         {/* Discovery banner after categories */}
 
         <div className="mb-4 sm:mb-6 flex justify-center">
-
-          <BannerAd placement="group_discovery_banner" />
+          {isNativeAdsSupported() ? (
+            <NativeAdSlot placement="GR_TOP_01" slotKey="below-categories" height={120} className="w-full" />
+          ) : (
+            <BannerAd placement="group_discovery_banner" />
+          )}
 
         </div>
 

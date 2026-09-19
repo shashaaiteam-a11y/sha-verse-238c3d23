@@ -39,7 +39,7 @@ import { formatDistanceToNow } from "date-fns";
 
 import { BOOK_CATEGORIES } from "@/lib/constants/bookshelf";
 
-import { SponsoredBookCard } from "@/components/ads";
+import { NativeAdSlot, SponsoredBookCard } from "@/components/ads";
 import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
@@ -242,7 +242,13 @@ const Bookshelf = () => {
     return items.flatMap((book, idx) => {
       const card = <BookCard key={book.id} book={book} />;
       if ((idx + 1) % every === 0 && idx !== items.length - 1) {
-        return [card, <SponsoredBookCard key={`${keyPrefix}-${book.id}`} />];
+        return [
+          card,
+          <div key={`${keyPrefix}-${book.id}`} className="min-w-0">
+            <SponsoredBookCard />
+            <NativeAdSlot placement="BS_GRID_01" slotKey={`${keyPrefix}-${book.id}`} />
+          </div>,
+        ];
       }
       return [card];
     });

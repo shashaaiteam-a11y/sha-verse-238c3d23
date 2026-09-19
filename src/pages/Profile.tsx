@@ -95,7 +95,7 @@ import {
 
 } from "@/components/ui/dialog";
 
-import { NativeAdCard } from '@/components/ads';
+import { NativeAdCard, NativeAdSlot } from '@/components/ads';
 import AppLogoStatusRing from "@/components/promotions/AppLogoStatusRing";
 
 
@@ -1459,19 +1459,16 @@ const Profile = () => {
 
                           // Inject native ad every 4 posts
 
-                          if ((idx + 1) % 4 === 0) {
+                          if (isOwnProfile && (idx + 1) % 4 === 0) {
 
                             return [
 
                               card,
 
-                              <NativeAdCard
-
-                                key={`ad-${post.id}`}
-
-                                placement="profile_posts"
-
-                              />,
+                              <div key={`ad-${post.id}`}>
+                                <NativeAdCard placement="profile_posts" />
+                                <NativeAdSlot placement="PF_POST_01" slotKey={`profile-post-${post.id}`} />
+                              </div>,
 
                             ];
 

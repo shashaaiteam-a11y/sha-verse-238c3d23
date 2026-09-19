@@ -19,6 +19,8 @@ interface NativeAdSlotProps {
   className?: string;
   /** Overrides the reserved height for this placement. */
   height?: number;
+  /** Lets a parent collapse surrounding reserved space after a terminal failure. */
+  onStateChange?: (state: "idle" | "loading" | "loaded" | "failed") => void;
 }
 
 /**
@@ -26,7 +28,7 @@ interface NativeAdSlotProps {
  * Android SDK on top of this container. Renders nothing at all on web, so web
  * behaviour is untouched, and collapses silently when no ad fills.
  */
-const NativeAdSlot = ({ placement, slotKey, className, height }: NativeAdSlotProps) => {
+const NativeAdSlot = ({ placement, slotKey, className, height, onStateChange }: NativeAdSlotProps) => {
   const supported = isNativeAdsSupported() && !ADS_HIDDEN;
   const containerRef = useRef<HTMLDivElement>(null);
   const uid = useId();
@@ -44,6 +46,10 @@ const NativeAdSlot = ({ placement, slotKey, className, height }: NativeAdSlotPro
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supported, slotId, placement]);
+
+  useEffect(() => {
+    onStateChange?.(state);
+  }, [onStateChange, state]);
 
   // Keep the native view glued to the reserved container while scrolling.
   useEffect(() => {
