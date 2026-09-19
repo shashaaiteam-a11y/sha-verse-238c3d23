@@ -37,7 +37,8 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { StickyBannerAd, BookReaderInlineAd } from "@/components/ads";
+import { StickyBannerAd, BookReaderInlineAd, NativeAdSlot } from "@/components/ads";
+import { isNativeAdsSupported } from "@/lib/ads/native/bridge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BOOK_PUBLIC_COLUMNS } from "@/lib/constants/bookshelf";
 
@@ -93,7 +94,7 @@ const BookReader = () => {
   const [scale, setScale] = useState(1);
   const [epubCfi, setEpubCfi] = useState<string | undefined>();
 
-  // 📖 Inline reader-ad state — every 4 pages, skip first 2 + last
+  // Web-only legacy reader-ad state. Android uses BS_READER_01 below.
   const [adKey, setAdKey] = useState(0);
   const [adDismissedFor, setAdDismissedFor] = useState<number | null>(null);
 
@@ -498,6 +499,8 @@ const BookReader = () => {
   const displayTotal = isReaderMode ? readerPagination.totalPages : totalPages;
   const displayPercent = isReaderMode ? readerPagination.percent : progressPercent;
   const isCurrentPageBookmarked = isPageBookmarked(currentPage);
+  const nativeReaderAdsEnabled = isNativeAdsSupported();
+  const showNativeReaderAd = nativeReaderAdsEnabled && displayPage > 1 && displayPage % 2 === 0;
 
   return (
     <div
@@ -1010,7 +1013,13 @@ const BookReader = () => {
         className={cn(
           "absolute inset-x-0 overflow-hidden transition-[top,bottom] duration-300",
           showControls ? "top-14" : "top-0",
-          showControls ? "bottom-24 sm:bottom-20" : "bottom-0"
+          showControls
+            ? showNativeReaderAd
+              ? "bottom-[34rem] sm:bottom-[32rem]"
+              : "bottom-24 sm:bottom-20"
+            : showNativeReaderAd
+              ? "bottom-[26rem]"
+              : "bottom-0"
         )}
       >
         <div className={cn("relative w-full h-full overflow-hidden", colors.bg)}>
@@ -1165,7 +1174,7 @@ const BookReader = () => {
 
           {/* 📖 Floating inline reader ad — docked above footer area, never
               shrinks the reading content. Dismissible per page. */}
-          {showReaderAd && (
+          {!nativeReaderAdsEnabled && showReaderAd && (
             <div
               className="absolute bottom-2 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-2 pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
@@ -1181,6 +1190,25 @@ const BookReader = () => {
         </div>
       </main>
 
+      {showNativeReaderAd && (
+        <div
+          className={cn(
+            "fixed inset-x-0 z-40 border-t px-3 py-3",
+            colors.headerBg
+          )}
+          style={{ bottom: showControls ? "calc(96px + env(safe-area-inset-bottom, 0px))" : "env(safe-area-inset-bottom, 0px)" }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="mx-auto w-full max-w-md">
+            <NativeAdSlot
+              placement="BS_READER_01"
+              slotKey={`reader-${book.id}-page-${displayPage}`}
+              height={420}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Bottom Navigation */}
       <footer
         className={cn(
@@ -1193,9 +1221,11 @@ const BookReader = () => {
       >
         {/* Sponsored sticky banner above pagination — height-constrained
             so footer stays a predictable ~96px mobile / ~80px desktop. */}
-        <div className="max-h-[50px] overflow-hidden">
-          <StickyBannerAd placement="bookshelf_reader_sticky" />
-        </div>
+        {!nativeReaderAdsEnabled && (
+          <div className="max-h-[50px] overflow-hidden">
+            <StickyBannerAd placement="bookshelf_reader_sticky" />
+          </div>
+        )}
         <div className="px-4 py-2 sm:py-1.5">
           {/* Progress Bar */}
           <div className="mb-2">

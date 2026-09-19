@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { NativeAdSlot } from "@/components/ads";
 import {
   Sheet,
   SheetContent,
@@ -77,6 +78,8 @@ const FacebookStoryViewer = ({
   const [replies, setReplies] = useState<StoryReply[]>([]);
   const [showViewers, setShowViewers] = useState(false);
   const [liveViewCount, setLiveViewCount] = useState(0);
+  const [showSponsoredStory, setShowSponsoredStory] = useState(false);
+  const viewedSinceAdRef = useRef(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -298,6 +301,10 @@ const FacebookStoryViewer = ({
   };
 
   const goToPrevious = () => {
+    if (showSponsoredStory) {
+      setShowSponsoredStory(false);
+      return;
+    }
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
     } else if (currentGroupIndex > 0) {
@@ -307,6 +314,17 @@ const FacebookStoryViewer = ({
   };
 
   const goToNext = () => {
+    if (showSponsoredStory) {
+      setShowSponsoredStory(false);
+    } else {
+      viewedSinceAdRef.current += 1;
+      if (viewedSinceAdRef.current % 3 === 0) {
+        clearTimers();
+        setIsPaused(true);
+        setShowSponsoredStory(true);
+        return;
+      }
+    }
     if (currentIndex < storyGroup.stories.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else if (currentGroupIndex < allGroups.length - 1) {
@@ -561,6 +579,7 @@ const FacebookStoryViewer = ({
       {/* Story container - Fullscreen on mobile, 9:16 on desktop/tablet to match Facebook style */}
       <div className="relative w-full h-[100dvh] md:w-auto md:h-[95vh] md:aspect-[9/16] mx-auto flex flex-col bg-black overflow-hidden rounded-none md:rounded-xl shadow-2xl">
         {/* Progress bars - pushed below status bar / notch */}
+        {!showSponsoredStory && (
         <div
           className="absolute left-4 right-4 z-40 flex gap-1"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
@@ -585,6 +604,7 @@ const FacebookStoryViewer = ({
             </div>
           ))}
         </div>
+        )}
 
         {/* Close button - pushed below status bar / notch (safe-area aware) */}
         <Button
@@ -603,6 +623,7 @@ const FacebookStoryViewer = ({
         </Button>
 
         {/* User info - leaves right padding so it never overlaps the close button */}
+        {!showSponsoredStory && (
         <div
           className="absolute left-4 right-14 z-40 flex items-center gap-3"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2.25rem)' }}
@@ -624,9 +645,10 @@ const FacebookStoryViewer = ({
             </p>
           </div>
         </div>
+        )}
 
         {/* Action icons row - placed BELOW user info with clear separation from close button */}
-        <div
+        {!showSponsoredStory && <div
           className="absolute right-2 z-50 flex items-center gap-1 bg-black/30 rounded-full px-1 py-1 backdrop-blur-sm pointer-events-auto"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + 5rem)' }}
           onPointerDown={(event) => event.stopPropagation()}
@@ -656,7 +678,7 @@ const FacebookStoryViewer = ({
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
-        </div>
+        </div>}
 
         {/* Story Insights Sheet — opens on bottom-left eye click; auto-pauses story */}
         {isOwnStory && (
@@ -766,6 +788,28 @@ const FacebookStoryViewer = ({
           </Sheet>
         )}
 
+        {showSponsoredStory ? (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-6 px-5 pt-24 pb-8">
+            <div className="w-full max-w-sm" onClick={(event) => event.stopPropagation()}>
+              <NativeAdSlot
+                placement="HF_STORY_02"
+                slotKey={`viewer-${currentStory.id}-${viewedSinceAdRef.current}`}
+                height={420}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              className="min-h-11 min-w-32"
+              onClick={(event) => {
+                event.stopPropagation();
+                goToNext();
+              }}
+            >
+              Continue
+            </Button>
+          </div>
+        ) : (
+        <>
         {/* Loading indicator */}
         {!mediaLoaded && !mediaError && currentStory.story_type !== 'text' && currentStory.media_type !== 'text' && (
           <div className="absolute inset-0 flex items-center justify-center z-30">
@@ -927,6 +971,8 @@ const FacebookStoryViewer = ({
             <Eye className="w-5 h-5" />
             <span className="text-sm font-medium">{liveViewCount} views</span>
           </button>
+        )}
+        </>
         )}
       </div>
     </div>

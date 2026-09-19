@@ -52,6 +52,7 @@ import AppLogoStatusRing from '@/components/promotions/AppLogoStatusRing';
 import AppMenu from '@/components/AppMenu';
 
 import { NativeAdCard, BannerAd, StickyBannerAd, NativeAdSlot } from '@/components/ads';
+import { isNativeAdsSupported } from '@/lib/ads/native/bridge';
 
 import { useSmartFeedAds } from '@/hooks/useSmartFeedAds';
 
@@ -328,8 +329,7 @@ const Home = () => {
           {/* Ad: 320x100 banner after friend suggestions */}
 
           <div className="mb-3 sm:mb-4 flex justify-center">
-
-            <BannerAd placement="home_banner" />
+            {!isNativeAdsSupported() && <BannerAd placement="home_banner" />}
 
           </div>
 

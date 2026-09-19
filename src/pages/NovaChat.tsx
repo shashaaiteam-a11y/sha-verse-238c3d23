@@ -10,6 +10,7 @@ import ChatSidebar from '@/components/novachat/ChatSidebar';
 import WelcomeScreen from '@/components/novachat/WelcomeScreen';
 import ChatInput from '@/components/novachat/ChatInput';
 import { RewardedAdButton, BannerAd, NativeAdSlot } from '@/components/ads';
+import { isNativeAdsSupported } from '@/lib/ads/native/bridge';
 import { useRewardedAd } from '@/hooks/useRewardedAd';
 import NovaChatInlineAd from '@/components/novachat/NovaChatInlineAd';
 import LimitReachedModal from '@/components/novachat/LimitReachedModal';
@@ -507,7 +508,7 @@ const NovaChat = () => {
 
           <div className="max-w-3xl mx-auto flex flex-col justify-center gap-3">
 
-            <BannerAd placement="novachat_banner" />
+            {!isNativeAdsSupported() && <BannerAd placement="novachat_banner" />}
 
             <NativeAdSlot
               placement="NC_INPUT_01"
